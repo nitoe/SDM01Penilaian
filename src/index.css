@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   Design tokens — tema Muhammadiyah
+   Hijau tua sebagai primary, emas sebagai aksen.
+   Nuansa profesional untuk guru (desktop + mobile).
+   ============================================================================ */
+
+@theme {
+  /* Primary — hijau Muhammadiyah */
+  --color-muh-50: #e8f5ef;
+  --color-muh-100: #c5e6d4;
+  --color-muh-200: #9ad4b5;
+  --color-muh-300: #6bc294;
+  --color-muh-400: #3faf78;
+  --color-muh-500: #1a9a5c;
+  --color-muh-600: #008c45;
+  --color-muh-700: #006b3f;
+  --color-muh-800: #004d2e;
+  --color-muh-900: #003320;
+  --color-muh-950: #001a10;
+
+  /* Aksen emas */
+  --color-gold-50: #fbf6e9;
+  --color-gold-100: #f5eac7;
+  --color-gold-200: #edd996;
+  --color-gold-300: #e2c45e;
+  --color-gold-400: #d4a84b;
+  --color-gold-500: #c9a227;
+  --color-gold-600: #a8841e;
+  --color-gold-700: #866618;
+  --color-gold-800: #654c12;
+  --color-gold-900: #43320c;
+
+  /* Surface & text */
+  --color-surface: #ffffff;
+  --color-surface-2: #f7f9f8;
+  --color-border: #e2e8e5;
+  --color-muted: #64748b;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family:
+    'Inter',
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  background-color: var(--color-surface-2);
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fokus yang jelas untuk aksesibilitas */
+:focus-visible {
+  outline: 2px solid var(--color-muh-600);
+  outline-offset: 2px;
+}
