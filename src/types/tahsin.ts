@@ -1,9 +1,7 @@
 /** Tipe data modul Tahsin-Tahfizh */
 
 export type JenjangTahsin = 'iqro' | 'quran'
-
 export type JenisSetoran = 'ziyadah' | 'murojaah' | 'tahsin'
-
 export type StatusHafalan = 'lulus' | 'mengulang' | 'belum'
 
 export interface SiswaTahsin {
@@ -12,7 +10,6 @@ export interface SiswaTahsin {
   nis?: string
   kelas: string
   jenjang: JenjangTahsin
-  /** true = siswa Iqro sudah pindah ke materi Al-Qur'an */
   tamatIqro?: boolean
   aktif?: boolean
 }
@@ -44,11 +41,37 @@ export interface SetoranPayload {
   jenjang: JenjangTahsin
   jenis: JenisSetoran
   materi: MateriSetoran
-  detailAyat?: { ayat: number; status?: string; kataSalah?: { index: number; jenis: string }[] }[]
-  detailBacaanIqro?: { teks: string; kataSalah?: { index: number; jenis: string }[] } | null
+  detailAyat?: {
+    ayat: number
+    status?: string
+    kataSalah?: { index: number; jenis: string }[]
+  }[]
+  detailBacaanIqro?: {
+    teks: string
+    kataSalah?: { index: number; jenis: string }[]
+  } | null
   statusHafalan: StatusHafalan | null
   catatan: string
   createdByNama: string
+}
+
+export interface SetoranRecord extends SetoranPayload {
+  id: string
+  createdAt?: { seconds: number; nanoseconds: number } | string | Date | null
+  createdBy?: string | null
+}
+
+export interface MenulisRecord {
+  id: string
+  siswaId: string
+  siswaNama?: string
+  kelas: string
+  materi?: { label?: string; tipe?: string; [k: string]: unknown }
+  catatan?: string
+  tanggalPeriksa?: string
+  createdAt?: { seconds: number; nanoseconds: number } | string | Date | null
+  createdBy?: string | null
+  [k: string]: unknown
 }
 
 export interface AuthScope {
@@ -64,3 +87,15 @@ export const SEMUA_KELAS = [
   '5A', '5B', '5C',
   '6A', '6B',
 ] as const
+
+export const JENIS_LABEL: Record<JenisSetoran, string> = {
+  ziyadah: 'Ziyadah',
+  murojaah: "Muroja'ah",
+  tahsin: 'Tahsin',
+}
+
+export const STATUS_LABEL: Record<StatusHafalan, string> = {
+  lulus: 'Lulus',
+  mengulang: 'Mengulang',
+  belum: 'Belum',
+}

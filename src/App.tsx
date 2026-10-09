@@ -11,13 +11,14 @@ import AkademikHub from './pages/AkademikHub'
 import AdminHub from './pages/AdminHub'
 import Placeholder from './pages/Placeholder'
 import InputSetoran from './pages/tahsin/InputSetoran'
+import RiwayatSiswa from './pages/tahsin/RiwayatSiswa'
 
 function LoadingScreen() {
   return (
     <div className="flex min-h-full items-center justify-center bg-surface-2">
       <div className="flex flex-col items-center gap-2">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-muh-200 border-t-muh-600" />
-        <p className="text-[11px] text-muted">Memuat…</p>
+        <div className="h-7 w-7 animate-spin rounded-full border-2 border-muh-200 border-t-muh-600" />
+        <p className="text-[12px] text-muted">Memuat…</p>
       </div>
     </div>
   )
@@ -64,6 +65,10 @@ export default function App() {
           <Route
             path="/tahsin/input-setoran"
             element={profile ? <InputSetoran profile={profile} /> : null}
+          />
+          <Route
+            path="/tahsin/riwayat"
+            element={profile ? <RiwayatSiswa profile={profile} /> : null}
           />
           <Route path="/tahsin/*" element={<Placeholder />} />
 

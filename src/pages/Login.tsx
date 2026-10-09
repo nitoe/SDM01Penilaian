@@ -30,7 +30,11 @@ export default function Login() {
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : 'Gagal masuk. Periksa email dan password.'
-      if (msg.includes('invalid-credential') || msg.includes('wrong-password') || msg.includes('INVALID_LOGIN')) {
+      if (
+        msg.includes('invalid-credential') ||
+        msg.includes('wrong-password') ||
+        msg.includes('INVALID_LOGIN')
+      ) {
         setError('Email atau password salah.')
       } else if (msg.includes('user-not-found')) {
         setError('Akun tidak ditemukan.')
@@ -45,29 +49,29 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-surface-2 px-4 py-8">
-      <div className="w-full max-w-[360px]">
-        <div className="mb-5 text-center">
-          <div className="mx-auto mb-2.5 flex h-10 w-10 items-center justify-center rounded-lg bg-muh-600 text-xs font-bold text-white">
+    <div className="flex min-h-full items-center justify-center bg-surface-2 px-4 py-10">
+      <div className="w-full max-w-[380px]">
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-muh-600 to-muh-900 text-sm font-bold text-white shadow-md">
             SD
           </div>
-          <h1 className="text-[15px] font-semibold text-slate-900">SDM 01 Kukusan</h1>
-          <p className="mt-0.5 text-[11px] text-muted">Sistem Penilaian · Portal Guru</p>
+          <h1 className="text-base font-semibold text-slate-900">SDM 01 Kukusan</h1>
+          <p className="mt-0.5 text-[12px] text-muted">Sistem Penilaian · Portal Guru</p>
         </div>
 
-        <div className="rounded-lg border border-border bg-white p-4 shadow-sm">
+        <div className="card-soft p-5">
           {!isFirebaseConfigured && (
-            <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-800">
+            <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-800">
               Firebase belum dikonfigurasi. Isi file <code className="font-mono">.env</code>.
             </div>
           )}
 
-          <h2 className="text-[13px] font-semibold text-slate-900">Masuk</h2>
-          <p className="mt-0.5 text-[11px] text-muted">
+          <h2 className="text-[14px] font-semibold text-slate-900">Masuk</h2>
+          <p className="mt-0.5 text-[12px] text-muted">
             Gunakan akun yang didaftarkan admin.
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-3.5 space-y-2.5">
+          <form onSubmit={handleSubmit} className="mt-4 space-y-3">
             <div>
               <label htmlFor="email" className="mb-1 block text-[11px] font-medium text-slate-600">
                 Email
@@ -79,13 +83,15 @@ export default function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-md border border-border bg-white px-2.5 py-1.5 text-[13px] outline-none transition placeholder:text-slate-400 focus:border-muh-500 focus:ring-2 focus:ring-muh-500/20"
+                className="w-full rounded-xl border border-border bg-slate-50/80 px-3 py-2 text-[13px] outline-none transition focus:border-muh-500 focus:bg-white focus:ring-2 focus:ring-muh-500/15"
                 placeholder="nama@sekolah.sch.id"
               />
             </div>
-
             <div>
-              <label htmlFor="password" className="mb-1 block text-[11px] font-medium text-slate-600">
+              <label
+                htmlFor="password"
+                className="mb-1 block text-[11px] font-medium text-slate-600"
+              >
                 Password
               </label>
               <input
@@ -95,28 +101,26 @@ export default function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-md border border-border bg-white px-2.5 py-1.5 text-[13px] outline-none transition placeholder:text-slate-400 focus:border-muh-500 focus:ring-2 focus:ring-muh-500/20"
+                className="w-full rounded-xl border border-border bg-slate-50/80 px-3 py-2 text-[13px] outline-none transition focus:border-muh-500 focus:bg-white focus:ring-2 focus:ring-muh-500/15"
                 placeholder="••••••••"
               />
             </div>
-
             {error && (
-              <div className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] font-medium text-red-700">
+              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-medium text-red-700">
                 {error}
               </div>
             )}
-
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center gap-1.5 rounded-md bg-muh-600 px-3 py-2 text-[12.5px] font-semibold text-white transition hover:bg-muh-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex w-full items-center justify-center rounded-xl bg-muh-600 px-3 py-2.5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-muh-700 disabled:opacity-60"
             >
               {loading ? 'Memproses…' : 'Masuk'}
             </button>
           </form>
         </div>
 
-        <p className="mt-4 text-center text-[10px] text-muted">
+        <p className="mt-5 text-center text-[11px] text-muted">
           SD Muhammadiyah 01 Kukusan · Internal
         </p>
       </div>
