@@ -4,14 +4,38 @@ export type JenjangTahsin = 'iqro' | 'quran'
 export type JenisSetoran = 'ziyadah' | 'murojaah' | 'tahsin'
 export type StatusHafalan = 'lulus' | 'mengulang' | 'belum'
 
+export type JenisKelamin = 'L' | 'P'
+
 export interface SiswaTahsin {
   id: string
   nama: string
+  /** NIPD / nomor induk lokal — juga dipakai sebagai document ID */
   nis?: string
+  nipd?: string
+  nisn?: string
   kelas: string
   jenjang: JenjangTahsin
   tamatIqro?: boolean
   aktif?: boolean
+  jk?: JenisKelamin | string
+  tempatLahir?: string
+  tanggalLahir?: string
+  agama?: string
+  alamat?: string
+  rt?: string
+  rw?: string
+  kelurahan?: string
+  kecamatan?: string
+  kodePos?: string
+  hp?: string
+  email?: string
+  ayahNama?: string
+  ayahPekerjaan?: string
+  ibuNama?: string
+  ibuPekerjaan?: string
+  sekolahAsal?: string
+  beratBadan?: number | null
+  tinggiBadan?: number | null
 }
 
 export interface MateriQuran {

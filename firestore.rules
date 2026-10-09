@@ -1,7 +1,20 @@
 rules_version = '2';
 
+// ============================================================================
 // Firestore Security Rules — SDM 01 Kukusan (sdm01kukusan-2e735)
-// Koleksi Tahsin: siswa, setoran, target_hafalan, menulis_log, kktp_tahsin_tahfizh
+//
+// Prinsip:
+//   1. Default TOLAK (blok paling bawah). Koleksi baru wajib didaftarkan di sini.
+//   2. users/{uid}.role adalah SATU-SATUNYA sumber role. Role TIDAK BOLEH
+//      bisa di-set oleh pemiliknya sendiri (kecuali pendaftaran orang tua:
+//      selalu 'orangtua' + 'pending', disetujui admin).
+//   3. Data siswa itu data pribadi anak. Orang tua hanya boleh GET anaknya
+//      sendiri (anakIds), TIDAK boleh list.
+//
+// Catatan: file ini baru berlaku setelah `npm run deploy:rules`. Uji dulu
+// dengan akun admin, guru Tahsin-Tahfizh, dan orang tua sebelum deploy.
+// Lihat ANTIREGRESI.md bagian rules sebelum mengubah apa pun di sini.
+// ============================================================================
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -14,69 +27,129 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isAdmin() {
-      return isLoggedIn() && myProfile().role == 'admin';
+    function myRole() {
+      return myProfile().role;
     }
 
+    function isAdmin() {
+      return isLoggedIn() && myRole() == 'admin';
+    }
+
+    // Semua jenis guru (+ admin). Dipakai untuk BACA roster siswa.
     function isGuru() {
-      return isLoggedIn() && myProfile().role in [
+      return isLoggedIn() && myRole() in [
         'admin', 'guru', 'guru_tahsin_tahfizh', 'guru_akademik'
       ];
     }
 
+    function isGuruTahsin() {
+      return isLoggedIn() && myRole() in ['admin', 'guru', 'guru_tahsin_tahfizh'];
+    }
+
+    function isGuruAkademik() {
+      return isLoggedIn() && myRole() == 'guru_akademik';
+    }
+
     function isApprovedParent() {
       return isLoggedIn()
-        && myProfile().role == 'orangtua'
+        && myRole() == 'orangtua'
         && myProfile().status == 'approved';
     }
 
+    // Orang tua hanya boleh melihat anaknya sendiri (siswaId = NIS = ID dokumen siswa).
+    function anakSaya(siswaId) {
+      return isApprovedParent() && siswaId in myProfile().anakIds;
+    }
+
+    // Admin, atau guru Tahsin-Tahfizh yang kelasnya ada di kelasAmpu.
+    function bolehKelas(kelas) {
+      return isLoggedIn() && (
+        myRole() == 'admin' ||
+        (myRole() in ['guru', 'guru_tahsin_tahfizh'] && kelas in myProfile().kelasAmpu)
+      );
+    }
+
+    // ---- users/{uid} -----------------------------------------------------
+    // Guru/admin dibuat admin (Console atau halaman admin). Pendaftaran mandiri
+    // HANYA sebagai orang tua berstatus pending, dengan daftar field terbatas.
+    // Pemilik akun hanya boleh mengubah nama (bukan role/status/kelasAmpu/
+    // penugasan/anakIds dan field turunan lain yang dipakai rules).
     match /users/{uid} {
-      allow read: if isLoggedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if isLoggedIn() && request.auth.uid == uid;
+      allow get: if isLoggedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isAdmin()
+        || (isLoggedIn() && request.auth.uid == uid
+            && request.resource.data.role == 'orangtua'
+            && request.resource.data.status == 'pending'
+            && request.resource.data.keys().hasOnly(
+                 ['email', 'nama', 'role', 'status', 'anakIds', 'createdAt', 'updatedAt']));
       allow update: if isAdmin()
         || (isLoggedIn() && request.auth.uid == uid
-            && !request.resource.data.diff(resource.data).affectedKeys()
-                .hasAny(['role', 'status', 'kelasAmpu', 'penugasan']));
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['nama', 'updatedAt']));
       allow delete: if isAdmin();
     }
 
+    // ---- siswa/{id} ------------------------------------------------------
+    // ID dokumen = NIS. Guru boleh baca roster. Tulis khusus admin, kecuali
+    // guru Tahsin-Tahfizh yang boleh mengubah HANYA field tamatIqro.
     match /siswa/{id} {
-      allow read: if isGuru() || isApprovedParent();
-      allow write: if isAdmin() || isGuru();
+      allow get: if isGuru() || anakSaya(id);
+      allow list: if isGuru();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isGuruTahsin()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['tamatIqro']));
     }
 
-    match /students/{id} {
-      allow read: if isGuru() || isApprovedParent();
-      allow write: if isAdmin() || isGuru();
-    }
-
+    // ---- Tahsin-Tahfizh --------------------------------------------------
+    // Riwayat bersifat immutable (update: false). Entri baru harus mencantumkan
+    // createdBy = uid pembuatnya dan kelas yang memang diampu.
     match /setoran/{id} {
-      allow read, write: if isGuru();
-    }
-
-    match /target_hafalan/{id} {
-      allow read, write: if isGuru();
+      allow get, list: if bolehKelas(resource.data.kelas)
+                       || anakSaya(resource.data.siswaId);
+      allow create: if bolehKelas(request.resource.data.kelas)
+                    && request.resource.data.createdBy == request.auth.uid;
+      allow update: if false;
+      allow delete: if isAdmin();
     }
 
     match /menulis_log/{id} {
-      allow read, write: if isGuru();
+      allow get, list: if bolehKelas(resource.data.kelas)
+                       || anakSaya(resource.data.siswaId);
+      allow create: if bolehKelas(request.resource.data.kelas)
+                    && request.resource.data.createdBy == request.auth.uid;
+      allow update: if false;
+      allow delete: if isAdmin();
     }
 
-    match /kktp_tahsin_tahfizh/{id} {
+    // ID dokumen = kode kelas (mis. '3A').
+    match /target_hafalan/{kelas} {
+      allow read: if isGuru();
+      allow write: if bolehKelas(kelas);
+    }
+
+    match /kktp_tahsin_tahfizh/{jenjang} {
       allow read: if isGuru();
       allow write: if isAdmin();
     }
 
-    match /mapel/{id} {
-      allow read, write: if isGuru();
-    }
-    match /tp_kktp/{id} {
-      allow read, write: if isGuru();
-    }
-    match /nilai/{id} {
-      allow read, write: if isGuru();
+    // ---- Akademik (SEMENTARA) ---------------------------------------------
+    // Modul Akademik belum dimigrasi. Dua blok ini placeholder yang mengikuti
+    // keputusan v2 (admin TIDAK menulis TP/KKTP). Saat migrasi Akademik, ganti
+    // dengan rules per-kelas/per-mapel dari v2 (penugasanKelasMapel, waliKelas).
+    match /mapel/{nama} {
+      allow read: if isGuru();
+      allow write: if isAdmin();
     }
 
+    match /tp_kktp/{id} {
+      allow read: if isGuru();
+      allow write: if isGuruAkademik();
+    }
+
+    // ---- Default: tolak semuanya -------------------------------------------
     match /{document=**} {
       allow read, write: if false;
     }
