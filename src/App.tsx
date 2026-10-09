@@ -12,6 +12,7 @@ import AdminHub from './pages/AdminHub'
 import Placeholder from './pages/Placeholder'
 import InputSetoran from './pages/tahsin/InputSetoran'
 import RiwayatSiswa from './pages/tahsin/RiwayatSiswa'
+import DataSiswa from './pages/admin/DataSiswa'
 
 function LoadingScreen() {
   return (
@@ -76,6 +77,10 @@ export default function App() {
           <Route path="/akademik/*" element={<Placeholder />} />
 
           <Route path="/admin" element={<AdminHub />} />
+          <Route
+            path="/admin/siswa"
+            element={profile ? <DataSiswa profile={profile} /> : null}
+          />
           <Route path="/admin/*" element={<Placeholder />} />
         </Route>
 
