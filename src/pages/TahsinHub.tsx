@@ -4,55 +4,57 @@ const items = [
   {
     to: '/tahsin/input-setoran',
     title: 'Input Setoran',
-    desc: 'Catat setoran hafalan / bacaan siswa.',
+    desc: 'Catat setoran hafalan / bacaan siswa',
     ready: true,
   },
   {
     to: '/tahsin/riwayat',
     title: 'Riwayat Siswa',
-    desc: 'Lihat riwayat setoran per siswa.',
+    desc: 'Riwayat setoran per siswa',
     ready: false,
   },
   {
     to: '/tahsin/target',
     title: 'Target Hafalan',
-    desc: 'Atur target hafalan per kelas / siswa.',
+    desc: 'Target per kelas / siswa',
     ready: false,
   },
   {
     to: '/tahsin/laporan',
     title: 'Cetak Laporan',
-    desc: 'Generate laporan kemajuan tahsin-tahfizh.',
+    desc: 'Laporan kemajuan tahsin-tahfizh',
     ready: false,
   },
 ]
 
 export default function TahsinHub() {
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <div>
-        <h1 className="text-xl font-extrabold text-slate-900">Tahsin & Tahfizh</h1>
-        <p className="mt-1 text-sm text-muted">
-          Modul penilaian bacaan Al-Qur&apos;an dan hafalan.
+        <h1 className="text-[15px] font-semibold text-slate-900">Tahsin & Tahfizh</h1>
+        <p className="mt-0.5 text-[11px] text-muted">
+          Penilaian bacaan Al-Qur&apos;an dan hafalan
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        {items.map((item) => (
+      <div className="overflow-hidden rounded-lg border border-border bg-white">
+        {items.map((item, i) => (
           <Link
             key={item.to}
             to={item.to}
-            className="flex items-start justify-between gap-3 rounded-2xl border border-border bg-white p-5 shadow-sm transition hover:border-muh-300 hover:shadow-md"
+            className={`flex items-center justify-between gap-3 px-3 py-2.5 transition hover:bg-slate-50 ${
+              i > 0 ? 'border-t border-border' : ''
+            }`}
           >
-            <div>
-              <div className="font-bold text-slate-900">{item.title}</div>
-              <p className="mt-0.5 text-sm text-muted">{item.desc}</p>
+            <div className="min-w-0">
+              <div className="text-[13px] font-medium text-slate-900">{item.title}</div>
+              <p className="text-[11px] text-muted">{item.desc}</p>
             </div>
             <span
-              className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 ${
+              className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
                 item.ready
-                  ? 'bg-muh-50 text-muh-800 ring-muh-100'
-                  : 'bg-amber-50 text-amber-700 ring-amber-100'
+                  ? 'bg-muh-50 text-muh-700'
+                  : 'bg-slate-100 text-slate-500'
               }`}
             >
               {item.ready ? 'Siap' : 'Segera'}

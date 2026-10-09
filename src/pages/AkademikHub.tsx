@@ -1,68 +1,37 @@
 import { Link } from 'react-router-dom'
 
 const items = [
-  {
-    to: '/akademik/setup-tp',
-    title: 'Setup TP & KKTP',
-    desc: 'Tujuan pembelajaran dan kriteria ketercapaian.',
-    badge: 'Segera',
-  },
-  {
-    to: '/akademik/nilai',
-    title: 'Input Nilai',
-    desc: 'Nilai mapel, STS, SAS, dan SLM.',
-    badge: 'Segera',
-  },
-  {
-    to: '/akademik/siswa',
-    title: 'Kelola Siswa',
-    desc: 'Data siswa, NISN, mutasi, dan impor.',
-    badge: 'Segera',
-  },
-  {
-    to: '/akademik/rapor',
-    title: 'Rapor',
-    desc: 'Kelengkapan rapor, cetak STS & SAS.',
-    badge: 'Segera',
-  },
-  {
-    to: '/akademik/absensi',
-    title: 'Absensi',
-    desc: 'Rekap kehadiran siswa.',
-    badge: 'Segera',
-  },
-  {
-    to: '/akademik/ekskul',
-    title: 'Ekstrakurikuler',
-    desc: 'Nilai dan deskripsi ekstrakurikuler.',
-    badge: 'Segera',
-  },
+  { to: '/akademik/setup-tp', title: 'Setup TP & KKTP', desc: 'Tujuan pembelajaran dan KKTP' },
+  { to: '/akademik/nilai', title: 'Input Nilai', desc: 'Nilai mapel, STS, SAS, SLM' },
+  { to: '/akademik/siswa', title: 'Kelola Siswa', desc: 'Data siswa, NISN, mutasi, impor' },
+  { to: '/akademik/rapor', title: 'Rapor', desc: 'Kelengkapan dan cetak rapor' },
+  { to: '/akademik/absensi', title: 'Absensi', desc: 'Rekap kehadiran siswa' },
+  { to: '/akademik/ekskul', title: 'Ekstrakurikuler', desc: 'Nilai dan deskripsi ekskul' },
 ]
 
 export default function AkademikHub() {
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <div>
-        <h1 className="text-xl font-extrabold text-slate-900">Akademik & Rapor</h1>
-        <p className="mt-1 text-sm text-muted">
-          Modul penilaian akademik. Halaman detail akan dimigrasikan bertahap dari
-          versi HTML.
-        </p>
+        <h1 className="text-[15px] font-semibold text-slate-900">Akademik & Rapor</h1>
+        <p className="mt-0.5 text-[11px] text-muted">Modul penilaian akademik</p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        {items.map((item) => (
+      <div className="overflow-hidden rounded-lg border border-border bg-white">
+        {items.map((item, i) => (
           <Link
             key={item.to}
             to={item.to}
-            className="flex items-start justify-between gap-3 rounded-2xl border border-border bg-white p-5 shadow-sm transition hover:border-muh-300 hover:shadow-md"
+            className={`flex items-center justify-between gap-3 px-3 py-2.5 transition hover:bg-slate-50 ${
+              i > 0 ? 'border-t border-border' : ''
+            }`}
           >
-            <div>
-              <div className="font-bold text-slate-900">{item.title}</div>
-              <p className="mt-0.5 text-sm text-muted">{item.desc}</p>
+            <div className="min-w-0">
+              <div className="text-[13px] font-medium text-slate-900">{item.title}</div>
+              <p className="text-[11px] text-muted">{item.desc}</p>
             </div>
-            <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 ring-1 ring-amber-100">
-              {item.badge}
+            <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+              Segera
             </span>
           </Link>
         ))}

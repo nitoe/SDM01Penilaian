@@ -197,20 +197,20 @@ export default function InputSetoran({ profile }: Props) {
     hitungTotalAyat(surahAwal, ayatMulai, surahAkhir, ayatAkhir)
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
+    <div className="mx-auto max-w-xl space-y-2.5">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
           <Link
             to="/tahsin"
-            className="text-xs font-bold text-muh-700 hover:underline"
+            className="text-[11px] font-medium text-muh-700 hover:underline"
           >
             ← Tahsin-Tahfizh
           </Link>
-          <h1 className="mt-1 text-xl font-extrabold text-slate-900">
+          <h1 className="mt-0.5 text-[15px] font-semibold text-slate-900">
             Input Setoran
           </h1>
-          <p className="mt-0.5 text-sm text-muted">
+          <p className="mt-0.5 text-[10.5px] text-muted">
             Catat setoran bacaan / hafalan siswa.
           </p>
         </div>
@@ -219,7 +219,7 @@ export default function InputSetoran({ profile }: Props) {
       {/* Toast */}
       {toast && (
         <div
-          className={`rounded-xl px-3.5 py-2.5 text-sm font-semibold ${
+          className={`rounded-md px-2.5 py-1.5 text-[12px] font-medium ${
             toast.error
               ? 'border border-red-200 bg-red-50 text-red-700'
               : 'border border-muh-200 bg-muh-50 text-muh-800'
@@ -230,10 +230,10 @@ export default function InputSetoran({ profile }: Props) {
       )}
 
       {/* Pilih siswa */}
-      <section className="rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="text-sm font-extrabold text-slate-800">1. Pilih siswa</h2>
+      <section className="rounded-lg border border-border bg-white p-3">
+        <h2 className="text-[12.5px] font-semibold text-slate-800">1. Pilih siswa</h2>
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-2 flex flex-wrap gap-1">
           {kelasOptions.map((k) => (
             <button
               key={k}
@@ -242,9 +242,9 @@ export default function InputSetoran({ profile }: Props) {
                 setKelasFilter(k)
                 setSelected(null)
               }}
-              className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+              className={`rounded px-2 py-1 text-[11px] font-medium transition ${
                 kelasFilter === k
-                  ? 'bg-muh-700 text-white'
+                  ? 'bg-muh-600 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -258,17 +258,17 @@ export default function InputSetoran({ profile }: Props) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Cari nama atau NIS…"
-          className="mt-3 w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-muh-500 focus:ring-4 focus:ring-muh-500/15"
+          className="mt-2 w-full rounded-md border border-border px-2.5 py-1.5 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/20"
         />
 
-        <div className="mt-3 max-h-52 overflow-y-auto rounded-xl border border-border">
+        <div className="mt-2 max-h-44 overflow-y-auto rounded-md border border-border">
           {loadingSiswa ? (
-            <p className="p-4 text-center text-sm text-muted">Memuat siswa…</p>
+            <p className="p-3 text-center text-[12px] text-muted">Memuat siswa…</p>
           ) : filteredSiswa.length === 0 ? (
-            <p className="p-4 text-center text-sm text-muted">
+            <p className="p-3 text-center text-[12px] text-muted">
               Tidak ada siswa di kelas {kelasFilter}.
               <br />
-              <span className="text-xs">
+              <span className="text-[11px]">
                 Pastikan koleksi Firestore <code className="font-mono">siswa</code> terisi
                 (field: nama, kelas, jenjang, aktif).
               </span>
@@ -279,13 +279,13 @@ export default function InputSetoran({ profile }: Props) {
                 key={s.id}
                 type="button"
                 onClick={() => setSelected(s)}
-                className={`flex w-full items-center gap-3 border-b border-border px-3.5 py-2.5 text-left transition last:border-0 ${
+                className={`flex w-full items-center gap-2 border-b border-border px-2.5 py-1.5 text-left transition last:border-0 ${
                   selected?.id === s.id
                     ? 'bg-muh-50'
                     : 'hover:bg-slate-50'
                 }`}
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muh-100 text-xs font-extrabold text-muh-800">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muh-50 text-[10px] font-semibold text-muh-700">
                   {s.nama
                     .split(' ')
                     .slice(0, 2)
@@ -294,16 +294,16 @@ export default function InputSetoran({ profile }: Props) {
                     .toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-bold text-slate-900">
+                  <div className="truncate text-[12.5px] font-medium text-slate-900">
                     {s.nama}
                   </div>
-                  <div className="text-[11px] text-muted">
+                  <div className="text-[10.5px] text-muted">
                     {s.kelas} · {s.jenjang === 'iqro' ? 'Iqro' : "Al-Qur'an"}
                     {s.nis ? ` · ${s.nis}` : ''}
                   </div>
                 </div>
                 {selected?.id === s.id && (
-                  <span className="text-xs font-bold text-muh-700">✓</span>
+                  <span className="text-[11px] font-bold text-muh-700">✓</span>
                 )}
               </button>
             ))
@@ -311,12 +311,12 @@ export default function InputSetoran({ profile }: Props) {
         </div>
 
         {selected && selected.jenjang === 'iqro' && (
-          <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
+          <label className="mt-2 flex items-center gap-1.5 text-[12px] text-slate-700">
             <input
               type="checkbox"
               checked={Boolean(selected.tamatIqro)}
               onChange={(e) => void handleTamatIqro(e.target.checked)}
-              className="h-4 w-4 rounded border-border text-muh-700 focus:ring-muh-500"
+              className="h-3.5 w-3.5 rounded border-border text-muh-600 focus:ring-muh-500"
             />
             <span className="font-medium">Sudah tamat Iqro (materi Al-Qur&apos;an)</span>
           </label>
@@ -326,16 +326,16 @@ export default function InputSetoran({ profile }: Props) {
       {/* Form setoran — aktif setelah pilih siswa */}
       {selected && (
         <>
-          <section className="rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5">
-            <h2 className="text-sm font-extrabold text-slate-800">
+          <section className="rounded-lg border border-border bg-white p-3">
+            <h2 className="text-[12.5px] font-semibold text-slate-800">
               2. Jenis & materi
             </h2>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-[10.5px] text-muted">
               Siswa: <strong>{selected.nama}</strong> ({selected.kelas})
             </p>
 
             {/* Jenis */}
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-2 flex flex-wrap gap-1">
               {JENIS_OPTIONS.map((opt) => {
                 const locked =
                   isIqroMurni && opt.value !== 'tahsin'
@@ -345,9 +345,9 @@ export default function InputSetoran({ profile }: Props) {
                     type="button"
                     disabled={locked}
                     onClick={() => setJenis(opt.value)}
-                    className={`rounded-xl px-3.5 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                    className={`rounded-xl px-3.5 py-2 text-[11px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${
                       jenis === opt.value
-                        ? 'bg-muh-700 text-white'
+                        ? 'bg-muh-600 text-white'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
@@ -359,10 +359,10 @@ export default function InputSetoran({ profile }: Props) {
 
             {/* Materi Quran */}
             {bacaQuran ? (
-              <div className="mt-4 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+              <div className="mt-2.5 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="mb-1 block text-[11px] font-bold text-slate-500">
+                    <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                       Surah awal
                     </label>
                     <select
@@ -374,7 +374,7 @@ export default function InputSetoran({ profile }: Props) {
                         setAyatMulai(1)
                         setAyatAkhir(Math.min(7, surahByNo(n).ayat))
                       }}
-                      className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
                     >
                       {SURAH_LIST.map((s) => (
                         <option key={s.no} value={s.no}>
@@ -384,13 +384,13 @@ export default function InputSetoran({ profile }: Props) {
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-[11px] font-bold text-slate-500">
+                    <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                       Surah akhir
                     </label>
                     <select
                       value={surahAkhir}
                       onChange={(e) => setSurahAkhir(Number(e.target.value))}
-                      className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
                     >
                       {SURAH_LIST.filter((s) => s.no >= surahAwal).map((s) => (
                         <option key={s.no} value={s.no}>
@@ -400,9 +400,9 @@ export default function InputSetoran({ profile }: Props) {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="mb-1 block text-[11px] font-bold text-slate-500">
+                    <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                       Ayat mulai
                     </label>
                     <input
@@ -411,11 +411,11 @@ export default function InputSetoran({ profile }: Props) {
                       max={surahByNo(surahAwal).ayat}
                       value={ayatMulai}
                       onChange={(e) => setAyatMulai(Number(e.target.value) || 1)}
-                      className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[11px] font-bold text-slate-500">
+                    <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                       Ayat akhir
                     </label>
                     <input
@@ -424,24 +424,24 @@ export default function InputSetoran({ profile }: Props) {
                       max={surahByNo(surahAkhir).ayat}
                       value={ayatAkhir}
                       onChange={(e) => setAyatAkhir(Number(e.target.value) || 1)}
-                      className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
                     />
                   </div>
                 </div>
-                <p className="text-xs font-medium text-muted">
+                <p className="text-[11px] font-medium text-muted">
                   Total: {totalAyatNote} ayat
                 </p>
               </div>
             ) : (
-              <div className="mt-4 space-y-3">
+              <div className="mt-2.5 space-y-2">
                 <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-500">
+                  <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                     Buku Iqro
                   </label>
                   <select
                     value={bukuIqro}
                     onChange={(e) => setBukuIqro(Number(e.target.value))}
-                    className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
                   >
                     {[1, 2, 3, 4, 5, 6].map((n) => (
                       <option key={n} value={n}>
@@ -450,9 +450,9 @@ export default function InputSetoran({ profile }: Props) {
                     ))}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="mb-1 block text-[11px] font-bold text-slate-500">
+                    <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                       Halaman mulai
                     </label>
                     <input
@@ -460,11 +460,11 @@ export default function InputSetoran({ profile }: Props) {
                       min={1}
                       value={halMulai}
                       onChange={(e) => setHalMulai(Number(e.target.value) || 1)}
-                      className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[11px] font-bold text-slate-500">
+                    <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                       Halaman akhir
                     </label>
                     <input
@@ -472,7 +472,7 @@ export default function InputSetoran({ profile }: Props) {
                       min={1}
                       value={halAkhir}
                       onChange={(e) => setHalAkhir(Number(e.target.value) || 1)}
-                      className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
                     />
                   </div>
                 </div>
@@ -480,14 +480,14 @@ export default function InputSetoran({ profile }: Props) {
             )}
           </section>
 
-          <section className="rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5">
-            <h2 className="text-sm font-extrabold text-slate-800">
+          <section className="rounded-lg border border-border bg-white p-3">
+            <h2 className="text-[12.5px] font-semibold text-slate-800">
               3. Penilaian & catatan
             </h2>
 
             {jenis !== 'tahsin' && (
-              <div className="mt-3">
-                <label className="mb-1 block text-[11px] font-bold text-slate-500">
+              <div className="mt-2">
+                <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                   Status hafalan
                 </label>
                 <select
@@ -495,7 +495,7 @@ export default function InputSetoran({ profile }: Props) {
                   onChange={(e) =>
                     setStatusHafalan(e.target.value as StatusHafalan)
                   }
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
                 >
                   <option value="lulus">Lulus</option>
                   <option value="mengulang">Mengulang</option>
@@ -504,16 +504,16 @@ export default function InputSetoran({ profile }: Props) {
               </div>
             )}
 
-            <div className="mt-3">
-              <label className="mb-1 block text-[11px] font-bold text-slate-500">
+            <div className="mt-2">
+              <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                 Catatan guru (opsional)
               </label>
               <textarea
                 value={catatan}
                 onChange={(e) => setCatatan(e.target.value)}
-                rows={3}
+                rows={2}
                 placeholder="Catatan singkat…"
-                className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-muh-500 focus:ring-4 focus:ring-muh-500/15"
+                className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px] outline-none focus:border-muh-500 focus:ring-4 focus:ring-muh-500/15"
               />
             </div>
 
@@ -521,7 +521,7 @@ export default function InputSetoran({ profile }: Props) {
               type="button"
               disabled={saving}
               onClick={() => void handleSimpan()}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-muh-700 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-muh-800 disabled:opacity-60"
+              className="mt-2.5 flex w-full items-center justify-center rounded-md bg-muh-600 px-3 py-2 text-[12.5px] font-semibold text-white transition hover:bg-muh-700 disabled:opacity-60"
             >
               {saving ? 'Menyimpan…' : 'Simpan Setoran'}
             </button>

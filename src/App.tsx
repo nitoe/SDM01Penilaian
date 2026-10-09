@@ -15,9 +15,9 @@ import InputSetoran from './pages/tahsin/InputSetoran'
 function LoadingScreen() {
   return (
     <div className="flex min-h-full items-center justify-center bg-surface-2">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-9 w-9 animate-spin rounded-full border-[3px] border-muh-200 border-t-muh-700" />
-        <p className="text-sm font-medium text-muted">Memuat…</p>
+      <div className="flex flex-col items-center gap-2">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-muh-200 border-t-muh-600" />
+        <p className="text-[11px] text-muted">Memuat…</p>
       </div>
     </div>
   )

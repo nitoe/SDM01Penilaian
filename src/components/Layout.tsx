@@ -9,10 +9,10 @@ interface LayoutProps {
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   [
-    'flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition',
+    'block rounded-md px-2.5 py-1.5 text-[12.5px] font-medium transition',
     isActive
-      ? 'bg-muh-700 text-white shadow-sm'
-      : 'text-slate-600 hover:bg-muh-50 hover:text-muh-800',
+      ? 'bg-muh-600 text-white'
+      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
   ].join(' ')
 
 export default function Layout({ profile }: LayoutProps) {
@@ -30,31 +30,30 @@ export default function Layout({ profile }: LayoutProps) {
     isAdmin || profile.role === 'guru' || profile.role === 'guru_akademik'
 
   return (
-    <div className="min-h-full flex flex-col bg-surface-2">
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 border-b border-border bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <Link to="/" className="flex items-center gap-3 no-underline">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muh-700 text-sm font-extrabold text-white shadow-sm">
+    <div className="flex min-h-full flex-col bg-surface-2">
+      <header className="sticky top-0 z-30 border-b border-border bg-white">
+        <div className="mx-auto flex h-11 max-w-5xl items-center justify-between gap-3 px-3 sm:px-4">
+          <Link to="/" className="flex items-center gap-2 no-underline">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-muh-600 text-[10px] font-bold tracking-wide text-white">
               SD
             </div>
-            <div className="leading-tight">
-              <div className="text-sm font-extrabold text-muh-800 tracking-tight">
+            <div className="leading-none">
+              <div className="text-[13px] font-semibold text-slate-900">
                 SDM 01 Kukusan
               </div>
-              <div className="text-[11px] font-medium text-muted">Sistem Penilaian</div>
+              <div className="mt-0.5 text-[10px] text-muted">Sistem Penilaian</div>
             </div>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <div className="hidden text-right sm:block">
-              <div className="text-sm font-semibold text-slate-800">{profile.nama}</div>
-              <div className="text-[11px] text-muted">{ROLE_LABEL[profile.role]}</div>
+              <div className="text-[12px] font-medium text-slate-800">{profile.nama}</div>
+              <div className="text-[10px] text-muted">{ROLE_LABEL[profile.role]}</div>
             </div>
             <button
               type="button"
               onClick={handleLogout}
-              className="rounded-xl border border-border bg-white px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-muh-300 hover:text-muh-800"
+              className="rounded-md border border-border bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
             >
               Keluar
             </button>
@@ -62,26 +61,22 @@ export default function Layout({ profile }: LayoutProps) {
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-6 md:flex-row">
-        {/* Sidebar */}
-        <aside className="w-full shrink-0 md:w-56">
-          <nav className="flex flex-row gap-1 overflow-x-auto rounded-2xl border border-border bg-white p-2 md:flex-col">
+      <div className="mx-auto flex w-full max-w-5xl flex-1 gap-4 px-3 py-3 sm:px-4 sm:py-4">
+        <aside className="hidden w-40 shrink-0 md:block">
+          <nav className="sticky top-14 space-y-0.5 rounded-lg border border-border bg-white p-1.5">
             <NavLink to="/" end className={navClass}>
               Beranda
             </NavLink>
-
             {isGuruTahsin && (
               <NavLink to="/tahsin" className={navClass}>
                 Tahsin-Tahfizh
               </NavLink>
             )}
-
             {isGuruAkademik && (
               <NavLink to="/akademik" className={navClass}>
-                Akademik & Rapor
+                Akademik
               </NavLink>
             )}
-
             {isAdmin && (
               <NavLink to="/admin" className={navClass}>
                 Admin
@@ -90,14 +85,37 @@ export default function Layout({ profile }: LayoutProps) {
           </nav>
         </aside>
 
-        {/* Konten halaman */}
-        <main className="min-w-0 flex-1">
+        {/* Mobile nav */}
+        <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-white md:hidden">
+          <nav className="mx-auto flex max-w-5xl justify-around px-1 py-1">
+            <NavLink to="/" end className={navClass}>
+              Beranda
+            </NavLink>
+            {isGuruTahsin && (
+              <NavLink to="/tahsin" className={navClass}>
+                Tahsin
+              </NavLink>
+            )}
+            {isGuruAkademik && (
+              <NavLink to="/akademik" className={navClass}>
+                Akademik
+              </NavLink>
+            )}
+            {isAdmin && (
+              <NavLink to="/admin" className={navClass}>
+                Admin
+              </NavLink>
+            )}
+          </nav>
+        </div>
+
+        <main className="min-w-0 flex-1 pb-14 md:pb-0">
           <Outlet />
         </main>
       </div>
 
-      <footer className="border-t border-border py-4 text-center text-[11px] text-muted">
-        SD Muhammadiyah 01 Kukusan · Sistem Penilaian
+      <footer className="hidden border-t border-border py-2 text-center text-[10px] text-muted md:block">
+        SD Muhammadiyah 01 Kukusan
       </footer>
     </div>
   )
