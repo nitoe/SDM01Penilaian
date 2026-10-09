@@ -10,6 +10,7 @@ import TahsinHub from './pages/TahsinHub'
 import AkademikHub from './pages/AkademikHub'
 import AdminHub from './pages/AdminHub'
 import Placeholder from './pages/Placeholder'
+import InputSetoran from './pages/tahsin/InputSetoran'
 
 function LoadingScreen() {
   return (
@@ -43,13 +44,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public */}
         <Route
           path="/login"
           element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
         />
 
-        {/* Protected — butuh login + profil Firestore */}
         <Route
           element={
             isAuthenticated && profile ? (
@@ -59,26 +58,26 @@ export default function App() {
             )
           }
         >
-          <Route
-            path="/"
-            element={profile ? <Home profile={profile} /> : null}
-          />
+          <Route path="/" element={profile ? <Home profile={profile} /> : null} />
 
-          {/* Tahsin-Tahfizh */}
           <Route path="/tahsin" element={<TahsinHub />} />
+          <Route
+            path="/tahsin/input-setoran"
+            element={profile ? <InputSetoran profile={profile} /> : null}
+          />
           <Route path="/tahsin/*" element={<Placeholder />} />
 
-          {/* Akademik */}
           <Route path="/akademik" element={<AkademikHub />} />
           <Route path="/akademik/*" element={<Placeholder />} />
 
-          {/* Admin */}
           <Route path="/admin" element={<AdminHub />} />
           <Route path="/admin/*" element={<Placeholder />} />
         </Route>
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to={isAuthenticated ? '/' : '/login'} replace />} />
+        <Route
+          path="*"
+          element={<Navigate to={isAuthenticated ? '/' : '/login'} replace />}
+        />
       </Routes>
     </BrowserRouter>
   )

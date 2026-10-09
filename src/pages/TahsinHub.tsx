@@ -5,25 +5,25 @@ const items = [
     to: '/tahsin/input-setoran',
     title: 'Input Setoran',
     desc: 'Catat setoran hafalan / bacaan siswa.',
-    badge: 'Segera',
+    ready: true,
   },
   {
     to: '/tahsin/riwayat',
     title: 'Riwayat Siswa',
     desc: 'Lihat riwayat setoran per siswa.',
-    badge: 'Segera',
+    ready: false,
   },
   {
     to: '/tahsin/target',
     title: 'Target Hafalan',
     desc: 'Atur target hafalan per kelas / siswa.',
-    badge: 'Segera',
+    ready: false,
   },
   {
     to: '/tahsin/laporan',
     title: 'Cetak Laporan',
     desc: 'Generate laporan kemajuan tahsin-tahfizh.',
-    badge: 'Segera',
+    ready: false,
   },
 ]
 
@@ -33,8 +33,7 @@ export default function TahsinHub() {
       <div>
         <h1 className="text-xl font-extrabold text-slate-900">Tahsin & Tahfizh</h1>
         <p className="mt-1 text-sm text-muted">
-          Modul penilaian bacaan Al-Qur&apos;an dan hafalan. Halaman detail akan
-          dimigrasikan dari versi HTML.
+          Modul penilaian bacaan Al-Qur&apos;an dan hafalan.
         </p>
       </div>
 
@@ -49,8 +48,14 @@ export default function TahsinHub() {
               <div className="font-bold text-slate-900">{item.title}</div>
               <p className="mt-0.5 text-sm text-muted">{item.desc}</p>
             </div>
-            <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 ring-1 ring-amber-100">
-              {item.badge}
+            <span
+              className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 ${
+                item.ready
+                  ? 'bg-muh-50 text-muh-800 ring-muh-100'
+                  : 'bg-amber-50 text-amber-700 ring-amber-100'
+              }`}
+            >
+              {item.ready ? 'Siap' : 'Segera'}
             </span>
           </Link>
         ))}

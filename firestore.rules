@@ -1,16 +1,7 @@
 rules_version = '2';
 
-// ============================================================================
 // Firestore Security Rules — SDM 01 Kukusan (sdm01kukusan-2e735)
-//
-// Model akses (disederhanakan untuk scaffold):
-//   - Hanya user yang punya dokumen di koleksi `users` yang boleh akses.
-//   - role "admin"          → akses penuh
-//   - role "guru"           → baca/tulis data sesuai modul & kelasAmpu
-//   - role "orangtua"       → baca data anak sendiri (jika status approved)
-//
-// Aturan akan diperhalus saat migrasi modul Tahsin & Akademik.
-// ============================================================================
+// Koleksi Tahsin: siswa, setoran, target_hafalan, menulis_log, kktp_tahsin_tahfizh
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -28,7 +19,9 @@ service cloud.firestore {
     }
 
     function isGuru() {
-      return isLoggedIn() && myProfile().role in ['admin', 'guru', 'guru_tahsin_tahfizh', 'guru_akademik'];
+      return isLoggedIn() && myProfile().role in [
+        'admin', 'guru', 'guru_tahsin_tahfizh', 'guru_akademik'
+      ];
     }
 
     function isApprovedParent() {
@@ -37,7 +30,6 @@ service cloud.firestore {
         && myProfile().status == 'approved';
     }
 
-    // Profil user sendiri — boleh baca; tulis terbatas (admin saja untuk role)
     match /users/{uid} {
       allow read: if isLoggedIn() && (request.auth.uid == uid || isAdmin());
       allow create: if isLoggedIn() && request.auth.uid == uid;
@@ -48,21 +40,33 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Data siswa — guru & admin
+    match /siswa/{id} {
+      allow read: if isGuru() || isApprovedParent();
+      allow write: if isAdmin() || isGuru();
+    }
+
     match /students/{id} {
       allow read: if isGuru() || isApprovedParent();
       allow write: if isAdmin() || isGuru();
     }
 
-    // Modul Tahsin-Tahfizh (placeholder)
     match /setoran/{id} {
       allow read, write: if isGuru();
     }
+
     match /target_hafalan/{id} {
       allow read, write: if isGuru();
     }
 
-    // Modul Akademik (placeholder)
+    match /menulis_log/{id} {
+      allow read, write: if isGuru();
+    }
+
+    match /kktp_tahsin_tahfizh/{id} {
+      allow read: if isGuru();
+      allow write: if isAdmin();
+    }
+
     match /mapel/{id} {
       allow read, write: if isGuru();
     }
@@ -73,7 +77,6 @@ service cloud.firestore {
       allow read, write: if isGuru();
     }
 
-    // Default: tolak semua yang belum didefinisikan
     match /{document=**} {
       allow read, write: if false;
     }
