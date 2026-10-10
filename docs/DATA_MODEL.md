@@ -5,19 +5,19 @@ yang ada, siapa pemiliknya, kuncinya apa, dan siapa yang boleh baca/tulis.
 Kalau menambah koleksi atau field baru, ubah dokumen ini DAN `firestore.rules`
 dalam commit yang sama.
 
-## Keputusan yang masih terbuka
+## Keputusan
 
-| # | Keputusan | Kenapa penting |
-|---|-----------|----------------|
-| 1 | **Satu project Firebase sebagai sumber kebenaran.** v2 memakai `sdm01-penilaianv2`, repo ini memakai `sdm01kukusan-2e735`. | Data nyata (siswa hasil impor Dapodik, nilai, dll.) kemungkinan ada di project v2. Selama dua project hidup berdampingan, data pasti tumpang tindih. |
-| 2 | **ID siswa.** Saat ini ID dokumen = NIS. | NIS bisa berganti (v2 butuh fitur `gantiNis` yang memigrasi 8 koleksi). ID yang stabil (mis. auto-ID) + NIS sebagai field akan menghapus kebutuhan itu. |
+| # | Keputusan | Status |
+|---|-----------|--------|
+| 1 | **Satu project Firebase: `sdm01kukusan-2e735`.** Data dari `sdm01-penilaianv2` dipindahkan ke sana (Auth + Firestore), lalu v2 dibekukan. Caranya: **[MIGRASI_DATA.md](MIGRASI_DATA.md)**. | ✅ Diputuskan 10 Okt 2026 |
+| 2 | **ID siswa.** Saat ini ID dokumen = NIPD (atau NISN bila NIPD kosong); v2 memakai NIS. Pastikan keduanya sama untuk semua siswa sebelum cutover (lihat verifikasi di MIGRASI_DATA.md). | ⏳ Terbuka — NIS bisa berganti (v2 butuh `gantiNis` yang memigrasi 8 koleksi); ID stabil (auto-ID) + NIPD sebagai field akan menghapus kebutuhan itu. |
 
 ## Koleksi yang SUDAH dipakai kode di repo ini
 
 | Koleksi | ID dokumen | Isi | Baca | Tulis |
 |---------|-----------|-----|------|-------|
 | `users` | UID Firebase Auth | `email, nama, role, kelasAmpu[], status, anakIds[], penugasan[]` | diri sendiri / admin | admin; pemilik hanya `nama` |
-| `siswa` | NIS | `nis, nama, kelas, jenjang ('iqro'\|'quran'), aktif, tamatIqro` | semua guru; orang tua hanya `get` anaknya | admin; guru Tahsin hanya `tamatIqro` |
+| `siswa` | NIPD (atau NISN) | `nipd, nis, nisn, nama, kelas, jenjang ('iqro'\|'quran'), aktif, tamatIqro, jk, tempatLahir, tanggalLahir, agama, alamat, rt, rw, kelurahan, kecamatan, kodePos, hp, email, ayahNama, ayahPekerjaan, ibuNama, ibuPekerjaan, sekolahAsal, beratBadan, tinggiBadan` | semua guru; orang tua hanya `get` anaknya | admin; guru Tahsin hanya `tamatIqro` |
 | `setoran` | auto | `siswaId, siswaNama, kelas, jenjang, jenis, materi, detailAyat, detailBacaanIqro, statusHafalan, catatan, createdBy, createdByNama, createdAt` | guru kelas terkait / orang tua anaknya | `create` oleh guru kelas terkait (`createdBy == uid`); immutable; hapus admin |
 | `menulis_log` | auto | `siswaId, siswaNama, kelas, materi, catatan, tanggalPeriksa, createdBy, createdAt` | sama dengan `setoran` | sama dengan `setoran` |
 | `target_hafalan` | kode kelas | target per kelas per semester | semua guru | guru kelas terkait / admin |

@@ -324,7 +324,7 @@ export function siswaToCsv(list: SiswaTahsin[]): string {
     lines.push(
       CSV_HEADERS.map((h) => {
         if (h === 'nipd') return esc(s.nipd || s.nis || s.id)
-        return esc((s as Record<string, unknown>)[h])
+        return esc((s as unknown as Record<string, unknown>)[h])
       }).join(','),
     )
   }

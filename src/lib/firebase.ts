@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, initializeFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 
 /**
@@ -18,11 +18,17 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:000000000000:web:placeholder',
 }
 
-const app = getApps().length ? getApps()[0]! : initializeApp(firebaseConfig)
+const isNewApp = getApps().length === 0
+const app = isNewApp ? initializeApp(firebaseConfig) : getApps()[0]!
 
 export { app }
 export const auth = getAuth(app)
-export const db = getFirestore(app)
+// ignoreUndefinedProperties: normalizeSiswa() menghasilkan field `undefined` untuk kolom
+// yang kosong. Tanpa opsi ini setDoc/set melempar "Unsupported field value: undefined".
+// initializeFirestore hanya boleh dipanggil sekali per app (HMR → pakai getFirestore).
+export const db = isNewApp
+  ? initializeFirestore(app, { ignoreUndefinedProperties: true })
+  : getFirestore(app)
 export const storage = getStorage(app)
 export { firebaseConfig }
 

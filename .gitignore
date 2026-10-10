@@ -31,3 +31,10 @@ dist-ssr
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# Kunci service account & laporan migrasi (JANGAN di-commit)
+service-account*.json
+serviceAccount*.json
+*-adminsdk-*.json
+*-key.json
+migrasi-laporan-*.json
