@@ -20,10 +20,19 @@
   --color-gold-400: #c49a2a;
   --color-gold-500: #a8821e;
 
+  --color-peach-50: #fff4ec;
+  --color-peach-100: #ffe4d0;
+  --color-peach-200: #fdc9a2;
+  --color-peach-300: #f9ab76;
+  --color-peach-400: #f08e50;
+  --color-peach-500: #d9722f;
+
   --color-surface: #ffffff;
-  --color-surface-2: #f0f2f5;
-  --color-border: #e8ecf0;
+  --color-surface-2: #f4f5f3;
+  --color-border: #e9ece9;
   --color-muted: #6b7280;
+
+  --radius-card: 1.25rem;
 }
 
 html, body, #root { height: 100%; }
@@ -31,7 +40,7 @@ html, body, #root { height: 100%; }
 body {
   margin: 0;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  font-size: 13.5px;
+  font-size: 14px;
   line-height: 1.5;
   background: var(--color-surface-2);
   color: #1e293b;
@@ -46,6 +55,17 @@ body {
 .card-soft {
   background: #fff;
   border: 1px solid var(--color-border);
-  border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03);
+  border-radius: var(--radius-card);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03), 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+/* Banner hijau sekolah dengan pendar peach di pojok kanan atas. Teks putih tetap di area hijau (kontras AA). */
+.hero-banner {
+  background:
+    radial-gradient(420px 220px at 100% 0%, rgba(240, 142, 80, 0.55), transparent 70%),
+    linear-gradient(135deg, var(--color-muh-600) 0%, var(--color-muh-800) 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

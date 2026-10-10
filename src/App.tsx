@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import type { User } from 'firebase/auth'
 import { subscribeAuth } from './lib/auth'
+import { canAkademik, canTahsin, isAdminRole } from './lib/roles'
 import type { AppUser } from './types/user'
 import Layout from './components/Layout'
 import Login from './pages/Login'
@@ -13,6 +14,11 @@ import Placeholder from './pages/Placeholder'
 import InputSetoran from './pages/tahsin/InputSetoran'
 import RiwayatSiswa from './pages/tahsin/RiwayatSiswa'
 import DataSiswa from './pages/admin/DataSiswa'
+
+/** Menjaga rute per role di sisi UI. Penegakan sebenarnya tetap di firestore.rules. */
+function RoleGate({ allow }: { allow: boolean }) {
+  return allow ? <Outlet /> : <Navigate to="/" replace />
+}
 
 function LoadingScreen() {
   return (
@@ -62,26 +68,32 @@ export default function App() {
         >
           <Route path="/" element={profile ? <Home profile={profile} /> : null} />
 
-          <Route path="/tahsin" element={<TahsinHub />} />
-          <Route
-            path="/tahsin/input-setoran"
-            element={profile ? <InputSetoran profile={profile} /> : null}
-          />
-          <Route
-            path="/tahsin/riwayat"
-            element={profile ? <RiwayatSiswa profile={profile} /> : null}
-          />
-          <Route path="/tahsin/*" element={<Placeholder />} />
+          <Route element={<RoleGate allow={profile ? canTahsin(profile.role) : false} />}>
+            <Route path="/tahsin" element={<TahsinHub />} />
+            <Route
+              path="/tahsin/input-setoran"
+              element={profile ? <InputSetoran profile={profile} /> : null}
+            />
+            <Route
+              path="/tahsin/riwayat"
+              element={profile ? <RiwayatSiswa profile={profile} /> : null}
+            />
+            <Route path="/tahsin/*" element={<Placeholder />} />
+          </Route>
 
-          <Route path="/akademik" element={<AkademikHub />} />
-          <Route path="/akademik/*" element={<Placeholder />} />
+          <Route element={<RoleGate allow={profile ? canAkademik(profile.role) : false} />}>
+            <Route path="/akademik" element={<AkademikHub />} />
+            <Route path="/akademik/*" element={<Placeholder />} />
+          </Route>
 
-          <Route path="/admin" element={<AdminHub />} />
-          <Route
-            path="/admin/siswa"
-            element={profile ? <DataSiswa profile={profile} /> : null}
-          />
-          <Route path="/admin/*" element={<Placeholder />} />
+          <Route element={<RoleGate allow={profile ? isAdminRole(profile.role) : false} />}>
+            <Route path="/admin" element={<AdminHub />} />
+            <Route
+              path="/admin/siswa"
+              element={profile ? <DataSiswa profile={profile} /> : null}
+            />
+            <Route path="/admin/*" element={<Placeholder />} />
+          </Route>
         </Route>
 
         <Route

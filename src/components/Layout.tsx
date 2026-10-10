@@ -1,33 +1,85 @@
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { logout } from '../lib/auth'
+import { canAkademik, canTahsin, isAdminRole } from '../lib/roles'
 import type { AppUser } from '../types/user'
 import { ROLE_LABEL } from '../types/user'
+import Icon, { type IconName } from './Icon'
 
 interface LayoutProps {
   profile: AppUser
 }
 
-const navClass = ({ isActive }: { isActive: boolean }) =>
+interface NavItem {
+  to: string
+  label: string
+  short: string
+  icon: IconName
+  end?: boolean
+  show: boolean
+}
+
+function sectionTitle(pathname: string): string {
+  if (pathname.startsWith('/tahsin')) return 'Tahsin & Tahfizh'
+  if (pathname.startsWith('/akademik')) return 'Akademik & Rapor'
+  if (pathname.startsWith('/admin')) return 'Administrasi'
+  return 'Beranda'
+}
+
+const TANGGAL = new Intl.DateTimeFormat('id-ID', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+})
+
+const sideLink = ({ isActive }: { isActive: boolean }) =>
   [
-    'flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium transition-colors',
+    'flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-[14px] font-medium transition-colors',
     isActive
-      ? 'bg-muh-50 text-muh-800'
-      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
+      ? 'bg-peach-50 text-peach-500'
+      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+  ].join(' ')
+
+const tabLink = ({ isActive }: { isActive: boolean }) =>
+  [
+    'flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10.5px] font-medium transition-colors',
+    isActive ? 'text-peach-500' : 'text-slate-500',
   ].join(' ')
 
 export default function Layout({ profile }: LayoutProps) {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
 
   async function handleLogout() {
     await logout()
     navigate('/login', { replace: true })
   }
 
-  const isAdmin = profile.role === 'admin'
-  const isGuruTahsin =
-    isAdmin || profile.role === 'guru' || profile.role === 'guru_tahsin_tahfizh'
-  const isGuruAkademik =
-    isAdmin || profile.role === 'guru' || profile.role === 'guru_akademik'
+  const items: NavItem[] = [
+    { to: '/', label: 'Beranda', short: 'Beranda', icon: 'home', end: true, show: true },
+    {
+      to: '/tahsin',
+      label: 'Tahsin-Tahfizh',
+      short: 'Tahsin',
+      icon: 'quran',
+      show: canTahsin(profile.role),
+    },
+    {
+      to: '/akademik',
+      label: 'Akademik & Rapor',
+      short: 'Akademik',
+      icon: 'clipboard',
+      show: canAkademik(profile.role),
+    },
+    {
+      to: '/admin',
+      label: 'Administrasi',
+      short: 'Admin',
+      icon: 'settings',
+      show: isAdminRole(profile.role),
+    },
+  ]
+  const visible = items.filter((i) => i.show)
 
   const initials = profile.nama
     .split(' ')
@@ -37,120 +89,97 @@ export default function Layout({ profile }: LayoutProps) {
     .toUpperCase()
 
   return (
-    <div className="flex min-h-full bg-surface-2">
-      {/* Sidebar desktop */}
-      <aside className="sticky top-0 hidden h-screen w-[220px] shrink-0 flex-col border-r border-border bg-white md:flex">
-        <div className="flex items-center gap-2.5 px-4 py-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-muh-600 to-muh-800 text-[11px] font-bold text-white shadow-sm">
-            SD
-          </div>
-          <div className="min-w-0 leading-tight">
-            <div className="truncate text-[13px] font-semibold text-slate-900">
-              SDM 01 Kukusan
-            </div>
-            <div className="text-[10px] text-muted">Sistem Penilaian</div>
-          </div>
-        </div>
-
-        <nav className="flex-1 space-y-0.5 px-2.5 py-1">
-          <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-            Menu
-          </p>
-          <NavLink to="/" end className={navClass}>
-            <span className="text-[14px] opacity-70">⌂</span>
-            Beranda
-          </NavLink>
-          {isGuruTahsin && (
-            <NavLink to="/tahsin" className={navClass}>
-              <span className="text-[14px] opacity-70">ق</span>
-              Tahsin-Tahfizh
-            </NavLink>
-          )}
-          {isGuruAkademik && (
-            <NavLink to="/akademik" className={navClass}>
-              <span className="text-[14px] opacity-70">☰</span>
-              Akademik
-            </NavLink>
-          )}
-          {isAdmin && (
-            <NavLink to="/admin" className={navClass}>
-              <span className="text-[14px] opacity-70">⚙</span>
-              Admin
-            </NavLink>
-          )}
-        </nav>
-
-        <div className="border-t border-border p-3">
-          <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-2.5 py-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muh-100 text-[11px] font-semibold text-muh-800">
-              {initials}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-[12px] font-medium text-slate-800">
-                {profile.nama}
+    <div className="flex min-h-full bg-surface-2 md:p-3">
+      <div className="flex min-h-full w-full overflow-hidden bg-white md:min-h-[calc(100vh-1.5rem)] md:rounded-[28px] md:border md:border-border md:shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
+        {/* Sidebar desktop */}
+        <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-border bg-white px-4 py-5 md:flex md:h-[calc(100vh-1.5rem)]">
+          <Link to="/" className="flex items-center gap-3 px-1 no-underline">
+            <img src="/favicon-32.png" alt="" className="h-9 w-9 rounded-xl" />
+            <div className="min-w-0 leading-tight">
+              <div className="truncate text-[15px] font-semibold text-slate-900">
+                SDM 01 Kukusan
               </div>
-              <div className="truncate text-[10px] text-muted">
-                {ROLE_LABEL[profile.role]}
-              </div>
+              <div className="text-[11px] text-muted">Sistem Penilaian</div>
             </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="mt-2 w-full rounded-xl px-3 py-1.5 text-left text-[12px] font-medium text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
-          >
-            Keluar
-          </button>
-        </div>
-      </aside>
-
-      {/* Main column */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile top bar */}
-        <header className="sticky top-0 z-20 flex h-12 items-center justify-between border-b border-border bg-white/90 px-3 backdrop-blur md:hidden">
-          <Link to="/" className="flex items-center gap-2 no-underline">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-muh-600 text-[10px] font-bold text-white">
-              SD
-            </div>
-            <span className="text-[13px] font-semibold text-slate-900">SDM 01</span>
           </Link>
+
+          <nav className="mt-7 flex-1 space-y-1">
+            <p className="mb-2 px-3.5 text-[11px] font-semibold text-slate-400">Menu</p>
+            {visible.map((i) => (
+              <NavLink key={i.to} to={i.to} end={i.end} className={sideLink}>
+                <Icon name={i.icon} />
+                {i.label}
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="hero-banner rounded-2xl p-4 text-white">
+            <p className="text-[11px] text-muh-100/85">Masuk sebagai</p>
+            <p className="mt-0.5 truncate text-[13.5px] font-semibold">{profile.nama}</p>
+            <p className="mt-0.5 text-[11.5px] text-muh-100/85">
+              {ROLE_LABEL[profile.role]}
+              {profile.kelasAmpu?.length ? ` · ${profile.kelasAmpu.join(', ')}` : ''}
+            </p>
+          </div>
+
           <button
             type="button"
             onClick={handleLogout}
-            className="rounded-lg border border-border px-2.5 py-1 text-[11px] font-medium text-slate-600"
+            className="mt-3 flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-[14px] font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
           >
+            <Icon name="logout" />
             Keluar
           </button>
-        </header>
+        </aside>
 
-        <main className="flex-1 overflow-auto p-3 pb-20 sm:p-5 md:pb-5">
-          <div className="mx-auto max-w-5xl">
-            <Outlet />
-          </div>
-        </main>
+        {/* Kolom utama */}
+        <div className="flex min-w-0 flex-1 flex-col bg-surface-2/60">
+          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-white/90 px-4 py-3 backdrop-blur sm:px-6 md:py-4">
+            <div className="min-w-0">
+              <h2 className="truncate text-[18px] font-semibold tracking-tight text-slate-900 sm:text-[20px]">
+                {sectionTitle(pathname)}
+              </h2>
+              <p className="text-[12px] text-muted">{TANGGAL.format(new Date())}</p>
+            </div>
 
-        {/* Mobile bottom nav */}
-        <nav className="fixed bottom-0 left-0 right-0 z-20 flex border-t border-border bg-white/95 px-1 py-1 backdrop-blur md:hidden">
-          <NavLink to="/" end className={navClass + ' flex-1 justify-center'}>
-            Beranda
-          </NavLink>
-          {isGuruTahsin && (
-            <NavLink to="/tahsin" className={navClass + ' flex-1 justify-center'}>
-              Tahsin
-            </NavLink>
-          )}
-          {isGuruAkademik && (
-            <NavLink to="/akademik" className={navClass + ' flex-1 justify-center'}>
-              Akademik
-            </NavLink>
-          )}
-          {isAdmin && (
-            <NavLink to="/admin" className={navClass + ' flex-1 justify-center'}>
-              Admin
-            </NavLink>
-          )}
-        </nav>
+            <div className="flex items-center gap-2.5">
+              <div className="hidden min-w-0 text-right sm:block">
+                <div className="truncate text-[13px] font-medium text-slate-800">
+                  {profile.nama}
+                </div>
+                <div className="text-[11px] text-muted">{ROLE_LABEL[profile.role]}</div>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-peach-100 text-[13px] font-semibold text-peach-500">
+                {initials}
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                aria-label="Keluar"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-slate-500 transition hover:bg-slate-50 md:hidden"
+              >
+                <Icon name="logout" />
+              </button>
+            </div>
+          </header>
+
+          <main className="flex-1 p-4 pb-24 sm:p-6 md:pb-6">
+            <div className="mx-auto max-w-5xl">
+              <Outlet />
+            </div>
+          </main>
+        </div>
       </div>
+
+      {/* Navigasi bawah (mobile) */}
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur md:hidden">
+        {visible.map((i) => (
+          <NavLink key={i.to} to={i.to} end={i.end} className={tabLink}>
+            <Icon name={i.icon} className="h-5 w-5" />
+            {i.short}
+          </NavLink>
+        ))}
+      </nav>
     </div>
   )
 }
