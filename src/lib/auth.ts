@@ -42,6 +42,9 @@ export async function fetchUserProfile(uid: string): Promise<AppUser | null> {
     status: data.status,
     anakIds: data.anakIds,
     penugasan: data.penugasan,
+    waliKelas: data.waliKelas,
+    penugasanKelas: data.penugasanKelas,
+    penugasanKelasMapel: data.penugasanKelasMapel,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
   }

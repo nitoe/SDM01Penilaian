@@ -14,7 +14,6 @@ import {
   upsertSiswaBatch,
   type SiswaInput,
 } from '../../lib/siswaAdmin'
-import siswaSeed from '../../data/siswaSeed.json'
 
 interface Props {
   profile: AppUser
@@ -164,26 +163,6 @@ export default function DataSiswa({ profile }: Props) {
     }
   }
 
-  async function handleImportSeed() {
-    if (
-      !window.confirm(
-        `Impor ${siswaSeed.length} siswa dari data resmi sekolah (merge by NIPD)? Data yang sama akan diperbarui.`,
-      )
-    )
-      return
-    setBusy(true)
-    try {
-      const n = await upsertSiswaBatch(siswaSeed as SiswaInput[])
-      showToast(`${n} siswa berhasil diimpor.`)
-      await load()
-    } catch (err) {
-      console.error(err)
-      showToast('Gagal impor data seed. Cek rules & koneksi.', true)
-    } finally {
-      setBusy(false)
-    }
-  }
-
   function handlePreview() {
     const rows = parseSiswaText(importText)
     setImportPreview(rows)
@@ -327,14 +306,6 @@ export default function DataSiswa({ profile }: Props) {
                   </button>
                 ))}
               </div>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void handleImportSeed()}
-                className="rounded-xl border border-dashed border-muh-300 bg-muh-50 px-3 py-1.5 text-[11px] font-semibold text-muh-800 hover:bg-muh-100 disabled:opacity-50"
-              >
-                {busy ? 'Mengimpor…' : `Impor ${siswaSeed.length} data resmi`}
-              </button>
             </div>
 
             <input
@@ -350,7 +321,7 @@ export default function DataSiswa({ profile }: Props) {
                 <p className="p-6 text-center text-[12px] text-muted">Memuat…</p>
               ) : filtered.length === 0 ? (
                 <div className="p-6 text-center text-[12px] text-muted">
-                  Belum ada data. Gunakan tombol impor data resmi atau Tambah manual. </div>
+                  Belum ada data. Gunakan menu Impor (CSV/Dapodik) atau Tambah manual. </div>
               ) : (
                 <table className="w-full text-left text-[12px]">
                   <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
@@ -703,14 +674,6 @@ export default function DataSiswa({ profile }: Props) {
               Nama, NIPD, JK, NISN, …). NIPD dipakai sebagai ID (upsert).
             </p>
           </div>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void handleImportSeed()}
-            className="rounded-xl bg-muh-600 px-3 py-2 text-[12px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
-          >
-            {busy ? 'Mengimpor…' : `Impor langsung ${siswaSeed.length} data resmi sekolah`}
-          </button>
           <textarea
             value={importText}
             onChange={(e) => {

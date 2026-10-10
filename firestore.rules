@@ -69,6 +69,27 @@ service cloud.firestore {
       );
     }
 
+
+    // ---- Akademik: akses per kelas+mapel & wali kelas -----------------------
+    // Rules tidak bisa menelusuri array of map, jadi dibaca dari field DATAR yang
+    // diturunkan dari `penugasan` (lib/penugasan.ts → turunkanFieldRules()):
+    //   penugasanKelasMapel = ["4A::Matematika", ...]   penugasanKelas = ["4A", ...]
+    //   waliKelas           = ["4A", ...]
+    // Field ini WAJIB sinkron dengan `penugasan` (lihat ANTIREGRESI §6).
+    function bolehMapelKelas(mapel, kelas) {
+      return isLoggedIn() && (
+        myRole() == 'admin' ||
+        (myRole() == 'guru_akademik' && (kelas + '::' + mapel) in myProfile().penugasanKelasMapel)
+      );
+    }
+
+    function bolehWaliKelas(kelas) {
+      return isLoggedIn() && (
+        myRole() == 'admin' ||
+        (myRole() == 'guru_akademik' && kelas in myProfile().waliKelas)
+      );
+    }
+
     // ---- users/{uid} -----------------------------------------------------
     // Guru/admin dibuat admin (Console atau halaman admin). Pendaftaran mandiri
     // HANYA sebagai orang tua berstatus pending, dengan daftar field terbatas.
@@ -147,6 +168,24 @@ service cloud.firestore {
     match /tp_kktp/{id} {
       allow read: if isGuru();
       allow write: if isGuruAkademik();
+    }
+
+    // Semester & tahun ajaran aktif (+ profil sekolah untuk rapor). Satu dokumen.
+    match /config/akademik {
+      allow read: if isGuru();
+      allow write: if isAdmin();
+    }
+
+    // Nilai SLM: satu dokumen per (siswa x TP x semester x tahun ajaran).
+    // Query klien WAJIB menyertakan where mapel DAN kelas (ANTIREGRESI §1 / v2 §1.1).
+    match /nilai_tp/{id} {
+      allow read: if bolehMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow update: if bolehMapelKelas(resource.data.mapel, resource.data.kelas)
+                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow delete: if isAdmin();
     }
 
     // ---- Default: tolak semuanya -------------------------------------------

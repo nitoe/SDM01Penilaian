@@ -38,3 +38,9 @@ serviceAccount*.json
 *-adminsdk-*.json
 *-key.json
 migrasi-laporan-*.json
+
+# Data pribadi siswa: JANGAN di-commit & jangan diimpor ke kode frontend (ikut terbundel ke JS publik)
+src/data/*.json
+*seed*.json
+*Dapodik*.xlsx
+*dapodik*.xlsx

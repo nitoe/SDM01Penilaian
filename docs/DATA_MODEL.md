@@ -22,8 +22,13 @@ dalam commit yang sama.
 | `menulis_log` | auto | `siswaId, siswaNama, kelas, materi, catatan, tanggalPeriksa, createdBy, createdAt` | sama dengan `setoran` | sama dengan `setoran` |
 | `target_hafalan` | kode kelas | target per kelas per semester | semua guru | guru kelas terkait / admin |
 | `kktp_tahsin_tahfizh` | jenjang | warisan v2, tidak aktif dipakai | semua guru | admin |
+| `config` (dok. `akademik`) | `akademik` | `semesterAktif, tahunAjaran`, profil sekolah untuk rapor | semua guru | admin |
+| `mapel` | nama mapel | `nama, urutan, tingkatanBerlaku[]` | semua guru | admin |
+| `tp_kktp` | auto | `mapel, tingkatan, fase, nomorTp, namaTp, cp, tipe, bobotSlm, bobotSas, bobotMapel, semester, levels[4]` | semua guru | `guru_akademik` (bukan admin) |
+| `nilai_tp` | auto | `tpId, siswaId, mapel, kelas, tingkatan, semester, tahunAjaran, slm, createdBy` | admin; `guru_akademik` untuk `kelas::mapel` penugasannya | sama dengan baca |
 
 **Role** (`users.role`): `admin`, `guru`, `guru_tahsin_tahfizh`, `guru_akademik`, `orangtua`.
+Field `users` untuk guru akademik: `penugasan[{kelas,mapel}]`, `waliKelas[]`, dan dua field turunan yang dibaca rules: `penugasanKelas[]`, `penugasanKelasMapel[]` ("4A::Matematika"). Turunan harus selalu sinkron (ANTIREGRESI §7.4).
 `orangtua` baru bisa mengakses data setelah `status == 'approved'`.
 
 ## Koleksi yang BELUM dimigrasi (ada di v2)
@@ -34,7 +39,7 @@ berupa placeholder.
 
 | Modul | Koleksi v2 |
 |-------|------------|
-| Akademik inti | `mapel`, `tp_kktp`, `config/akademik`, `nilai_tp`, `nilai_sts`, `nilai_sas`, `asesmen_cakupan` |
+| Akademik inti | `nilai_sts`, `nilai_sas`, `asesmen_cakupan` (`mapel`, `tp_kktp`, `config/akademik`, `nilai_tp` sudah dimigrasi) |
 | Rapor | `absensi_rapor`, `kokurikuler_rapor`, `identitas_siswa` |
 | Kokurikuler | `dpl`, `kokurikuler`, `proyek_stem`, `g7kaih` |
 | Ekstrakurikuler | `ekstrakurikuler`, `ekstrakurikuler_siswa` |

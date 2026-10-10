@@ -21,6 +21,15 @@ export interface AppUser {
   anakIds?: string[]
   /** Penugasan mapel (untuk guru akademik) */
   penugasan?: { kelas: string; mapel: string }[]
+  /** Kelas tempat guru menjadi wali kelas (guru akademik). */
+  waliKelas?: string[]
+  /**
+   * Field datar turunan `penugasan`, dibaca firestore.rules (rules tidak bisa menelusuri array
+   * of map). WAJIB sinkron dengan `penugasan` — lihat `turunkanFieldRules()` di lib/penugasan.ts.
+   */
+  penugasanKelas?: string[]
+  /** Format "KELAS::MAPEL", mis. "4A::Matematika". */
+  penugasanKelasMapel?: string[]
   createdAt?: string
   updatedAt?: string
 }

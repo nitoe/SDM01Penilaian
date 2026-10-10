@@ -14,6 +14,9 @@ import Placeholder from './pages/Placeholder'
 import InputSetoran from './pages/tahsin/InputSetoran'
 import RiwayatSiswa from './pages/tahsin/RiwayatSiswa'
 import DataSiswa from './pages/admin/DataSiswa'
+import SetupTp from './pages/akademik/SetupTp'
+import BobotSemester from './pages/akademik/BobotSemester'
+import NilaiSlm from './pages/akademik/NilaiSlm'
 
 /** Menjaga rute per role di sisi UI. Penegakan sebenarnya tetap di firestore.rules. */
 function RoleGate({ allow }: { allow: boolean }) {
@@ -83,6 +86,12 @@ export default function App() {
 
           <Route element={<RoleGate allow={profile ? canAkademik(profile.role) : false} />}>
             <Route path="/akademik" element={<AkademikHub />} />
+            <Route path="/akademik/setup-tp" element={profile ? <SetupTp profile={profile} /> : null} />
+            <Route
+              path="/akademik/bobot-semester"
+              element={profile ? <BobotSemester profile={profile} /> : null}
+            />
+            <Route path="/akademik/nilai-slm" element={profile ? <NilaiSlm profile={profile} /> : null} />
             <Route path="/akademik/*" element={<Placeholder />} />
           </Route>
 
