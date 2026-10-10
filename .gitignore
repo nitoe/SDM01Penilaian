@@ -50,3 +50,6 @@ src/data/*.json
 *.xls
 src/data/
 
+# Patch/diff bisa memuat salinan data (fase1.patch pernah memuat data 403 siswa)
+*.patch
+*.diff

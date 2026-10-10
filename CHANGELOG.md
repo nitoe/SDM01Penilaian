@@ -61,3 +61,7 @@
 - `firestore.rules`: koleksi `identitas_siswa` (admin + wali kelas), mengembalikan pola v2.
 - `docs/IMPOR_SISWA.md` (baru), `docs/DATA_MODEL.md` (skema dan pemetaan), `.gitignore` (`*.xlsx`, `*.xls`, `src/data/`).
 
+## Belum dirilis (basis: package.json 0.1.0) — Hapus identitas nyata dari contoh template
+
+- `src/pages/admin/DataSiswa.tsx`: baris contoh pada "Unduh template" memakai NIPD/NISN siswa sungguhan; diganti nilai palsu (`000000001`, `0000000001`). `.gitignore`: `*.patch` dan `*.diff` ditolak karena `fase1.patch` ternyata memuat data 403 siswa.
+

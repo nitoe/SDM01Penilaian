@@ -777,7 +777,7 @@ export default function DataSiswa({ profile }: Props) {
                   downloadText(
                     'template-siswa.csv',
                     CSV_HEADERS.join(',') +
-                      '\n262701001,3199520020,Contoh Siswa,1A,L,Depok,2019-01-01,Islam,,,,,,,,,,,,,,',
+                      '\n000000001,0000000001,Contoh Siswa,1A,L,Depok,2019-01-01,Islam,,,,,,,,,,,,,,',
                   )
                 }
                 className="rounded-xl border border-border px-3 py-1.5 text-[12px] font-medium text-slate-600"
