@@ -44,3 +44,9 @@ src/data/*.json
 *seed*.json
 *Dapodik*.xlsx
 *dapodik*.xlsx
+
+# Data pribadi siswa: jangan pernah di-commit
+*.xlsx
+*.xls
+src/data/
+

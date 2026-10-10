@@ -112,7 +112,8 @@ service cloud.firestore {
     }
 
     // ---- siswa/{id} ------------------------------------------------------
-    // ID dokumen = NIS. Guru boleh baca roster. Tulis khusus admin, kecuali
+    // Data DASAR saja (nama, NIPD/NIS, NISN, kelas, jenjang, aktif, tamatIqro, tempat/tanggal lahir).
+    // Biodata sensitif ada di identitas_siswa. Guru boleh baca roster. Tulis khusus admin, kecuali
     // guru Tahsin-Tahfizh yang boleh mengubah HANYA field tamatIqro.
     match /siswa/{id} {
       allow get: if isGuru() || anakSaya(id);
@@ -122,6 +123,15 @@ service cloud.firestore {
         || (isGuruTahsin()
             && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['tamatIqro']));
+    }
+
+    // ---- identitas_siswa/{id} -----------------------------------------------
+    // Biodata sensitif (alamat, HP, email, data orang tua, sekolah asal, berat/tinggi badan).
+    // ID dokumen = ID siswa. Hanya admin dan wali kelas siswa tersebut (v2 antiregresi §12).
+    // SENGAJA tidak ada akses guru lain maupun orang tua. Jangan memindahkan field ini kembali ke `siswa`.
+    match /identitas_siswa/{id} {
+      allow read, write: if isAdmin()
+        || bolehWaliKelas(get(/databases/$(database)/documents/siswa/$(id)).data.kelas);
     }
 
     // ---- Tahsin-Tahfizh --------------------------------------------------

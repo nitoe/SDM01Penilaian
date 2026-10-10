@@ -17,7 +17,8 @@ dalam commit yang sama.
 | Koleksi | ID dokumen | Isi | Baca | Tulis |
 |---------|-----------|-----|------|-------|
 | `users` | UID Firebase Auth | `email, nama, role, kelasAmpu[], status, anakIds[], penugasan[]` | diri sendiri / admin | admin; pemilik hanya `nama` |
-| `siswa` | NIPD (atau NISN) | `nipd, nis, nisn, nama, kelas, jenjang ('iqro'\|'quran'), aktif, tamatIqro, jk, tempatLahir, tanggalLahir, agama, alamat, rt, rw, kelurahan, kecamatan, kodePos, hp, email, ayahNama, ayahPekerjaan, ibuNama, ibuPekerjaan, sekolahAsal, beratBadan, tinggiBadan` | semua guru; orang tua hanya `get` anaknya | admin; guru Tahsin hanya `tamatIqro` |
+| `siswa` | NIPD (atau NISN) | **Data dasar:** `nipd, nis, nisn, nama, kelas, jenjang ('iqro'\|'quran'), aktif, tamatIqro, tempatLahir, tanggalLahir` | semua guru; orang tua hanya `get` anaknya | admin; guru Tahsin hanya `tamatIqro` |
+| `identitas_siswa` | sama dengan `siswa` | **Biodata sensitif** (nama kunci mengikuti v2): `jenisKelamin, agama, alamatSiswa, rt, rw, kelurahan, kecamatan, kodePos, hp, email, namaAyah, pekerjaanAyah, namaIbu, pekerjaanIbu, sekolahAsal, beratBadan, tinggiBadan` (+ `statusDalamKeluarga, anakKe, teleponRumah, diterimaDiKelas, diterimaTanggal, namaWali, alamatWali, teleponWali, pekerjaanWali, alamatOrangTua` dari modul Rapor) | admin + wali kelas siswa itu | admin + wali kelas siswa itu |
 | `setoran` | auto | `siswaId, siswaNama, kelas, jenjang, jenis, materi, detailAyat, detailBacaanIqro, statusHafalan, catatan, createdBy, createdByNama, createdAt` | guru kelas terkait / orang tua anaknya | `create` oleh guru kelas terkait (`createdBy == uid`); immutable; hapus admin |
 | `menulis_log` | auto | `siswaId, siswaNama, kelas, materi, catatan, tanggalPeriksa, createdBy, createdAt` | sama dengan `setoran` | sama dengan `setoran` |
 | `target_hafalan` | kode kelas | target per kelas per semester | semua guru | guru kelas terkait / admin |
@@ -64,3 +65,20 @@ Koleksi yang menyimpan `siswaId` (harus ikut dimigrasi bila ID siswa berubah):
 - `users.kelasAmpu` khusus **guru Tahsin-Tahfizh** (dibaca rules untuk `setoran`). Kelas guru akademik berasal dari
   `waliKelas` dan `penugasan` — jangan memakai `kelasAmpu` untuk modul Akademik atau tampilan beranda.
 - Masa transisi: sumber kebenaran sementara data Tahsin-Tahfizh adalah v2 (lihat `MIGRASI_DATA.md`).
+
+## Penyimpanan data siswa (diputuskan 10 Okt 2026)
+
+Data siswa dipisah dua dokumen dengan ID yang sama, mengikuti v2 (antiregresi §12.1):
+
+- `siswa/{id}` dibaca semua guru → hanya data dasar. Alamat, HP, email, dan data orang tua **tidak boleh** ada di sini.
+- `identitas_siswa/{id}` → biodata sensitif, hanya admin dan wali kelas siswa tersebut.
+
+Halaman admin menampilkan keduanya digabung (`listSiswaLengkap`); halaman guru memakai `listAllSiswa` (data dasar saja).
+Pemetaan nama (tampilan gabungan → `identitas_siswa`): `jk→jenisKelamin`, `alamat→alamatSiswa`, `ayahNama→namaAyah`,
+`ayahPekerjaan→pekerjaanAyah`, `ibuNama→namaIbu`, `ibuPekerjaan→pekerjaanIbu`; lainnya sama. Pemetaan ada di
+`IDENTITAS_KEY` (`src/lib/siswaImport.ts`) — satu-satunya tempat yang boleh diubah. Alamat Dapodik tersimpan terstruktur
+(`alamatSiswa` + `rt/rw/kelurahan/kecamatan/kodePos`); modul Rapor menyusun alamat lengkap saat mencetak.
+
+Sumber data: ekspor Dapodik "Daftar Peserta Didik" (.xlsx) lewat Admin → Data Siswa → Impor. Lihat `IMPOR_SISWA.md`.
+Nama siswa dan nama orang tua yang tertulis HURUF BESAR SEMUA dirapikan menjadi Title Case saat impor.
+

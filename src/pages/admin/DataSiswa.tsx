@@ -5,13 +5,19 @@ import type { JenjangTahsin, SiswaTahsin } from '../../types/tahsin'
 import { SEMUA_KELAS } from '../../types/tahsin'
 import {
   CSV_HEADERS,
+  bacaExcel,
   downloadText,
+  jalankanImpor,
   listAllSiswa,
+  listSiswaLengkap,
+  parseDapodikRows,
   parseSiswaText,
+  praLihatImpor,
   setSiswaAktif,
   siswaToCsv,
   upsertSiswa,
-  upsertSiswaBatch,
+  validasiLayoutDapodik,
+  type HasilPraLihat,
   type SiswaInput,
 } from '../../lib/siswaAdmin'
 
@@ -77,7 +83,9 @@ export default function DataSiswa({ profile }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<SiswaInput>({ ...emptyForm })
   const [importText, setImportText] = useState('')
-  const [importPreview, setImportPreview] = useState<SiswaInput[]>([])
+  const [preview, setPreview] = useState<HasilPraLihat | null>(null)
+  const [sumberImpor, setSumberImpor] = useState('')
+  const [progres, setProgres] = useState<string | null>(null)
   const [selected, setSelected] = useState<SiswaTahsin | null>(null)
 
   const showToast = (msg: string, error = false) => {
@@ -88,7 +96,7 @@ export default function DataSiswa({ profile }: Props) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      setList(await listAllSiswa(kelasFilter || null))
+      setList(await listSiswaLengkap(kelasFilter || null))
     } catch (e) {
       console.error(e)
       showToast('Gagal memuat data siswa. Periksa rules Firestore.', true)
@@ -150,7 +158,7 @@ export default function DataSiswa({ profile }: Props) {
     e.preventDefault()
     setBusy(true)
     try {
-      await upsertSiswa(form)
+      await upsertSiswa(form, { hapusKosong: Boolean(editingId) })
       showToast(editingId ? 'Data siswa diperbarui.' : 'Siswa baru disimpan.')
       setMode('list')
       setSelected(null)
@@ -163,30 +171,72 @@ export default function DataSiswa({ profile }: Props) {
     }
   }
 
-  function handlePreview() {
-    const rows = parseSiswaText(importText)
-    setImportPreview(rows)
-    if (!rows.length) {
-      showToast('Tidak ada baris valid. Pastikan ada header nama + nipd/nisn.', true)
-    }
+  /** Peta siswa yang sudah ada (semua kelas, data dasar) untuk menentukan baru/update dan mencegah duplikat. */
+  async function petaSiswaAda() {
+    return new Map((await listAllSiswa(null)).map((x) => [x.id, x]))
   }
 
-  async function handleImportCsv() {
-    const rows = importPreview.length ? importPreview : parseSiswaText(importText)
+  async function buatPratinjau(rows: SiswaInput[], sumber: string) {
     if (!rows.length) {
-      showToast('Tidak ada data.', true)
+      setPreview(null)
+      showToast('Tidak ada baris data yang terbaca.', true)
       return
     }
     setBusy(true)
     try {
-      const n = await upsertSiswaBatch(rows)
-      showToast(`${n} siswa diimpor/diperbarui.`)
+      setPreview(praLihatImpor(rows, await petaSiswaAda()))
+      setSumberImpor(sumber)
+    } catch (err) {
+      console.error(err)
+      showToast('Gagal membandingkan dengan data yang ada. Periksa koneksi dan hak akses.', true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function handlePreview() {
+    void buatPratinjau(parseSiswaText(importText), 'teks yang ditempel')
+  }
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setBusy(true)
+    try {
+      const rows = await bacaExcel(await file.arrayBuffer())
+      validasiLayoutDapodik(rows)
+      setBusy(false)
+      await buatPratinjau(parseDapodikRows(rows), file.name)
+    } catch (err) {
+      console.error(err)
+      setPreview(null)
+      showToast(err instanceof Error ? err.message : 'File tidak dapat dibaca.', true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleImport() {
+    if (!preview) return
+    const n = preview.baru + preview.update
+    if (!n) {
+      showToast('Tidak ada baris valid untuk disimpan.', true)
+      return
+    }
+    setBusy(true)
+    try {
+      const selesai = await jalankanImpor(preview.items, (x, total) => setProgres(`${x} dari ${total}`))
+      showToast(`${selesai} siswa tersimpan (${preview.baru} baru, ${preview.update} diperbarui).`)
+      setPreview(null)
+      setImportText('')
       setMode('list')
       await load()
     } catch (err) {
       console.error(err)
-      showToast('Impor gagal.', true)
+      showToast('Impor gagal di tengah jalan. Ulangi: aman, siswa yang sudah tersimpan hanya diperbarui.', true)
     } finally {
+      setProgres(null)
       setBusy(false)
     }
   }
@@ -221,7 +271,7 @@ export default function DataSiswa({ profile }: Props) {
             Data Siswa
           </h1>
           <p className="text-[12px] text-muted">
-            Master data lengkap · ID dokumen = NIPD · {list.length} siswa di filter saat ini
+            Data dasar + biodata · ID dokumen = NIPD · {list.length} siswa di filter saat ini
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -321,7 +371,8 @@ export default function DataSiswa({ profile }: Props) {
                 <p className="p-6 text-center text-[12px] text-muted">Memuat…</p>
               ) : filtered.length === 0 ? (
                 <div className="p-6 text-center text-[12px] text-muted">
-                  Belum ada data. Gunakan menu Impor (CSV/Dapodik) atau Tambah manual. </div>
+                  Belum ada data. Gunakan menu Impor (Excel Dapodik) atau Tambah manual.
+                </div>
               ) : (
                 <table className="w-full text-left text-[12px]">
                   <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
@@ -666,83 +717,172 @@ export default function DataSiswa({ profile }: Props) {
 
       {/* IMPORT */}
       {mode === 'import' && (
-        <section className="card-soft space-y-3 p-4">
+        <section className="card-soft space-y-4 p-4">
           <div>
-            <h2 className="text-[14px] font-semibold text-slate-800">Impor CSV / TSV</h2>
+            <h2 className="text-[14px] font-semibold text-slate-800">Impor data siswa</h2>
             <p className="mt-1 text-[12px] text-muted">
-              Header didukung: {CSV_HEADERS.slice(0, 8).join(', ')}, … atau kolom DAPODIK (Rombel,
-              Nama, NIPD, JK, NISN, …). NIPD dipakai sebagai ID (upsert).
+              Cocokkan berdasarkan NIPD. Data dasar masuk ke <code>siswa</code>; biodata (alamat, HP, orang
+              tua, dll.) masuk ke <code>identitas_siswa</code> yang hanya dapat dibaca admin dan wali kelas. Status
+              Aktif, Tamat Iqro, dan Jenjang siswa yang sudah ada tidak diubah oleh impor.
             </p>
           </div>
-          <textarea
-            value={importText}
-            onChange={(e) => {
-              setImportText(e.target.value)
-              setImportPreview([])
-            }}
-            rows={12}
-            placeholder={`nipd,nisn,nama,kelas,jk,...\n262701001,3199520020,Nama Siswa,1A,L,...`}
-            className="w-full rounded-xl border border-border bg-slate-50/50 px-3 py-2 font-mono text-[11px] outline-none focus:border-muh-500 focus:bg-white"
-          />
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={handlePreview}
-              className="rounded-xl border border-border bg-white px-3 py-1.5 text-[12px] font-medium"
-            >
-              Pratinjau
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void handleImportCsv()}
-              className="rounded-xl bg-muh-600 px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-60"
-            >
-              {busy
-                ? 'Mengimpor…'
-                : `Impor teks${importPreview.length ? ` (${importPreview.length})` : ''}`}
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                downloadText(
-                  'template-siswa.csv',
-                  CSV_HEADERS.join(',') +
-                    '\n262701001,3199520020,Contoh Siswa,1A,L,Depok,2019-01-01,Islam,,,,,,,,,,,,,,',
-                )
-              }
-              className="rounded-xl border border-border px-3 py-1.5 text-[12px] font-medium text-slate-600"
-            >
-              Unduh template
-            </button>
+
+          <div className="rounded-2xl border border-dashed border-muh-300 bg-muh-50/40 p-4">
+            <p className="text-[12.5px] font-semibold text-slate-800">File Excel Dapodik (.xlsx)</p>
+            <p className="mt-0.5 text-[11.5px] text-muted">
+              Ekspor "Daftar Peserta Didik". File dibaca di browser ini dan tidak diunggah ke mana pun; yang
+              tersimpan hanya data siswa di Firestore. Jangan simpan file ini di repo.
+            </p>
+            <label className="mt-3 inline-flex cursor-pointer items-center rounded-xl bg-muh-600 px-3.5 py-2 text-[12px] font-semibold text-white hover:bg-muh-700">
+              Pilih file…
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                disabled={busy}
+                onChange={(e) => void handleFile(e)}
+              />
+            </label>
           </div>
-          {importPreview.length > 0 && (
-            <div className="max-h-56 overflow-auto rounded-xl border border-border">
-              <table className="w-full text-left text-[11px]">
-                <thead className="bg-slate-50 text-slate-500">
-                  <tr>
-                    <th className="px-2 py-1.5">NIPD</th>
-                    <th className="px-2 py-1.5">Nama</th>
-                    <th className="px-2 py-1.5">Kelas</th>
-                    <th className="px-2 py-1.5">NISN</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {importPreview.slice(0, 50).map((r) => (
-                    <tr key={String(r.nipd || r.nisn)} className="border-t border-border">
-                      <td className="px-2 py-1 font-mono">{r.nipd}</td>
-                      <td className="px-2 py-1">{r.nama}</td>
-                      <td className="px-2 py-1">{r.kelas}</td>
-                      <td className="px-2 py-1 font-mono">{r.nisn}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {importPreview.length > 50 && (
-                <p className="border-t border-border p-2 text-[11px] text-muted">
-                  … dan {importPreview.length - 50} baris lainnya
-                </p>
+
+          <details className="rounded-2xl border border-border p-3">
+            <summary className="cursor-pointer text-[12px] font-medium text-slate-700">
+              Atau tempel teks CSV / TSV
+            </summary>
+            <p className="mt-2 text-[11.5px] text-muted">
+              Header didukung: {CSV_HEADERS.slice(0, 8).join(', ')}, … atau kolom Dapodik.
+            </p>
+            <textarea
+              value={importText}
+              onChange={(e) => {
+                setImportText(e.target.value)
+                setPreview(null)
+              }}
+              rows={8}
+              placeholder={`nipd,nisn,nama,kelas,jk,...`}
+              className="mt-2 w-full rounded-xl border border-border bg-slate-50/50 px-3 py-2 font-mono text-[11px] outline-none focus:border-muh-500 focus:bg-white"
+            />
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy || !importText.trim()}
+                onClick={handlePreview}
+                className="rounded-xl border border-border bg-white px-3 py-1.5 text-[12px] font-medium disabled:opacity-50"
+              >
+                Pratinjau
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  downloadText(
+                    'template-siswa.csv',
+                    CSV_HEADERS.join(',') +
+                      '\n262701001,3199520020,Contoh Siswa,1A,L,Depok,2019-01-01,Islam,,,,,,,,,,,,,,',
+                  )
+                }
+                className="rounded-xl border border-border px-3 py-1.5 text-[12px] font-medium text-slate-600"
+              >
+                Unduh template
+              </button>
+            </div>
+          </details>
+
+          {preview && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                <span className="font-semibold text-slate-800">Pratinjau dari {sumberImpor}:</span>
+                <span className="rounded-full bg-muh-50 px-2.5 py-0.5 font-semibold text-muh-700">
+                  {preview.baru} baru
+                </span>
+                <span className="rounded-full bg-sky-50 px-2.5 py-0.5 font-semibold text-sky-700">
+                  {preview.update} diperbarui
+                </span>
+                <span
+                  className={`rounded-full px-2.5 py-0.5 font-semibold ${
+                    preview.error ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  {preview.error} bermasalah
+                </span>
+              </div>
+
+              <p className="text-[11.5px] text-muted">
+                Per kelas:{' '}
+                {Object.entries(preview.perKelas)
+                  .sort(([a], [b]) => a.localeCompare(b, 'id'))
+                  .map(([k, n]) => `${k} (${n})`)
+                  .join(' · ')}
+              </p>
+
+              {preview.error > 0 && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-[11.5px] text-red-800">
+                  <p className="font-semibold">Baris ini akan dilewati:</p>
+                  <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                    {preview.items
+                      .filter((x) => x.status === 'error')
+                      .slice(0, 20)
+                      .map((x) => (
+                        <li key={x.baris}>
+                          Baris {x.baris}: {x.pesan}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
               )}
+
+              <div className="max-h-56 overflow-auto rounded-xl border border-border">
+                <table className="w-full text-left text-[11px]">
+                  <thead className="sticky top-0 bg-slate-50 text-slate-500">
+                    <tr>
+                      <th className="px-2 py-1.5">NIPD</th>
+                      <th className="px-2 py-1.5">Nama</th>
+                      <th className="px-2 py-1.5">Kelas</th>
+                      <th className="px-2 py-1.5">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.items
+                      .filter((x) => x.s)
+                      .slice(0, 40)
+                      .map((x) => (
+                        <tr key={x.baris} className="border-t border-border">
+                          <td className="px-2 py-1 font-mono">{x.s!.id}</td>
+                          <td className="px-2 py-1">{x.s!.nama}</td>
+                          <td className="px-2 py-1">{x.s!.kelas}</td>
+                          <td className="px-2 py-1">
+                            {x.status === 'error' ? 'Dilewati' : x.status === 'baru' ? 'Baru' : 'Diperbarui'}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+                {preview.items.length > 40 && (
+                  <p className="border-t border-border p-2 text-[11px] text-muted">
+                    … dan {preview.items.length - 40} baris lainnya
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  disabled={busy || preview.baru + preview.update === 0}
+                  onClick={() => void handleImport()}
+                  className="rounded-xl bg-muh-600 px-4 py-2 text-[12.5px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
+                >
+                  {busy
+                    ? `Menyimpan… ${progres ?? ''}`
+                    : `Simpan ${preview.baru + preview.update} siswa`}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setPreview(null)}
+                  className="rounded-xl border border-border px-3 py-2 text-[12px] font-medium text-slate-600"
+                >
+                  Batal
+                </button>
+              </div>
             </div>
           )}
         </section>
