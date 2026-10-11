@@ -13,6 +13,7 @@ import AdminHub from './pages/AdminHub'
 import Placeholder from './pages/Placeholder'
 import InputSetoran from './pages/tahsin/InputSetoran'
 import RiwayatSiswa from './pages/tahsin/RiwayatSiswa'
+import TargetHafalan from './pages/tahsin/TargetHafalan'
 import DataSiswa from './pages/admin/DataSiswa'
 import SetupTp from './pages/akademik/SetupTp'
 import BobotSemester from './pages/akademik/BobotSemester'
@@ -80,6 +81,10 @@ export default function App() {
             <Route
               path="/tahsin/riwayat"
               element={profile ? <RiwayatSiswa profile={profile} /> : null}
+            />
+            <Route
+              path="/tahsin/target"
+              element={profile ? <TargetHafalan profile={profile} /> : null}
             />
             <Route path="/tahsin/*" element={<Placeholder />} />
           </Route>

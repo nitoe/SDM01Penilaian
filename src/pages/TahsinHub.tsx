@@ -22,7 +22,7 @@ const items: { to: string; title: string; desc: string; ready: boolean; icon: Ic
     to: '/tahsin/target',
     title: 'Target Hafalan',
     desc: 'Target per kelas dan capaian siswa',
-    ready: false,
+    ready: true,
     icon: 'target',
     tone: 'peach',
   },

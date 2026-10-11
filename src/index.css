@@ -71,16 +71,31 @@ body {
 }
 
 /* ---- Baca & Tandai (Tahsin): teks Arab dan tanda kata ---------------------------------------------
-   Tanpa font dari CDN (CSP): memakai font Arab bawaan sistem; Amiri dipakai bila terpasang. */
+   Font Al-Qur'an Amiri Quran (lisensi SIL OFL 1.1, lihat public/fonts) disajikan dari situs sendiri agar sesuai CSP. */
+@font-face {
+  font-family: 'Amiri Quran';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/amiri-quran-arabic-400-normal.woff2') format('woff2');
+}
 .font-arab {
-  font-family: 'Amiri', 'Scheherazade New', 'Noto Naskh Arabic', 'Traditional Arabic', 'Geeza Pro', 'Segoe UI', serif;
-  font-size: 1.65rem;
-  line-height: 2.5;
+  font-family: 'Amiri Quran', 'Amiri', 'Scheherazade New', 'Noto Naskh Arabic', 'Traditional Arabic', 'Geeza Pro', serif;
+  font-size: 1.85rem;
+  line-height: 2.6;
+}
+.font-arab.ukuran-1 { font-size: 1.55rem; line-height: 2.4; }
+.font-arab.ukuran-2 { font-size: 1.95rem; line-height: 2.6; }
+.font-arab.ukuran-3 { font-size: 2.45rem; line-height: 2.7; }
+@media (min-width: 1024px) {
+  .font-arab.ukuran-1 { font-size: 1.8rem; }
+  .font-arab.ukuran-2 { font-size: 2.3rem; }
+  .font-arab.ukuran-3 { font-size: 2.9rem; }
 }
 .kata-arab {
   display: inline-block;
-  margin: 0 0.12rem;
-  padding: 0 0.3rem;
+  margin: 0 0.1rem;
+  padding: 0 0.28rem;
   border-radius: 0.5rem;
   background: transparent;
   cursor: pointer;

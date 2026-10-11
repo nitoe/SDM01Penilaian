@@ -19,10 +19,21 @@ import {
   getMenulisLog,
   getRiwayatSetoran,
   getSiswaList,
+  getTargetHafalan,
   toMillis,
   updateSetoranFields,
 } from '../../lib/tahsinData'
 import { ringkasDetailAyat, ringkasDetailIqro } from '../../lib/bacaTandai'
+import {
+  hitungProgresSurah,
+  iqroTercapai,
+  persenSurah,
+  posisiIqro,
+  ringkasKualitasBacaan,
+  surahTercapai,
+  type TargetHafalan,
+} from '../../lib/target'
+import { surahByNo } from '../../lib/quranSurah'
 
 interface Props {
   profile: AppUser
@@ -96,6 +107,7 @@ export default function RiwayatSiswa({ profile }: Props) {
   const [editStatus, setEditStatus] = useState<StatusHafalan>('lulus')
   const [editCatatan, setEditCatatan] = useState('')
   const [sibukId, setSibukId] = useState<string | null>(null)
+  const [target, setTarget] = useState<TargetHafalan | null>(null)
 
   const tampilkanPesan = (teks: string, galat = false) => {
     setPesan({ teks, galat })
@@ -122,17 +134,20 @@ export default function RiwayatSiswa({ profile }: Props) {
     setLoadingHist(true)
     setError(null)
     try {
-      const [r, m] = await Promise.all([
+      const [r, m, t] = await Promise.all([
         getRiwayatSetoran(s.id, s.kelas),
         getMenulisLog(s.id, s.kelas),
+        getTargetHafalan(s.kelas).catch(() => null), // target boleh kosong/ditolak: Ringkasan tetap tampil
       ])
       setSetoran(r)
       setMenulis(m)
+      setTarget(t)
     } catch (e) {
       console.error(e)
       setError('Gagal memuat riwayat. Periksa koneksi & index Firestore.')
       setSetoran([])
       setMenulis([])
+      setTarget(null)
     } finally {
       setLoadingHist(false)
     }
@@ -574,6 +589,7 @@ export default function RiwayatSiswa({ profile }: Props) {
                   setoran={setoran}
                   menulis={menulis}
                   stats={stats}
+                  target={target}
                 />
               )}
             </div>
@@ -597,12 +613,18 @@ function Ringkasan({
   setoran,
   menulis,
   stats,
+  target,
 }: {
   selected: SiswaTahsin
   setoran: SetoranRecord[]
   menulis: MenulisRecord[]
   stats: { total: number; d30: number; ziyadahLulus: number; last: string }
+  target: TargetHafalan | null
 }) {
+  const kualitas = ringkasKualitasBacaan(setoran)
+  const isIqro = selected.jenjang === 'iqro'
+  const progres = target?.targetSurah?.length ? hitungProgresSurah(target.targetSurah, setoran) : []
+  const pos = posisiIqro(setoran)
   const byJenis = {
     ziyadah: setoran.filter((r) => r.jenis === 'ziyadah').length,
     murojaah: setoran.filter((r) => r.jenis === 'murojaah').length,
@@ -645,6 +667,100 @@ function Ringkasan({
           Materi terakhir: <span className="text-slate-800">{stats.last}</span>
         </p>
       </div>
+
+      {/* Kualitas bacaan: 5 sesi terbaru yang memakai Baca & Tandai / Latihan Membaca */}
+      <section className="rounded-xl border border-border p-3.5">
+        <h3 className="text-[12.5px] font-semibold text-slate-800">
+          Kualitas bacaan <span className="font-normal text-muted">(5 sesi terbaru)</span>
+        </h3>
+        {kualitas ? (
+          <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg bg-slate-50 px-2 py-2">
+              <div className="text-lg font-semibold text-slate-800">{kualitas.ayatDinilai}</div>
+              <div className="text-[10.5px] text-muted">{isIqro ? 'latihan' : 'ayat dinilai'}</div>
+            </div>
+            <div className="rounded-lg bg-[#fdf3d8] px-2 py-2">
+              <div className="text-lg font-semibold text-[#8a6a0c]">{kualitas.tajwid}</div>
+              <div className="text-[10.5px] text-[#8a6a0c]">kesalahan tajwid</div>
+            </div>
+            <div className="rounded-lg bg-red-50 px-2 py-2">
+              <div className="text-lg font-semibold text-red-700">{kualitas.makhroj}</div>
+              <div className="text-[10.5px] text-red-700">kesalahan makhroj</div>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-1.5 text-[12px] text-muted">
+            Belum ada data Baca &amp; Tandai. Data muncul setelah guru menandai bacaan di Input Setoran.
+          </p>
+        )}
+      </section>
+
+      {/* Target hafalan kelas */}
+      <section className="rounded-xl border border-border p-3.5">
+        <div className="flex items-baseline justify-between gap-2">
+          <h3 className="text-[12.5px] font-semibold text-slate-800">
+            Target hafalan{target?.labelSemester ? ` · ${target.labelSemester}` : ''}
+          </h3>
+          <Link to="/tahsin/target" className="text-[11.5px] font-medium text-muh-700 hover:underline">
+            Atur target
+          </Link>
+        </div>
+
+        {!target || (isIqro ? !target.targetJilid : !progres.length) ? (
+          <p className="mt-1.5 text-[12px] text-muted">Target kelas {selected.kelas} belum diatur.</p>
+        ) : isIqro ? (
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]">
+            <span>
+              Target: <strong>Iqro {target.targetJilid}</strong> hal. <strong>{target.targetHalaman ?? 1}</strong>
+            </span>
+            <span>
+              Posisi sekarang: <strong>Iqro {pos.jilid}</strong> hal. <strong>{pos.halaman}</strong>
+            </span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
+                iqroTercapai(target, pos) ? 'bg-muh-50 text-muh-700' : 'bg-amber-50 text-amber-800'
+              }`}
+            >
+              {iqroTercapai(target, pos) ? 'Target tercapai' : 'Belum tercapai'}
+            </span>
+          </div>
+        ) : (
+          <>
+            <p className="mt-1 text-[12px] text-muted">
+              {progres.filter(surahTercapai).length} dari {progres.length} surah tercapai. Hanya setoran Ziyadah
+              berstatus Lulus untuk satu surah yang dihitung.
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {progres.map((p) => {
+                const info = surahByNo(p.surahNo)
+                const persen = persenSurah(p)
+                const selesai = surahTercapai(p)
+                return (
+                  <li key={p.surahNo} className="flex items-center gap-3 text-[12px]">
+                    <span className="w-32 shrink-0 truncate font-medium text-slate-800">{info?.nama}</span>
+                    <span
+                      className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100"
+                      role="progressbar"
+                      aria-valuenow={persen}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`Progres ${info?.nama}`}
+                    >
+                      <span
+                        className={`block h-full rounded-full ${selesai ? 'bg-muh-600' : 'bg-peach-400'}`}
+                        style={{ width: `${persen}%` }}
+                      />
+                    </span>
+                    <span className="w-24 shrink-0 text-right text-muted">
+                      {p.maxAyatAkhir}/{info?.ayat} ayat{selesai ? ' ✓' : ''}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </>
+        )}
+      </section>
     </div>
   )
 }

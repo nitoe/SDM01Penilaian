@@ -4,11 +4,19 @@ import type { AppUser } from '../../types/user'
 import type {
   JenisKata,
   JenisSetoran,
+  SetoranRecord,
   StatusHafalan,
   SiswaTahsin,
 } from '../../types/tahsin'
-import { SEMUA_KELAS } from '../../types/tahsin'
-import { getSiswaList, saveSetoran, updateTamatIqro } from '../../lib/tahsinData'
+import { JENIS_LABEL, SEMUA_KELAS, STATUS_LABEL } from '../../types/tahsin'
+import {
+  formatTanggal,
+  getRiwayatSetoran,
+  getSiswaList,
+  saveSetoran,
+  updateTamatIqro,
+} from '../../lib/tahsinData'
+import { rentangLanjutan } from '../../lib/lanjutan'
 import { SURAH_LIST, surahByNo, hitungTotalAyat } from '../../lib/quranSurah'
 import {
   bangunDetailAyat,
@@ -19,6 +27,7 @@ import {
   type TandaPerAyat,
 } from '../../lib/bacaTandai'
 import { BacaTandai, KartuKataIqro } from '../../components/BacaTandai'
+import PanelSiswa from '../../components/PanelSiswa'
 
 interface Props {
   profile: AppUser
@@ -67,6 +76,11 @@ export default function InputSetoran({ profile }: Props) {
   const [iqroTeks, setIqroTeks] = useState('')
   const [iqroKata, setIqroKata] = useState<Record<number, JenisKata>>({})
 
+  // Mobile: daftar siswa diciutkan setelah memilih; setoran terakhir siswa untuk melanjutkan
+  const [ganti, setGanti] = useState(true)
+  const [terakhir, setTerakhir] = useState<SetoranRecord | null>(null)
+
+  const [tampilCatatan, setTampilCatatan] = useState(false)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<{ msg: string; error?: boolean } | null>(null)
 
@@ -141,6 +155,40 @@ export default function InputSetoran({ profile }: Props) {
     setTanda((prev) => (bisaBacaTandai ? selaraskanRentang(prev, ayatMulai, ayatAkhir) : {}))
   }, [bisaBacaTandai, ayatMulai, ayatAkhir])
 
+  const muatTerakhir = useCallback(async (s: SiswaTahsin | null) => {
+    if (!s) {
+      setTerakhir(null)
+      return
+    }
+    try {
+      const list = await getRiwayatSetoran(s.id, s.kelas)
+      setTerakhir(list[0] ?? null)
+    } catch (err) {
+      console.error(err)
+      setTerakhir(null)
+    }
+  }, [])
+
+  useEffect(() => {
+    void muatTerakhir(selected)
+  }, [selected?.id, muatTerakhir]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function pilihSiswa(s: SiswaTahsin) {
+    setSelected(s)
+    setGanti(false)
+  }
+
+  const usulan = useMemo(() => (bacaQuran ? rentangLanjutan(terakhir) : null), [bacaQuran, terakhir])
+
+  function terapkanUsulan() {
+    if (!usulan) return
+    setSurahAwal(usulan.surah)
+    setSurahAkhir(usulan.surah)
+    setAyatMulai(usulan.mulai)
+    setAyatAkhir(usulan.akhir)
+    if (!isIqroMurni && terakhir && terakhir.jenis !== 'tahsin') setJenis(terakhir.jenis)
+  }
+
   async function handleTamatIqro(checked: boolean) {
     if (!selected) return
     const ok = window.confirm(
@@ -167,7 +215,7 @@ export default function InputSetoran({ profile }: Props) {
     }
   }
 
-  async function handleSimpan() {
+  async function handleSimpan(berikutnya = false) {
     if (!selected) {
       showToast('Pilih siswa terlebih dahulu.', true)
       return
@@ -222,6 +270,10 @@ export default function InputSetoran({ profile }: Props) {
       setTanda(bisaBacaTandai ? selaraskanRentang({}, ayatMulai, ayatAkhir) : {})
       setIqroTeks('')
       setIqroKata({})
+      const idx = filteredSiswa.findIndex((x) => x.id === selected.id)
+      const berikut = berikutnya ? filteredSiswa[idx + 1] : undefined
+      if (berikut) pilihSiswa(berikut)
+      else void muatTerakhir(selected)
     } catch (err) {
       console.error(err)
       showToast('Gagal menyimpan setoran. Coba lagi.', true)
@@ -231,33 +283,32 @@ export default function InputSetoran({ profile }: Props) {
   }
 
   const totalAyatNote =
-    bacaQuran &&
-    hitungTotalAyat(surahAwal, ayatMulai, surahAkhir, ayatAkhir)
+    bacaQuran && hitungTotalAyat(surahAwal, ayatMulai, surahAkhir, ayatAkhir)
+
+  const idxSelected = selected ? filteredSiswa.findIndex((x) => x.id === selected.id) : -1
+  const adaBerikutnya = idxSelected >= 0 && idxSelected < filteredSiswa.length - 1
+
+  const label = 'mb-1 block text-[11px] font-medium text-slate-500'
+  const kontrol =
+    'w-full rounded-xl border border-border bg-white px-3 py-2 text-[13px] outline-none transition focus:border-muh-500 focus:ring-2 focus:ring-muh-500/20'
 
   return (
-    <div className="mx-auto max-w-xl space-y-2.5">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <Link
-            to="/tahsin"
-            className="text-[11px] font-medium text-muh-700 hover:underline"
-          >
+    <div className="space-y-3">
+      {/* Judul */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <div className="flex items-baseline gap-3">
+          <Link to="/tahsin" className="text-[12px] font-medium text-muh-700 hover:underline">
             ← Tahsin-Tahfizh
           </Link>
-          <h1 className="mt-0.5 text-[15px] font-semibold text-slate-900">
-            Input Setoran
-          </h1>
-          <p className="mt-0.5 text-[10.5px] text-muted">
-            Catat setoran bacaan / hafalan siswa.
-          </p>
+          <h1 className="text-[18px] font-semibold tracking-tight text-slate-900">Input Setoran</h1>
         </div>
+        <p className="hidden text-[12px] text-muted md:block">Catat setoran bacaan dan hafalan siswa</p>
       </div>
 
-      {/* Toast */}
       {toast && (
         <div
-          className={`rounded-md px-2.5 py-1.5 text-[12px] font-medium ${
+          role="status"
+          className={`rounded-xl px-3.5 py-2 text-[12.5px] font-medium ${
             toast.error
               ? 'border border-red-200 bg-red-50 text-red-700'
               : 'border border-muh-200 bg-muh-50 text-muh-800'
@@ -267,357 +318,385 @@ export default function InputSetoran({ profile }: Props) {
         </div>
       )}
 
-      {/* Pilih siswa */}
-      <section className="rounded-lg border border-border bg-white p-3">
-        <h2 className="text-[12.5px] font-semibold text-slate-800">1. Pilih siswa</h2>
+      <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start">
+        {/* Kiri: pilih siswa (HP: diciutkan setelah memilih) */}
+        <aside className={`lg:sticky lg:top-24 ${selected && !ganti ? 'hidden lg:block' : ''}`}>
+          <PanelSiswa
+            kelasOptions={kelasOptions}
+            kelasFilter={kelasFilter}
+            onKelas={(k) => {
+              setKelasFilter(k)
+              setSelected(null)
+              setGanti(true)
+            }}
+            search={search}
+            onSearch={setSearch}
+            memuat={loadingSiswa}
+            daftar={filteredSiswa}
+            terpilih={selected}
+            onPilih={pilihSiswa}
+          />
+        </aside>
 
-        <div className="mt-2 flex flex-wrap gap-1">
-          {kelasOptions.map((k) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => {
-                setKelasFilter(k)
-                setSelected(null)
-              }}
-              className={`rounded px-2 py-1 text-[11px] font-medium transition ${
-                kelasFilter === k
-                  ? 'bg-muh-600 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {k}
-            </button>
-          ))}
-        </div>
-
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cari nama atau NIS…"
-          className="mt-2 w-full rounded-md border border-border px-2.5 py-1.5 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/20"
-        />
-
-        <div className="mt-2 max-h-44 overflow-y-auto rounded-md border border-border">
-          {loadingSiswa ? (
-            <p className="p-3 text-center text-[12px] text-muted">Memuat siswa…</p>
-          ) : filteredSiswa.length === 0 ? (
-            <p className="p-3 text-center text-[12px] text-muted">
-              Tidak ada siswa di kelas {kelasFilter}.
-              <br />
-              <span className="text-[11px]">
-                Pastikan koleksi Firestore <code className="font-mono">siswa</code> terisi
-                (field: nama, kelas, jenjang, aktif).
+        {/* Kanan: area kerja */}
+        <div className="min-w-0 space-y-3">
+          {!selected ? (
+            <div className="card-soft flex min-h-[18rem] flex-col items-center justify-center px-6 py-12 text-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-muh-50 text-muh-700">
+                <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M16 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1" />
+                  <path d="M9.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
+                  <path d="M21 20v-1a4 4 0 0 0-3-3.87M16 4.13a3.5 3.5 0 0 1 0 6.74" />
+                </svg>
               </span>
-            </p>
+              <p className="mt-4 text-[15px] font-semibold text-slate-900">Pilih siswa untuk mulai</p>
+              <p className="mt-1 max-w-xs text-[12.5px] text-muted">
+                Pilih kelas dan siswa di daftar. Teks ayat, terjemahan, dan audio muncul di sini.
+              </p>
+            </div>
           ) : (
-            filteredSiswa.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setSelected(s)}
-                className={`flex w-full items-center gap-2 border-b border-border px-2.5 py-1.5 text-left transition last:border-0 ${
-                  selected?.id === s.id
-                    ? 'bg-muh-50'
-                    : 'hover:bg-slate-50'
-                }`}
-              >
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muh-50 text-[10px] font-semibold text-muh-700">
-                  {s.nama
-                    .split(' ')
-                    .slice(0, 2)
-                    .map((w) => w[0])
-                    .join('')
-                    .toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[12.5px] font-medium text-slate-900">
-                    {s.nama}
+            <>
+              {/* Siswa + setoran terakhir */}
+              <section className="card-soft p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muh-600 text-[14px] font-semibold text-white">
+                      {selected.nama.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <h2 className="truncate text-[16px] font-semibold text-slate-900">{selected.nama}</h2>
+                      <p className="text-[12px] text-muted">
+                        Kelas {selected.kelas} · {bacaQuran ? "Al-Qur'an" : 'Iqro'}
+                        {selected.nis ? ` · ${selected.nis}` : ''}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-[10.5px] text-muted">
-                    {s.kelas} · {s.jenjang === 'iqro' ? 'Iqro' : "Al-Qur'an"}
-                    {s.nis ? ` · ${s.nis}` : ''}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGanti(true)}
+                    className="rounded-lg border border-border px-2.5 py-1 text-[12px] font-semibold text-muh-700 lg:hidden"
+                  >
+                    Ganti siswa
+                  </button>
+                  {selected.jenjang === 'iqro' && (
+                    <label className="flex w-full items-center gap-2 text-[12.5px] text-slate-700 lg:w-auto">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(selected.tamatIqro)}
+                        onChange={(e) => void handleTamatIqro(e.target.checked)}
+                        className="h-4 w-4 rounded border-border text-muh-600 focus:ring-muh-500"
+                      />
+                      <span className="font-medium">Sudah tamat Iqro (materi Al-Qur&apos;an)</span>
+                    </label>
+                  )}
                 </div>
-                {selected?.id === s.id && (
-                  <span className="text-[11px] font-bold text-muh-700">✓</span>
+
+                {terakhir && (
+                  <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-xl bg-slate-50 px-3 py-2 text-[12.5px]">
+                    <span className="text-muted">Setoran terakhir:</span>
+                    <strong className="font-semibold text-slate-800">{terakhir.materi?.label ?? '—'}</strong>
+                    <span className="rounded-full bg-white px-2 py-0.5 text-[10.5px] font-semibold text-slate-600 ring-1 ring-border">
+                      {JENIS_LABEL[terakhir.jenis]}
+                    </span>
+                    {terakhir.statusHafalan && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
+                          terakhir.statusHafalan === 'lulus' ? 'bg-muh-50 text-muh-700' : 'bg-amber-50 text-amber-800'
+                        }`}
+                      >
+                        {STATUS_LABEL[terakhir.statusHafalan]}
+                      </span>
+                    )}
+                    <span className="text-muted">{formatTanggal(terakhir.createdAt)}</span>
+                    {usulan && (
+                      <button
+                        type="button"
+                        onClick={terapkanUsulan}
+                        className="ml-auto rounded-lg bg-muh-600 px-3 py-1 text-[12px] font-semibold text-white hover:bg-muh-700"
+                      >
+                        {terakhir.statusHafalan === 'ulang' ? 'Ulangi' : 'Lanjutkan'}: {surahByNo(usulan.surah).nama}{' '}
+                        {usulan.mulai}–{usulan.akhir}
+                      </button>
+                    )}
+                  </div>
                 )}
-              </button>
-            ))
+              </section>
+
+              {/* Jenis & materi */}
+              <section className="card-soft p-4">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+                  <div>
+                    <p className={label}>Jenis setoran</p>
+                    <div className="inline-flex gap-1 rounded-xl bg-slate-100 p-1" role="group" aria-label="Jenis setoran">
+                      {JENIS_OPTIONS.map((opt) => {
+                        const locked = isIqroMurni && opt.value !== 'tahsin'
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            disabled={locked}
+                            aria-pressed={jenis === opt.value}
+                            onClick={() => setJenis(opt.value)}
+                            className={`rounded-lg px-4 py-1.5 text-[12.5px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                              jenis === opt.value
+                                ? 'bg-white text-muh-700 shadow-sm'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  {bacaQuran && (
+                    <p className="ml-auto self-end text-[12px] font-medium text-muted">Total: {totalAyatNote} ayat</p>
+                  )}
+                </div>
+
+                {bacaQuran ? (
+                  <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_5.5rem_5.5rem]">
+                    <div>
+                      <label htmlFor="surah-awal" className={label}>
+                        Surah awal
+                      </label>
+                      <select
+                        id="surah-awal"
+                        value={surahAwal}
+                        onChange={(e) => {
+                          const n = Number(e.target.value)
+                          setSurahAwal(n)
+                          setSurahAkhir(n)
+                          setAyatMulai(1)
+                          setAyatAkhir(Math.min(7, surahByNo(n).ayat))
+                        }}
+                        className={kontrol}
+                      >
+                        {SURAH_LIST.map((x) => (
+                          <option key={x.no} value={x.no}>
+                            {x.no}. {x.nama}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="surah-akhir" className={label}>
+                        Surah akhir
+                      </label>
+                      <select
+                        id="surah-akhir"
+                        value={surahAkhir}
+                        onChange={(e) => setSurahAkhir(Number(e.target.value))}
+                        className={kontrol}
+                      >
+                        {SURAH_LIST.filter((x) => x.no >= surahAwal).map((x) => (
+                          <option key={x.no} value={x.no}>
+                            {x.no}. {x.nama}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="ayat-mulai" className={label}>
+                        Ayat mulai
+                      </label>
+                      <input
+                        id="ayat-mulai"
+                        type="number"
+                        min={1}
+                        max={surahByNo(surahAwal).ayat}
+                        value={ayatMulai}
+                        onChange={(e) => setAyatMulai(Number(e.target.value) || 1)}
+                        className={kontrol}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="ayat-akhir" className={label}>
+                        Ayat akhir
+                      </label>
+                      <input
+                        id="ayat-akhir"
+                        type="number"
+                        min={1}
+                        max={surahByNo(surahAkhir).ayat}
+                        value={ayatAkhir}
+                        onChange={(e) => setAyatAkhir(Number(e.target.value) || 1)}
+                        className={kontrol}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2.5 md:max-w-xl">
+                    <div>
+                      <label htmlFor="buku-iqro" className={label}>
+                        Buku Iqro
+                      </label>
+                      <select
+                        id="buku-iqro"
+                        value={bukuIqro}
+                        onChange={(e) => setBukuIqro(Number(e.target.value))}
+                        className={kontrol}
+                      >
+                        {[1, 2, 3, 4, 5, 6].map((n) => (
+                          <option key={n} value={n}>
+                            Iqro Jilid {n}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="hal-mulai" className={label}>
+                        Halaman mulai
+                      </label>
+                      <input
+                        id="hal-mulai"
+                        type="number"
+                        min={1}
+                        value={halMulai}
+                        onChange={(e) => setHalMulai(Number(e.target.value) || 1)}
+                        className={kontrol}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="hal-akhir" className={label}>
+                        Halaman akhir
+                      </label>
+                      <input
+                        id="hal-akhir"
+                        type="number"
+                        min={1}
+                        value={halAkhir}
+                        onChange={(e) => setHalAkhir(Number(e.target.value) || 1)}
+                        className={kontrol}
+                      />
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* Baca & Tandai / Latihan membaca */}
+              <section className="card-soft p-4">
+                {bacaQuran ? (
+                  <>
+                    <h2 className="mb-3 text-[14px] font-semibold text-slate-900">Baca &amp; Tandai</h2>
+                    {bisaBacaTandai ? (
+                      <BacaTandai
+                        surah={surahAwal}
+                        mulai={ayatMulai}
+                        akhir={ayatAkhir}
+                        tanda={tanda}
+                        onChange={setTanda}
+                      />
+                    ) : (
+                      <p className="text-[12.5px] text-muted">
+                        {surahAwal !== surahAkhir
+                          ? 'Baca & Tandai hanya tersedia untuk rentang dalam satu surah.'
+                          : 'Ayat akhir harus sama dengan atau lebih besar dari ayat mulai.'}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <h2 className="mb-3 text-[14px] font-semibold text-slate-900">
+                      Latihan membaca <span className="font-normal text-muted">(opsional)</span>
+                    </h2>
+                    <KartuKataIqro
+                      teks={iqroTeks}
+                      kata={iqroKata}
+                      onBuat={(t) => {
+                        setIqroTeks(t)
+                        setIqroKata({})
+                      }}
+                      onKetuk={(i) => {
+                        const hasil = ketukKata({ ...tandaKosong(), kata: iqroKata }, i)
+                        setIqroKata(hasil.kata)
+                      }}
+                    />
+                  </>
+                )}
+              </section>
+
+              {/* Bilah simpan: selalu terlihat, tanpa menggulir ke bawah */}
+              <div className="sticky bottom-[4.25rem] z-20 md:bottom-3">
+                <div className="card-soft flex flex-col gap-2 p-2.5 shadow-lg lg:flex-row lg:items-end lg:gap-3 lg:p-3">
+                  <div className="flex items-end justify-between gap-2 lg:contents">
+                    {jenis !== 'tahsin' && (
+                      <div className="shrink-0">
+                        <p className={`${label} sr-only lg:not-sr-only`}>Status hafalan</p>
+                        <div className="inline-flex gap-1 rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="Status hafalan">
+                          {(['lulus', 'ulang'] as StatusHafalan[]).map((st) => (
+                            <button
+                              key={st}
+                              type="button"
+                              role="radio"
+                              aria-checked={statusHafalan === st}
+                              onClick={() => setStatusHafalan(st)}
+                              className={`rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition lg:px-3.5 ${
+                                statusHafalan === st
+                                  ? st === 'lulus'
+                                    ? 'bg-muh-600 text-white shadow-sm'
+                                    : 'bg-amber-500 text-white shadow-sm'
+                                  : 'text-slate-600 hover:text-slate-900'
+                              }`}
+                            >
+                              {STATUS_LABEL[st]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setTampilCatatan((v) => !v)}
+                      aria-expanded={tampilCatatan || Boolean(catatan)}
+                      className="rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-semibold text-slate-600 lg:hidden"
+                    >
+                      {tampilCatatan || catatan ? 'Catatan ▲' : '+ Catatan'}
+                    </button>
+                  </div>
+                  <div className={`min-w-0 flex-1 ${tampilCatatan || catatan ? '' : 'hidden'} lg:block`}>
+                    <label htmlFor="catatan-guru" className={`${label} sr-only lg:not-sr-only`}>
+                      Catatan guru (opsional)
+                    </label>
+                    <textarea
+                      id="catatan-guru"
+                      value={catatan}
+                      onChange={(e) => setCatatan(e.target.value)}
+                      onKeyDown={(e) => {
+                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !saving) void handleSimpan()
+                      }}
+                      rows={1}
+                      placeholder="Catatan guru (opsional)…"
+                      title="Tekan Ctrl+Enter untuk menyimpan"
+                      className={`${kontrol} field-sizing-content max-h-28 min-h-[2.4rem] resize-none`}
+                    />
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    {adaBerikutnya && (
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => void handleSimpan(true)}
+                        className="flex-1 whitespace-nowrap rounded-xl border border-muh-300 bg-white px-3 py-2 text-[12.5px] font-semibold text-muh-700 transition hover:bg-muh-50 disabled:opacity-60 lg:flex-none lg:px-4 lg:py-2.5 lg:text-[13px]"
+                      >
+                        Simpan &amp; berikutnya
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => void handleSimpan()}
+                      className="flex-1 whitespace-nowrap rounded-xl bg-muh-600 px-5 py-2 text-[12.5px] font-semibold text-white transition hover:bg-muh-700 disabled:opacity-60 lg:flex-none lg:px-6 lg:py-2.5 lg:text-[13px]"
+                    >
+                      {saving ? 'Menyimpan…' : 'Simpan setoran'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
-
-        {selected && selected.jenjang === 'iqro' && (
-          <label className="mt-2 flex items-center gap-1.5 text-[12px] text-slate-700">
-            <input
-              type="checkbox"
-              checked={Boolean(selected.tamatIqro)}
-              onChange={(e) => void handleTamatIqro(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-border text-muh-600 focus:ring-muh-500"
-            />
-            <span className="font-medium">Sudah tamat Iqro (materi Al-Qur&apos;an)</span>
-          </label>
-        )}
-      </section>
-
-      {/* Form setoran — aktif setelah pilih siswa */}
-      {selected && (
-        <>
-          <section className="rounded-lg border border-border bg-white p-3">
-            <h2 className="text-[12.5px] font-semibold text-slate-800">
-              2. Jenis & materi
-            </h2>
-            <p className="mt-1 text-[10.5px] text-muted">
-              Siswa: <strong>{selected.nama}</strong> ({selected.kelas})
-            </p>
-
-            {/* Jenis */}
-            <div className="mt-2 flex flex-wrap gap-1">
-              {JENIS_OPTIONS.map((opt) => {
-                const locked =
-                  isIqroMurni && opt.value !== 'tahsin'
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    disabled={locked}
-                    onClick={() => setJenis(opt.value)}
-                    className={`rounded-xl px-3.5 py-2 text-[11px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                      jenis === opt.value
-                        ? 'bg-muh-600 text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Materi Quran */}
-            {bacaQuran ? (
-              <div className="mt-2.5 space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label htmlFor="surah-awal" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
-                      Surah awal
-                    </label>
-                    <select
-                  id="surah-awal"
-                      value={surahAwal}
-                      onChange={(e) => {
-                        const n = Number(e.target.value)
-                        setSurahAwal(n)
-                        setSurahAkhir(n)
-                        setAyatMulai(1)
-                        setAyatAkhir(Math.min(7, surahByNo(n).ayat))
-                      }}
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
-                    >
-                      {SURAH_LIST.map((s) => (
-                        <option key={s.no} value={s.no}>
-                          {s.no}. {s.nama}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="surah-akhir" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
-                      Surah akhir
-                    </label>
-                    <select
-                  id="surah-akhir"
-                      value={surahAkhir}
-                      onChange={(e) => setSurahAkhir(Number(e.target.value))}
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
-                    >
-                      {SURAH_LIST.filter((s) => s.no >= surahAwal).map((s) => (
-                        <option key={s.no} value={s.no}>
-                          {s.no}. {s.nama}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label htmlFor="ayat-mulai" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
-                      Ayat mulai
-                    </label>
-                    <input
-                  id="ayat-mulai"
-                      type="number"
-                      min={1}
-                      max={surahByNo(surahAwal).ayat}
-                      value={ayatMulai}
-                      onChange={(e) => setAyatMulai(Number(e.target.value) || 1)}
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="ayat-akhir" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
-                      Ayat akhir
-                    </label>
-                    <input
-                  id="ayat-akhir"
-                      type="number"
-                      min={1}
-                      max={surahByNo(surahAkhir).ayat}
-                      value={ayatAkhir}
-                      onChange={(e) => setAyatAkhir(Number(e.target.value) || 1)}
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
-                    />
-                  </div>
-                </div>
-                <p className="text-[11px] font-medium text-muted">
-                  Total: {totalAyatNote} ayat
-                </p>
-              </div>
-            ) : (
-              <div className="mt-2.5 space-y-2">
-                <div>
-                  <label htmlFor="buku-iqro" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
-                    Buku Iqro
-                  </label>
-                  <select
-                  id="buku-iqro"
-                    value={bukuIqro}
-                    onChange={(e) => setBukuIqro(Number(e.target.value))}
-                    className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
-                  >
-                    {[1, 2, 3, 4, 5, 6].map((n) => (
-                      <option key={n} value={n}>
-                        Iqro Jilid {n}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label htmlFor="hal-mulai" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
-                      Halaman mulai
-                    </label>
-                    <input
-                  id="hal-mulai"
-                      type="number"
-                      min={1}
-                      value={halMulai}
-                      onChange={(e) => setHalMulai(Number(e.target.value) || 1)}
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="hal-akhir" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
-                      Halaman akhir
-                    </label>
-                    <input
-                  id="hal-akhir"
-                      type="number"
-                      min={1}
-                      value={halAkhir}
-                      onChange={(e) => setHalAkhir(Number(e.target.value) || 1)}
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-
-          {bacaQuran ? (
-            <section className="rounded-lg border border-border bg-white p-3">
-              <h2 className="text-[12.5px] font-semibold text-slate-800">3. Baca &amp; Tandai</h2>
-              {bisaBacaTandai ? (
-                <div className="mt-2">
-                  <BacaTandai
-                    surah={surahAwal}
-                    mulai={ayatMulai}
-                    akhir={ayatAkhir}
-                    tanda={tanda}
-                    onChange={setTanda}
-                  />
-                </div>
-              ) : (
-                <p className="mt-2 text-[12px] text-muted">
-                  {surahAwal !== surahAkhir
-                    ? 'Baca & Tandai hanya tersedia untuk rentang dalam satu surah.'
-                    : 'Ayat akhir harus sama dengan atau lebih besar dari ayat mulai.'}
-                </p>
-              )}
-            </section>
-          ) : (
-            <section className="rounded-lg border border-border bg-white p-3">
-              <h2 className="text-[12.5px] font-semibold text-slate-800">
-                3. Latihan membaca{' '}
-                <span className="font-normal text-muted">(opsional)</span>
-              </h2>
-              <div className="mt-2">
-                <KartuKataIqro
-                  teks={iqroTeks}
-                  kata={iqroKata}
-                  onBuat={(t) => {
-                    setIqroTeks(t)
-                    setIqroKata({})
-                  }}
-                  onKetuk={(i) => {
-                    const hasil = ketukKata({ ...tandaKosong(), kata: iqroKata }, i)
-                    setIqroKata(hasil.kata)
-                  }}
-                />
-              </div>
-            </section>
-          )}
-
-          <section className="rounded-lg border border-border bg-white p-3">
-            <h2 className="text-[12.5px] font-semibold text-slate-800">
-              4. Penilaian & catatan
-            </h2>
-
-            {jenis !== 'tahsin' && (
-              <div className="mt-2">
-                <label htmlFor="status-hafalan" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
-                  Status hafalan
-                </label>
-                <select
-                  id="status-hafalan"
-                  value={statusHafalan}
-                  onChange={(e) =>
-                    setStatusHafalan(e.target.value as StatusHafalan)
-                  }
-                  className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
-                >
-                  <option value="lulus">Lulus — lanjut materi berikutnya</option>
-                  <option value="ulang">Perlu diulang</option>
-                </select>
-              </div>
-            )}
-
-            <div className="mt-2">
-              <label htmlFor="catatan-guru" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
-                Catatan guru (opsional)
-              </label>
-              <textarea
-                  id="catatan-guru"
-                value={catatan}
-                onChange={(e) => setCatatan(e.target.value)}
-                rows={2}
-                placeholder="Catatan singkat…"
-                className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px] outline-none focus:border-muh-500 focus:ring-4 focus:ring-muh-500/15"
-              />
-            </div>
-
-            <button
-              type="button"
-              disabled={saving}
-              onClick={() => void handleSimpan()}
-              className="mt-2.5 flex w-full items-center justify-center rounded-md bg-muh-600 px-3 py-2 text-[12.5px] font-semibold text-white transition hover:bg-muh-700 disabled:opacity-60"
-            >
-              {saving ? 'Menyimpan…' : 'Simpan Setoran'}
-            </button>
-          </section>
-        </>
-      )}
+      </div>
     </div>
   )
 }

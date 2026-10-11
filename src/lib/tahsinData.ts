@@ -8,6 +8,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from 'firebase/firestore'
@@ -22,6 +23,7 @@ import type {
   StatusHafalan,
 } from '../types/tahsin'
 import { recordSetoran } from './bacaTandai'
+import type { TargetHafalan } from './target'
 import { SEMUA_KELAS } from '../types/tahsin'
 
 export async function getSiswaList(
@@ -106,6 +108,22 @@ export async function updateSetoranFields(
 /** Hapus satu setoran. Rules: pembuatnya sendiri atau admin. */
 export async function deleteSetoran(id: string) {
   await deleteDoc(doc(db, 'setoran', id))
+}
+
+/** Target hafalan satu kelas; null bila belum diatur. */
+export async function getTargetHafalan(kelas: string): Promise<TargetHafalan | null> {
+  const snap = await getDoc(doc(db, 'target_hafalan', kelas))
+  return snap.exists() ? ({ ...snap.data(), kelas } as TargetHafalan) : null
+}
+
+/** Simpan (timpa) target satu kelas. ID dokumen = kode kelas. Rules: admin atau guru yang mengampu kelas itu. */
+export async function saveTargetHafalan(kelas: string, data: Omit<TargetHafalan, 'kelas'>) {
+  await setDoc(doc(db, 'target_hafalan', kelas), {
+    ...data,
+    kelas,
+    updatedBy: auth.currentUser?.uid || null,
+    updatedAt: serverTimestamp(),
+  })
 }
 
 export async function getMenulisLog(

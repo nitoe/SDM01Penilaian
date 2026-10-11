@@ -19,6 +19,9 @@ interface NavItem {
   show: boolean
 }
 
+/** Halaman kerja harian yang memakai lebar layar penuh (dua kolom di PC); lainnya tetap berlebar baca. */
+const HALAMAN_LEBAR = ['/tahsin/input-setoran', '/tahsin/riwayat', '/tahsin/target', '/tahsin/menulis', '/admin/siswa']
+
 function sectionTitle(pathname: string): string {
   if (pathname.startsWith('/tahsin')) return 'Tahsin & Tahfizh'
   if (pathname.startsWith('/akademik')) return 'Akademik & Rapor'
@@ -91,7 +94,7 @@ export default function Layout({ profile }: LayoutProps) {
 
   return (
     <div className="flex min-h-full bg-surface-2 md:p-3">
-      <div className="flex min-h-full w-full overflow-hidden bg-white md:min-h-[calc(100vh-1.5rem)] md:rounded-[28px] md:border md:border-border md:shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
+      <div className="flex min-h-full w-full bg-white md:overflow-clip md:min-h-[calc(100vh-1.5rem)] md:rounded-[28px] md:border md:border-border md:shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
         {/* Sidebar desktop */}
         <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-border bg-white px-4 py-5 md:flex md:h-[calc(100vh-1.5rem)]">
           <Link to="/" className="flex items-center gap-3 px-1 no-underline">
@@ -165,7 +168,7 @@ export default function Layout({ profile }: LayoutProps) {
           </header>
 
           <main className="flex-1 p-4 pb-24 sm:p-6 md:pb-6">
-            <div className="mx-auto max-w-5xl">
+            <div className={`mx-auto ${HALAMAN_LEBAR.some((p) => pathname.startsWith(p)) ? 'max-w-[1500px]' : 'max-w-5xl'}`}>
               <Outlet />
             </div>
           </main>
