@@ -14,12 +14,15 @@ import {
   type StatusHafalan,
 } from '../../types/tahsin'
 import {
+  deleteSetoran,
   formatTanggal,
   getMenulisLog,
   getRiwayatSetoran,
   getSiswaList,
   toMillis,
+  updateSetoranFields,
 } from '../../lib/tahsinData'
+import { ringkasDetailAyat, ringkasDetailIqro } from '../../lib/bacaTandai'
 
 interface Props {
   profile: AppUser
@@ -56,8 +59,7 @@ function statusBadge(status: StatusHafalan | null | undefined) {
   if (!status) return null
   const map: Record<StatusHafalan, string> = {
     lulus: 'bg-muh-50 text-muh-700',
-    mengulang: 'bg-amber-50 text-amber-700',
-    belum: 'bg-slate-100 text-slate-600',
+    ulang: 'bg-amber-50 text-amber-800',
   }
   return (
     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${map[status]}`}>
@@ -88,6 +90,17 @@ export default function RiwayatSiswa({ profile }: Props) {
   const [loadingHist, setLoadingHist] = useState(false)
   const [tab, setTab] = useState<TabKey>('membaca')
   const [error, setError] = useState<string | null>(null)
+  const [pesan, setPesan] = useState<{ teks: string; galat?: boolean } | null>(null)
+  const [editId, setEditId] = useState<string | null>(null)
+  const [editJenis, setEditJenis] = useState<JenisSetoran>('ziyadah')
+  const [editStatus, setEditStatus] = useState<StatusHafalan>('lulus')
+  const [editCatatan, setEditCatatan] = useState('')
+  const [sibukId, setSibukId] = useState<string | null>(null)
+
+  const tampilkanPesan = (teks: string, galat = false) => {
+    setPesan({ teks, galat })
+    setTimeout(() => setPesan(null), 3200)
+  }
 
   const loadSiswa = useCallback(async () => {
     setLoadingSiswa(true)
@@ -167,7 +180,58 @@ export default function RiwayatSiswa({ profile }: Props) {
     return { total, d30, ziyadahLulus, last }
   }, [setoran])
 
+  function mulaiEdit(r: SetoranRecord) {
+    setEditId(r.id)
+    setEditJenis(r.jenis)
+    setEditStatus(r.statusHafalan ?? 'lulus')
+    setEditCatatan(r.catatan ?? '')
+  }
+
+  async function simpanEdit(r: SetoranRecord) {
+    const patch = {
+      jenis: editJenis,
+      statusHafalan: editJenis === 'tahsin' ? null : editStatus,
+      catatan: editCatatan.trim(),
+    }
+    setSibukId(r.id)
+    try {
+      await updateSetoranFields(r.id, patch)
+      setSetoran((prev) => prev.map((x) => (x.id === r.id ? { ...x, ...patch } : x)))
+      setEditId(null)
+      tampilkanPesan('Perubahan tersimpan.')
+    } catch (e) {
+      console.error(e)
+      tampilkanPesan('Gagal menyimpan. Mungkin ini bukan catatan milik Anda sendiri.', true)
+    } finally {
+      setSibukId(null)
+    }
+  }
+
+  async function hapus(r: SetoranRecord) {
+    if (!window.confirm('Hapus catatan ini? Tindakan ini tidak bisa dibatalkan.')) return
+    setSibukId(r.id)
+    try {
+      await deleteSetoran(r.id)
+      setSetoran((prev) => prev.filter((x) => x.id !== r.id))
+      tampilkanPesan('Catatan berhasil dihapus.')
+    } catch (e) {
+      console.error(e)
+      tampilkanPesan('Gagal menghapus. Mungkin ini bukan catatan milik Anda sendiri.', true)
+    } finally {
+      setSibukId(null)
+    }
+  }
+
   function renderSetoranCard(r: SetoranRecord) {
+    const milikSendiri = Boolean(r.createdBy) && r.createdBy === profile.uid
+    const bolehHapus = milikSendiri || profile.role === 'admin'
+    const ringkas = r.detailAyat?.length
+      ? ringkasDetailAyat(r.detailAyat)
+      : r.detailBacaanIqro
+        ? ringkasDetailIqro(r.detailBacaanIqro)
+        : ''
+    const mengedit = editId === r.id
+    const sibuk = sibukId === r.id
     return (
       <div key={r.id} className="card-soft p-3.5 sm:p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
@@ -183,17 +247,110 @@ export default function RiwayatSiswa({ profile }: Props) {
             <p className="mt-1.5 text-[13px] font-semibold text-slate-900">
               {r.materi?.label || '—'}
             </p>
+            {ringkas ? (
+              <p className="mt-1 inline-block rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                {ringkas}
+              </p>
+            ) : null}
             {r.catatan ? (
-              <p className="mt-1 text-[12px] text-muted">{r.catatan}</p>
+              <p className="mt-1 text-[12px] text-muted">&ldquo;{r.catatan}&rdquo;</p>
             ) : null}
           </div>
           <div className="text-right text-[11px] text-muted">
             <div>{formatTanggal(r.createdAt)}</div>
-            {r.createdByNama ? (
-              <div className="mt-0.5 text-[10px]">{r.createdByNama}</div>
+            {r.createdByNama && profile.role === 'admin' ? (
+              <div className="mt-0.5 text-[10px]">Diinput oleh: {r.createdByNama}</div>
             ) : null}
+            {(milikSendiri || bolehHapus) && !mengedit && (
+              <div className="mt-1.5 flex justify-end gap-1.5">
+                {milikSendiri && (
+                  <button
+                    type="button"
+                    disabled={sibuk}
+                    onClick={() => mulaiEdit(r)}
+                    className="rounded-lg border border-border px-2 py-0.5 text-[10.5px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Ubah
+                  </button>
+                )}
+                {bolehHapus && (
+                  <button
+                    type="button"
+                    disabled={sibuk}
+                    onClick={() => void hapus(r)}
+                    className="rounded-lg border border-red-200 px-2 py-0.5 text-[10.5px] font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    Hapus
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
+
+        {mengedit && (
+          <div className="mt-3 space-y-2 rounded-xl border border-border bg-slate-50/60 p-3">
+            <p className="text-[11px] text-muted">
+              Hanya jenis, status, dan catatan yang bisa diubah. Untuk mengoreksi materi, hapus lalu input ulang.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="text-[10.5px] font-medium text-slate-500">
+                Jenis
+                <select
+                  value={editJenis}
+                  onChange={(e) => setEditJenis(e.target.value as JenisSetoran)}
+                  className="mt-0.5 w-full rounded-md border border-border bg-white px-2 py-1.5 text-[12.5px]"
+                >
+                  {(Object.keys(JENIS_LABEL) as JenisSetoran[]).map((j) => (
+                    <option key={j} value={j}>
+                      {JENIS_LABEL[j]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {editJenis !== 'tahsin' && (
+                <label className="text-[10.5px] font-medium text-slate-500">
+                  Status hafalan
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as StatusHafalan)}
+                    className="mt-0.5 w-full rounded-md border border-border bg-white px-2 py-1.5 text-[12.5px]"
+                  >
+                    <option value="lulus">Lulus</option>
+                    <option value="ulang">Perlu diulang</option>
+                  </select>
+                </label>
+              )}
+            </div>
+            <label className="block text-[10.5px] font-medium text-slate-500">
+              Catatan
+              <textarea
+                value={editCatatan}
+                onChange={(e) => setEditCatatan(e.target.value)}
+                rows={2}
+                className="mt-0.5 w-full rounded-md border border-border bg-white px-2 py-1.5 text-[12.5px]"
+              />
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={sibuk}
+                onClick={() => void simpanEdit(r)}
+                className="rounded-lg bg-muh-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
+              >
+                {sibuk ? 'Menyimpan…' : 'Simpan'}
+              </button>
+              <button
+                type="button"
+                disabled={sibuk}
+                onClick={() => setEditId(null)}
+                className="rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-slate-600"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -360,6 +517,18 @@ export default function RiwayatSiswa({ profile }: Props) {
               {error && (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-medium text-red-700">
                   {error}
+                </div>
+              )}
+
+              {pesan && (
+                <div
+                  className={`rounded-xl border px-3 py-2 text-[12px] font-medium ${
+                    pesan.galat
+                      ? 'border-red-200 bg-red-50 text-red-700'
+                      : 'border-muh-200 bg-muh-50 text-muh-800'
+                  }`}
+                >
+                  {pesan.teks}
                 </div>
               )}
 

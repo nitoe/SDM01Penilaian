@@ -135,15 +135,20 @@ service cloud.firestore {
     }
 
     // ---- Tahsin-Tahfizh --------------------------------------------------
-    // Riwayat bersifat immutable (update: false). Entri baru harus mencantumkan
-    // createdBy = uid pembuatnya dan kelas yang memang diampu.
+    // Entri baru harus mencantumkan createdBy = uid pembuatnya dan kelas yang memang diampu.
+    // Sesuai v2 antiregresi §5: hanya PEMBUATNYA yang boleh mengubah (dan hanya field sederhana: jenis, status
+    // hafalan, catatan; materi dan Baca & Tandai terkunci), pembuatnya atau admin boleh menghapus.
     match /setoran/{id} {
       allow get, list: if bolehKelas(resource.data.kelas)
                        || anakSaya(resource.data.siswaId);
       allow create: if bolehKelas(request.resource.data.kelas)
                     && request.resource.data.createdBy == request.auth.uid;
-      allow update: if false;
-      allow delete: if isAdmin();
+      allow update: if isLoggedIn()
+                    && resource.data.createdBy == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['jenis', 'statusHafalan', 'catatan']);
+      allow delete: if isLoggedIn()
+                    && (resource.data.createdBy == request.auth.uid || isAdmin());
     }
 
     match /menulis_log/{id} {
@@ -151,8 +156,12 @@ service cloud.firestore {
                        || anakSaya(resource.data.siswaId);
       allow create: if bolehKelas(request.resource.data.kelas)
                     && request.resource.data.createdBy == request.auth.uid;
-      allow update: if false;
-      allow delete: if isAdmin();
+      allow update: if isLoggedIn()
+                    && resource.data.createdBy == request.auth.uid
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                         .hasAny(['siswaId', 'kelas', 'createdBy', 'createdAt']);
+      allow delete: if isLoggedIn()
+                    && (resource.data.createdBy == request.auth.uid || isAdmin());
     }
 
     // ID dokumen = kode kelas (mis. '3A').

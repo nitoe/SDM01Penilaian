@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -13,11 +14,14 @@ import {
 import { auth, db } from './firebase'
 import type {
   AuthScope,
+  JenisSetoran,
   MenulisRecord,
   SetoranPayload,
   SetoranRecord,
   SiswaTahsin,
+  StatusHafalan,
 } from '../types/tahsin'
+import { recordSetoran } from './bacaTandai'
 import { SEMUA_KELAS } from '../types/tahsin'
 
 export async function getSiswaList(
@@ -61,7 +65,7 @@ export async function updateTamatIqro(siswaId: string, value: boolean) {
   await updateDoc(doc(db, 'siswa', siswaId), { tamatIqro: value })
 }
 
-/** Riwayat setoran satu siswa (terbaru dulu). Filter kelas wajib. */
+/** Riwayat setoran satu siswa (terbaru dulu). Filter kelas wajib. Istilah status data lama disamakan (recordSetoran). */
 export async function getRiwayatSetoran(
   siswaId: string,
   kelas: string,
@@ -74,7 +78,7 @@ export async function getRiwayatSetoran(
       orderBy('createdAt', 'desc'),
     )
     const snap = await getDocs(q)
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as SetoranRecord)
+    return snap.docs.map((d) => recordSetoran(d.id, d.data()))
   } catch {
     // Fallback jika index belum ada
     const q = query(
@@ -83,9 +87,25 @@ export async function getRiwayatSetoran(
       where('kelas', '==', kelas),
     )
     const snap = await getDocs(q)
-    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as SetoranRecord)
+    const list = snap.docs.map((d) => recordSetoran(d.id, d.data()))
     return list.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
   }
+}
+
+/**
+ * Ubah field sederhana satu setoran: jenis, status hafalan, catatan. Materi dan Baca & Tandai SENGAJA tidak
+ * bisa diubah (hapus lalu input ulang) agar riwayat konsisten. Rules hanya mengizinkan pembuatnya (v2 §5).
+ */
+export async function updateSetoranFields(
+  id: string,
+  patch: { jenis: JenisSetoran; statusHafalan: StatusHafalan | null; catatan: string },
+) {
+  await updateDoc(doc(db, 'setoran', id), patch)
+}
+
+/** Hapus satu setoran. Rules: pembuatnya sendiri atau admin. */
+export async function deleteSetoran(id: string) {
+  await deleteDoc(doc(db, 'setoran', id))
 }
 
 export async function getMenulisLog(

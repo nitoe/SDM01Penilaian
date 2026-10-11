@@ -2,7 +2,30 @@
 
 export type JenjangTahsin = 'iqro' | 'quran'
 export type JenisSetoran = 'ziyadah' | 'murojaah' | 'tahsin'
-export type StatusHafalan = 'lulus' | 'mengulang' | 'belum'
+/** Status satu setoran hafalan. Istilah mengikuti v2: 'lulus' atau 'ulang' (Perlu diulang). */
+export type StatusHafalan = 'lulus' | 'ulang'
+/** Tanda per kata saat Baca & Tandai: 1× ketuk = tajwid, 2× = makhroj. */
+export type JenisKata = 'tajwid' | 'makhroj'
+/** Status per ayat saat Baca & Tandai. */
+export type StatusAyat = 'lulus' | 'gagal'
+
+export interface KataSalah {
+  index: number
+  jenis: JenisKata
+}
+
+/** Bentuk yang disimpan di setoran.detailAyat (sama dengan v2). */
+export interface DetailAyatItem {
+  ayat: number
+  status: StatusAyat | null
+  kataSalah: KataSalah[]
+}
+
+/** Bentuk yang disimpan di setoran.detailBacaanIqro (sama dengan v2). */
+export interface DetailBacaanIqro {
+  teks: string
+  kataSalah: KataSalah[]
+}
 
 export type JenisKelamin = 'L' | 'P'
 
@@ -65,15 +88,8 @@ export interface SetoranPayload {
   jenjang: JenjangTahsin
   jenis: JenisSetoran
   materi: MateriSetoran
-  detailAyat?: {
-    ayat: number
-    status?: string
-    kataSalah?: { index: number; jenis: string }[]
-  }[]
-  detailBacaanIqro?: {
-    teks: string
-    kataSalah?: { index: number; jenis: string }[]
-  } | null
+  detailAyat?: DetailAyatItem[]
+  detailBacaanIqro?: DetailBacaanIqro | null
   statusHafalan: StatusHafalan | null
   catatan: string
   createdByNama: string
@@ -120,6 +136,5 @@ export const JENIS_LABEL: Record<JenisSetoran, string> = {
 
 export const STATUS_LABEL: Record<StatusHafalan, string> = {
   lulus: 'Lulus',
-  mengulang: 'Mengulang',
-  belum: 'Belum',
+  ulang: 'Perlu diulang',
 }

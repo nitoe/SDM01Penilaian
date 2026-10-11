@@ -69,3 +69,23 @@ body {
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ---- Baca & Tandai (Tahsin): teks Arab dan tanda kata ---------------------------------------------
+   Tanpa font dari CDN (CSP): memakai font Arab bawaan sistem; Amiri dipakai bila terpasang. */
+.font-arab {
+  font-family: 'Amiri', 'Scheherazade New', 'Noto Naskh Arabic', 'Traditional Arabic', 'Geeza Pro', 'Segoe UI', serif;
+  font-size: 1.65rem;
+  line-height: 2.5;
+}
+.kata-arab {
+  display: inline-block;
+  margin: 0 0.12rem;
+  padding: 0 0.3rem;
+  border-radius: 0.5rem;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+.kata-arab:hover { background: rgba(15, 23, 42, 0.06); }
+.kata-arab.kata-tajwid { background: #f5c542; box-shadow: 0 0 0 1px #d4a520; }
+.kata-arab.kata-makhroj { background: #e0604f; color: #fff; box-shadow: 0 0 0 1px #c44b3b; }

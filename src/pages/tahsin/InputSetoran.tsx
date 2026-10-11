@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import type {
+  JenisKata,
   JenisSetoran,
   StatusHafalan,
   SiswaTahsin,
@@ -9,6 +10,15 @@ import type {
 import { SEMUA_KELAS } from '../../types/tahsin'
 import { getSiswaList, saveSetoran, updateTamatIqro } from '../../lib/tahsinData'
 import { SURAH_LIST, surahByNo, hitungTotalAyat } from '../../lib/quranSurah'
+import {
+  bangunDetailAyat,
+  bangunDetailIqro,
+  ketukKata,
+  selaraskanRentang,
+  tandaKosong,
+  type TandaPerAyat,
+} from '../../lib/bacaTandai'
+import { BacaTandai, KartuKataIqro } from '../../components/BacaTandai'
 
 interface Props {
   profile: AppUser
@@ -51,6 +61,11 @@ export default function InputSetoran({ profile }: Props) {
   const [bukuIqro, setBukuIqro] = useState(1)
   const [halMulai, setHalMulai] = useState(1)
   const [halAkhir, setHalAkhir] = useState(1)
+
+  // Baca & Tandai (Al-Qur'an, satu surah) dan Latihan Membaca (Iqro)
+  const [tanda, setTanda] = useState<TandaPerAyat>({})
+  const [iqroTeks, setIqroTeks] = useState('')
+  const [iqroKata, setIqroKata] = useState<Record<number, JenisKata>>({})
 
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<{ msg: string; error?: boolean } | null>(null)
@@ -111,6 +126,21 @@ export default function InputSetoran({ profile }: Props) {
     if (isIqroMurni) setJenis('tahsin')
   }, [isIqroMurni])
 
+  /** Baca & Tandai hanya untuk rentang dalam satu surah (sama dengan v2). */
+  const bisaBacaTandai = bacaQuran && surahAwal === surahAkhir && ayatAkhir >= ayatMulai
+
+  // Ganti siswa atau surah → tanda lama tidak berlaku lagi.
+  useEffect(() => {
+    setTanda({})
+    setIqroTeks('')
+    setIqroKata({})
+  }, [selected?.id, surahAwal, surahAkhir])
+
+  // Geser rentang ayat → tanda ayat yang masih ada di rentang dipertahankan.
+  useEffect(() => {
+    setTanda((prev) => (bisaBacaTandai ? selaraskanRentang(prev, ayatMulai, ayatAkhir) : {}))
+  }, [bisaBacaTandai, ayatMulai, ayatAkhir])
+
   async function handleTamatIqro(checked: boolean) {
     if (!selected) return
     const ok = window.confirm(
@@ -140,6 +170,10 @@ export default function InputSetoran({ profile }: Props) {
   async function handleSimpan() {
     if (!selected) {
       showToast('Pilih siswa terlebih dahulu.', true)
+      return
+    }
+    if (bacaQuran && surahAwal === surahAkhir && ayatAkhir < ayatMulai) {
+      showToast('Ayat akhir tidak boleh lebih kecil dari ayat mulai.', true)
       return
     }
     setSaving(true)
@@ -174,8 +208,8 @@ export default function InputSetoran({ profile }: Props) {
         jenjang: selected.jenjang,
         jenis,
         materi,
-        detailAyat: [],
-        detailBacaanIqro: null,
+        detailAyat: bisaBacaTandai ? bangunDetailAyat(tanda) : [],
+        detailBacaanIqro: bacaQuran ? null : bangunDetailIqro(iqroTeks, iqroKata),
         statusHafalan: jenis === 'tahsin' ? null : statusHafalan,
         catatan: catatan.trim(),
         createdByNama: profile.nama,
@@ -184,6 +218,10 @@ export default function InputSetoran({ profile }: Props) {
       showToast(`Setoran ${selected.nama.split(' ')[0]} tersimpan.`)
       setCatatan('')
       setStatusHafalan('lulus')
+      // Siswa tetap terpilih (lanjut ayat berikutnya); tanda dan latihan dikosongkan.
+      setTanda(bisaBacaTandai ? selaraskanRentang({}, ayatMulai, ayatAkhir) : {})
+      setIqroTeks('')
+      setIqroKata({})
     } catch (err) {
       console.error(err)
       showToast('Gagal menyimpan setoran. Coba lagi.', true)
@@ -362,10 +400,11 @@ export default function InputSetoran({ profile }: Props) {
               <div className="mt-2.5 space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
+                    <label htmlFor="surah-awal" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                       Surah awal
                     </label>
                     <select
+                  id="surah-awal"
                       value={surahAwal}
                       onChange={(e) => {
                         const n = Number(e.target.value)
@@ -384,10 +423,11 @@ export default function InputSetoran({ profile }: Props) {
                     </select>
                   </div>
                   <div>
-                    <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
+                    <label htmlFor="surah-akhir" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                       Surah akhir
                     </label>
                     <select
+                  id="surah-akhir"
                       value={surahAkhir}
                       onChange={(e) => setSurahAkhir(Number(e.target.value))}
                       className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
@@ -402,10 +442,11 @@ export default function InputSetoran({ profile }: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
+                    <label htmlFor="ayat-mulai" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                       Ayat mulai
                     </label>
                     <input
+                  id="ayat-mulai"
                       type="number"
                       min={1}
                       max={surahByNo(surahAwal).ayat}
@@ -415,10 +456,11 @@ export default function InputSetoran({ profile }: Props) {
                     />
                   </div>
                   <div>
-                    <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
+                    <label htmlFor="ayat-akhir" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                       Ayat akhir
                     </label>
                     <input
+                  id="ayat-akhir"
                       type="number"
                       min={1}
                       max={surahByNo(surahAkhir).ayat}
@@ -435,10 +477,11 @@ export default function InputSetoran({ profile }: Props) {
             ) : (
               <div className="mt-2.5 space-y-2">
                 <div>
-                  <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
+                  <label htmlFor="buku-iqro" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                     Buku Iqro
                   </label>
                   <select
+                  id="buku-iqro"
                     value={bukuIqro}
                     onChange={(e) => setBukuIqro(Number(e.target.value))}
                     className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
@@ -452,10 +495,11 @@ export default function InputSetoran({ profile }: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
+                    <label htmlFor="hal-mulai" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                       Halaman mulai
                     </label>
                     <input
+                  id="hal-mulai"
                       type="number"
                       min={1}
                       value={halMulai}
@@ -464,10 +508,11 @@ export default function InputSetoran({ profile }: Props) {
                     />
                   </div>
                   <div>
-                    <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
+                    <label htmlFor="hal-akhir" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                       Halaman akhir
                     </label>
                     <input
+                  id="hal-akhir"
                       type="number"
                       min={1}
                       value={halAkhir}
@@ -480,35 +525,80 @@ export default function InputSetoran({ profile }: Props) {
             )}
           </section>
 
+          {bacaQuran ? (
+            <section className="rounded-lg border border-border bg-white p-3">
+              <h2 className="text-[12.5px] font-semibold text-slate-800">3. Baca &amp; Tandai</h2>
+              {bisaBacaTandai ? (
+                <div className="mt-2">
+                  <BacaTandai
+                    surah={surahAwal}
+                    mulai={ayatMulai}
+                    akhir={ayatAkhir}
+                    tanda={tanda}
+                    onChange={setTanda}
+                  />
+                </div>
+              ) : (
+                <p className="mt-2 text-[12px] text-muted">
+                  {surahAwal !== surahAkhir
+                    ? 'Baca & Tandai hanya tersedia untuk rentang dalam satu surah.'
+                    : 'Ayat akhir harus sama dengan atau lebih besar dari ayat mulai.'}
+                </p>
+              )}
+            </section>
+          ) : (
+            <section className="rounded-lg border border-border bg-white p-3">
+              <h2 className="text-[12.5px] font-semibold text-slate-800">
+                3. Latihan membaca{' '}
+                <span className="font-normal text-muted">(opsional)</span>
+              </h2>
+              <div className="mt-2">
+                <KartuKataIqro
+                  teks={iqroTeks}
+                  kata={iqroKata}
+                  onBuat={(t) => {
+                    setIqroTeks(t)
+                    setIqroKata({})
+                  }}
+                  onKetuk={(i) => {
+                    const hasil = ketukKata({ ...tandaKosong(), kata: iqroKata }, i)
+                    setIqroKata(hasil.kata)
+                  }}
+                />
+              </div>
+            </section>
+          )}
+
           <section className="rounded-lg border border-border bg-white p-3">
             <h2 className="text-[12.5px] font-semibold text-slate-800">
-              3. Penilaian & catatan
+              4. Penilaian & catatan
             </h2>
 
             {jenis !== 'tahsin' && (
               <div className="mt-2">
-                <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
+                <label htmlFor="status-hafalan" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                   Status hafalan
                 </label>
                 <select
+                  id="status-hafalan"
                   value={statusHafalan}
                   onChange={(e) =>
                     setStatusHafalan(e.target.value as StatusHafalan)
                   }
                   className="w-full rounded-md border border-border px-2 py-1.5 text-[12.5px]"
                 >
-                  <option value="lulus">Lulus</option>
-                  <option value="mengulang">Mengulang</option>
-                  <option value="belum">Belum</option>
+                  <option value="lulus">Lulus — lanjut materi berikutnya</option>
+                  <option value="ulang">Perlu diulang</option>
                 </select>
               </div>
             )}
 
             <div className="mt-2">
-              <label className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
+              <label htmlFor="catatan-guru" className="mb-0.5 block text-[10.5px] font-medium text-slate-500">
                 Catatan guru (opsional)
               </label>
               <textarea
+                  id="catatan-guru"
                 value={catatan}
                 onChange={(e) => setCatatan(e.target.value)}
                 rows={2}
