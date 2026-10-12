@@ -109,14 +109,22 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create: if isAdmin()
         || (isLoggedIn() && request.auth.uid == uid
-            && request.resource.data.role == 'orangtua'
             && request.resource.data.status == 'pending'
-            && request.resource.data.keys().hasOnly(
-                 ['email', 'nama', 'role', 'status', 'anakIds', 'createdAt', 'updatedAt']));
+            && (
+              // Pendaftaran orang tua
+              (request.resource.data.role == 'orangtua'
+               && request.resource.data.keys().hasOnly(
+                    ['email', 'nama', 'role', 'status', 'anakIds', 'createdAt', 'updatedAt']))
+              ||
+              // Pendaftaran mandiri guru (nama harus dari daftar resmi, role sementara guru)
+              (request.resource.data.role in ['guru', 'guru_tahsin_tahfizh', 'guru_akademik']
+               && request.resource.data.keys().hasOnly(
+                    ['email', 'nama', 'gelar', 'role', 'status', 'createdAt', 'updatedAt']))
+            ));
       allow update: if isAdmin()
         || (akunAktif() && request.auth.uid == uid
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['nama', 'updatedAt']));
+                 .hasOnly(['nama', 'gelar', 'updatedAt']));
       allow delete: if isAdmin();
     }
 

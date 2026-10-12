@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ambilNoticeLogin } from '../lib/akunGuru'
 import { loginWithEmail, logout } from '../lib/auth'
+import { sendPasswordResetEmail } from 'firebase/auth'
+import { auth } from '../lib/firebase'
 import { isFirebaseConfigured } from '../lib/firebase'
 
 export default function Login() {
@@ -10,6 +12,8 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [resetMsg, setResetMsg] = useState<string | null>(null)
 
   useEffect(() => {
     const notice = ambilNoticeLogin()
@@ -26,6 +30,16 @@ export default function Login() {
         setError(
           'Akun Auth berhasil, tetapi profil di Firestore belum ada. Minta admin membuat dokumen users/{uid}.',
         )
+        return
+      }
+      if (profile.status === 'pending') {
+        setError('Akun Anda belum disetujui admin. Tunggu persetujuan terlebih dahulu.')
+        await logout()
+        return
+      }
+      if (profile.status === 'rejected') {
+        setError('Pendaftaran akun Anda ditolak. Hubungi administrator.')
+        await logout()
         return
       }
       if (profile.role === 'orangtua' && profile.status !== 'approved') {
@@ -125,16 +139,25 @@ export default function Login() {
                 <label htmlFor="password" className="mb-1.5 block text-[12px] font-medium text-slate-600">
                   Password
                 </label>
-                <input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={field}
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={field + ' pr-20'}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-muh-700"
+                  >
+                    {showPassword ? 'Sembunyikan' : 'Tampilkan'}
+                  </button>
+                </div>
               </div>
               {error && (
                 <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] font-medium text-red-700">
@@ -150,7 +173,34 @@ export default function Login() {
               </button>
             </form>
 
-            <p className="mt-8 text-center text-[12px] text-muted lg:text-left">
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!email.trim()) {
+                    setError('Isi email terlebih dahulu untuk mengatur ulang password.')
+                    return
+                  }
+                  try {
+                    await sendPasswordResetEmail(auth, email.trim().toLowerCase())
+                    setResetMsg('Tautan atur ulang password telah dikirim ke email Anda.')
+                    setError(null)
+                  } catch {
+                    setError('Gagal mengirim tautan. Periksa email.')
+                  }
+                }}
+                className="text-[12px] font-medium text-muh-700 hover:underline"
+              >
+                Lupa password?
+              </button>
+              {resetMsg && <p className="mt-2 text-[12px] text-muh-800">{resetMsg}</p>}
+            </div>
+
+            <p className="mt-6 text-center text-[12px] text-muted">
+              Belum punya akun? <Link to="/register" className="font-medium text-muh-700">Daftar sebagai guru</Link>
+            </p>
+
+            <p className="mt-4 text-center text-[12px] text-muted lg:text-left">
               SD Muhammadiyah 01 Kukusan · Internal
             </p>
           </div>

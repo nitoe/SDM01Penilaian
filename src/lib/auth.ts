@@ -37,6 +37,7 @@ export async function fetchUserProfile(uid: string): Promise<AppUser | null> {
     uid,
     email: (data.email as string) || '',
     nama: (data.nama as string) || '',
+    gelar: (data.gelar as string) || undefined,
     role: data.role,
     kelasAmpu: data.kelasAmpu,
     status: data.status,

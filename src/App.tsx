@@ -7,6 +7,8 @@ import { canAkademik, canTahsin, isAdminRole } from './lib/roles'
 import type { AppUser } from './types/user'
 import Layout from './components/Layout'
 import Login from './pages/Login'
+import Register from './pages/Register'
+import ProfilSaya from './pages/ProfilSaya'
 import Home from './pages/Home'
 import TahsinHub from './pages/TahsinHub'
 import AkademikHub from './pages/AkademikHub'
@@ -70,6 +72,10 @@ export default function App() {
           path="/login"
           element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
         />
+        <Route
+          path="/register"
+          element={isAuthenticated ? <Navigate to="/" replace /> : <Register />}
+        />
 
         <Route
           element={
@@ -81,6 +87,7 @@ export default function App() {
           }
         >
           <Route path="/" element={profile ? <Home profile={profile} /> : null} />
+          <Route path="/profil" element={profile ? <ProfilSaya profile={profile} /> : null} />
 
           <Route element={<RoleGate allow={profile ? canTahsin(profile.role) : false} />}>
             <Route path="/tahsin" element={<TahsinHub />} />

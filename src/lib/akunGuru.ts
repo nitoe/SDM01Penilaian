@@ -11,17 +11,20 @@ const URUTAN: readonly string[] = SEMUA_KELAS
 export interface InputAkunGuru {
   email: string
   nama: string
+  gelar?: string
   role: UserRole
   kelasAmpu: string[]
   penugasan: { kelas: string; mapel: string }[]
   waliKelas: string[]
   aktif: boolean
+  status?: 'pending' | 'approved' | 'rejected'
 }
 
 /** Dokumen `users/{uid}` yang ditulis halaman Kelola Akun. */
 export interface DokumenAkun {
   email: string
   nama: string
+  gelar?: string
   role: UserRole
   kelasAmpu: string[]
   penugasan: { kelas: string; mapel: string }[]
@@ -29,6 +32,7 @@ export interface DokumenAkun {
   penugasanKelas: string[]
   penugasanKelasMapel: string[]
   aktif: boolean
+  status?: 'pending' | 'approved' | 'rejected'
   updatedAt: string
   createdAt?: string
 }
@@ -76,6 +80,7 @@ export function susunDokumenAkun(input: InputAkunGuru, sekarang: string, created
   const dokumen: DokumenAkun = {
     email: input.email.trim().toLowerCase(),
     nama: input.nama.trim(),
+    gelar: input.gelar?.trim() || undefined,
     role: input.role,
     kelasAmpu: butuhTahsin ? urutKelas(input.kelasAmpu) : [],
     penugasan,
@@ -83,6 +88,7 @@ export function susunDokumenAkun(input: InputAkunGuru, sekarang: string, created
     penugasanKelas: turunan.penugasanKelas,
     penugasanKelasMapel: turunan.penugasanKelasMapel,
     aktif: input.aktif !== false,
+    status: input.status,
     updatedAt: sekarang,
   }
   if (createdAt) dokumen.createdAt = createdAt

@@ -47,6 +47,7 @@ const inputCls =
 const formKosong = (): InputAkunGuru & { password: string } => ({
   email: '',
   nama: '',
+  gelar: '',
   role: 'guru_tahsin_tahfizh',
   kelasAmpu: [],
   penugasan: [],
@@ -252,6 +253,7 @@ export default function KelolaAkun({ profile }: Props) {
     setForm({
       email: akun.email,
       nama: akun.nama === '(tanpa nama)' ? '' : akun.nama,
+      gelar: akun.gelar ?? '',
       role: akun.roleRusak ? 'guru_tahsin_tahfizh' : akun.role === 'guru' ? 'guru' : akun.role,
       kelasAmpu: [...(akun.kelasAmpu ?? [])],
       penugasan: (akun.penugasan ?? []).map((p) => ({ ...p })),
@@ -375,6 +377,33 @@ export default function KelolaAkun({ profile }: Props) {
             }`}
           >
             Tambah guru
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const data = list.map((u) => ({
+                email: u.email,
+                nama: u.nama,
+                gelar: u.gelar ?? '',
+                role: u.role,
+                status: u.status ?? 'approved',
+                aktif: u.aktif !== false,
+                kelasAmpu: u.kelasAmpu ?? [],
+                penugasan: u.penugasan ?? [],
+                waliKelas: u.waliKelas ?? [],
+              }))
+              const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `akun-guru-${new Date().toISOString().slice(0, 10)}.json`
+              a.click()
+              URL.revokeObjectURL(url)
+              showToast('Data akun diekspor.')
+            }}
+            className="rounded-xl border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Ekspor JSON
           </button>
         </div>
       </div>
@@ -593,6 +622,14 @@ export default function KelolaAkun({ profile }: Props) {
                   className={inputCls}
                   value={form.nama}
                   onChange={(e) => setF('nama', e.target.value)}
+                />
+              </Field>
+              <Field label="Gelar pendidikan">
+                <input
+                  className={inputCls}
+                  value={form.gelar ?? ''}
+                  placeholder="contoh: S.Pd"
+                  onChange={(e) => setF('gelar', e.target.value)}
                 />
               </Field>
               <Field label="Email *">

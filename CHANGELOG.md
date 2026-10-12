@@ -94,3 +94,13 @@
 - Admin tidak dapat menonaktifkan atau mengganti peran akunnya sendiri dari halaman ini.
 
 
+
+## Belum dirilis — Pendaftaran mandiri guru & fitur akun
+
+- Pendaftaran mandiri guru: halaman `/register` dengan dropdown nama guru resmi (dari penugasan 2026-2027). Akun dibuat dengan `status: pending`, menunggu persetujuan admin.
+- Field `gelar` (pendidikan terakhir) ditambahkan pada profil guru. Dipakai untuk penandatanganan rapor (`nama, gelar`).
+- Guru dapat mengedit nama dan gelar sendiri di `/profil`.
+- Halaman login: toggle tampilkan/sembunyikan password (default sembunyi), fitur lupa password (kirim tautan reset).
+- Admin tetap dapat membuat akun langsung di Kelola Akun. Ditambah tombol Ekspor JSON akun guru (untuk backup/impor ulang tanpa duplikat).
+- `firestore.rules`: diperbarui agar mendukung create guru pending dan update `gelar` oleh pemilik.
+- Data nama guru resmi: `src/lib/dataGuruResmi.ts`.

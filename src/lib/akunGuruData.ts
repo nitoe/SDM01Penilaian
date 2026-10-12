@@ -70,6 +70,7 @@ function dariDokumen(uid: string, data: DocumentData): AkunStaf | null {
     uid,
     email: typeof data.email === 'string' ? data.email : '',
     nama: typeof data.nama === 'string' && data.nama ? data.nama : '(tanpa nama)',
+    gelar: typeof data.gelar === 'string' ? data.gelar : undefined,
     role,
     roleRusak,
     kelasAmpu: sebagaiStringArray(data.kelasAmpu),
@@ -78,6 +79,7 @@ function dariDokumen(uid: string, data: DocumentData): AkunStaf | null {
     penugasanKelas: sebagaiStringArray(data.penugasanKelas),
     penugasanKelasMapel: sebagaiStringArray(data.penugasanKelasMapel),
     aktif: typeof data.aktif === 'boolean' ? data.aktif : undefined,
+    status: typeof data.status === 'string' ? data.status as any : undefined,
     createdAt: keIso(data.createdAt),
     updatedAt: keIso(data.updatedAt),
   }
