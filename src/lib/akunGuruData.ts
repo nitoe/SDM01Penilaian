@@ -132,6 +132,10 @@ export async function setAkunAktif(uid: string, aktif: boolean): Promise<void> {
   await setDoc(doc(db, 'users', uid), { aktif, updatedAt: new Date().toISOString() }, { merge: true })
 }
 
+export async function setStatusAkun(uid: string, status: 'pending' | 'approved' | 'rejected'): Promise<void> {
+  await setDoc(doc(db, 'users', uid), { status, updatedAt: new Date().toISOString() }, { merge: true })
+}
+
 export async function kirimResetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email.trim().toLowerCase())
 }

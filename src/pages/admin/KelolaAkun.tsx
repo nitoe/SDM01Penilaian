@@ -12,6 +12,7 @@ import {
   listAkunStaf,
   pesanGalatAuth,
   setAkunAktif,
+  setStatusAkun,
   simpanAkunGuru,
   type AkunStaf,
 } from '../../lib/akunGuruData'
@@ -25,7 +26,7 @@ interface Props {
 }
 
 type Mode = 'list' | 'form'
-type Saringan = 'semua' | 'guru_tahsin_tahfizh' | 'guru_akademik' | 'admin' | 'nonaktif'
+type Saringan = 'semua' | 'guru_tahsin_tahfizh' | 'guru_akademik' | 'admin' | 'nonaktif' | 'pending'
 
 const OPSI_BARU: { value: UserRole; label: string }[] = [
   { value: 'guru_tahsin_tahfizh', label: 'Guru Tahsin-Tahfizh' },
@@ -35,6 +36,7 @@ const OPSI_BARU: { value: UserRole; label: string }[] = [
 
 const SARINGAN: { id: Saringan; label: string }[] = [
   { id: 'semua', label: 'Semua' },
+  { id: 'pending', label: 'Menunggu' },
   { id: 'guru_tahsin_tahfizh', label: 'Tahsin' },
   { id: 'guru_akademik', label: 'Akademik' },
   { id: 'admin', label: 'Admin' },
@@ -236,7 +238,8 @@ export default function KelolaAkun({ profile }: Props) {
     const q = cari.trim().toLowerCase()
     return list.filter((u) => {
       if (saringan === 'nonaktif' && u.aktif !== false) return false
-      if (saringan !== 'semua' && saringan !== 'nonaktif' && u.role !== saringan) return false
+      if (saringan === 'pending' && u.status !== 'pending') return false
+      if (saringan !== 'semua' && saringan !== 'nonaktif' && saringan !== 'pending' && u.role !== saringan) return false
       if (!q) return true
       return `${u.nama} ${u.email} ${labelPeran(u)}`.toLowerCase().includes(q)
     })
@@ -259,6 +262,7 @@ export default function KelolaAkun({ profile }: Props) {
       penugasan: (akun.penugasan ?? []).map((p) => ({ ...p })),
       waliKelas: [...(akun.waliKelas ?? [])],
       aktif: akun.aktif !== false,
+      status: akun.status,
       password: '',
     })
     setMode('form')
@@ -288,8 +292,10 @@ export default function KelolaAkun({ profile }: Props) {
         setKataSandiBaru({ nama: form.nama.trim(), email: form.email.trim().toLowerCase(), password: form.password })
         showToast('Akun guru dibuat. Salin password awal sebelum menutup kotak di bawah.')
       } else {
-        await simpanAkunGuru(editing.uid, form, editing.createdAt)
-        showToast('Perubahan akun disimpan.')
+        const input = { ...form }
+        if (editing.status === 'pending') input.status = 'approved'
+        await simpanAkunGuru(editing.uid, input, editing.createdAt)
+        showToast(editing.status === 'pending' ? 'Akun disetujui dan data disimpan.' : 'Perubahan akun disimpan.')
         setKataSandiBaru(null)
       }
       setMode('list')
@@ -332,6 +338,22 @@ export default function KelolaAkun({ profile }: Props) {
       setKonfirmasi(null)
       await load()
       setDipilih((prev) => (prev?.uid === akun.uid ? { ...prev, aktif } : prev))
+    } catch (err) {
+      console.error(err)
+      showToast(pesanGalatAuth(err), true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function terapkanStatus(akun: AkunStaf, status: 'approved' | 'rejected') {
+    if (akun.uid === profile.uid) return
+    setBusy(true)
+    try {
+      await setStatusAkun(akun.uid, status)
+      showToast(status === 'approved' ? `${akun.nama} disetujui.` : `${akun.nama} ditolak.`)
+      await load()
+      setDipilih((prev) => (prev?.uid === akun.uid ? { ...prev, status } : prev))
     } catch (err) {
       console.error(err)
       showToast(pesanGalatAuth(err), true)
@@ -505,9 +527,15 @@ export default function KelolaAkun({ profile }: Props) {
                         <td className="px-3 py-2">{labelPeran(u)}</td>
                         <td className="hidden px-3 py-2 text-muted sm:table-cell">{ringkasTugas(u)}</td>
                         <td className="px-3 py-2">
-                          <Badge tone={u.aktif === false ? 'neutral' : 'green'}>
-                            {u.aktif === false ? 'Nonaktif' : 'Aktif'}
-                          </Badge>
+                          {u.status === 'pending' ? (
+                            <Badge tone="peach">Menunggu</Badge>
+                          ) : u.status === 'rejected' ? (
+                            <Badge tone="neutral">Ditolak</Badge>
+                          ) : (
+                            <Badge tone={u.aktif === false ? 'neutral' : 'green'}>
+                              {u.aktif === false ? 'Nonaktif' : 'Aktif'}
+                            </Badge>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -524,10 +552,14 @@ export default function KelolaAkun({ profile }: Props) {
             ) : (
               <div className="space-y-3 text-[12px]">
                 <div>
-                  <div className="text-[15px] font-semibold text-slate-900">{dipilih.nama}</div>
+                  <div className="text-[15px] font-semibold text-slate-900">
+                    {dipilih.nama}{dipilih.gelar ? `, ${dipilih.gelar}` : ''}
+                  </div>
                   <div className="text-[11px] text-muted">{dipilih.email}</div>
-                  <div className="mt-1">
+                  <div className="mt-1 flex flex-wrap gap-1">
                     <Badge tone={dipilih.roleRusak ? 'peach' : 'neutral'}>{labelPeran(dipilih)}</Badge>
+                    {dipilih.status === 'pending' && <Badge tone="peach">Menunggu</Badge>}
+                    {dipilih.status === 'rejected' && <Badge tone="neutral">Ditolak</Badge>}
                   </div>
                 </div>
                 <p className="border-t border-border pt-3 text-slate-700">{ringkasTugas(dipilih)}</p>
@@ -539,6 +571,29 @@ export default function KelolaAkun({ profile }: Props) {
                       </li>
                     ))}
                   </ul>
+                )}
+                {dipilih.status === 'pending' && (
+                  <div className="rounded-xl border border-peach-200 bg-peach-50 p-2.5">
+                    <p className="text-[11px] font-medium text-peach-800">Menunggu persetujuan</p>
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => openEdit(dipilih)}
+                        className="w-full rounded-lg bg-muh-600 py-1.5 text-[11px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
+                      >
+                        Setujui & atur tugas
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void terapkanStatus(dipilih, 'rejected')}
+                        className="w-full rounded-lg border border-red-200 bg-white py-1.5 text-[11px] font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
+                      >
+                        Tolak pendaftaran
+                      </button>
+                    </div>
+                  </div>
                 )}
                 <button
                   type="button"
@@ -608,7 +663,14 @@ export default function KelolaAkun({ profile }: Props) {
 
       {mode === 'form' && (
         <section className="card-soft p-4">
-          <h2 className="text-[14px] font-semibold text-slate-800">{editing ? 'Ubah akun' : 'Tambah akun guru'}</h2>
+          <h2 className="text-[14px] font-semibold text-slate-800">
+            {editing ? (editing.status === 'pending' ? 'Setujui akun guru' : 'Ubah akun') : 'Tambah akun guru'}
+          </h2>
+          {editing?.status === 'pending' && (
+            <p className="mt-2 rounded-xl border border-peach-200 bg-peach-50 px-3 py-2 text-[12px] text-peach-800">
+              Menyimpan akan menyetujui akun ini. Atur peran, kelas, dan penugasan mapel sebelum menyimpan.
+            </p>
+          )}
           {editing?.roleRusak && (
             <p className="mt-2 rounded-xl border border-peach-200 bg-peach-50 px-3 py-2 text-[12px] text-slate-800">
               Role tersimpan ({editing.roleRusak}) tidak dikenal. Pilih peran yang benar sebelum menyimpan.

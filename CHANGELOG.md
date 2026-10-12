@@ -104,3 +104,12 @@
 - Admin tetap dapat membuat akun langsung di Kelola Akun. Ditambah tombol Ekspor JSON akun guru (untuk backup/impor ulang tanpa duplikat).
 - `firestore.rules`: diperbarui agar mendukung create guru pending dan update `gelar` oleh pemilik.
 - Data nama guru resmi: `src/lib/dataGuruResmi.ts`.
+
+## Belum dirilis — Approval akun guru di Kelola Akun
+
+- Filter baru **Menunggu** di halaman Kelola Akun.
+- Badge status: Menunggu (peach), Ditolak, Aktif/Nonaktif.
+- Panel samping: untuk akun pending muncul tombol **Setujui & atur tugas** (membuka form) dan **Tolak pendaftaran**.
+- Menyimpan form akun pending otomatis mengubah status menjadi `approved`.
+- Fungsi `setStatusAkun` ditambahkan di `akunGuruData.ts`.
+- Nama + gelar ditampilkan di panel detail.
