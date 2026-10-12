@@ -30,6 +30,11 @@ export interface AppUser {
   penugasanKelas?: string[]
   /** Format "KELAS::MAPEL", mis. "4A::Matematika". */
   penugasanKelasMapel?: string[]
+  /**
+   * `false` = tidak boleh masuk dan rules menolak akses.
+   * Tidak ada / `true` = aktif. Hanya admin yang boleh mengubahnya.
+   */
+  aktif?: boolean
   createdAt?: string
   updatedAt?: string
 }

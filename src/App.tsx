@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import type { User } from 'firebase/auth'
-import { subscribeAuth } from './lib/auth'
+import { subscribeAuth, logout } from './lib/auth'
+import { simpanNoticeLogin } from './lib/akunGuru'
 import { canAkademik, canTahsin, isAdminRole } from './lib/roles'
 import type { AppUser } from './types/user'
 import Layout from './components/Layout'
@@ -15,6 +16,7 @@ import InputSetoran from './pages/tahsin/InputSetoran'
 import RiwayatSiswa from './pages/tahsin/RiwayatSiswa'
 import TargetHafalan from './pages/tahsin/TargetHafalan'
 import DataSiswa from './pages/admin/DataSiswa'
+import KelolaAkun from './pages/admin/KelolaAkun'
 import SetupTp from './pages/akademik/SetupTp'
 import BobotSemester from './pages/akademik/BobotSemester'
 import NilaiSlm from './pages/akademik/NilaiSlm'
@@ -42,6 +44,14 @@ export default function App() {
 
   useEffect(() => {
     const unsub = subscribeAuth((u, p) => {
+      if (u && p?.aktif === false) {
+        simpanNoticeLogin('Akun ini dinonaktifkan. Hubungi administrator.')
+        void logout()
+        setUser(null)
+        setProfile(null)
+        setLoading(false)
+        return
+      }
       setUser(u)
       setProfile(p)
       setLoading(false)
@@ -105,6 +115,10 @@ export default function App() {
             <Route
               path="/admin/siswa"
               element={profile ? <DataSiswa profile={profile} /> : null}
+            />
+            <Route
+              path="/admin/users"
+              element={profile ? <KelolaAkun profile={profile} /> : null}
             />
             <Route path="/admin/*" element={<Placeholder />} />
           </Route>

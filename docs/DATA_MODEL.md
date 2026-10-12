@@ -16,7 +16,7 @@ dalam commit yang sama.
 
 | Koleksi | ID dokumen | Isi | Baca | Tulis |
 |---------|-----------|-----|------|-------|
-| `users` | UID Firebase Auth | `email, nama, role, kelasAmpu[], status, anakIds[], penugasan[]` | diri sendiri / admin | admin; pemilik hanya `nama` |
+| `users` | UID Firebase Auth | `email, nama, role, aktif, kelasAmpu[], status, anakIds[], penugasan[], waliKelas[], penugasanKelas[], penugasanKelasMapel[]` | diri sendiri / admin (akun `aktif: false` ditolak, kecuali pemilik tetap boleh `get` profilnya) | admin; pemilik hanya `nama`, dan hanya bila akun masih aktif |
 | `siswa` | NIPD (atau NISN) | **Data dasar:** `nipd, nis, nisn, nama, kelas, jenjang ('iqro'\|'quran'), aktif, tamatIqro, tempatLahir, tanggalLahir` | semua guru; orang tua hanya `get` anaknya | admin; guru Tahsin hanya `tamatIqro` |
 | `identitas_siswa` | sama dengan `siswa` | **Biodata sensitif** (nama kunci mengikuti v2): `jenisKelamin, agama, alamatSiswa, rt, rw, kelurahan, kecamatan, kodePos, hp, email, namaAyah, pekerjaanAyah, namaIbu, pekerjaanIbu, sekolahAsal, beratBadan, tinggiBadan` (+ `statusDalamKeluarga, anakKe, teleponRumah, diterimaDiKelas, diterimaTanggal, namaWali, alamatWali, teleponWali, pekerjaanWali, alamatOrangTua` dari modul Rapor) | admin + wali kelas siswa itu | admin + wali kelas siswa itu |
 | `setoran` | auto | `siswaId, siswaNama, kelas, jenjang, jenis, materi, detailAyat, detailBacaanIqro, statusHafalan, catatan, createdBy, createdByNama, createdAt` | guru kelas terkait / orang tua anaknya | `create` oleh guru kelas terkait (`createdBy == uid`); immutable; hapus admin |
@@ -30,6 +30,8 @@ dalam commit yang sama.
 
 **Role** (`users.role`): `admin`, `guru`, `guru_tahsin_tahfizh`, `guru_akademik`, `orangtua`.
 Field `users` untuk guru akademik: `penugasan[{kelas,mapel}]`, `waliKelas[]`, dan dua field turunan yang dibaca rules: `penugasanKelas[]`, `penugasanKelasMapel[]` ("4A::Matematika"). Turunan harus selalu sinkron (ANTIREGRESI §7.4).
+`aktif: false` menonaktifkan akun (halaman login menolak, dan rules menolak baca/tulis). Field tidak ada atau `true` berarti aktif. Hanya admin yang mengubahnya.
+Halaman Kelola Akun menulis `kelasAmpu`, `penugasan`, `waliKelas`, dan kedua field turunan sekaligus. Peran yang tidak memakai sebuah field menyimpannya sebagai array kosong supaya akses lama tidak tertinggal.
 `orangtua` baru bisa mengakses data setelah `status == 'approved'`.
 
 ## Koleksi yang BELUM dimigrasi (ada di v2)

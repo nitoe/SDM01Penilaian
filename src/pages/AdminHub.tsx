@@ -13,8 +13,8 @@ const items: { to: string; title: string; desc: string; ready: boolean; icon: Ic
   {
     to: '/admin/users',
     title: 'Kelola Akun',
-    desc: 'Tambah atau ubah akun guru dan admin',
-    ready: false,
+    desc: 'Tambah guru, atur kelas dan mapel, nonaktifkan akun',
+    ready: true,
     icon: 'key',
     tone: 'ink',
   },

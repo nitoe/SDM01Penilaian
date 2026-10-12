@@ -1,5 +1,5 @@
 import type { AppUser } from '../types/user'
-import { tingkatanDariKelas } from './akademikRumus'
+import { tingkatanDariKelas } from './akademikRumus.ts'
 
 type Penugasan = { kelas: string; mapel: string }
 

@@ -45,6 +45,7 @@ export async function fetchUserProfile(uid: string): Promise<AppUser | null> {
     waliKelas: data.waliKelas,
     penugasanKelas: data.penugasanKelas,
     penugasanKelasMapel: data.penugasanKelasMapel,
+    aktif: typeof data.aktif === 'boolean' ? data.aktif : undefined,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
   }

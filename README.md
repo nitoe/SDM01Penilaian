@@ -94,7 +94,8 @@ Daftar koleksi dan keputusan data: **[docs/DATA_MODEL.md](docs/DATA_MODEL.md)**.
 | Tahsin-Tahfizh: Input Setoran, Riwayat Siswa | ✅ Ada |
 | Tahsin-Tahfizh: Catat Menulis, Cetak Laporan, Target Hafalan | ⏳ Belum — placeholder |
 | Admin: Data Siswa | ✅ Ada |
-| Admin: akun guru/orang tua, mutasi, impor siswa massal | ⏳ Belum — placeholder |
+| Admin: Kelola Akun Guru | ✅ Ada |
+| Admin: akun orang tua, mutasi | ⏳ Belum — placeholder |
 | Akademik: Setup TP & KKTP, Bobot Semester TP, Input Nilai SLM | ✅ Ada |
 | Akademik: STS/SAS, rapor, absensi, kokurikuler, ekskul, mutasi | ⏳ Belum — placeholder |
 

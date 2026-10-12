@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { loginWithEmail } from '../lib/auth'
+import { ambilNoticeLogin } from '../lib/akunGuru'
+import { loginWithEmail, logout } from '../lib/auth'
 import { isFirebaseConfigured } from '../lib/firebase'
 
 export default function Login() {
@@ -9,6 +10,11 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const notice = ambilNoticeLogin()
+    if (notice) setError(notice)
+  }, [])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -24,6 +30,12 @@ export default function Login() {
       }
       if (profile.role === 'orangtua' && profile.status !== 'approved') {
         setError('Akun orang tua belum disetujui admin.')
+        return
+      }
+      if (profile.aktif === false) {
+        ambilNoticeLogin()
+        await logout()
+        setError('Akun ini dinonaktifkan. Hubungi administrator.')
         return
       }
       navigate('/', { replace: true })
