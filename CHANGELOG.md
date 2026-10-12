@@ -130,3 +130,10 @@
 - Guru dapat memilih kelas Tahsin, wali kelas, dan penugasan mapel saat mendaftar.
 - Data tersebut disimpan dengan status `pending`; admin meninjau dan menyetujui di Kelola Akun.
 - `firestore.rules`: field kelasAmpu, penugasan, waliKelas, dan turunan diizinkan pada create pendaftaran guru.
+
+## Belum dirilis — Form tambah guru admin selaras dengan pendaftaran
+
+- Form Tambah/Ubah akun di Kelola Akun memakai pilihan peran yang sama:
+  Guru Tahsin-Tahfizh, Guru Akademik, Kombinasi, Administrator.
+- Pemilihan peran berupa kartu (bukan dropdown) dengan deskripsi singkat.
+- Hint kelas dan penugasan diselaraskan dengan form pendaftaran mandiri.

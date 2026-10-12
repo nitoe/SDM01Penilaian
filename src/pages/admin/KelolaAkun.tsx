@@ -28,10 +28,11 @@ interface Props {
 type Mode = 'list' | 'form'
 type Saringan = 'semua' | 'guru_tahsin_tahfizh' | 'guru_akademik' | 'admin' | 'nonaktif' | 'pending'
 
-const OPSI_BARU: { value: UserRole; label: string }[] = [
-  { value: 'guru_tahsin_tahfizh', label: 'Guru Tahsin-Tahfizh' },
-  { value: 'guru_akademik', label: 'Guru Akademik' },
-  { value: 'admin', label: 'Administrator' },
+const OPSI_BARU: { value: UserRole; label: string; desk?: string }[] = [
+  { value: 'guru_tahsin_tahfizh', label: 'Guru Tahsin-Tahfizh', desk: 'Setoran bacaan dan hafalan.' },
+  { value: 'guru_akademik', label: 'Guru Akademik', desk: 'Wali kelas dan/atau guru bidang studi.' },
+  { value: 'guru', label: 'Kombinasi', desk: 'Tahsin sekaligus akademik.' },
+  { value: 'admin', label: 'Administrator', desk: 'Semua modul.' },
 ]
 
 const SARINGAN: { id: Saringan; label: string }[] = [
@@ -366,8 +367,7 @@ export default function KelolaAkun({ profile }: Props) {
 
   const butuhTahsin = form.role === 'guru_tahsin_tahfizh' || form.role === 'guru'
   const butuhAkademik = form.role === 'guru_akademik' || form.role === 'guru'
-  const opsiPeran =
-    form.role === 'guru' ? [{ value: 'guru' as const, label: 'Guru (gabungan, lama)' }, ...OPSI_BARU] : OPSI_BARU
+  const opsiPeran = OPSI_BARU
 
   return (
     <div className="space-y-4">
@@ -662,7 +662,7 @@ export default function KelolaAkun({ profile }: Props) {
       )}
 
       {mode === 'form' && (
-        <section className="card-soft p-4">
+        <section className="card-soft p-4 sm:p-5">
           <h2 className="text-[14px] font-semibold text-slate-800">
             {editing ? (editing.status === 'pending' ? 'Setujui akun guru' : 'Ubah akun') : 'Tambah akun guru'}
           </h2>
@@ -705,20 +705,31 @@ export default function KelolaAkun({ profile }: Props) {
                   onChange={(e) => setF('email', e.target.value)}
                 />
               </Field>
-              <Field label="Peran *">
-                <select
-                  className={inputCls}
-                  value={form.role}
-                  disabled={editing?.uid === profile.uid}
-                  onChange={(e) => setF('role', e.target.value as UserRole)}
-                >
-                  {opsiPeran.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+              <div className="sm:col-span-2">
+                <span className="mb-1.5 block text-[11px] font-medium text-slate-600">Peran *</span>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {opsiPeran.map((o) => {
+                    const aktif = form.role === o.value
+                    const terkunci = editing?.uid === profile.uid
+                    return (
+                      <button
+                        key={o.value}
+                        type="button"
+                        disabled={terkunci}
+                        onClick={() => setF('role', o.value)}
+                        className={`rounded-xl border px-3 py-2 text-left text-[12px] disabled:opacity-60 ${
+                          aktif
+                            ? 'border-muh-500 bg-muh-50 text-muh-900'
+                            : 'border-border bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="font-semibold">{o.label}</div>
+                        {o.desk && <div className="mt-0.5 text-[11px] text-muted">{o.desk}</div>}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
               {!editing && (
                 <Field label="Password awal *">
                   <div className="flex gap-2">
@@ -751,10 +762,15 @@ export default function KelolaAkun({ profile }: Props) {
                 Administrator membuka semua modul. Kelas dan mapel tidak perlu diisi.
               </p>
             )}
+            {form.role === 'guru' && (
+              <p className="rounded-xl bg-muh-50 px-3 py-2 text-[12px] text-muh-900">
+                Kombinasi: isi kelas Tahsin dan juga wali kelas / penugasan mapel.
+              </p>
+            )}
             {butuhTahsin && (
               <PilihKelas
                 label="Kelas Tahsin-Tahfizh"
-                hint="Guru hanya mencatat setoran di kelas yang dipilih."
+                hint="Pilih kelas tempat guru mencatat setoran."
                 value={form.kelasAmpu}
                 onChange={(kelasAmpu) => setF('kelasAmpu', kelasAmpu)}
               />
@@ -763,7 +779,7 @@ export default function KelolaAkun({ profile }: Props) {
               <>
                 <PilihKelas
                   label="Wali kelas"
-                  hint="Wali kelas dapat melihat biodata siswa di kelas itu. Boleh kosong."
+                  hint="Boleh lebih dari satu, atau kosong jika hanya guru bidang studi."
                   value={form.waliKelas}
                   onChange={(waliKelas) => setF('waliKelas', waliKelas)}
                 />
