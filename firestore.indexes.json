@@ -30,6 +30,37 @@
       ]
     },
     {
+      "collectionGroup": "asesmen_cakupan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mapel", "order": "ASCENDING" },
+        { "fieldPath": "kelas", "order": "ASCENDING" },
+        { "fieldPath": "semester", "order": "ASCENDING" },
+        { "fieldPath": "tahunAjaran", "order": "ASCENDING" },
+        { "fieldPath": "jenis", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "nilai_sts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mapel", "order": "ASCENDING" },
+        { "fieldPath": "kelas", "order": "ASCENDING" },
+        { "fieldPath": "semester", "order": "ASCENDING" },
+        { "fieldPath": "tahunAjaran", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "nilai_sas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mapel", "order": "ASCENDING" },
+        { "fieldPath": "kelas", "order": "ASCENDING" },
+        { "fieldPath": "semester", "order": "ASCENDING" },
+        { "fieldPath": "tahunAjaran", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "siswa",
       "queryScope": "COLLECTION",
       "fields": [

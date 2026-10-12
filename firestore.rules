@@ -240,6 +240,39 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Cakupan TP STS/SAS, lalu nilainya. Admin membaca, guru kelas atau bidang studi menulis.
+    match /asesmen_cakupan/{id} {
+      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas)
+                     && request.resource.data.jenis in ['sts', 'sas'];
+      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas)
+                     && request.resource.data.jenis == resource.data.jenis;
+      allow delete: if isAdmin();
+    }
+
+    match /nilai_sts/{id} {
+      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow delete: if isAdmin();
+    }
+
+    match /nilai_sas/{id} {
+      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow delete: if isAdmin();
+    }
+
     // ---- Default: tolak semuanya -------------------------------------------
     match /{document=**} {
       allow read, write: if false;

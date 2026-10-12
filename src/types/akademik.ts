@@ -67,6 +67,33 @@ export interface NilaiTpDoc {
   slm: number
 }
 
+export type JenisAsesmen = 'sts' | 'sas'
+
+/** Dokumen `asesmen_cakupan/{id}` — TP yang diikutkan STS atau SAS. */
+export interface AsesmenCakupan {
+  id: string
+  mapel: string
+  kelas: string
+  tingkatan: string
+  semester: Semester
+  tahunAjaran: string
+  jenis: JenisAsesmen
+  tpIds: string[]
+}
+
+/** Dokumen `nilai_sts` atau `nilai_sas`. */
+export interface NilaiAsesmenDoc {
+  id: string
+  tpId: string
+  siswaId: string
+  mapel: string
+  kelas: string
+  tingkatan: string
+  semester: Semester
+  tahunAjaran: string
+  nilai: number
+}
+
 export interface LevelHasil {
   index: number
   label: string

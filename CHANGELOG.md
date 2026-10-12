@@ -170,6 +170,12 @@
 - Rules `nilai_tp`: guru kelas boleh menulis nilai di kelasnya; admin hanya membaca. **Belum di-deploy** — jalankan `npm run deploy:rules`.
 - Administrasi → Data Sekolah: identitas, NPSN, alamat, kepala sekolah, tahun ajaran, semester, Seni Budaya, tanggal rapor, dan dimensi profil lulusan. Nilai baru menempel pada tahun ajaran aktif; data tahun lalu tidak dipindahkan.
 
+## Belum dirilis — Nilai STS dan SAS
+
+- Halaman `/akademik/nilai-sts`: guru memilih cakupan TP untuk STS atau SAS secara terpisah, lalu mengisi nilai per siswa. STS hanya menaikkan SLM bila lebih tinggi. SAS menampilkan SLM, STS, dan pratinjau nilai akhir TP.
+- Koleksi `asesmen_cakupan`, `nilai_sts`, `nilai_sas`. Admin hanya membaca. **Rules dan indeks belum di-deploy** — jalankan `npm run deploy:rules`.
+
+
 
 
 

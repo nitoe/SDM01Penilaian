@@ -16,9 +16,12 @@ import { auth, db } from './firebase'
 import { faseDariTingkatan } from './akademikRumus'
 import { MAPEL_BAWAAN } from './mapelBawaan'
 import type {
+  AsesmenCakupan,
   ConfigAkademik,
+  JenisAsesmen,
   LevelKktp,
   Mapel,
+  NilaiAsesmenDoc,
   NilaiTpDoc,
   Semester,
   TipeTp,
@@ -297,6 +300,147 @@ export async function saveNilaiTPBatch(
         batch.update(doc(db, 'nilai_tp', found.id), { ...data, updatedAt: serverTimestamp(), updatedBy: uid() })
       } else {
         batch.set(doc(collection(db, 'nilai_tp')), { ...data, createdAt: serverTimestamp(), createdBy: uid() })
+      }
+      n++
+    }
+    await batch.commit()
+  }
+  return n
+}
+
+const KOLEKSI_ASESMEN: Record<JenisAsesmen, 'nilai_sts' | 'nilai_sas'> = {
+  sts: 'nilai_sts',
+  sas: 'nilai_sas',
+}
+
+/** Cakupan TP untuk STS atau SAS. Query wajib menyertakan mapel dan kelas. */
+export async function getCakupanTP(ctx: {
+  mapel: string
+  kelas: string
+  semester: Semester
+  tahunAjaran: string
+  jenis: JenisAsesmen
+}): Promise<AsesmenCakupan | null> {
+  const q = query(
+    collection(db, 'asesmen_cakupan'),
+    where('mapel', '==', ctx.mapel),
+    where('kelas', '==', ctx.kelas),
+    where('semester', '==', ctx.semester),
+    where('tahunAjaran', '==', ctx.tahunAjaran),
+    where('jenis', '==', ctx.jenis),
+  )
+  const snap = await getDocs(q)
+  if (snap.empty) return null
+  const d = snap.docs[0]
+  const data = d.data()
+  return {
+    id: d.id,
+    mapel: String(data.mapel ?? ctx.mapel),
+    kelas: String(data.kelas ?? ctx.kelas),
+    tingkatan: String(data.tingkatan ?? ''),
+    semester: data.semester === '2' ? '2' : '1',
+    tahunAjaran: String(data.tahunAjaran ?? ctx.tahunAjaran),
+    jenis: data.jenis === 'sas' ? 'sas' : 'sts',
+    tpIds: Array.isArray(data.tpIds) ? data.tpIds.map(String) : [],
+  }
+}
+
+export async function saveCakupanTP(payload: Omit<AsesmenCakupan, 'id'>, existingId?: string): Promise<void> {
+  const data = {
+    mapel: payload.mapel,
+    kelas: payload.kelas,
+    tingkatan: String(payload.tingkatan),
+    semester: payload.semester,
+    tahunAjaran: payload.tahunAjaran,
+    jenis: payload.jenis,
+    tpIds: payload.tpIds,
+  }
+  if (existingId) {
+    await updateDoc(doc(db, 'asesmen_cakupan', existingId), {
+      ...data,
+      updatedAt: serverTimestamp(),
+      updatedBy: uid(),
+    })
+  } else {
+    await addDoc(collection(db, 'asesmen_cakupan'), {
+      ...data,
+      createdAt: serverTimestamp(),
+      createdBy: uid(),
+    })
+  }
+}
+
+/** Nilai STS/SAS satu mapel+kelas, dikelompokkan tpId → siswaId. */
+export async function getNilaiAsesmenKelas(ctx: {
+  jenis: JenisAsesmen
+  mapel: string
+  kelas: string
+  semester: Semester
+  tahunAjaran: string
+}): Promise<Record<string, Record<string, NilaiAsesmenDoc>>> {
+  const q = query(
+    collection(db, KOLEKSI_ASESMEN[ctx.jenis]),
+    where('mapel', '==', ctx.mapel),
+    where('kelas', '==', ctx.kelas),
+    where('semester', '==', ctx.semester),
+    where('tahunAjaran', '==', ctx.tahunAjaran),
+  )
+  const snap = await getDocs(q)
+  const map: Record<string, Record<string, NilaiAsesmenDoc>> = {}
+  snap.forEach((d) => {
+    const raw = d.data()
+    const tpId = String(raw.tpId ?? '')
+    const siswaId = String(raw.siswaId ?? '')
+    if (!tpId || !siswaId) return
+    if (!map[tpId]) map[tpId] = {}
+    map[tpId][siswaId] = {
+      id: d.id,
+      tpId,
+      siswaId,
+      mapel: String(raw.mapel ?? ctx.mapel),
+      kelas: String(raw.kelas ?? ctx.kelas),
+      tingkatan: String(raw.tingkatan ?? ''),
+      semester: raw.semester === '2' ? '2' : '1',
+      tahunAjaran: String(raw.tahunAjaran ?? ctx.tahunAjaran),
+      nilai: Number(raw.nilai),
+    }
+  })
+  return map
+}
+
+export async function saveNilaiAsesmenBatch(
+  ctx: {
+    jenis: JenisAsesmen
+    tpId: string
+    mapel: string
+    kelas: string
+    tingkatan: string
+    semester: Semester
+    tahunAjaran: string
+  },
+  entries: { siswaId: string; nilai: number }[],
+  existing: Record<string, NilaiAsesmenDoc>,
+): Promise<number> {
+  const kol = KOLEKSI_ASESMEN[ctx.jenis]
+  let n = 0
+  for (let i = 0; i < entries.length; i += 400) {
+    const batch = writeBatch(db)
+    for (const { siswaId, nilai } of entries.slice(i, i + 400)) {
+      const data = {
+        tpId: ctx.tpId,
+        siswaId,
+        mapel: ctx.mapel,
+        kelas: ctx.kelas,
+        tingkatan: String(ctx.tingkatan),
+        semester: ctx.semester,
+        tahunAjaran: ctx.tahunAjaran,
+        nilai,
+      }
+      const found = existing[siswaId]
+      if (found) {
+        batch.update(doc(db, kol, found.id), { ...data, updatedAt: serverTimestamp(), updatedBy: uid() })
+      } else {
+        batch.set(doc(collection(db, kol)), { ...data, createdAt: serverTimestamp(), createdBy: uid() })
       }
       n++
     }

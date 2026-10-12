@@ -24,6 +24,7 @@ import TahunAjaran from './pages/admin/TahunAjaran'
 import SetupTp from './pages/akademik/SetupTp'
 import BobotSemester from './pages/akademik/BobotSemester'
 import NilaiSlm from './pages/akademik/NilaiSlm'
+import NilaiStsSas from './pages/akademik/NilaiStsSas'
 import LaporanSlm from './pages/akademik/LaporanSlm'
 import Rapor from './pages/akademik/Rapor'
 
@@ -118,6 +119,7 @@ export default function App() {
               element={profile ? <BobotSemester profile={profile} /> : null}
             />
             <Route path="/akademik/nilai-slm" element={profile ? <NilaiSlm profile={profile} /> : null} />
+            <Route path="/akademik/nilai-sts" element={profile ? <NilaiStsSas profile={profile} /> : null} />
             <Route path="/akademik/laporan-slm" element={profile ? <LaporanSlm profile={profile} /> : null} />
             <Route path="/akademik/rapor" element={profile ? <Rapor profile={profile} /> : null} />
             <Route path="/akademik/*" element={<Placeholder />} />

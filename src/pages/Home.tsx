@@ -287,6 +287,13 @@ export default function Home({ profile }: HomeProps) {
                   icon="printer"
                   tone="violet"
                 />
+                <ModuleCard
+                  to="/akademik/nilai-sts"
+                  title="Nilai STS & SAS"
+                  desc="Cakupan TP, lalu nilai tengah dan akhir semester"
+                  icon="clipboard"
+                  tone="ink"
+                />
               </div>
             </div>
           )}

@@ -26,7 +26,9 @@ dalam commit yang sama.
 | `config` (dok. `akademik`) | `akademik` | `semesterAktif, tahunAjaran`, profil sekolah untuk rapor | semua guru | admin |
 | `mapel` | nama mapel | `nama, urutan, tingkatanBerlaku[]` | semua guru | admin |
 | `tp_kktp` | auto | `mapel, tingkatan, fase, nomorTp, namaTp, cp, tipe, bobotSlm, bobotSas, bobotMapel, semester, levels[4]` | semua guru | `guru_akademik` (bukan admin) |
-| `nilai_tp` | auto | `tpId, siswaId, mapel, kelas, tingkatan, semester, tahunAjaran, slm, createdBy` | admin; `guru_akademik` untuk `kelas::mapel` penugasannya | sama dengan baca |
+| `nilai_tp` | auto | `tpId, siswaId, mapel, kelas, tingkatan, semester, tahunAjaran, slm, createdBy` | admin (baca); guru kelas atau penugasan mapel | tulis: guru kelas / penugasan, bukan admin |
+| `asesmen_cakupan` | auto | `mapel, kelas, tingkatan, semester, tahunAjaran, jenis (sts\|sas), tpIds[]` | sama dengan nilai | sama |
+| `nilai_sts`, `nilai_sas` | auto | `tpId, siswaId, mapel, kelas, tingkatan, semester, tahunAjaran, nilai` | sama dengan nilai | sama |
 
 **Role** (`users.role`): `admin`, `guru`, `guru_tahsin_tahfizh`, `guru_akademik`, `orangtua`.
 Field `users` untuk guru akademik: `penugasan[{kelas,mapel}]`, `waliKelas[]`, dan dua field turunan yang dibaca rules: `penugasanKelas[]`, `penugasanKelasMapel[]` ("4A::Matematika"). Turunan harus selalu sinkron (ANTIREGRESI §7.4).
@@ -42,7 +44,7 @@ berupa placeholder.
 
 | Modul | Koleksi v2 |
 |-------|------------|
-| Akademik inti | `nilai_sts`, `nilai_sas`, `asesmen_cakupan` (`mapel`, `tp_kktp`, `config/akademik`, `nilai_tp` sudah dimigrasi) |
+| Akademik inti | `mapel`, `tp_kktp`, `config/akademik`, `nilai_tp`, `asesmen_cakupan`, `nilai_sts`, `nilai_sas` sudah ada |
 | Rapor | `absensi_rapor`, `kokurikuler_rapor`, `identitas_siswa` |
 | Kokurikuler | `dpl`, `kokurikuler`, `proyek_stem`, `g7kaih` |
 | Ekstrakurikuler | `ekstrakurikuler`, `ekstrakurikuler_siswa` |
