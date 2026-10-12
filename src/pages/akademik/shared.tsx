@@ -30,6 +30,15 @@ export function BackLink({ to, children }: { to: string; children: ReactNode }) 
   )
 }
 
+export function NoticeAksesGuru({ aksi, role }: { aksi: string; role: string }) {
+  const siapa = role === 'admin' ? 'administrator' : 'ini'
+  return (
+    <Notice tone="warn">
+      {aksi} oleh guru kelas maupun guru bidang studi yang mengampu mapel itu. Akun {siapa} tidak menulis halaman ini.
+    </Notice>
+  )
+}
+
 export function Notice({ children, tone = 'info' }: { children: ReactNode; tone?: 'info' | 'warn' | 'error' }) {
   const cls = {
     info: 'border-sky-200 bg-sky-50 text-sky-900',

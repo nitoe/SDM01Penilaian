@@ -18,7 +18,7 @@ import { mapelKelasSaya } from '../../lib/penugasan'
 import { isGuruAkademikRole } from '../../lib/roles'
 import type { SiswaTahsin } from '../../types/tahsin'
 import { Badge, HeroBanner } from '../../components/ui'
-import { BackLink, LEVEL_WARNA, Notice, Spinner, btnGhost, btnPrimary, inputCls, useToast } from './shared'
+import { BackLink, LEVEL_WARNA, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, inputCls, useToast } from './shared'
 
 type Draf = Record<string, string>
 type NilaiKelas = Record<string, Record<string, NilaiTpDoc>>
@@ -269,9 +269,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik">Akademik & Rapor</BackLink>
-        <Notice tone="warn">
-          Input nilai dilakukan oleh guru yang mengampu mapel itu, baik guru kelas maupun guru bidang studi.
-        </Notice>
+        <NoticeAksesGuru aksi="Nilai SLM diisi" role={profile.role} />
       </div>
     )
   }

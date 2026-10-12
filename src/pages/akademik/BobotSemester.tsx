@@ -6,7 +6,7 @@ import { getTPList, normalisasiPersenBobotMapel, saveBobotSemesterBatch } from '
 import { mapelTingkatanSaya } from '../../lib/penugasan'
 import { isGuruAkademikRole } from '../../lib/roles'
 import { HeroBanner } from '../../components/ui'
-import { BackLink, Notice, Spinner, btnGhost, btnPrimary, inputCls, useToast } from './shared'
+import { BackLink, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, inputCls, useToast } from './shared'
 
 interface Baris {
   tp: TujuanPembelajaran
@@ -51,9 +51,7 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
-        <Notice tone="warn">
-          Bobot TP diatur oleh guru yang mengampu mapel itu, baik guru kelas maupun guru bidang studi.
-        </Notice>
+        <NoticeAksesGuru aksi="Bobot semester diatur" role={profile.role} />
       </div>
     )
   }

@@ -20,6 +20,7 @@ import {
   BackLink,
   LEVEL_WARNA,
   Notice,
+  NoticeAksesGuru,
   Spinner,
   btnGhost,
   btnPrimary,
@@ -145,10 +146,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
-        <Notice tone="warn">
-          TP dan KKTP disusun oleh guru yang mengampu mapel itu, baik guru kelas maupun guru bidang studi. Akun{' '}
-          {profile.role === 'admin' ? 'administrator' : 'ini'} tidak menulis halaman ini.
-        </Notice>
+        <NoticeAksesGuru aksi="TP dan KKTP disusun" role={profile.role} />
       </div>
     )
   }

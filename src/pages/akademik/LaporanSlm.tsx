@@ -17,7 +17,7 @@ import { mapelKelasSaya } from '../../lib/penugasan'
 import { isGuruAkademikRole } from '../../lib/roles'
 import type { SiswaTahsin } from '../../types/tahsin'
 import { HeroBanner } from '../../components/ui'
-import { BackLink, LEVEL_WARNA, Notice, Spinner, btnGhost, btnPrimary } from './shared'
+import { BackLink, LEVEL_WARNA, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary } from './shared'
 
 type NilaiKelas = Record<string, Record<string, NilaiTpDoc>>
 
@@ -85,7 +85,7 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik">Akademik & Rapor</BackLink>
-        <Notice tone="warn">Laporan SLM hanya untuk guru yang mengampu mata pelajaran.</Notice>
+        <NoticeAksesGuru aksi="Laporan SLM dibuka" role={profile.role} />
       </div>
     )
   }
