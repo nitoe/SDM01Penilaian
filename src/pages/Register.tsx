@@ -1,12 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { GURU_RESMI, adalahNamaResmi } from '../lib/dataGuruResmi'
 
 export default function Register() {
-  const navigate = useNavigate()
   const [nama, setNama] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
