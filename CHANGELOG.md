@@ -120,3 +120,13 @@
 - Halaman `/akademik/rapor` (pratinjau): tanda tangan diri sendiri dan wali kelas terpilih memakai gelar.
 - Layout (sidebar & header) menampilkan gelar di samping nama jika ada.
 - AkademikHub menandai halaman Rapor sebagai siap (pratinjau tanda tangan).
+
+## Belum dirilis — Pendaftaran guru: pilih peran dan kelas
+
+- Form `/register` diperlebar dan guru dapat memilih peran:
+  - Guru Tahsin-Tahfizh
+  - Guru Akademik (wali kelas / bidang studi)
+  - Kombinasi
+- Guru dapat memilih kelas Tahsin, wali kelas, dan penugasan mapel saat mendaftar.
+- Data tersebut disimpan dengan status `pending`; admin meninjau dan menyetujui di Kelola Akun.
+- `firestore.rules`: field kelasAmpu, penugasan, waliKelas, dan turunan diizinkan pada create pendaftaran guru.

@@ -116,10 +116,13 @@ service cloud.firestore {
                && request.resource.data.keys().hasOnly(
                     ['email', 'nama', 'role', 'status', 'anakIds', 'createdAt', 'updatedAt']))
               ||
-              // Pendaftaran mandiri guru (nama harus dari daftar resmi, role sementara guru)
+              // Pendaftaran mandiri guru: boleh isi peran, kelas, penugasan (status tetap pending)
               (request.resource.data.role in ['guru', 'guru_tahsin_tahfizh', 'guru_akademik']
                && request.resource.data.keys().hasOnly(
-                    ['email', 'nama', 'gelar', 'role', 'status', 'createdAt', 'updatedAt']))
+                    ['email', 'nama', 'gelar', 'role', 'status',
+                     'kelasAmpu', 'penugasan', 'waliKelas',
+                     'penugasanKelas', 'penugasanKelasMapel',
+                     'aktif', 'createdAt', 'updatedAt']))
             ));
       allow update: if isAdmin()
         || (akunAktif() && request.auth.uid == uid
