@@ -89,6 +89,15 @@ export async function unggahMapelBawaan(): Promise<number> {
   return n
 }
 
+/** Satu mapel. Dokumen yang belum ada memakai daftar bawaan. Nama yang tidak dikenal dianggap berlaku di semua tingkatan. Kesalahan jaringan dilempar — pemanggil yang memutuskan apakah boleh lanjut. */
+export async function getMapelByNama(nama: string): Promise<Mapel> {
+  const snap = await getDoc(doc(db, 'mapel', nama))
+  if (snap.exists()) return dokumenKeMapel(snap.id, snap.data() as Record<string, unknown>)
+  const bawaan = MAPEL_BAWAAN.find((m) => m.nama === nama)
+  if (bawaan) return { ...bawaan, tingkatanBerlaku: [...(bawaan.tingkatanBerlaku ?? [])] }
+  return { id: nama, nama, tingkatanBerlaku: [] }
+}
+
 const CONFIG_BAWAAN: ConfigAkademik = { semesterAktif: '1', tahunAjaran: '2026/2027' }
 
 export async function getConfigAkademik(): Promise<ConfigAkademik> {

@@ -6,7 +6,10 @@ import {
   LEVEL_LABEL,
   LEVEL_RANGE_DEFAULT,
   deleteTP,
+  faseDariTingkatan,
+  getMapelByNama,
   getTPList,
+  mapelBerlakuDiTingkatan,
   saveTP,
   validasiLevels,
 } from '../../lib/akademik'
@@ -73,7 +76,13 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const [form, setForm] = useState<FormState | null>(null)
   const [busy, setBusy] = useState(false)
   const [terbuka, setTerbuka] = useState<string | null>(null)
+  const [jumlahTp, setJumlahTp] = useState<Record<string, number | 'gagal'> | null>(null)
+  const [cakupan, setCakupan] = useState<{ kunci: string; status: 'boleh' | 'di luar' } | null>(null)
   const { show, node } = useToast()
+
+  const kunciCakupan = `${mapel}|${tingkatan}`
+  const statusCakupan: 'memeriksa' | 'boleh' | 'di luar' =
+    !mapel || !tingkatan ? 'boleh' : cakupan?.kunci === kunciCakupan ? cakupan.status : 'memeriksa'
 
   const muat = useCallback(async () => {
     setList(null)
@@ -87,8 +96,50 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   }, [mapel, tingkatan, show])
 
   useEffect(() => {
-    if (mapel && tingkatan && berhak) void muat()
-  }, [mapel, tingkatan, berhak, muat])
+    if (mapel || tingkatan || !isGuruAkademikRole(profile.role) || pilihan.length === 0) return
+    let batal = false
+    setJumlahTp(null)
+    void Promise.all(
+      pilihan.map(async (p) => {
+        const kunci = `${p.mapel}|${p.tingkatan}`
+        try {
+          const daftar = await getTPList(p.mapel, p.tingkatan)
+          return [kunci, daftar.length] as const
+        } catch (e) {
+          console.error(e)
+          return [kunci, 'gagal'] as const
+        }
+      }),
+    ).then((baris) => {
+      if (!batal) setJumlahTp(Object.fromEntries(baris))
+    })
+    return () => {
+      batal = true
+    }
+  }, [mapel, tingkatan, pilihan, profile.role])
+
+  useEffect(() => {
+    if (!mapel || !tingkatan || !berhak || !isGuruAkademikRole(profile.role)) return
+    const kunci = `${mapel}|${tingkatan}`
+    let batal = false
+    void getMapelByNama(mapel)
+      .then((m) => {
+        if (batal) return
+        setCakupan({ kunci, status: mapelBerlakuDiTingkatan(m, tingkatan) ? 'boleh' : 'di luar' })
+      })
+      .catch((e) => {
+        console.error(e)
+        // Gagal memuat data mapel (jaringan) tidak boleh mengunci guru yang memang berhak.
+        if (!batal) setCakupan({ kunci, status: 'boleh' })
+      })
+    return () => {
+      batal = true
+    }
+  }, [mapel, tingkatan, berhak, profile.role])
+
+  useEffect(() => {
+    if (mapel && tingkatan && berhak && statusCakupan === 'boleh') void muat()
+  }, [mapel, tingkatan, berhak, statusCakupan, muat])
 
   if (!isGuruAkademikRole(profile.role)) {
     return (
@@ -116,16 +167,28 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
           <Notice tone="warn">Akun Anda belum memiliki penugasan mata pelajaran. Hubungi admin.</Notice>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {pilihan.map((p) => (
-              <Link
-                key={`${p.mapel}-${p.tingkatan}`}
-                to={`/akademik/setup-tp?mapel=${encodeURIComponent(p.mapel)}&tingkatan=${p.tingkatan}`}
-                className="card-soft block p-4 no-underline transition hover:border-muh-300"
-              >
-                <p className="text-[14px] font-semibold text-slate-900">{p.mapel}</p>
-                <p className="mt-0.5 text-[12px] text-muted">Tingkat {p.tingkatan}</p>
-              </Link>
-            ))}
+            {pilihan.map((p) => {
+              const kunci = `${p.mapel}|${p.tingkatan}`
+              const n = jumlahTp?.[kunci]
+              return (
+                <Link
+                  key={kunci}
+                  to={`/akademik/setup-tp?mapel=${encodeURIComponent(p.mapel)}&tingkatan=${p.tingkatan}`}
+                  className="card-soft block p-4 no-underline transition hover:border-muh-300"
+                >
+                  <p className="text-[14px] font-semibold text-slate-900">{p.mapel}</p>
+                  <p className="mt-0.5 text-[12px] text-muted">
+                    Tingkat {p.tingkatan} · Fase {faseDariTingkatan(p.tingkatan)}
+                    {jumlahTp === null ? ' · Memuat status…' : n === 'gagal' ? ' · Gagal memuat status' : ''}
+                  </p>
+                  {typeof n === 'number' && (
+                    <p className="mt-2">
+                      {n > 0 ? <Badge tone="green">{n} TP</Badge> : <Badge tone="peach">Belum ada TP</Badge>}
+                    </p>
+                  )}
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>
@@ -137,6 +200,18 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
       <div className="space-y-4">
         <BackLink to="/akademik/setup-tp">Pilih mata pelajaran</BackLink>
         <Notice tone="error">Anda tidak memiliki penugasan untuk {mapel} tingkat {tingkatan}.</Notice>
+      </div>
+    )
+  }
+
+  if (statusCakupan === 'di luar') {
+    return (
+      <div className="space-y-4">
+        <BackLink to="/akademik/setup-tp">Pilih mata pelajaran</BackLink>
+        <Notice tone="warn">
+          {mapel} tidak diajarkan di kelas tingkat {tingkatan}. Cek kembali data mapel di Administrasi → Mata
+          Pelajaran kalau ini seharusnya diajarkan.
+        </Notice>
       </div>
     )
   }
@@ -213,11 +288,15 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     <div className="space-y-5">
       <BackLink to="/akademik/setup-tp">Pilih mata pelajaran</BackLink>
       <HeroBanner
-        eyebrow={`Tingkat ${tingkatan}`}
+        eyebrow={`Tingkat ${tingkatan} · Fase ${faseDariTingkatan(tingkatan)}`}
         title={`TP & KKTP — ${mapel}`}
         subtitle="Tujuan pembelajaran beserta empat level KKTP. Semester dan persentase bobot TP diatur di menu Bobot Semester."
       />
 
+      {statusCakupan !== 'boleh' ? (
+        <Spinner />
+      ) : (
+        <>
       {!form && (
         <div className="flex flex-wrap gap-2">
           <button
@@ -266,6 +345,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
               rows={2}
               value={form.cp}
               onChange={(e) => setForm({ ...form, cp: e.target.value })}
+              placeholder="Kalimat CP dari mapel ini untuk fase terkait"
             />
           </label>
 
@@ -316,6 +396,9 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
               />
             </label>
           </div>
+          <p className="text-[11.5px] leading-relaxed text-muted">
+            Dipakai kalau SAS TP ini diisi. Kalau SAS kosong, nilai akhir TP = SLM saja.
+          </p>
 
           <div className="space-y-2.5">
             <p className="text-[12px] font-medium text-slate-600">
@@ -389,6 +472,9 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                     <span className="block text-[13.5px] font-semibold leading-snug text-slate-900">{tp.namaTp}</span>
                     <span className="mt-1 flex flex-wrap items-center gap-1.5">
                       <Badge tone="green">{tp.tipe}</Badge>
+                      <Badge>
+                        SLM {tp.bobotSlm ?? 60}% · SAS {tp.bobotSas ?? 40}%
+                      </Badge>
                       {tp.semester ? (
                         <Badge>
                           Sem {tp.semester} · {tp.bobotMapel ?? '–'}%
@@ -408,7 +494,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                           <span className={`h-fit shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${LEVEL_WARNA[i]}`}>
                             {LEVEL_LABEL[tp.tipe][i]} {l.min}–{l.maks}
                           </span>
-                          <span className="text-slate-600">{l.deskripsi}</span>
+                          <span className="text-slate-600">{l.deskripsi || 'Belum diisi'}</span>
                         </li>
                       ))}
                     </ul>
@@ -430,6 +516,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
             )
           })}
         </div>
+      )}
+        </>
       )}
       {node}
     </div>

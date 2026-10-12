@@ -6,6 +6,14 @@ import type { AppUser } from '../../types/user'
 
 const TINGKATAN = ['1', '2', '3', '4', '5', '6']
 
+/** Nama yang dipakai daftar lama, bukan seed penilaian-v2. Tidak dihapus otomatis. */
+const NAMA_LAMA = new Set([
+  'Ilmu Pengetahuan Alam dan Sosial',
+  'Pendidikan Jasmani, Olahraga, dan Kesehatan',
+  'Tahsin',
+  'Tahfizh',
+])
+
 interface Props {
   profile: AppUser
 }
@@ -119,7 +127,8 @@ export default function SetupMapel({ profile }: Props) {
         </Link>
         <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">Mata Pelajaran</h1>
         <p className="text-[12px] text-muted">
-          Dipakai saat mengisi tugas guru bidang studi, dan nanti di Setup TP. Nama mapel menjadi identitasnya.
+          Dipakai untuk tugas guru bidang studi dan Setup TP. Nama persis ini yang tersimpan di TP — IPAS dan PJOK,
+          bukan nama panjang. Tahsin dan Tahfizh tidak masuk daftar ini.
         </p>
       </div>
 
@@ -134,6 +143,14 @@ export default function SetupMapel({ profile }: Props) {
           >
             Simpan daftar ini ke sistem
           </button>
+        </div>
+      )}
+
+      {tersimpan && !loading && list.some((m) => NAMA_LAMA.has(m.nama)) && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-[12px] leading-relaxed text-amber-950">
+          Masih ada nama lama (IPAS ditulis panjang, PJOK ditulis panjang, atau Tahsin/Tahfizh). Setup TP memakai
+          nama resmi: <strong>IPAS</strong> dan <strong>PJOK</strong>. Tahsin dan Tahfizh bukan mapel TP. Tambahkan
+          nama yang belum ada, lalu hapus nama lama hanya jika belum ada TP yang memakai nama itu.
         </div>
       )}
 
