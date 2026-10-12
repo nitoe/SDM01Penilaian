@@ -7,5 +7,5 @@ export const canTahsin = (r: UserRole) =>
 export const canAkademik = (r: UserRole) =>
   r === 'admin' || r === 'guru' || r === 'guru_akademik'
 export const isStaff = (r: UserRole) => canTahsin(r) || canAkademik(r)
-/** Guru yang boleh menulis TP/nilai: guru mapel, atau kombinasi Tahsin + akademik. Admin tidak. */
+/** Guru yang boleh menulis TP/nilai: guru kelas, guru bidang studi, atau kombinasi dengan Tahsin. Admin tidak. */
 export const isGuruAkademikRole = (r: UserRole) => r === 'guru_akademik' || r === 'guru'

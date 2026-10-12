@@ -146,8 +146,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
       <div className="space-y-4">
         <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
         <Notice tone="warn">
-          TP dan KKTP disusun oleh guru mata pelajaran. Akun {profile.role === 'admin' ? 'administrator' : 'ini'} tidak
-          memiliki akses menulis halaman ini.
+          TP dan KKTP disusun oleh guru yang mengampu mapel itu, baik guru kelas maupun guru bidang studi. Akun{' '}
+          {profile.role === 'admin' ? 'administrator' : 'ini'} tidak menulis halaman ini.
         </Notice>
       </div>
     )
@@ -164,7 +164,10 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
           subtitle="Pilih mata pelajaran dan tingkatan. TP berlaku untuk semua kelas paralel di tingkatan yang sama."
         />
         {pilihan.length === 0 ? (
-          <Notice tone="warn">Akun Anda belum memiliki penugasan mata pelajaran. Hubungi admin.</Notice>
+          <Notice tone="warn">
+            Belum ada mata pelajaran yang diampu. Guru kelas memilih mapel di kelasnya; guru bidang studi menambahkan
+            mapel di kelas lain. Hubungi admin bila tugasnya belum diisi.
+          </Notice>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {pilihan.map((p) => {

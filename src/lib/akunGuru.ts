@@ -23,22 +23,18 @@ export function tugasDariAkun(input: {
     return { tahsin: false, guruKelas: false, bidangStudi: false }
   }
   const adaWali = (input.waliKelas?.length ?? 0) > 0
-  const adaMapel = (input.penugasan?.length ?? 0) > 0
+  const tugas = rapikanPenugasan(input.penugasan ?? [])
+  const kelasWali = new Set(urutKelas(input.waliKelas ?? []))
+  const adaDiLuar = tugas.some((p) => !kelasWali.has(p.kelas))
+  const bidangStudi = adaDiLuar || (!adaWali && tugas.length > 0)
   if (input.role === 'guru_tahsin_tahfizh') {
     return { tahsin: true, guruKelas: false, bidangStudi: false }
   }
   if (input.role === 'guru_akademik') {
-    return {
-      tahsin: false,
-      guruKelas: adaWali || !adaMapel,
-      bidangStudi: adaMapel,
-    }
+    if (!adaWali && tugas.length === 0) return { tahsin: false, guruKelas: true, bidangStudi: false }
+    return { tahsin: false, guruKelas: adaWali, bidangStudi }
   }
-  return {
-    tahsin: true,
-    guruKelas: adaWali,
-    bidangStudi: adaMapel,
-  }
+  return { tahsin: true, guruKelas: adaWali, bidangStudi }
 }
 
 /** `guru` = Tahsin sekaligus guru kelas dan/atau bidang studi. */
@@ -111,6 +107,37 @@ export function rapikanPenugasan(list: { kelas: string; mapel: string }[]): { ke
   )
 }
 
+/** Mapel yang diampu guru kelas di kelas yang diwalikan. */
+export function mapelDiampuDiKelasWali(
+  penugasan: { kelas: string; mapel: string }[],
+  waliKelas: string[],
+): string[] {
+  const wali = new Set(urutKelas(waliKelas))
+  return [...new Set(rapikanPenugasan(penugasan).filter((p) => wali.has(p.kelas)).map((p) => p.mapel))].sort((a, b) =>
+    a.localeCompare(b, 'id'),
+  )
+}
+
+/** Penugasan bidang studi: mapel di kelas yang bukan kelas wali. */
+export function penugasanDiLuarKelasWali(
+  penugasan: { kelas: string; mapel: string }[],
+  waliKelas: string[],
+): { kelas: string; mapel: string }[] {
+  const wali = new Set(urutKelas(waliKelas))
+  return rapikanPenugasan(penugasan).filter((p) => !wali.has(p.kelas))
+}
+
+/** Gabungkan mapel guru kelas (berlaku di setiap kelas wali) dengan penugasan bidang studi. */
+export function gabungPenugasanGuru(
+  waliKelas: string[],
+  mapelKelas: string[],
+  penugasanLain: { kelas: string; mapel: string }[],
+): { kelas: string; mapel: string }[] {
+  const mapel = [...new Set(mapelKelas.map((m) => m.trim()).filter(Boolean))]
+  const dariKelas = urutKelas(waliKelas).flatMap((kelas) => mapel.map((nama) => ({ kelas, mapel: nama })))
+  return rapikanPenugasan([...dariKelas, ...penugasanLain])
+}
+
 /**
  * Susun dokumen profil sekaligus field yang dibaca rules.
  * Peran yang tidak memakai sebuah tugas menyimpannya sebagai array kosong,
@@ -167,6 +194,9 @@ export function validasiAkun(
       return input.role === 'guru'
         ? 'Tambahkan tugas guru kelas atau guru bidang studi.'
         : 'Guru akademik perlu guru kelas atau penugasan mapel.'
+    }
+    if (adaKelas && mapelDiampuDiKelasWali(input.penugasan, input.waliKelas ?? []).length === 0) {
+      return 'Guru kelas perlu memilih mapel yang diampu di kelasnya, agar bisa menyusun TP dan mengisi nilai.'
     }
     for (const p of input.penugasan) {
       if (!p.kelas.trim() && !p.mapel.trim()) continue

@@ -269,7 +269,9 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik">Akademik & Rapor</BackLink>
-        <Notice tone="warn">Input nilai dilakukan oleh guru mata pelajaran sesuai penugasannya.</Notice>
+        <Notice tone="warn">
+          Input nilai dilakukan oleh guru yang mengampu mapel itu, baik guru kelas maupun guru bidang studi.
+        </Notice>
       </div>
     )
   }
@@ -284,7 +286,10 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
           subtitle="Pilih mata pelajaran dan kelas. Status di kartu adalah kelengkapan nilai semester yang sedang berjalan."
         />
         {pilihan.length === 0 ? (
-          <Notice tone="warn">Akun Anda belum memiliki penugasan mata pelajaran. Hubungi admin.</Notice>
+          <Notice tone="warn">
+            Belum ada mata pelajaran yang diampu. Guru kelas memilih mapel di kelasnya; guru bidang studi menambahkan
+            mapel di kelas lain. Hubungi admin bila tugasnya belum diisi.
+          </Notice>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {pilihan.map((p) => {

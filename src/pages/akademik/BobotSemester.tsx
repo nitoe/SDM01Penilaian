@@ -51,7 +51,9 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
-        <Notice tone="warn">Pengaturan bobot TP dilakukan oleh guru mata pelajaran.</Notice>
+        <Notice tone="warn">
+          Bobot TP diatur oleh guru yang mengampu mapel itu, baik guru kelas maupun guru bidang studi.
+        </Notice>
       </div>
     )
   }
@@ -62,7 +64,10 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
         <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
         <HeroBanner eyebrow="Akademik" title="Bobot Semester TP" subtitle="Pilih mata pelajaran dan tingkatan." />
         {pilihan.length === 0 ? (
-          <Notice tone="warn">Akun Anda belum memiliki penugasan mata pelajaran. Hubungi admin.</Notice>
+          <Notice tone="warn">
+            Belum ada mata pelajaran yang diampu. Guru kelas memilih mapel di kelasnya; guru bidang studi menambahkan
+            mapel di kelas lain.
+          </Notice>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {pilihan.map((p) => (

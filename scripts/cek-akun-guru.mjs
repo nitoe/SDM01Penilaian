@@ -1,6 +1,6 @@
 // Uji penyusunan dokumen akun guru. Jalankan: node --experimental-strip-types scripts/cek-akun-guru.mjs
 import assert from 'node:assert/strict'
-import { rapikanPenugasan, susunDokumenAkun, validasiAkun } from '../src/lib/akunGuru.ts'
+import { gabungPenugasanGuru, mapelDiampuDiKelasWali, penugasanDiLuarKelasWali, rapikanPenugasan, susunDokumenAkun, tugasDariAkun, validasiAkun } from '../src/lib/akunGuru.ts'
 
 const dasar = {
   email: ' Siti@Sekolah.sch.id ',
@@ -70,5 +70,27 @@ assert.equal(validasiAkun(
 assert.deepEqual(rapikanPenugasan([{ kelas: '1A', mapel: '' }, { kelas: '1A', mapel: 'PAI' }]), [
   { kelas: '1A', mapel: 'PAI' },
 ])
+
+assert.deepEqual(
+  gabungPenugasanGuru(['1A'], ['Matematika', 'Bahasa Indonesia'], [{ kelas: '2B', mapel: 'PJOK' }]),
+  [
+    { kelas: '1A', mapel: 'Bahasa Indonesia' },
+    { kelas: '1A', mapel: 'Matematika' },
+    { kelas: '2B', mapel: 'PJOK' },
+  ],
+)
+assert.deepEqual(mapelDiampuDiKelasWali(dok.penugasan, ['4A']), ['Matematika'])
+assert.deepEqual(penugasanDiLuarKelasWali(
+  [{ kelas: '4A', mapel: 'Matematika' }, { kelas: '5A', mapel: 'PJOK' }],
+  ['4A'],
+), [{ kelas: '5A', mapel: 'PJOK' }])
+assert.deepEqual(
+  tugasDariAkun({ role: 'guru_akademik', waliKelas: ['4A'], penugasan: [{ kelas: '4A', mapel: 'Matematika' }] }),
+  { tahsin: false, guruKelas: true, bidangStudi: false },
+)
+assert.equal(
+  validasiAkun({ ...dasar, penugasan: [{ kelas: '5A', mapel: 'PJOK' }] }, { baru: false, password: '', diriSendiri: false }),
+  'Guru kelas perlu memilih mapel yang diampu di kelasnya, agar bisa menyusun TP dan mengisi nilai.',
+)
 
 console.log('Semua pemeriksaan akun guru lolos.')

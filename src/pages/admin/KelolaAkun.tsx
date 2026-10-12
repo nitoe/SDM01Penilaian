@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNo
 import { Link, Navigate } from 'react-router-dom'
 import { Badge } from '../../components/ui'
 import {
+  gabungPenugasanGuru,
+  mapelDiampuDiKelasWali,
+  penugasanDiLuarKelasWali,
   ringkasTugas,
   roleDariTugas,
   tugasDariAkun,
@@ -34,8 +37,8 @@ type Saringan = 'semua' | 'guru_tahsin_tahfizh' | 'guru_akademik' | 'admin' | 'n
 
 const TUGAS_OPSI: { key: keyof TugasGuru; label: string; desk: string }[] = [
   { key: 'tahsin', label: 'Guru Tahsin-Tahfizh', desk: 'Mencatat setoran di kelas yang dipilih.' },
-  { key: 'guruKelas', label: 'Guru Kelas', desk: 'Wali kelas. Bisa digabung dengan Tahsin.' },
-  { key: 'bidangStudi', label: 'Guru Bidang Studi', desk: 'Mengajar mapel di kelas tertentu.' },
+  { key: 'guruKelas', label: 'Guru Kelas', desk: 'Wali kelas. Menyusun TP dan nilai mapel di kelas itu.' },
+  { key: 'bidangStudi', label: 'Guru Bidang Studi', desk: 'Mengajar mapel di kelas lain.' },
 ]
 
 const SARINGAN: { id: Saringan; label: string }[] = [
@@ -110,6 +113,45 @@ function PilihKelas({
   )
 }
 
+function PilihMapel({
+  nama,
+  value,
+  onChange,
+}: {
+  nama: string[]
+  value: string[]
+  onChange: (next: string[]) => void
+}) {
+  function toggle(m: string) {
+    onChange(value.includes(m) ? value.filter((x) => x !== m) : [...value, m])
+  }
+  return (
+    <div>
+      <span className="mb-1 block text-[11px] font-medium text-slate-600">Mapel di kelas wali</span>
+      <p className="mb-1.5 text-[11px] text-muted">
+        Berlaku untuk setiap kelas wali. Guru kelas menyusun TP dan mengisi nilai mapel ini.
+      </p>
+      <div className="flex flex-wrap gap-1">
+        {nama.map((m) => {
+          const aktif = value.includes(m)
+          return (
+            <button
+              key={m}
+              type="button"
+              onClick={() => toggle(m)}
+              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                aktif ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {m}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function EditorPenugasan({
   rows,
   mapel,
@@ -125,7 +167,7 @@ function EditorPenugasan({
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="text-[11px] font-medium text-slate-600">Penugasan mapel</span>
+        <span className="text-[11px] font-medium text-slate-600">Mapel di kelas lain</span>
         <button
           type="button"
           onClick={() => onChange([...rows, { kelas: '1A', mapel: mapel[0]?.nama ?? '' }])}
@@ -135,7 +177,7 @@ function EditorPenugasan({
         </button>
       </div>
       <p className="mb-2 text-[11px] text-muted">
-        Setiap baris adalah satu kelas dan satu mapel. Field untuk rules diisi otomatis saat disimpan.
+        Mapel yang diajar di luar kelas wali. Setiap baris adalah satu kelas dan satu mapel.
       </p>
       {rows.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border px-3 py-3 text-[12px] text-muted">
@@ -212,6 +254,7 @@ export default function KelolaAkun({ profile }: Props) {
   const [konfirmasi, setKonfirmasi] = useState<string | null>(null)
   const [sebagaiAdmin, setSebagaiAdmin] = useState(false)
   const [tugas, setTugas] = useState<TugasGuru>({ tahsin: true, guruKelas: false, bidangStudi: false })
+  const [mapelKelas, setMapelKelas] = useState<string[]>([])
 
   const showToast = (msg: string, error = false) => {
     setToast({ msg, error })
@@ -256,6 +299,7 @@ export default function KelolaAkun({ profile }: Props) {
     setForm(formKosong())
     setSebagaiAdmin(false)
     setTugas({ tahsin: true, guruKelas: false, bidangStudi: false })
+    setMapelKelas([])
     setMode('form')
   }
 
@@ -267,7 +311,7 @@ export default function KelolaAkun({ profile }: Props) {
       gelar: akun.gelar ?? '',
       role: akun.roleRusak ? 'guru_tahsin_tahfizh' : akun.role === 'guru' ? 'guru' : akun.role,
       kelasAmpu: [...(akun.kelasAmpu ?? [])],
-      penugasan: (akun.penugasan ?? []).map((p) => ({ ...p })),
+      penugasan: penugasanDiLuarKelasWali(akun.penugasan ?? [], akun.waliKelas ?? []),
       waliKelas: [...(akun.waliKelas ?? [])],
       aktif: akun.aktif !== false,
       status: akun.status,
@@ -275,6 +319,7 @@ export default function KelolaAkun({ profile }: Props) {
     })
     setSebagaiAdmin(akun.role === 'admin')
     setTugas(tugasDariAkun(akun))
+    setMapelKelas(mapelDiampuDiKelasWali(akun.penugasan ?? [], akun.waliKelas ?? []))
     setMode('form')
   }
 
@@ -294,7 +339,11 @@ export default function KelolaAkun({ profile }: Props) {
       role: sebagaiAdmin ? 'admin' : roleDariTugas(tugas),
       kelasAmpu: !sebagaiAdmin && tugas.tahsin ? form.kelasAmpu : [],
       waliKelas: !sebagaiAdmin && tugas.guruKelas ? form.waliKelas : [],
-      penugasan: !sebagaiAdmin && tugas.bidangStudi ? form.penugasan : [],
+      penugasan: gabungPenugasanGuru(
+        !sebagaiAdmin && tugas.guruKelas ? form.waliKelas : [],
+        !sebagaiAdmin && tugas.guruKelas ? mapelKelas : [],
+        !sebagaiAdmin && tugas.bidangStudi ? form.penugasan : [],
+      ),
     }
     const galat = validasiAkun(inputSiap, {
       baru: !editing,
@@ -810,12 +859,19 @@ export default function KelolaAkun({ profile }: Props) {
               />
             )}
             {butuhKelas && (
-              <PilihKelas
-                label="Guru kelas"
-                hint="Kelas yang diwalikan. Boleh lebih dari satu."
-                value={form.waliKelas}
-                onChange={(waliKelas) => setF('waliKelas', waliKelas)}
-              />
+              <>
+                <PilihKelas
+                  label="Guru kelas"
+                  hint="Kelas yang diwalikan. Boleh lebih dari satu."
+                  value={form.waliKelas}
+                  onChange={(waliKelas) => setF('waliKelas', waliKelas)}
+                />
+                <PilihMapel
+                  nama={[...new Set([...mapel.map((m) => m.nama), ...mapelKelas])]}
+                  value={mapelKelas}
+                  onChange={setMapelKelas}
+                />
+              </>
             )}
             {butuhMapel && (
               <EditorPenugasan
