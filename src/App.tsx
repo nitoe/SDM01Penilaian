@@ -22,6 +22,7 @@ import KelolaAkun from './pages/admin/KelolaAkun'
 import SetupTp from './pages/akademik/SetupTp'
 import BobotSemester from './pages/akademik/BobotSemester'
 import NilaiSlm from './pages/akademik/NilaiSlm'
+import Rapor from './pages/akademik/Rapor'
 
 /** Menjaga rute per role di sisi UI. Penegakan sebenarnya tetap di firestore.rules. */
 function RoleGate({ allow }: { allow: boolean }) {
@@ -114,6 +115,7 @@ export default function App() {
               element={profile ? <BobotSemester profile={profile} /> : null}
             />
             <Route path="/akademik/nilai-slm" element={profile ? <NilaiSlm profile={profile} /> : null} />
+            <Route path="/akademik/rapor" element={profile ? <Rapor profile={profile} /> : null} />
             <Route path="/akademik/*" element={<Placeholder />} />
           </Route>
 

@@ -119,7 +119,9 @@ export default function Layout({ profile }: LayoutProps) {
 
           <div className="hero-banner rounded-2xl p-4 text-white">
             <p className="text-[11px] text-muh-100/85">Masuk sebagai</p>
-            <p className="mt-0.5 truncate text-[13.5px] font-semibold">{profile.nama}</p>
+            <p className="mt-0.5 truncate text-[13.5px] font-semibold">
+              {profile.nama}{profile.gelar ? `, ${profile.gelar}` : ''}
+            </p>
             <p className="mt-0.5 text-[11.5px] text-muh-100/85">
               {ROLE_LABEL[profile.role]}
               {ringkasKelas(profile) ? ` · ${ringkasKelas(profile)}` : ''}
@@ -149,7 +151,7 @@ export default function Layout({ profile }: LayoutProps) {
             <div className="flex items-center gap-2.5">
               <div className="hidden min-w-0 text-right sm:block">
                 <div className="truncate text-[13px] font-medium text-slate-800">
-                  {profile.nama}
+                  {profile.nama}{profile.gelar ? `, ${profile.gelar}` : ''}
                 </div>
                 <div className="text-[11px] text-muted">{ROLE_LABEL[profile.role]}</div>
               </div>

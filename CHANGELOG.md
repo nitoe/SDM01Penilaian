@@ -113,3 +113,10 @@
 - Menyimpan form akun pending otomatis mengubah status menjadi `approved`.
 - Fungsi `setStatusAkun` ditambahkan di `akunGuruData.ts`.
 - Nama + gelar ditampilkan di panel detail.
+
+## Belum dirilis — Integrasi nama + gelar untuk rapor
+
+- Komponen baru `TandaTanganGuru` yang menampilkan "Nama, Gelar".
+- Halaman `/akademik/rapor` (pratinjau): tanda tangan diri sendiri dan wali kelas terpilih memakai gelar.
+- Layout (sidebar & header) menampilkan gelar di samping nama jika ada.
+- AkademikHub menandai halaman Rapor sebagai siap (pratinjau tanda tangan).
