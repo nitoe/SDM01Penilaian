@@ -19,6 +19,7 @@ import RiwayatSiswa from './pages/tahsin/RiwayatSiswa'
 import TargetHafalan from './pages/tahsin/TargetHafalan'
 import DataSiswa from './pages/admin/DataSiswa'
 import KelolaAkun from './pages/admin/KelolaAkun'
+import SetupMapel from './pages/admin/Mapel'
 import SetupTp from './pages/akademik/SetupTp'
 import BobotSemester from './pages/akademik/BobotSemester'
 import NilaiSlm from './pages/akademik/NilaiSlm'
@@ -128,6 +129,10 @@ export default function App() {
             <Route
               path="/admin/users"
               element={profile ? <KelolaAkun profile={profile} /> : null}
+            />
+            <Route
+              path="/admin/mapel"
+              element={profile ? <SetupMapel profile={profile} /> : null}
             />
             <Route path="/admin/*" element={<Placeholder />} />
           </Route>

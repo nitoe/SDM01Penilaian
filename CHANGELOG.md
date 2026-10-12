@@ -137,3 +137,9 @@
   Guru Tahsin-Tahfizh, Guru Akademik, Kombinasi, Administrator.
 - Pemilihan peran berupa kartu (bukan dropdown) dengan deskripsi singkat.
 - Hint kelas dan penugasan diselaraskan dengan form pendaftaran mandiri.
+
+## Belum dirilis — Daftar mapel dan tugas guru yang bisa digabung
+
+- Admin → Mata Pelajaran: daftar bawaan (Pendidikan Pancasila sampai Tahfizh) langsung bisa dipilih, lalu disimpan ke Firestore.
+- Form daftar dan tambah guru: tugas Tahsin-Tahfizh, Guru Kelas, dan Guru Bidang Studi bisa dipilih bersamaan. Tahsin + guru kelas tidak lagi tertutup oleh satu peran “Kombinasi”.
+- Rules: akun kombinasi (`guru`) boleh mengakses data wali kelas dan mapel yang ditugaskan.

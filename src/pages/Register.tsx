@@ -5,34 +5,21 @@ import { doc, setDoc } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { GURU_RESMI, adalahNamaResmi } from '../lib/dataGuruResmi'
 import { getMapelList } from '../lib/akademik'
+import { MAPEL_BAWAAN } from '../lib/mapelBawaan'
+import { roleDariTugas, type TugasGuru } from '../lib/akunGuru'
 import { turunkanFieldRules } from '../lib/penugasan'
 import { SEMUA_KELAS } from '../types/tahsin'
 import type { Mapel } from '../types/akademik'
-import type { UserRole } from '../types/user'
-
-type PeranPilihan = 'guru_tahsin_tahfizh' | 'guru_akademik' | 'guru'
-
-const OPSI_PERAN: { value: PeranPilihan; label: string; desk: string }[] = [
-  {
-    value: 'guru_tahsin_tahfizh',
-    label: 'Guru Tahsin-Tahfizh',
-    desk: 'Mencatat setoran bacaan dan hafalan.',
-  },
-  {
-    value: 'guru_akademik',
-    label: 'Guru Akademik',
-    desk: 'Wali kelas dan/atau guru bidang studi.',
-  },
-  {
-    value: 'guru',
-    label: 'Kombinasi',
-    desk: 'Tahsin-Tahfizh sekaligus akademik (wali kelas atau mapel).',
-  },
-]
 
 function toggleItem(list: string[], item: string): string[] {
   return list.includes(item) ? list.filter((x) => x !== item) : [...list, item]
 }
+
+const TUGAS_OPSI: { key: keyof TugasGuru; label: string; desk: string }[] = [
+  { key: 'tahsin', label: 'Guru Tahsin-Tahfizh', desk: 'Mencatat setoran di kelas yang dipilih.' },
+  { key: 'guruKelas', label: 'Guru Kelas', desk: 'Menjadi wali kelas. Bisa digabung dengan Tahsin.' },
+  { key: 'bidangStudi', label: 'Guru Bidang Studi', desk: 'Mengajar mapel tertentu di kelas lain.' },
+]
 
 export default function Register() {
   const [nama, setNama] = useState('')
@@ -40,7 +27,7 @@ export default function Register() {
   const [password, setPassword] = useState('')
   const [gelar, setGelar] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [peran, setPeran] = useState<PeranPilihan>('guru_akademik')
+  const [tugas, setTugas] = useState<TugasGuru>({ tahsin: false, guruKelas: true, bidangStudi: false })
   const [kelasAmpu, setKelasAmpu] = useState<string[]>([])
   const [waliKelas, setWaliKelas] = useState<string[]>([])
   const [penugasan, setPenugasan] = useState<{ kelas: string; mapel: string }[]>([])
@@ -52,11 +39,12 @@ export default function Register() {
   useEffect(() => {
     getMapelList()
       .then(setMapelList)
-      .catch(() => setMapelList([]))
+      .catch(() => setMapelList(MAPEL_BAWAAN.map((m) => ({ ...m }))))
   }, [])
 
-  const butuhTahsin = peran === 'guru_tahsin_tahfizh' || peran === 'guru'
-  const butuhAkademik = peran === 'guru_akademik' || peran === 'guru'
+  const butuhTahsin = tugas.tahsin
+  const butuhKelas = tugas.guruKelas
+  const butuhMapel = tugas.bidangStudi
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -69,18 +57,26 @@ export default function Register() {
       setError('Password minimal 8 karakter.')
       return
     }
+    if (!tugas.tahsin && !tugas.guruKelas && !tugas.bidangStudi) {
+      setError('Pilih minimal satu tugas.')
+      return
+    }
     if (butuhTahsin && kelasAmpu.length === 0) {
       setError('Pilih minimal satu kelas untuk Tahsin-Tahfizh.')
       return
     }
-    const penugasanBersih = penugasan.filter((p) => p.kelas && p.mapel.trim())
-    if (butuhAkademik && waliKelas.length === 0 && penugasanBersih.length === 0) {
-      setError('Untuk guru akademik, pilih wali kelas atau tambahkan minimal satu penugasan mapel.')
+    if (butuhKelas && waliKelas.length === 0) {
+      setError('Pilih kelas yang Anda ampu sebagai guru kelas.')
+      return
+    }
+    const penugasanBersih = butuhMapel ? penugasan.filter((p) => p.kelas && p.mapel.trim()) : []
+    if (butuhMapel && penugasanBersih.length === 0) {
+      setError('Tambahkan minimal satu penugasan mapel.')
       return
     }
 
     const turunan = turunkanFieldRules(penugasanBersih)
-    const role: UserRole = peran
+    const role = roleDariTugas(tugas)
 
     setLoading(true)
     try {
@@ -93,10 +89,10 @@ export default function Register() {
         status: 'pending',
         aktif: true,
         kelasAmpu: butuhTahsin ? kelasAmpu : [],
-        waliKelas: butuhAkademik ? waliKelas : [],
-        penugasan: butuhAkademik ? penugasanBersih : [],
-        penugasanKelas: butuhAkademik ? turunan.penugasanKelas : [],
-        penugasanKelasMapel: butuhAkademik ? turunan.penugasanKelasMapel : [],
+        waliKelas: butuhKelas ? waliKelas : [],
+        penugasan: penugasanBersih,
+        penugasanKelas: turunan.penugasanKelas,
+        penugasanKelasMapel: turunan.penugasanKelasMapel,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
@@ -236,24 +232,26 @@ export default function Register() {
             </div>
           </div>
 
-          {/* Peran */}
           <div>
-            <span className="mb-2 block text-[12px] font-medium text-slate-600">Peran *</span>
+            <span className="mb-2 block text-[12px] font-medium text-slate-600">Tugas *</span>
+            <p className="mb-2 text-[11px] text-muted">
+              Bisa dipilih bersamaan. Misalnya guru Tahsin-Tahfizh yang juga menjadi guru kelas, atau yang juga mengajar bidang studi.
+            </p>
             <div className="grid gap-2 sm:grid-cols-3">
-              {OPSI_PERAN.map((o) => {
-                const aktif = peran === o.value
+              {TUGAS_OPSI.map((o) => {
+                const aktif = tugas[o.key]
                 return (
                   <button
-                    key={o.value}
+                    key={o.key}
                     type="button"
-                    onClick={() => setPeran(o.value)}
+                    onClick={() => setTugas((prev) => ({ ...prev, [o.key]: !prev[o.key] }))}
                     className={`rounded-xl border px-3 py-2.5 text-left text-[12px] ${
                       aktif
                         ? 'border-muh-500 bg-muh-50 text-muh-900'
                         : 'border-border bg-white text-slate-700 hover:bg-slate-50'
                     }`}
                   >
-                    <div className="font-semibold">{o.label}</div>
+                    <div className="font-semibold">{aktif ? '✓ ' : ''}{o.label}</div>
                     <div className="mt-0.5 text-[11px] text-muted">{o.desk}</div>
                   </button>
                 )
@@ -261,7 +259,6 @@ export default function Register() {
             </div>
           </div>
 
-          {/* Tahsin */}
           {butuhTahsin && (
             <div>
               <span className="mb-1 block text-[12px] font-medium text-slate-600">Kelas Tahsin-Tahfizh *</span>
@@ -270,96 +267,85 @@ export default function Register() {
             </div>
           )}
 
-          {/* Akademik */}
-          {butuhAkademik && (
-            <>
-              <div>
-                <span className="mb-1 block text-[12px] font-medium text-slate-600">Wali kelas</span>
-                <p className="mb-2 text-[11px] text-muted">Boleh lebih dari satu, atau kosong jika hanya guru bidang studi.</p>
-                <ChipKelas value={waliKelas} onChange={setWaliKelas} />
-              </div>
+          {butuhKelas && (
+            <div>
+              <span className="mb-1 block text-[12px] font-medium text-slate-600">Guru kelas *</span>
+              <p className="mb-2 text-[11px] text-muted">Kelas yang Anda walikan. Boleh lebih dari satu.</p>
+              <ChipKelas value={waliKelas} onChange={setWaliKelas} />
+            </div>
+          )}
 
-              <div>
-                <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <span className="text-[12px] font-medium text-slate-600">Penugasan mapel</span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPenugasan((prev) => [...prev, { kelas: '1A', mapel: mapelList[0]?.nama ?? '' }])
-                    }
-                    className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-200"
-                  >
-                    + Tambah
-                  </button>
-                </div>
-                <p className="mb-2 text-[11px] text-muted">
-                  Setiap baris: satu kelas dan satu mapel. Cocok untuk guru bidang studi atau wali kelas yang juga mengajar di kelas lain.
-                </p>
-                {penugasan.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-border px-3 py-3 text-[12px] text-muted">
-                    Belum ada penugasan mapel.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {penugasan.map((row, i) => (
-                      <div key={i} className="grid grid-cols-[88px_1fr_auto] gap-2">
-                        <select
-                          className={field}
-                          value={row.kelas}
-                          onChange={(e) =>
-                            setPenugasan((prev) =>
-                              prev.map((r, idx) => (idx === i ? { ...r, kelas: e.target.value } : r)),
-                            )
-                          }
-                        >
-                          {SEMUA_KELAS.map((k) => (
-                            <option key={k} value={k}>
-                              {k}
-                            </option>
-                          ))}
-                        </select>
-                        {mapelList.length > 0 ? (
-                          <select
-                            className={field}
-                            value={row.mapel}
-                            onChange={(e) =>
-                              setPenugasan((prev) =>
-                                prev.map((r, idx) => (idx === i ? { ...r, mapel: e.target.value } : r)),
-                              )
-                            }
-                          >
-                            <option value="">— Mapel —</option>
-                            {mapelList.map((m) => (
-                              <option key={m.id} value={m.nama}>
-                                {m.nama}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <input
-                            className={field}
-                            value={row.mapel}
-                            placeholder="Nama mapel"
-                            onChange={(e) =>
-                              setPenugasan((prev) =>
-                                prev.map((r, idx) => (idx === i ? { ...r, mapel: e.target.value } : r)),
-                              )
-                            }
-                          />
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setPenugasan((prev) => prev.filter((_, idx) => idx !== i))}
-                          className="rounded-xl border border-border px-2.5 text-[11px] font-medium text-slate-500 hover:bg-slate-50"
-                        >
-                          Hapus
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+          {butuhMapel && (
+            <div>
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <span className="text-[12px] font-medium text-slate-600">Penugasan mapel *</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPenugasan((prev) => [...prev, { kelas: '1A', mapel: mapelList[0]?.nama ?? '' }])
+                  }
+                  className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-200"
+                >
+                  + Tambah
+                </button>
               </div>
-            </>
+              <p className="mb-2 text-[11px] text-muted">
+                Setiap baris: satu kelas dan satu mapel.
+              </p>
+              {penugasan.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-border px-3 py-3 text-[12px] text-muted">
+                  Belum ada penugasan mapel.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {penugasan.map((row, i) => (
+                    <div key={i} className="grid grid-cols-[88px_1fr_auto] gap-2">
+                      <select
+                        className={field}
+                        value={row.kelas}
+                        onChange={(e) =>
+                          setPenugasan((prev) =>
+                            prev.map((r, idx) => (idx === i ? { ...r, kelas: e.target.value } : r)),
+                          )
+                        }
+                      >
+                        {SEMUA_KELAS.map((k) => (
+                          <option key={k} value={k}>
+                            {k}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        className={field}
+                        value={row.mapel}
+                        onChange={(e) =>
+                          setPenugasan((prev) =>
+                            prev.map((r, idx) => (idx === i ? { ...r, mapel: e.target.value } : r)),
+                          )
+                        }
+                      >
+                        <option value="">— Mapel —</option>
+                        {row.mapel && !mapelList.some((m) => m.nama === row.mapel) && (
+                          <option value={row.mapel}>{row.mapel}</option>
+                        )}
+                        {mapelList.map((m) => (
+                          <option key={m.id} value={m.nama}>
+                            {m.nama}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setPenugasan((prev) => prev.filter((_, idx) => idx !== i))}
+                        className="rounded-xl border border-border px-2.5 text-[11px] font-medium text-slate-500 hover:bg-slate-50"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {error && (

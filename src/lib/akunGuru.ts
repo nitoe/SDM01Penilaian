@@ -5,6 +5,50 @@ import { turunkanFieldRules } from './penugasan.ts'
 /** Peran yang dikelola di halaman Kelola Akun (orang tua punya halaman sendiri). */
 export const ROLE_STAF: readonly UserRole[] = ['admin', 'guru', 'guru_tahsin_tahfizh', 'guru_akademik']
 
+/** Tugas yang boleh digabung. Peran Firestore diturunkan dari kombinasi ini. */
+export interface TugasGuru {
+  tahsin: boolean
+  /** Guru kelas / wali kelas. */
+  guruKelas: boolean
+  bidangStudi: boolean
+}
+
+export function tugasDariAkun(input: {
+  role: UserRole
+  kelasAmpu?: string[]
+  waliKelas?: string[]
+  penugasan?: { kelas: string; mapel: string }[]
+}): TugasGuru {
+  if (input.role === 'admin' || input.role === 'orangtua') {
+    return { tahsin: false, guruKelas: false, bidangStudi: false }
+  }
+  const adaWali = (input.waliKelas?.length ?? 0) > 0
+  const adaMapel = (input.penugasan?.length ?? 0) > 0
+  if (input.role === 'guru_tahsin_tahfizh') {
+    return { tahsin: true, guruKelas: false, bidangStudi: false }
+  }
+  if (input.role === 'guru_akademik') {
+    return {
+      tahsin: false,
+      guruKelas: adaWali || !adaMapel,
+      bidangStudi: adaMapel,
+    }
+  }
+  return {
+    tahsin: true,
+    guruKelas: adaWali,
+    bidangStudi: adaMapel,
+  }
+}
+
+/** `guru` = Tahsin sekaligus guru kelas dan/atau bidang studi. */
+export function roleDariTugas(t: TugasGuru): UserRole {
+  const akademik = t.guruKelas || t.bidangStudi
+  if (t.tahsin && akademik) return 'guru'
+  if (t.tahsin) return 'guru_tahsin_tahfizh'
+  return 'guru_akademik'
+}
+
 const KELAS_SAH = new Set<string>(SEMUA_KELAS)
 const URUTAN: readonly string[] = SEMUA_KELAS
 
@@ -113,14 +157,17 @@ export function validasiAkun(
   if (input.role === 'guru_tahsin_tahfizh' && urutKelas(input.kelasAmpu).length === 0) {
     return 'Guru Tahsin-Tahfizh wajib memiliki minimal satu kelas.'
   }
-  if (input.role === 'guru') {
-    const adaTugas =
-      urutKelas(input.kelasAmpu).length > 0 ||
-      urutKelas(input.waliKelas).length > 0 ||
-      rapikanPenugasan(input.penugasan).length > 0
-    if (!adaTugas) return 'Role guru gabungan perlu kelas Tahsin, wali kelas, atau penugasan mapel.'
+  if (input.role === 'guru' && urutKelas(input.kelasAmpu).length === 0) {
+    return 'Kombinasi Tahsin wajib memiliki minimal satu kelas Tahsin-Tahfizh.'
   }
   if (input.role === 'guru_akademik' || input.role === 'guru') {
+    const adaKelas = urutKelas(input.waliKelas).length > 0
+    const adaMapel = rapikanPenugasan(input.penugasan).length > 0
+    if (!adaKelas && !adaMapel) {
+      return input.role === 'guru'
+        ? 'Tambahkan tugas guru kelas atau guru bidang studi.'
+        : 'Guru akademik perlu guru kelas atau penugasan mapel.'
+    }
     for (const p of input.penugasan) {
       if (!p.kelas.trim() && !p.mapel.trim()) continue
       if (!KELAS_SAH.has(p.kelas.trim())) return `Kelas penugasan tidak dikenal: ${p.kelas || '—'}.`
@@ -140,7 +187,7 @@ export function ringkasTugas(input: {
   if (input.role === 'admin') return 'Semua modul'
   const bagian: string[] = []
   const wali = urutKelas(input.waliKelas ?? [])
-  if (wali.length) bagian.push(`Wali ${wali.join(', ')}`)
+  if (wali.length) bagian.push(`Guru kelas ${wali.join(', ')}`)
   const tugas = rapikanPenugasan(input.penugasan ?? [])
   if (tugas.length) {
     const mapel = new Set(tugas.map((p) => p.mapel)).size

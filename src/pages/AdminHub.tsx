@@ -19,6 +19,14 @@ const items: { to: string; title: string; desc: string; ready: boolean; icon: Ic
     tone: 'ink',
   },
   {
+    to: '/admin/mapel',
+    title: 'Mata Pelajaran',
+    desc: 'Daftar mapel untuk tugas guru dan setup TP',
+    ready: true,
+    icon: 'clipboard',
+    tone: 'violet',
+  },
+  {
     to: '/admin/ortu',
     title: 'Akun Orang Tua',
     desc: 'Persetujuan dan pengelolaan akun orang tua',

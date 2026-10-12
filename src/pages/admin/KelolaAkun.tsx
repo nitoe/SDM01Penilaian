@@ -3,8 +3,11 @@ import { Link, Navigate } from 'react-router-dom'
 import { Badge } from '../../components/ui'
 import {
   ringkasTugas,
+  roleDariTugas,
+  tugasDariAkun,
   validasiAkun,
   type InputAkunGuru,
+  type TugasGuru,
 } from '../../lib/akunGuru'
 import {
   buatAkunGuru,
@@ -17,9 +20,10 @@ import {
   type AkunStaf,
 } from '../../lib/akunGuruData'
 import { getMapelList } from '../../lib/akademik'
+import { MAPEL_BAWAAN } from '../../lib/mapelBawaan'
 import { SEMUA_KELAS } from '../../types/tahsin'
 import type { Mapel } from '../../types/akademik'
-import { ROLE_LABEL, type AppUser, type UserRole } from '../../types/user'
+import { ROLE_LABEL, type AppUser } from '../../types/user'
 
 interface Props {
   profile: AppUser
@@ -28,11 +32,10 @@ interface Props {
 type Mode = 'list' | 'form'
 type Saringan = 'semua' | 'guru_tahsin_tahfizh' | 'guru_akademik' | 'admin' | 'nonaktif' | 'pending'
 
-const OPSI_BARU: { value: UserRole; label: string; desk?: string }[] = [
-  { value: 'guru_tahsin_tahfizh', label: 'Guru Tahsin-Tahfizh', desk: 'Setoran bacaan dan hafalan.' },
-  { value: 'guru_akademik', label: 'Guru Akademik', desk: 'Wali kelas dan/atau guru bidang studi.' },
-  { value: 'guru', label: 'Kombinasi', desk: 'Tahsin sekaligus akademik.' },
-  { value: 'admin', label: 'Administrator', desk: 'Semua modul.' },
+const TUGAS_OPSI: { key: keyof TugasGuru; label: string; desk: string }[] = [
+  { key: 'tahsin', label: 'Guru Tahsin-Tahfizh', desk: 'Mencatat setoran di kelas yang dipilih.' },
+  { key: 'guruKelas', label: 'Guru Kelas', desk: 'Wali kelas. Bisa digabung dengan Tahsin.' },
+  { key: 'bidangStudi', label: 'Guru Bidang Studi', desk: 'Mengajar mapel di kelas tertentu.' },
 ]
 
 const SARINGAN: { id: Saringan; label: string }[] = [
@@ -207,6 +210,8 @@ export default function KelolaAkun({ profile }: Props) {
   const [dipilih, setDipilih] = useState<AkunStaf | null>(null)
   const [kataSandiBaru, setKataSandiBaru] = useState<{ nama: string; email: string; password: string } | null>(null)
   const [konfirmasi, setKonfirmasi] = useState<string | null>(null)
+  const [sebagaiAdmin, setSebagaiAdmin] = useState(false)
+  const [tugas, setTugas] = useState<TugasGuru>({ tahsin: true, guruKelas: false, bidangStudi: false })
 
   const showToast = (msg: string, error = false) => {
     setToast({ msg, error })
@@ -218,7 +223,7 @@ export default function KelolaAkun({ profile }: Props) {
     try {
       const [akun, daftarMapel] = await Promise.all([
         listAkunStaf(),
-        getMapelList().catch(() => [] as Mapel[]),
+        getMapelList().catch(() => MAPEL_BAWAAN.map((m) => ({ ...m }))),
       ])
       setList(akun)
       setMapel(daftarMapel)
@@ -249,6 +254,8 @@ export default function KelolaAkun({ profile }: Props) {
   function openCreate() {
     setEditing(null)
     setForm(formKosong())
+    setSebagaiAdmin(false)
+    setTugas({ tahsin: true, guruKelas: false, bidangStudi: false })
     setMode('form')
   }
 
@@ -266,6 +273,8 @@ export default function KelolaAkun({ profile }: Props) {
       status: akun.status,
       password: '',
     })
+    setSebagaiAdmin(akun.role === 'admin')
+    setTugas(tugasDariAkun(akun))
     setMode('form')
   }
 
@@ -276,9 +285,20 @@ export default function KelolaAkun({ profile }: Props) {
   async function handleSave(e: FormEvent) {
     e.preventDefault()
     const diriSendiri = editing?.uid === profile.uid
-    const galat = validasiAkun(form, {
+    if (!sebagaiAdmin && !tugas.tahsin && !tugas.guruKelas && !tugas.bidangStudi) {
+      showToast('Pilih minimal satu tugas guru.', true)
+      return
+    }
+    const inputSiap: InputAkunGuru & { password: string } = {
+      ...form,
+      role: sebagaiAdmin ? 'admin' : roleDariTugas(tugas),
+      kelasAmpu: !sebagaiAdmin && tugas.tahsin ? form.kelasAmpu : [],
+      waliKelas: !sebagaiAdmin && tugas.guruKelas ? form.waliKelas : [],
+      penugasan: !sebagaiAdmin && tugas.bidangStudi ? form.penugasan : [],
+    }
+    const galat = validasiAkun(inputSiap, {
       baru: !editing,
-      password: form.password,
+      password: inputSiap.password,
       diriSendiri,
       roleLama: editing?.roleRusak ? undefined : editing?.role,
     })
@@ -289,11 +309,11 @@ export default function KelolaAkun({ profile }: Props) {
     setBusy(true)
     try {
       if (!editing) {
-        await buatAkunGuru(form, form.password)
-        setKataSandiBaru({ nama: form.nama.trim(), email: form.email.trim().toLowerCase(), password: form.password })
+        await buatAkunGuru(inputSiap, inputSiap.password)
+        setKataSandiBaru({ nama: inputSiap.nama.trim(), email: inputSiap.email.trim().toLowerCase(), password: inputSiap.password })
         showToast('Akun guru dibuat. Salin password awal sebelum menutup kotak di bawah.')
       } else {
-        const input = { ...form }
+        const input = { ...inputSiap }
         if (editing.status === 'pending') input.status = 'approved'
         await simpanAkunGuru(editing.uid, input, editing.createdAt)
         showToast(editing.status === 'pending' ? 'Akun disetujui dan data disimpan.' : 'Perubahan akun disimpan.')
@@ -365,9 +385,10 @@ export default function KelolaAkun({ profile }: Props) {
 
   if (profile.role !== 'admin') return <Navigate to="/" replace />
 
-  const butuhTahsin = form.role === 'guru_tahsin_tahfizh' || form.role === 'guru'
-  const butuhAkademik = form.role === 'guru_akademik' || form.role === 'guru'
-  const opsiPeran = OPSI_BARU
+  const terkunci = editing?.uid === profile.uid
+  const butuhTahsin = !sebagaiAdmin && tugas.tahsin
+  const butuhKelas = !sebagaiAdmin && tugas.guruKelas
+  const butuhMapel = !sebagaiAdmin && tugas.bidangStudi
 
   return (
     <div className="space-y-4">
@@ -706,29 +727,42 @@ export default function KelolaAkun({ profile }: Props) {
                 />
               </Field>
               <div className="sm:col-span-2">
-                <span className="mb-1.5 block text-[11px] font-medium text-slate-600">Peran *</span>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                  {opsiPeran.map((o) => {
-                    const aktif = form.role === o.value
-                    const terkunci = editing?.uid === profile.uid
-                    return (
-                      <button
-                        key={o.value}
-                        type="button"
-                        disabled={terkunci}
-                        onClick={() => setF('role', o.value)}
-                        className={`rounded-xl border px-3 py-2 text-left text-[12px] disabled:opacity-60 ${
-                          aktif
-                            ? 'border-muh-500 bg-muh-50 text-muh-900'
-                            : 'border-border bg-white text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="font-semibold">{o.label}</div>
-                        {o.desk && <div className="mt-0.5 text-[11px] text-muted">{o.desk}</div>}
-                      </button>
-                    )
-                  })}
-                </div>
+                <span className="mb-1.5 block text-[11px] font-medium text-slate-600">Tugas *</span>
+                <p className="mb-2 text-[11px] text-muted">
+                  Boleh lebih dari satu. Contoh: Tahsin-Tahfizh sekaligus guru kelas, atau Tahsin sekaligus bidang studi.
+                </p>
+                <button
+                  type="button"
+                  disabled={terkunci}
+                  onClick={() => setSebagaiAdmin((v) => !v)}
+                  className={`mb-2 w-full rounded-xl border px-3 py-2 text-left text-[12px] disabled:opacity-60 ${
+                    sebagaiAdmin ? 'border-muh-500 bg-muh-50' : 'border-border bg-white'
+                  }`}
+                >
+                  <div className="font-semibold text-slate-800">Administrator</div>
+                  <div className="mt-0.5 text-[11px] text-muted">Semua modul. Kelas dan mapel tidak perlu diisi.</div>
+                </button>
+                {!sebagaiAdmin && (
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {TUGAS_OPSI.map((o) => {
+                      const aktif = tugas[o.key]
+                      return (
+                        <button
+                          key={o.key}
+                          type="button"
+                          disabled={terkunci}
+                          onClick={() => setTugas((prev) => ({ ...prev, [o.key]: !prev[o.key] }))}
+                          className={`rounded-xl border px-3 py-2 text-left text-[12px] disabled:opacity-60 ${
+                            aktif ? 'border-muh-500 bg-muh-50 text-muh-900' : 'border-border bg-white text-slate-700'
+                          }`}
+                        >
+                          <div className="font-semibold">{aktif ? '✓ ' : ''}{o.label}</div>
+                          <div className="mt-0.5 text-[11px] text-muted">{o.desk}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
               {!editing && (
                 <Field label="Password awal *">
@@ -757,14 +791,14 @@ export default function KelolaAkun({ profile }: Props) {
                 Email login tidak diubah di sini. Untuk password, kirim tautan ke email guru dari panel daftar.
               </p>
             )}
-            {form.role === 'admin' && (
+            {sebagaiAdmin && (
               <p className="rounded-xl bg-slate-50 px-3 py-2 text-[12px] text-muted">
                 Administrator membuka semua modul. Kelas dan mapel tidak perlu diisi.
               </p>
             )}
-            {form.role === 'guru' && (
+            {butuhTahsin && butuhKelas && (
               <p className="rounded-xl bg-muh-50 px-3 py-2 text-[12px] text-muh-900">
-                Kombinasi: isi kelas Tahsin dan juga wali kelas / penugasan mapel.
+                Kombinasi: guru Tahsin-Tahfizh yang juga menjadi guru kelas. Isi kedua bagian di bawah.
               </p>
             )}
             {butuhTahsin && (
@@ -775,20 +809,20 @@ export default function KelolaAkun({ profile }: Props) {
                 onChange={(kelasAmpu) => setF('kelasAmpu', kelasAmpu)}
               />
             )}
-            {butuhAkademik && (
-              <>
-                <PilihKelas
-                  label="Wali kelas"
-                  hint="Boleh lebih dari satu, atau kosong jika hanya guru bidang studi."
-                  value={form.waliKelas}
-                  onChange={(waliKelas) => setF('waliKelas', waliKelas)}
-                />
-                <EditorPenugasan
-                  rows={form.penugasan}
-                  mapel={mapel}
-                  onChange={(penugasan) => setF('penugasan', penugasan)}
-                />
-              </>
+            {butuhKelas && (
+              <PilihKelas
+                label="Guru kelas"
+                hint="Kelas yang diwalikan. Boleh lebih dari satu."
+                value={form.waliKelas}
+                onChange={(waliKelas) => setF('waliKelas', waliKelas)}
+              />
+            )}
+            {butuhMapel && (
+              <EditorPenugasan
+                rows={form.penugasan}
+                mapel={mapel}
+                onChange={(penugasan) => setF('penugasan', penugasan)}
+              />
             )}
             {editing && editing.uid !== profile.uid && (
               <label className="flex items-center gap-2 text-[12px] text-slate-700">

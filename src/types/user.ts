@@ -46,7 +46,7 @@ export interface AppUser {
 
 export const ROLE_LABEL: Record<UserRole, string> = {
   admin: 'Administrator',
-  guru: 'Guru',
+  guru: 'Guru Kombinasi',
   guru_tahsin_tahfizh: 'Guru Tahsin-Tahfizh',
   guru_akademik: 'Guru Akademik',
   orangtua: 'Orang Tua',

@@ -55,7 +55,7 @@ service cloud.firestore {
     }
 
     function isGuruAkademik() {
-      return akunAktif() && myRole() == 'guru_akademik';
+      return akunAktif() && myRole() in ['guru_akademik', 'guru'];
     }
 
     function isApprovedParent() {
@@ -87,14 +87,14 @@ service cloud.firestore {
     function bolehMapelKelas(mapel, kelas) {
       return akunAktif() && (
         myRole() == 'admin' ||
-        (myRole() == 'guru_akademik' && (kelas + '::' + mapel) in myProfile().penugasanKelasMapel)
+        (myRole() in ['guru_akademik', 'guru'] && (kelas + '::' + mapel) in myProfile().penugasanKelasMapel)
       );
     }
 
     function bolehWaliKelas(kelas) {
       return akunAktif() && (
         myRole() == 'admin' ||
-        (myRole() == 'guru_akademik' && kelas in myProfile().waliKelas)
+        (myRole() in ['guru_akademik', 'guru'] && kelas in myProfile().waliKelas)
       );
     }
 

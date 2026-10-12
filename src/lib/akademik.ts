@@ -7,12 +7,14 @@ import {
   getDocs,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
   writeBatch,
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
 import { faseDariTingkatan } from './akademikRumus'
+import { MAPEL_BAWAAN } from './mapelBawaan'
 import type {
   ConfigAkademik,
   LevelKktp,
@@ -32,11 +34,59 @@ export * from './akademikRumus'
 
 const uid = () => auth.currentUser?.uid ?? null
 
+function dokumenKeMapel(id: string, data: Record<string, unknown>): Mapel {
+  return {
+    id,
+    nama: typeof data.nama === 'string' && data.nama ? data.nama : id,
+    urutan: typeof data.urutan === 'number' ? data.urutan : 0,
+    tingkatanBerlaku: Array.isArray(data.tingkatanBerlaku)
+      ? data.tingkatanBerlaku.filter((x): x is string => typeof x === 'string')
+      : undefined,
+  }
+}
+
 export async function getMapelList(): Promise<Mapel[]> {
+  try {
+    const snap = await getDocs(collection(db, 'mapel'))
+    if (snap.empty) return MAPEL_BAWAAN.map((m) => ({ ...m, tingkatanBerlaku: [...(m.tingkatanBerlaku ?? [])] }))
+    return snap.docs
+      .map((d) => dokumenKeMapel(d.id, d.data() as Record<string, unknown>))
+      .sort((a, b) => (a.urutan ?? 0) - (b.urutan ?? 0) || a.nama.localeCompare(b.nama, 'id'))
+  } catch {
+    return MAPEL_BAWAAN.map((m) => ({ ...m, tingkatanBerlaku: [...(m.tingkatanBerlaku ?? [])] }))
+  }
+}
+
+/** True bila koleksi Firestore `mapel` sudah berisi dokumen. */
+export async function adaMapelTersimpan(): Promise<boolean> {
   const snap = await getDocs(collection(db, 'mapel'))
-  return snap.docs
-    .map((d) => ({ id: d.id, nama: d.id, ...d.data() }) as Mapel)
-    .sort((a, b) => (a.urutan ?? 0) - (b.urutan ?? 0))
+  return !snap.empty
+}
+
+export async function simpanMapel(m: Mapel): Promise<void> {
+  const nama = m.nama.trim()
+  await setDoc(doc(db, 'mapel', nama), {
+    nama,
+    urutan: m.urutan ?? 0,
+    tingkatanBerlaku: m.tingkatanBerlaku ?? [],
+  })
+}
+
+export async function hapusMapel(nama: string): Promise<void> {
+  await deleteDoc(doc(db, 'mapel', nama))
+}
+
+/** Tulis daftar bawaan yang belum ada. Tidak menimpa mapel yang sudah disimpan. */
+export async function unggahMapelBawaan(): Promise<number> {
+  const snap = await getDocs(collection(db, 'mapel'))
+  const punya = new Set(snap.docs.map((d) => d.id))
+  let n = 0
+  for (const m of MAPEL_BAWAAN) {
+    if (punya.has(m.nama)) continue
+    await simpanMapel(m)
+    n += 1
+  }
+  return n
 }
 
 const CONFIG_BAWAAN: ConfigAkademik = { semesterAktif: '1', tahunAjaran: '2026/2027' }
