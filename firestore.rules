@@ -84,11 +84,24 @@ service cloud.firestore {
     //   penugasanKelasMapel = ["4A::Matematika", ...]   penugasanKelas = ["4A", ...]
     //   waliKelas           = ["4A", ...]
     // Field ini WAJIB sinkron dengan `penugasan` (lihat ANTIREGRESI §6).
-    function bolehMapelKelas(mapel, kelas) {
-      return akunAktif() && (
-        myRole() == 'admin' ||
-        (myRole() in ['guru_akademik', 'guru'] && (kelas + '::' + mapel) in myProfile().penugasanKelasMapel)
-      );
+    // Guru kelas menulis nilai setiap mapel di kelas yang diwalikan.
+    // Guru bidang studi hanya pasangan kelas::mapel pada penugasannya.
+    // Admin boleh membaca, tidak boleh menulis (UI juga hanya mode lihat).
+    function daftarAda(field) {
+      return field in myProfile() && myProfile()[field] is list;
+    }
+
+    function tulisMapelKelas(mapel, kelas) {
+      return akunAktif()
+        && myRole() in ['guru_akademik', 'guru']
+        && (
+          (daftarAda('penugasanKelasMapel') && (kelas + '::' + mapel) in myProfile().penugasanKelasMapel)
+          || (daftarAda('waliKelas') && kelas in myProfile().waliKelas)
+        );
+    }
+
+    function lihatMapelKelas(mapel, kelas) {
+      return isAdmin() || tulisMapelKelas(mapel, kelas);
     }
 
     function bolehWaliKelas(kelas) {
@@ -218,12 +231,12 @@ service cloud.firestore {
     // Nilai SLM: satu dokumen per (siswa x TP x semester x tahun ajaran).
     // Query klien WAJIB menyertakan where mapel DAN kelas (ANTIREGRESI §1 / v2 §1.1).
     match /nilai_tp/{id} {
-      allow read: if bolehMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
       allow create: if isLoggedIn()
                      && request.resource.data.createdBy == request.auth.uid
-                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
-      allow update: if bolehMapelKelas(resource.data.mapel, resource.data.kelas)
-                     && bolehMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
       allow delete: if isAdmin();
     }
 

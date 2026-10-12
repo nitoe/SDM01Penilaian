@@ -6,9 +6,11 @@ import {
   type DashboardStats,
 } from '../lib/dashboardStats'
 import { kelasSaya } from '../lib/kelasSaya'
-import { mapelKelasSaya } from '../lib/penugasan'
+import { getMapelList } from '../lib/akademik'
+import { aksesMapelKelas } from '../lib/aksesAkademik'
 import { canAkademik, canTahsin, isAdminRole, isGuruAkademikRole, isStaff } from '../lib/roles'
 import { SEMUA_KELAS } from '../types/tahsin'
+import type { Mapel } from '../types/akademik'
 import type { AppUser } from '../types/user'
 import { ROLE_LABEL } from '../types/user'
 import { Chip, HeroBanner, ModuleCard, SectionTitle, StatCard } from '../components/ui'
@@ -95,6 +97,7 @@ export default function Home({ profile }: HomeProps) {
   const [statsState, setStatsState] = useState<Muat>(staff ? 'loading' : 'ok')
   const [config, setConfig] = useState<AkademikConfig | null>(null)
   const [configState, setConfigState] = useState<Muat>(staff ? 'loading' : 'ok')
+  const [mapelMaster, setMapelMaster] = useState<Mapel[]>([])
 
   useEffect(() => {
     if (!staff) return
@@ -122,14 +125,29 @@ export default function Home({ profile }: HomeProps) {
     }
   }, [staff])
 
+  useEffect(() => {
+    if (!isGuruAkademikRole(profile.role)) return
+    let batal = false
+    getMapelList()
+      .then((daftar) => {
+        if (!batal) setMapelMaster(daftar)
+      })
+      .catch(() => {
+        if (!batal) setMapelMaster([])
+      })
+    return () => {
+      batal = true
+    }
+  }, [profile.role])
+
   const saya = useMemo(() => kelasSaya(profile), [profile])
   const guruMapel = isGuruAkademikRole(profile.role)
-  /** Mapel → daftar kelas, dari `penugasan` profil (tanpa query tambahan). */
+  /** Mapel guru kelas = semua mapel di kelas wali; guru bidang studi = penugasannya. */
   const mapelSaya = useMemo(() => {
     const per = new Map<string, string[]>()
-    for (const x of mapelKelasSaya(profile)) per.set(x.mapel, [...(per.get(x.mapel) ?? []), x.kelas])
+    for (const x of aksesMapelKelas(profile, mapelMaster)) per.set(x.mapel, [...(per.get(x.mapel) ?? []), x.kelas])
     return [...per.entries()]
-  }, [profile])
+  }, [profile, mapelMaster])
   const siswaKelasSaya = stats
     ? stats.perKelas.filter((k) => saya.semua.includes(k.kelas)).reduce((n, k) => n + k.jumlah, 0)
     : null

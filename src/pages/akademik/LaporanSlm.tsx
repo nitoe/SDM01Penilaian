@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
-import type { ConfigAkademik, NilaiTpDoc, TujuanPembelajaran } from '../../types/akademik'
+import type { ConfigAkademik, Mapel, NilaiTpDoc, TujuanPembelajaran } from '../../types/akademik'
 import {
   getConfigAkademik,
+  getMapelList,
   getNilaiTPKelas,
   getTPList,
   hitungNilaiAkhirMapel,
@@ -13,8 +14,8 @@ import {
   tpMasukSemester,
 } from '../../lib/akademik'
 import { getSiswaList } from '../../lib/tahsinData'
-import { mapelKelasSaya } from '../../lib/penugasan'
-import { isGuruAkademikRole } from '../../lib/roles'
+import { aksesMapelKelas } from '../../lib/aksesAkademik'
+import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import type { SiswaTahsin } from '../../types/tahsin'
 import { HeroBanner } from '../../components/ui'
 import { BackLink, LEVEL_WARNA, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary } from './shared'
@@ -35,9 +36,14 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
   const mapel = params.get('mapel') || ''
   const kelas = params.get('kelas') || ''
   const tingkatan = tingkatanDariKelas(kelas)
-  const pilihan = useMemo(() => mapelKelasSaya(profile), [profile])
+  const tulis = isGuruAkademikRole(profile.role)
+  const admin = isAdminRole(profile.role)
+  const [mapelMaster, setMapelMaster] = useState<Mapel[] | null>(null)
+  const pilihan = useMemo(
+    () => (mapelMaster ? aksesMapelKelas(profile, mapelMaster) : []),
+    [profile, mapelMaster],
+  )
   const berhak = pilihan.some((p) => p.mapel === mapel && p.kelas === kelas)
-  const guru = isGuruAkademikRole(profile.role)
 
   const [config, setConfig] = useState<ConfigAkademik | null>(null)
   const [tpList, setTpList] = useState<TujuanPembelajaran[] | null>(null)
@@ -46,7 +52,21 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
   const [galat, setGalat] = useState('')
 
   useEffect(() => {
-    if (!mapel || !kelas || !berhak || !guru) return
+    let batal = false
+    getMapelList()
+      .then((daftar) => {
+        if (!batal) setMapelMaster(daftar)
+      })
+      .catch(() => {
+        if (!batal) setMapelMaster([])
+      })
+    return () => {
+      batal = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!mapel || !kelas || !berhak || (!tulis && !admin)) return
     let batal = false
     setConfig(null)
     setTpList(null)
@@ -79,9 +99,9 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [mapel, kelas, tingkatan, berhak, guru, profile.role])
+  }, [mapel, kelas, tingkatan, berhak, tulis, admin, profile.role])
 
-  if (!guru) {
+  if (!tulis && !admin) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik">Akademik & Rapor</BackLink>
@@ -99,8 +119,12 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
           title="Laporan SLM"
           subtitle="Rekap nilai sumatif lingkup materi per kelas. Belum termasuk STS dan SAS."
         />
-        {pilihan.length === 0 ? (
-          <Notice tone="warn">Akun Anda belum memiliki penugasan mata pelajaran. Hubungi admin.</Notice>
+        {mapelMaster === null ? (
+          <Spinner />
+        ) : pilihan.length === 0 ? (
+          <Notice tone="warn">
+            Akun ini belum menjadi guru kelas dan belum memiliki mapel bidang studi. Hubungi admin.
+          </Notice>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {pilihan.map((p) => (

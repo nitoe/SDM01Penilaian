@@ -23,18 +23,15 @@ export function tugasDariAkun(input: {
     return { tahsin: false, guruKelas: false, bidangStudi: false }
   }
   const adaWali = (input.waliKelas?.length ?? 0) > 0
-  const tugas = rapikanPenugasan(input.penugasan ?? [])
-  const kelasWali = new Set(urutKelas(input.waliKelas ?? []))
-  const adaDiLuar = tugas.some((p) => !kelasWali.has(p.kelas))
-  const bidangStudi = adaDiLuar || (!adaWali && tugas.length > 0)
+  const adaMapel = (input.penugasan?.length ?? 0) > 0
   if (input.role === 'guru_tahsin_tahfizh') {
     return { tahsin: true, guruKelas: false, bidangStudi: false }
   }
   if (input.role === 'guru_akademik') {
-    if (!adaWali && tugas.length === 0) return { tahsin: false, guruKelas: true, bidangStudi: false }
-    return { tahsin: false, guruKelas: adaWali, bidangStudi }
+    if (!adaWali && !adaMapel) return { tahsin: false, guruKelas: true, bidangStudi: false }
+    return { tahsin: false, guruKelas: adaWali, bidangStudi: adaMapel }
   }
-  return { tahsin: true, guruKelas: adaWali, bidangStudi }
+  return { tahsin: true, guruKelas: adaWali, bidangStudi: adaMapel }
 }
 
 /** `guru` = Tahsin sekaligus guru kelas dan/atau bidang studi. */
@@ -194,9 +191,6 @@ export function validasiAkun(
       return input.role === 'guru'
         ? 'Tambahkan tugas guru kelas atau guru bidang studi.'
         : 'Guru akademik perlu guru kelas atau penugasan mapel.'
-    }
-    if (adaKelas && mapelDiampuDiKelasWali(input.penugasan, input.waliKelas ?? []).length === 0) {
-      return 'Guru kelas perlu memilih mapel yang diampu di kelasnya, agar bisa menyusun TP dan mengisi nilai.'
     }
     for (const p of input.penugasan) {
       if (!p.kelas.trim() && !p.mapel.trim()) continue

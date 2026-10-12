@@ -40,9 +40,17 @@ export interface ConfigAkademik {
   semesterAktif: Semester
   tahunAjaran: string
   namaSekolah?: string
+  npsn?: string
+  alamatSekolah?: string
+  telpSekolah?: string
   namaKepsek?: string
   nbmKepsek?: string
   kotaRapor?: string
+  seniSemesterGanjil?: string
+  seniSemesterGenap?: string
+  tglRapor?: string
+  tglRapor1sampai5?: string
+  dplSemesterIni?: string[]
   [k: string]: unknown
 }
 

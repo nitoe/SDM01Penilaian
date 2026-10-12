@@ -6,7 +6,7 @@ import { auth, db } from '../lib/firebase'
 import { GURU_RESMI, adalahNamaResmi } from '../lib/dataGuruResmi'
 import { getMapelList } from '../lib/akademik'
 import { MAPEL_BAWAAN } from '../lib/mapelBawaan'
-import { gabungPenugasanGuru, roleDariTugas, type TugasGuru } from '../lib/akunGuru'
+import { roleDariTugas, type TugasGuru } from '../lib/akunGuru'
 import { turunkanFieldRules } from '../lib/penugasan'
 import { SEMUA_KELAS } from '../types/tahsin'
 import type { Mapel } from '../types/akademik'
@@ -17,8 +17,8 @@ function toggleItem(list: string[], item: string): string[] {
 
 const TUGAS_OPSI: { key: keyof TugasGuru; label: string; desk: string }[] = [
   { key: 'tahsin', label: 'Guru Tahsin-Tahfizh', desk: 'Mencatat setoran di kelas yang dipilih.' },
-  { key: 'guruKelas', label: 'Guru Kelas', desk: 'Wali kelas. Menyusun TP dan nilai mapel di kelas itu.' },
-  { key: 'bidangStudi', label: 'Guru Bidang Studi', desk: 'Mengajar mapel tertentu, termasuk di kelas lain.' },
+  { key: 'guruKelas', label: 'Guru Kelas', desk: 'Wali kelas. Mengakses semua mapel di kelas itu, tanpa menu Tahsin.' },
+  { key: 'bidangStudi', label: 'Guru Bidang Studi', desk: 'Hanya mapel yang ditugaskan, termasuk di kelas lain.' },
 ]
 
 export default function Register() {
@@ -30,7 +30,6 @@ export default function Register() {
   const [tugas, setTugas] = useState<TugasGuru>({ tahsin: false, guruKelas: true, bidangStudi: false })
   const [kelasAmpu, setKelasAmpu] = useState<string[]>([])
   const [waliKelas, setWaliKelas] = useState<string[]>([])
-  const [mapelKelas, setMapelKelas] = useState<string[]>([])
   const [penugasan, setPenugasan] = useState<{ kelas: string; mapel: string }[]>([])
   const [mapelList, setMapelList] = useState<Mapel[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -70,16 +69,11 @@ export default function Register() {
       setError('Pilih kelas yang Anda ampu sebagai guru kelas.')
       return
     }
-    if (butuhKelas && mapelKelas.length === 0) {
-      setError('Pilih mapel yang Anda ampu di kelas tersebut. Guru kelas menyusun TP dan mengisi nilai mapel itu.')
+    const penugasanBersih = butuhMapel ? penugasan.filter((p) => p.kelas && p.mapel.trim()) : []
+    if (butuhMapel && penugasanBersih.length === 0) {
+      setError('Tambahkan minimal satu penugasan mapel.')
       return
     }
-    const dariBidang = butuhMapel ? penugasan.filter((p) => p.kelas && p.mapel.trim()) : []
-    if (butuhMapel && dariBidang.length === 0) {
-      setError('Tambahkan minimal satu penugasan mapel di kelas lain.')
-      return
-    }
-    const penugasanBersih = gabungPenugasanGuru(butuhKelas ? waliKelas : [], butuhKelas ? mapelKelas : [], dariBidang)
 
     const turunan = turunkanFieldRules(penugasanBersih)
     const role = roleDariTugas(tugas)
@@ -276,36 +270,17 @@ export default function Register() {
           {butuhKelas && (
             <div>
               <span className="mb-1 block text-[12px] font-medium text-slate-600">Guru kelas *</span>
-              <p className="mb-2 text-[11px] text-muted">Kelas yang Anda walikan. Boleh lebih dari satu.</p>
-              <ChipKelas value={waliKelas} onChange={setWaliKelas} />
-              <span className="mb-1 mt-3 block text-[12px] font-medium text-slate-600">Mapel di kelas ini *</span>
               <p className="mb-2 text-[11px] text-muted">
-                Berlaku untuk setiap kelas wali yang dipilih. Ini yang dipakai untuk menyusun TP dan mengisi nilai.
+                Kelas yang Anda walikan. Semua mata pelajaran di tingkat itu ikut terbuka, termasuk yang diampu guru bidang studi.
               </p>
-              <div className="flex flex-wrap gap-1">
-                {[...new Set([...mapelList.map((m) => m.nama), ...mapelKelas])].map((nama) => {
-                  const aktif = mapelKelas.includes(nama)
-                  return (
-                    <button
-                      key={nama}
-                      type="button"
-                      onClick={() => setMapelKelas((prev) => toggleItem(prev, nama))}
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                        aktif ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600'
-                      }`}
-                    >
-                      {nama}
-                    </button>
-                  )
-                })}
-              </div>
+              <ChipKelas value={waliKelas} onChange={setWaliKelas} />
             </div>
           )}
 
           {butuhMapel && (
             <div>
               <div className="mb-1.5 flex items-center justify-between gap-2">
-                <span className="text-[12px] font-medium text-slate-600">Mapel di kelas lain *</span>
+                <span className="text-[12px] font-medium text-slate-600">Penugasan mapel *</span>
                 <button
                   type="button"
                   onClick={() =>
@@ -317,7 +292,7 @@ export default function Register() {
                 </button>
               </div>
               <p className="mb-2 text-[11px] text-muted">
-                Untuk mapel yang Anda ajar di luar kelas wali. Setiap baris: satu kelas dan satu mapel.
+                Hanya mapel yang Anda ampu. Setiap baris: satu kelas dan satu mapel.
               </p>
               {penugasan.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-border px-3 py-3 text-[12px] text-muted">

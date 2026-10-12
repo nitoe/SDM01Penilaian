@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
-import type { Semester, TujuanPembelajaran } from '../../types/akademik'
-import { getTPList, normalisasiPersenBobotMapel, saveBobotSemesterBatch } from '../../lib/akademik'
-import { mapelTingkatanSaya } from '../../lib/penugasan'
-import { isGuruAkademikRole } from '../../lib/roles'
+import type { Mapel, Semester, TujuanPembelajaran } from '../../types/akademik'
+import { getMapelList, getTPList, normalisasiPersenBobotMapel, saveBobotSemesterBatch } from '../../lib/akademik'
+import { aksesMapelTingkatan } from '../../lib/aksesAkademik'
+import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { HeroBanner } from '../../components/ui'
 import { BackLink, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, inputCls, useToast } from './shared'
 
@@ -20,13 +20,33 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
   const [params] = useSearchParams()
   const mapel = params.get('mapel') || ''
   const tingkatan = params.get('tingkatan') || ''
-  const pilihan = useMemo(() => mapelTingkatanSaya(profile), [profile])
+  const tulis = isGuruAkademikRole(profile.role)
+  const admin = isAdminRole(profile.role)
+  const [mapelMaster, setMapelMaster] = useState<Mapel[] | null>(null)
+  const pilihan = useMemo(
+    () => (mapelMaster ? aksesMapelTingkatan(profile, mapelMaster) : []),
+    [profile, mapelMaster],
+  )
   const berhak = pilihan.some((p) => p.mapel === mapel && p.tingkatan === tingkatan)
 
   const [baris, setBaris] = useState<Baris[] | null>(null)
   const [kotor, setKotor] = useState(false)
   const [busy, setBusy] = useState(false)
   const { show, node } = useToast()
+
+  useEffect(() => {
+    let batal = false
+    getMapelList()
+      .then((daftar) => {
+        if (!batal) setMapelMaster(daftar)
+      })
+      .catch(() => {
+        if (!batal) setMapelMaster([])
+      })
+    return () => {
+      batal = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!mapel || !tingkatan || !berhak) return
@@ -47,7 +67,7 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     }
   }, [mapel, tingkatan, berhak, show])
 
-  if (!isGuruAkademikRole(profile.role)) {
+  if (!tulis && !admin) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
@@ -61,10 +81,11 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
       <div className="space-y-5">
         <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
         <HeroBanner eyebrow="Akademik" title="Bobot Semester TP" subtitle="Pilih mata pelajaran dan tingkatan." />
-        {pilihan.length === 0 ? (
+        {mapelMaster === null ? (
+          <Spinner />
+        ) : pilihan.length === 0 ? (
           <Notice tone="warn">
-            Belum ada mata pelajaran yang diampu. Guru kelas memilih mapel di kelasnya; guru bidang studi menambahkan
-            mapel di kelas lain.
+            Akun ini belum menjadi guru kelas dan belum memiliki mapel bidang studi. Hubungi admin.
           </Notice>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -162,11 +183,13 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
             className={`${inputCls} w-16 text-center`}
             inputMode="decimal"
             value={r.bobot}
+            readOnly={!tulis}
             onChange={(e) => ubah(r.tp.id, { bobot: e.target.value })}
           />
           %
         </label>
       )}
+      {tulis && (
       <span className="flex gap-1">
         {(['1', '2'] as Semester[])
           .filter((s) => s !== r.semester)
@@ -181,6 +204,7 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
             </button>
           ))}
       </span>
+      )}
     </li>
   )
 
@@ -201,7 +225,7 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
               {pas ? '✓' : '⚠'} Total {total}%
             </span>
           )}
-          {isi.length > 0 && (
+          {isi.length > 0 && tulis && (
             <button type="button" className={`${btnGhost} ml-auto !px-2.5 !py-1 !text-[12px]`} onClick={() => ratakan(s)}>
               Ratakan ke 100%
             </button>
@@ -224,7 +248,11 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
       <HeroBanner
         eyebrow={`Tingkat ${tingkatan}`}
         title={`Bobot Semester TP — ${mapel}`}
-        subtitle="Kelompokkan TP ke Semester 1 atau 2, lalu atur persentase kontribusi tiap TP terhadap nilai akhir mapel (per semester total 100%)."
+        subtitle={
+          tulis
+            ? 'Kelompokkan TP ke Semester 1 atau 2, lalu atur persentase kontribusi tiap TP terhadap nilai akhir mapel (per semester total 100%).'
+            : 'Mode lihat. Administrator tidak mengubah semester atau bobot.'
+        }
       />
       {baris === null ? (
         <Spinner />
@@ -246,12 +274,14 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
           )}
           {renderKelompok('1')}
           {renderKelompok('2')}
+          {tulis && (
           <div className="sticky bottom-16 z-10 flex items-center gap-2 rounded-2xl border border-border bg-white/95 p-3 shadow-lg backdrop-blur md:bottom-4">
             <button type="button" className={btnPrimary} disabled={busy || !kotor} onClick={() => void simpan()}>
               {busy ? 'Menyimpan…' : 'Simpan semua'}
             </button>
             {kotor && <span className="text-[12px] text-amber-700">Ada perubahan yang belum disimpan.</span>}
           </div>
+          )}
         </>
       )}
       {node}

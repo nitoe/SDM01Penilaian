@@ -114,6 +114,45 @@ export async function simpanSemesterAktif(p: { semesterAktif: Semester; tahunAja
   )
 }
 
+/** Identitas sekolah dan pengaturan akademik. Nilai lama di tahun ajaran lain tidak dipindahkan. */
+export async function simpanProfilSekolah(p: {
+  namaSekolah: string
+  npsn: string
+  alamatSekolah: string
+  telpSekolah: string
+  namaKepsek: string
+  nbmKepsek: string
+  tahunAjaran: string
+  semesterAktif: Semester
+  seniSemesterGanjil: string
+  seniSemesterGenap: string
+  tglRapor: string
+  tglRapor1sampai5: string
+  kotaRapor: string
+  dplSemesterIni: string[]
+}): Promise<void> {
+  await setDoc(
+    doc(db, 'config', 'akademik'),
+    {
+      namaSekolah: p.namaSekolah.trim(),
+      npsn: p.npsn.trim(),
+      alamatSekolah: p.alamatSekolah.trim(),
+      telpSekolah: p.telpSekolah.trim(),
+      namaKepsek: p.namaKepsek.trim(),
+      nbmKepsek: p.nbmKepsek.trim(),
+      tahunAjaran: p.tahunAjaran.trim(),
+      semesterAktif: p.semesterAktif,
+      seniSemesterGanjil: p.seniSemesterGanjil,
+      seniSemesterGenap: p.seniSemesterGenap,
+      tglRapor: p.tglRapor.trim(),
+      tglRapor1sampai5: p.tglRapor1sampai5.trim(),
+      kotaRapor: p.kotaRapor.trim(),
+      dplSemesterIni: p.dplSemesterIni,
+    },
+    { merge: true },
+  )
+}
+
 export async function getTPList(mapel: string, tingkatan: string): Promise<TujuanPembelajaran[]> {
   const q = query(
     collection(db, 'tp_kktp'),

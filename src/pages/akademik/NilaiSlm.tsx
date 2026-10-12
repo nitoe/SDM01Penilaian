@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
-import type { ConfigAkademik, NilaiTpDoc, TujuanPembelajaran } from '../../types/akademik'
+import type { ConfigAkademik, Mapel, NilaiTpDoc, TujuanPembelajaran } from '../../types/akademik'
 import {
   getConfigAkademik,
+  getMapelList,
   getNilaiTPKelas,
   getTPList,
   hitungNilaiAkhirMapel,
@@ -14,8 +15,8 @@ import {
   tpMasukSemester,
 } from '../../lib/akademik'
 import { getSiswaList } from '../../lib/tahsinData'
-import { mapelKelasSaya } from '../../lib/penugasan'
-import { isGuruAkademikRole } from '../../lib/roles'
+import { aksesMapelKelas } from '../../lib/aksesAkademik'
+import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import type { SiswaTahsin } from '../../types/tahsin'
 import { Badge, HeroBanner } from '../../components/ui'
 import { BackLink, LEVEL_WARNA, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, inputCls, useToast } from './shared'
@@ -50,6 +51,7 @@ function TpNilai({
   ctx,
   config,
   existing,
+  tulis,
   onSelesai,
   onPesan,
 }: {
@@ -58,6 +60,7 @@ function TpNilai({
   ctx: { mapel: string; kelas: string; tingkatan: string }
   config: ConfigAkademik
   existing: Record<string, NilaiTpDoc>
+  tulis: boolean
   onSelesai: () => Promise<void>
   onPesan: (msg: string, err?: boolean) => void
 }) {
@@ -140,6 +143,7 @@ function TpNilai({
                 }`}
                 inputMode="decimal"
                 value={draf[s.id] ?? ''}
+                readOnly={!tulis}
                 onChange={(e) => setDraf((d) => ({ ...d, [s.id]: e.target.value }))}
                 placeholder="–"
               />
@@ -147,9 +151,11 @@ function TpNilai({
           )
         })}
       </ul>
+      {tulis && (
       <button type="button" className={`${btnPrimary} w-full`} disabled={busy || !berubah.length} onClick={() => void simpan()}>
         {busy ? 'Menyimpan…' : berubah.length ? `Simpan ${berubah.length} perubahan` : 'Tidak ada perubahan'}
       </button>
+      )}
     </div>
   )
 }
@@ -159,9 +165,15 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
   const mapel = params.get('mapel') || ''
   const kelas = params.get('kelas') || ''
   const tingkatan = tingkatanDariKelas(kelas)
-  const pilihan = useMemo(() => mapelKelasSaya(profile), [profile])
+  const tulis = isGuruAkademikRole(profile.role)
+  const admin = isAdminRole(profile.role)
+  const [mapelMaster, setMapelMaster] = useState<Mapel[] | null>(null)
+  const pilihan = useMemo(
+    () => (mapelMaster ? aksesMapelKelas(profile, mapelMaster) : []),
+    [profile, mapelMaster],
+  )
   const berhak = pilihan.some((p) => p.mapel === mapel && p.kelas === kelas)
-  const guru = isGuruAkademikRole(profile.role)
+  const guru = tulis || admin
 
   const [config, setConfig] = useState<ConfigAkademik | null>(null)
   const [tpList, setTpList] = useState<TujuanPembelajaran[] | null>(null)
@@ -171,6 +183,20 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
   const [terbuka, setTerbuka] = useState<string | null>(null)
   const [gagalMuat, setGagalMuat] = useState(false)
   const { show, node } = useToast()
+
+  useEffect(() => {
+    let batal = false
+    getMapelList()
+      .then((daftar) => {
+        if (!batal) setMapelMaster(daftar)
+      })
+      .catch(() => {
+        if (!batal) setMapelMaster([])
+      })
+    return () => {
+      batal = true
+    }
+  }, [])
 
   const muatDetail = useCallback(async () => {
     const [c, t, s] = await Promise.all([
@@ -191,7 +217,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
   }, [mapel, kelas, tingkatan, profile.role])
 
   useEffect(() => {
-    if (mapel || kelas || !guru || pilihan.length === 0) return
+    if (mapel || kelas || !tulis || pilihan.length === 0) return
     let batal = false
     setStatus(null)
     void (async () => {
@@ -232,7 +258,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [mapel, kelas, guru, pilihan, profile.role, show])
+  }, [mapel, kelas, tulis, pilihan, profile.role, show])
 
   useEffect(() => {
     if (!mapel || !kelas || !berhak || !guru) return
@@ -265,7 +291,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
     )
   }, [config, mapel, kelas])
 
-  if (!guru) {
+  if (!tulis && !admin) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik">Akademik & Rapor</BackLink>
@@ -283,10 +309,11 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
           title="Input Nilai SLM"
           subtitle="Pilih mata pelajaran dan kelas. Status di kartu adalah kelengkapan nilai semester yang sedang berjalan."
         />
-        {pilihan.length === 0 ? (
+        {mapelMaster === null ? (
+          <Spinner />
+        ) : pilihan.length === 0 ? (
           <Notice tone="warn">
-            Belum ada mata pelajaran yang diampu. Guru kelas memilih mapel di kelasnya; guru bidang studi menambahkan
-            mapel di kelas lain. Hubungi admin bila tugasnya belum diisi.
+            Akun ini belum menjadi guru kelas dan belum memiliki mapel bidang studi. Hubungi admin.
           </Notice>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -303,7 +330,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
                     <p className="mt-0.5 text-[12px] text-muted">
                       Kelas {p.kelas}
                       {st && st.jenis !== 'gagal' ? ` · ${st.siswa} siswa` : ''}
-                      {status === null ? ' · Memuat status…' : st?.jenis === 'gagal' ? ' · Gagal memuat status' : ''}
+                      {tulis && status === null ? ' · Memuat status…' : st?.jenis === 'gagal' ? ' · Gagal memuat status' : ''}
                     </p>
                   </Link>
                   {st?.jenis === 'tanpa-tp' && (
@@ -358,7 +385,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
         title={`Nilai SLM — ${mapel}`}
         subtitle={
           config?.tahunAjaran
-            ? `Semester ${config.semesterAktif} · Tahun ajaran ${config.tahunAjaran}`
+            ? `Semester ${config.semesterAktif} · Tahun ajaran ${config.tahunAjaran}${tulis ? '' : ' · mode lihat'}`
             : 'Memuat…'
         }
       />
@@ -430,6 +457,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
                         ctx={{ mapel, kelas, tingkatan }}
                         config={config}
                         existing={nilai[tp.id] ?? KOSONG}
+                        tulis={tulis}
                         onSelesai={segarkanNilai}
                         onPesan={show}
                       />

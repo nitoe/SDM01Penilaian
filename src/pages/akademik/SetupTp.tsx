@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
-import type { TipeTp, TujuanPembelajaran } from '../../types/akademik'
+import type { Mapel, TipeTp, TujuanPembelajaran } from '../../types/akademik'
 import {
   LEVEL_LABEL,
   LEVEL_RANGE_DEFAULT,
   deleteTP,
   faseDariTingkatan,
   getMapelByNama,
+  getMapelList,
   getTPList,
   mapelBerlakuDiTingkatan,
   saveTP,
   validasiLevels,
 } from '../../lib/akademik'
-import { mapelTingkatanSaya } from '../../lib/penugasan'
-import { isGuruAkademikRole } from '../../lib/roles'
+import { aksesMapelTingkatan } from '../../lib/aksesAkademik'
+import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { HeroBanner, Badge } from '../../components/ui'
 import {
   BackLink,
@@ -70,7 +71,13 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const [params] = useSearchParams()
   const mapel = params.get('mapel') || ''
   const tingkatan = params.get('tingkatan') || ''
-  const pilihan = useMemo(() => mapelTingkatanSaya(profile), [profile])
+  const tulis = isGuruAkademikRole(profile.role)
+  const admin = isAdminRole(profile.role)
+  const [mapelMaster, setMapelMaster] = useState<Mapel[] | null>(null)
+  const pilihan = useMemo(
+    () => (mapelMaster ? aksesMapelTingkatan(profile, mapelMaster) : []),
+    [profile, mapelMaster],
+  )
   const berhak = pilihan.some((p) => p.mapel === mapel && p.tingkatan === tingkatan)
 
   const [list, setList] = useState<TujuanPembelajaran[] | null>(null)
@@ -97,7 +104,21 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   }, [mapel, tingkatan, show])
 
   useEffect(() => {
-    if (mapel || tingkatan || !isGuruAkademikRole(profile.role) || pilihan.length === 0) return
+    let batal = false
+    getMapelList()
+      .then((daftar) => {
+        if (!batal) setMapelMaster(daftar)
+      })
+      .catch(() => {
+        if (!batal) setMapelMaster([])
+      })
+    return () => {
+      batal = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (mapel || tingkatan || (!tulis && !admin) || pilihan.length === 0) return
     let batal = false
     setJumlahTp(null)
     void Promise.all(
@@ -117,10 +138,10 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [mapel, tingkatan, pilihan, profile.role])
+  }, [mapel, tingkatan, tulis, admin, pilihan])
 
   useEffect(() => {
-    if (!mapel || !tingkatan || !berhak || !isGuruAkademikRole(profile.role)) return
+    if (!mapel || !tingkatan || !berhak || (!tulis && !admin)) return
     const kunci = `${mapel}|${tingkatan}`
     let batal = false
     void getMapelByNama(mapel)
@@ -136,13 +157,13 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [mapel, tingkatan, berhak, profile.role])
+  }, [mapel, tingkatan, berhak, tulis, admin])
 
   useEffect(() => {
     if (mapel && tingkatan && berhak && statusCakupan === 'boleh') void muat()
   }, [mapel, tingkatan, berhak, statusCakupan, muat])
 
-  if (!isGuruAkademikRole(profile.role)) {
+  if (!tulis && !admin) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
@@ -161,10 +182,11 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
           title="Setup TP & KKTP"
           subtitle="Pilih mata pelajaran dan tingkatan. TP berlaku untuk semua kelas paralel di tingkatan yang sama."
         />
-        {pilihan.length === 0 ? (
+        {mapelMaster === null ? (
+          <Spinner />
+        ) : pilihan.length === 0 ? (
           <Notice tone="warn">
-            Belum ada mata pelajaran yang diampu. Guru kelas memilih mapel di kelasnya; guru bidang studi menambahkan
-            mapel di kelas lain. Hubungi admin bila tugasnya belum diisi.
+            Akun ini belum menjadi guru kelas dan belum memiliki mapel bidang studi. Hubungi admin.
           </Notice>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -291,14 +313,18 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
       <HeroBanner
         eyebrow={`Tingkat ${tingkatan} · Fase ${faseDariTingkatan(tingkatan)}`}
         title={`TP & KKTP — ${mapel}`}
-        subtitle="Tujuan pembelajaran beserta empat level KKTP. Semester dan persentase bobot TP diatur di menu Bobot Semester."
+        subtitle={
+          tulis
+            ? 'Tujuan pembelajaran beserta empat level KKTP. Semester dan persentase bobot TP diatur di menu Bobot Semester.'
+            : 'Mode lihat. Administrator dapat membaca TP yang disusun guru, tetapi tidak mengubahnya.'
+        }
       />
 
       {statusCakupan !== 'boleh' ? (
         <Spinner />
       ) : (
         <>
-      {!form && (
+      {!form && tulis && (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -500,6 +526,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                       ))}
                     </ul>
                     <div className="flex gap-2">
+                      {tulis && (
+                        <>
                       <button type="button" className={btnGhost} onClick={() => { setForm(formDariTp(tp)); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
                         Edit
                       </button>
@@ -510,6 +538,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                       >
                         Hapus
                       </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

@@ -1,5 +1,6 @@
 // Uji penyusunan dokumen akun guru. Jalankan: node --experimental-strip-types scripts/cek-akun-guru.mjs
 import assert from 'node:assert/strict'
+import { aksesMapelKelas, aksesMapelTingkatan } from '../src/lib/aksesAkademik.ts'
 import { gabungPenugasanGuru, mapelDiampuDiKelasWali, penugasanDiLuarKelasWali, rapikanPenugasan, susunDokumenAkun, tugasDariAkun, validasiAkun } from '../src/lib/akunGuru.ts'
 
 const dasar = {
@@ -85,12 +86,32 @@ assert.deepEqual(penugasanDiLuarKelasWali(
   ['4A'],
 ), [{ kelas: '5A', mapel: 'PJOK' }])
 assert.deepEqual(
-  tugasDariAkun({ role: 'guru_akademik', waliKelas: ['4A'], penugasan: [{ kelas: '4A', mapel: 'Matematika' }] }),
+  tugasDariAkun({ role: 'guru_akademik', waliKelas: ['4A'], penugasan: [] }),
   { tahsin: false, guruKelas: true, bidangStudi: false },
 )
 assert.equal(
-  validasiAkun({ ...dasar, penugasan: [{ kelas: '5A', mapel: 'PJOK' }] }, { baru: false, password: '', diriSendiri: false }),
-  'Guru kelas perlu memilih mapel yang diampu di kelasnya, agar bisa menyusun TP dan mengisi nilai.',
+  validasiAkun({ ...dasar, penugasan: [] }, { baru: false, password: '', diriSendiri: false }),
+  null,
+)
+
+const master = [
+  { id: 'Matematika', nama: 'Matematika', tingkatanBerlaku: ['1', '2'] },
+  { id: 'PJOK', nama: 'PJOK', tingkatanBerlaku: ['1', '2'] },
+  { id: 'IPAS', nama: 'IPAS', tingkatanBerlaku: ['3'] },
+]
+const wali = { role: 'guru_akademik', waliKelas: ['1A'], penugasan: [] }
+assert.deepEqual(
+  aksesMapelKelas(wali, master).map((x) => x.mapel),
+  ['Matematika', 'PJOK'],
+)
+assert.ok(aksesMapelKelas(wali, master).every((x) => x.kelas === '1A'))
+assert.deepEqual(aksesMapelKelas({ role: 'guru_akademik', waliKelas: [], penugasan: [{ kelas: '2B', mapel: 'PJOK' }] }, master), [
+  { mapel: 'PJOK', kelas: '2B' },
+])
+assert.equal(aksesMapelTingkatan(wali, master).some((x) => x.mapel === 'IPAS'), false)
+assert.equal(
+  aksesMapelTingkatan({ role: 'admin', waliKelas: [], penugasan: [] }, master).some((x) => x.mapel === 'IPAS' && x.tingkatan === '3'),
+  true,
 )
 
 console.log('Semua pemeriksaan akun guru lolos.')

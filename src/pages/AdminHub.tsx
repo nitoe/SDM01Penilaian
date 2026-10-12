@@ -28,8 +28,8 @@ const items: { to: string; title: string; desc: string; ready: boolean; icon: Ic
   },
   {
     to: '/admin/tahun-ajaran',
-    title: 'Tahun Ajaran',
-    desc: 'Semester dan tahun ajaran untuk penyimpanan nilai',
+    title: 'Data Sekolah',
+    desc: 'Identitas, NPSN, kepala sekolah, tahun ajaran, dan semester',
     ready: true,
     icon: 'calendar',
     tone: 'sky',
