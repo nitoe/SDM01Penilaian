@@ -20,7 +20,7 @@ interface NavItem {
 }
 
 /** Halaman kerja harian yang memakai lebar layar penuh (dua kolom di PC); lainnya tetap berlebar baca. */
-const HALAMAN_LEBAR = ['/tahsin/input-setoran', '/tahsin/riwayat', '/tahsin/target', '/tahsin/menulis', '/admin/siswa', '/admin/users']
+const HALAMAN_LEBAR = ['/tahsin/input-setoran', '/tahsin/riwayat', '/tahsin/target', '/tahsin/menulis', '/admin/siswa', '/admin/users', '/akademik/laporan-slm']
 
 function sectionTitle(pathname: string): string {
   if (pathname.startsWith('/tahsin')) return 'Tahsin & Tahfizh'
@@ -93,10 +93,10 @@ export default function Layout({ profile }: LayoutProps) {
     .toUpperCase()
 
   return (
-    <div className="flex min-h-full bg-surface-2 md:p-3">
-      <div className="flex min-h-full w-full bg-white md:overflow-clip md:min-h-[calc(100vh-1.5rem)] md:rounded-[28px] md:border md:border-border md:shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
+    <div className="flex min-h-full bg-surface-2 md:p-3 print:bg-white print:p-0">
+      <div className="flex min-h-full w-full bg-white md:overflow-clip md:min-h-[calc(100vh-1.5rem)] md:rounded-[28px] md:border md:border-border md:shadow-[0_8px_30px_rgba(15,23,42,0.06)] print:rounded-none print:border-0 print:shadow-none">
         {/* Sidebar desktop */}
-        <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-border bg-white px-4 py-5 md:flex md:h-[calc(100vh-1.5rem)]">
+        <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-border bg-white px-4 py-5 md:flex md:h-[calc(100vh-1.5rem)] print:hidden">
           <Link to="/" className="flex items-center gap-3 px-1 no-underline">
             <img src="/favicon-32.png" alt="" className="h-9 w-9 rounded-xl" />
             <div className="min-w-0 leading-tight">
@@ -140,7 +140,7 @@ export default function Layout({ profile }: LayoutProps) {
 
         {/* Kolom utama */}
         <div className="flex min-w-0 flex-1 flex-col bg-surface-2/60">
-          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-white/90 px-4 py-3 backdrop-blur sm:px-6 md:py-4">
+          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-white/90 px-4 py-3 backdrop-blur sm:px-6 md:py-4 print:hidden">
             <div className="min-w-0">
               <h2 className="truncate text-[18px] font-semibold tracking-tight text-slate-900 sm:text-[20px]">
                 {sectionTitle(pathname)}
@@ -169,7 +169,7 @@ export default function Layout({ profile }: LayoutProps) {
             </div>
           </header>
 
-          <main className="flex-1 p-4 pb-24 sm:p-6 md:pb-6">
+          <main className="flex-1 p-4 pb-24 sm:p-6 md:pb-6 print:p-0">
             <div className={`mx-auto ${HALAMAN_LEBAR.some((p) => pathname.startsWith(p)) ? 'max-w-[1500px]' : 'max-w-5xl'}`}>
               <Outlet />
             </div>
@@ -178,7 +178,7 @@ export default function Layout({ profile }: LayoutProps) {
       </div>
 
       {/* Navigasi bawah (mobile) */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur md:hidden print:hidden">
         {visible.map((i) => (
           <NavLink key={i.to} to={i.to} end={i.end} className={tabLink}>
             <Icon name={i.icon} className="h-5 w-5" />

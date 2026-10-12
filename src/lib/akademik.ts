@@ -105,6 +105,15 @@ export async function getConfigAkademik(): Promise<ConfigAkademik> {
   return snap.exists() ? ({ ...CONFIG_BAWAAN, ...snap.data() } as ConfigAkademik) : CONFIG_BAWAAN
 }
 
+/** Tahun ajaran dan semester aktif. Field lain di dokumen yang sama tidak ditimpa. */
+export async function simpanSemesterAktif(p: { semesterAktif: Semester; tahunAjaran: string }): Promise<void> {
+  await setDoc(
+    doc(db, 'config', 'akademik'),
+    { semesterAktif: p.semesterAktif, tahunAjaran: p.tahunAjaran.trim() },
+    { merge: true },
+  )
+}
+
 export async function getTPList(mapel: string, tingkatan: string): Promise<TujuanPembelajaran[]> {
   const q = query(
     collection(db, 'tp_kktp'),
@@ -195,6 +204,31 @@ export async function getNilaiTPUntukTP(ctx: {
   snap.forEach((d) => {
     const v = { id: d.id, ...d.data() } as NilaiTpDoc
     map[v.siswaId] = v
+  })
+  return map
+}
+
+/** Semua nilai SLM satu mapel+kelas pada semester berjalan, dikelompokkan tpId → siswaId. */
+export async function getNilaiTPKelas(ctx: {
+  mapel: string
+  kelas: string
+  semester: Semester
+  tahunAjaran: string
+}): Promise<Record<string, Record<string, NilaiTpDoc>>> {
+  const q = query(
+    collection(db, 'nilai_tp'),
+    where('mapel', '==', ctx.mapel),
+    where('kelas', '==', ctx.kelas),
+    where('semester', '==', ctx.semester),
+    where('tahunAjaran', '==', ctx.tahunAjaran),
+  )
+  const snap = await getDocs(q)
+  const map: Record<string, Record<string, NilaiTpDoc>> = {}
+  snap.forEach((d) => {
+    const v = { id: d.id, ...d.data() } as NilaiTpDoc
+    if (!v.tpId || !v.siswaId) return
+    if (!map[v.tpId]) map[v.tpId] = {}
+    map[v.tpId][v.siswaId] = v
   })
   return map
 }

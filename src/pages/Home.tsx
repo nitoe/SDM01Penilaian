@@ -262,6 +262,13 @@ export default function Home({ profile }: HomeProps) {
                   icon="pencil"
                   tone="green"
                 />
+                <ModuleCard
+                  to="/akademik/laporan-slm"
+                  title="Laporan SLM"
+                  desc="Rekap nilai SLM per kelas"
+                  icon="printer"
+                  tone="violet"
+                />
               </div>
             </div>
           )}

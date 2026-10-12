@@ -20,9 +20,11 @@ import TargetHafalan from './pages/tahsin/TargetHafalan'
 import DataSiswa from './pages/admin/DataSiswa'
 import KelolaAkun from './pages/admin/KelolaAkun'
 import SetupMapel from './pages/admin/Mapel'
+import TahunAjaran from './pages/admin/TahunAjaran'
 import SetupTp from './pages/akademik/SetupTp'
 import BobotSemester from './pages/akademik/BobotSemester'
 import NilaiSlm from './pages/akademik/NilaiSlm'
+import LaporanSlm from './pages/akademik/LaporanSlm'
 import Rapor from './pages/akademik/Rapor'
 
 /** Menjaga rute per role di sisi UI. Penegakan sebenarnya tetap di firestore.rules. */
@@ -116,6 +118,7 @@ export default function App() {
               element={profile ? <BobotSemester profile={profile} /> : null}
             />
             <Route path="/akademik/nilai-slm" element={profile ? <NilaiSlm profile={profile} /> : null} />
+            <Route path="/akademik/laporan-slm" element={profile ? <LaporanSlm profile={profile} /> : null} />
             <Route path="/akademik/rapor" element={profile ? <Rapor profile={profile} /> : null} />
             <Route path="/akademik/*" element={<Placeholder />} />
           </Route>
@@ -133,6 +136,10 @@ export default function App() {
             <Route
               path="/admin/mapel"
               element={profile ? <SetupMapel profile={profile} /> : null}
+            />
+            <Route
+              path="/admin/tahun-ajaran"
+              element={profile ? <TahunAjaran profile={profile} /> : null}
             />
             <Route path="/admin/*" element={<Placeholder />} />
           </Route>

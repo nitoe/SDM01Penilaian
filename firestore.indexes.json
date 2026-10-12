@@ -1,4 +1,42 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "tp_kktp",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mapel", "order": "ASCENDING" },
+        { "fieldPath": "tingkatan", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "nilai_tp",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mapel", "order": "ASCENDING" },
+        { "fieldPath": "kelas", "order": "ASCENDING" },
+        { "fieldPath": "semester", "order": "ASCENDING" },
+        { "fieldPath": "tahunAjaran", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "nilai_tp",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tpId", "order": "ASCENDING" },
+        { "fieldPath": "mapel", "order": "ASCENDING" },
+        { "fieldPath": "kelas", "order": "ASCENDING" },
+        { "fieldPath": "semester", "order": "ASCENDING" },
+        { "fieldPath": "tahunAjaran", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "siswa",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "kelas", "order": "ASCENDING" },
+        { "fieldPath": "aktif", "order": "ASCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

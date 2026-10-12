@@ -85,6 +85,11 @@ export function tentukanLevel(
   return { index: last, label: labels[last], deskripsi: levels[last]?.deskripsi || '' }
 }
 
+/** TP tanpa semester ikut semester yang sedang berjalan (belum dikelompokkan). */
+export function tpMasukSemester(tp: { semester?: string | null }, semester: string): boolean {
+  return !tp.semester || tp.semester === semester
+}
+
 /** Rata-rata tertimbang nilai akhir TP; dinormalisasi terhadap entri yang punya nilai. */
 export function hitungNilaiAkhirMapel(entries: { nilai: Angka; bobot?: number | null }[]): number | null {
   const valid = (entries || [])

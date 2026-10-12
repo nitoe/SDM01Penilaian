@@ -1,7 +1,7 @@
 // Uji rumus nilai Akademik. Jalankan: node --experimental-strip-types scripts/cek-rumus-akademik.mjs
 import assert from 'node:assert/strict'
 import {
-  hitungNilaiAkhirTP, hitungNilaiAkhirMapel, normalisasiPersenBobotMapel, tentukanLevel, validasiLevels,
+  hitungNilaiAkhirTP, hitungNilaiAkhirMapel, normalisasiPersenBobotMapel, tentukanLevel, tpMasukSemester, validasiLevels,
 } from '../src/lib/akademikRumus.ts'
 
 const tp = { bobotSlm: 60, bobotSas: 40, tipe: 'pengetahuan', levels: [
@@ -31,6 +31,10 @@ assert.equal(hitungNilaiAkhirMapel([{ nilai: 80, bobot: 50 }, { nilai: 90, bobot
 assert.equal(hitungNilaiAkhirMapel([{ nilai: 80, bobot: 50 }, { nilai: null, bobot: 50 }]), 80)
 assert.equal(hitungNilaiAkhirMapel([]), null)
 assert.equal(hitungNilaiAkhirMapel([{ nilai: 100, bobot: 15 }, { nilai: 0, bobot: 1 }]), Math.round(1500 / 16))
+
+assert.equal(tpMasukSemester({ semester: '1' }, '1'), true)
+assert.equal(tpMasukSemester({ semester: '2' }, '1'), false)
+assert.equal(tpMasukSemester({}, '2'), true)
 
 // Normalisasi persen: total selalu 100 dan rasio terjaga
 for (const n of [1, 2, 3, 7, 11]) {

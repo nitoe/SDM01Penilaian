@@ -27,6 +27,14 @@ const items: { to: string; title: string; desc: string; ready: boolean; icon: Ic
     tone: 'violet',
   },
   {
+    to: '/admin/tahun-ajaran',
+    title: 'Tahun Ajaran',
+    desc: 'Semester dan tahun ajaran untuk penyimpanan nilai',
+    ready: true,
+    icon: 'calendar',
+    tone: 'sky',
+  },
+  {
     to: '/admin/ortu',
     title: 'Akun Orang Tua',
     desc: 'Persetujuan dan pengelolaan akun orang tua',
