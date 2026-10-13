@@ -232,3 +232,11 @@
   - Halaman memakai lebar penuh (`HALAMAN_LEBAR`).
 - `src/components/Layout.tsx`: `/akademik/nilai-sts` masuk daftar halaman lebar.
 - `src/pages/AkademikHub.tsx`: deskripsi kartu STS/SAS diperjelas.
+
+## Belum dirilis — Nilai STS/SAS: layout spreadsheet 1 tabel
+
+- `NilaiStsSas.tsx`: diganti layout **satu tabel** (baris = siswa, kolom = materi yang dicentang) menggantikan daftar bertumpuk per TP.
+- Panel kanan (desktop) / atas (mobile): centang materi diujikan, bisa **Tampilkan / Sembunyikan**.
+- Tombol **Simpan** selalu tersedia: di bawah panel materi saat panel terbuka, atau sticky di bawah layar saat panel disembunyikan. Menyimpan semua perubahan di semua kolom sekaligus.
+- Navigasi sel: Enter / panah kanan-kiri-atas-bawah.
+- Default cakupan: semua TP semester aktif dicentang jika belum pernah disimpan.

@@ -23,9 +23,9 @@ import type { SiswaTahsin } from '../../types/tahsin'
 import { Badge, HeroBanner } from '../../components/ui'
 import { BackLink, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, useToast } from './shared'
 
-/** Input nilai besar — mudah disentuh & dibaca guru senior */
-const inputNilaiCls =
-  'h-12 w-[4.5rem] shrink-0 rounded-xl border-2 border-slate-200 bg-white text-center text-[17px] font-semibold tabular-nums text-slate-900 outline-none transition focus:border-muh-500 focus:ring-4 focus:ring-muh-500/20 disabled:bg-slate-50 disabled:text-slate-400 sm:h-14 sm:w-20 sm:text-[18px]'
+/** Kotak nilai di sel tabel — cukup besar untuk disentuh */
+const cellInputCls =
+  'h-11 w-[3.75rem] rounded-lg border-2 border-slate-200 bg-white text-center text-[16px] font-semibold tabular-nums text-slate-900 outline-none transition focus:border-muh-500 focus:ring-2 focus:ring-muh-500/25 disabled:bg-slate-50 disabled:text-slate-400 sm:h-12 sm:w-16 sm:text-[17px]'
 
 function jenisDari(v: string | null): JenisAsesmen {
   return v === 'sas' ? 'sas' : 'sts'
@@ -43,24 +43,6 @@ function parseNilai(t: string | undefined): number | null {
   if (t === undefined || t.trim() === '') return null
   const n = Number(t.replace(',', '.'))
   return Number.isFinite(n) ? n : NaN
-}
-
-function hitungTerisi(
-  tpId: string,
-  siswa: SiswaTahsin[],
-  draf: Record<string, Record<string, string>>,
-  existing: Record<string, Record<string, NilaiAsesmenDoc>>,
-): { terisi: number; total: number } {
-  let terisi = 0
-  for (const s of siswa) {
-    const teks = draf[tpId]?.[s.id]
-    if (teks !== undefined && teks.trim() !== '') {
-      terisi++
-      continue
-    }
-    if (existing[tpId]?.[s.id]?.nilai != null) terisi++
-  }
-  return { terisi, total: siswa.length }
 }
 
 export default function NilaiStsSas({ profile }: { profile: AppUser }) {
@@ -118,7 +100,7 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
     setTp(tampil)
     setSiswa(anak.sort((a, b) => a.nama.localeCompare(b.nama, 'id')))
     setCakupanId(cakupan?.id)
-    // Jika belum pernah atur cakupan: default centang semua TP semester (lebih aman untuk guru senior)
+    // Default: semua TP semester dicentang jika belum pernah diatur
     if (cakupan?.tpIds?.length) {
       setPilihTp(cakupan.tpIds)
     } else {
@@ -202,7 +184,6 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
     )
   }
 
-  // ---- Hub: pilih jenis + mapel/kelas -----------------------------------------------------------
   if (!mapel || !kelas) {
     return (
       <div className="space-y-5">
@@ -210,23 +191,21 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
         <HeroBanner
           eyebrow="Akademik"
           title="Nilai Ujian Tengah & Akhir"
-          subtitle="Pilih jenis ujian, lalu mata pelajaran dan kelas. Tekan kartu untuk mulai mengisi."
+          subtitle="Pilih jenis ujian, lalu mata pelajaran dan kelas."
         />
-
-        {/* Pilihan jenis — tombol besar, teks lengkap */}
         <div className="grid grid-cols-2 gap-3">
-          {([
-            { j: 'sts' as JenisAsesmen, judul: 'Ujian Tengah', sub: 'STS · Tengah semester' },
-            { j: 'sas' as JenisAsesmen, judul: 'Ujian Akhir', sub: 'SAS · Akhir semester' },
-          ]).map(({ j, judul, sub }) => (
+          {(
+            [
+              { j: 'sts' as JenisAsesmen, judul: 'Ujian Tengah', sub: 'STS · Tengah semester' },
+              { j: 'sas' as JenisAsesmen, judul: 'Ujian Akhir', sub: 'SAS · Akhir semester' },
+            ] as const
+          ).map(({ j, judul, sub }) => (
             <button
               key={j}
               type="button"
               onClick={() => gantiJenis(j)}
               className={`rounded-2xl border-2 px-4 py-4 text-left transition ${
-                jenis === j
-                  ? 'border-muh-600 bg-muh-50 shadow-sm'
-                  : 'border-slate-200 bg-white hover:border-muh-300'
+                jenis === j ? 'border-muh-600 bg-muh-50 shadow-sm' : 'border-slate-200 bg-white hover:border-muh-300'
               }`}
             >
               <p className={`text-[15px] font-bold ${jenis === j ? 'text-muh-800' : 'text-slate-800'}`}>{judul}</p>
@@ -234,11 +213,9 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
             </button>
           ))}
         </div>
-
         <p className="text-[13px] font-medium text-slate-700">
           Pilih mapel & kelas untuk <span className="font-bold text-muh-700">{labelJenis(jenis)}</span>
         </p>
-
         {mapelMaster === null ? (
           <Spinner />
         ) : pilihan.length === 0 ? (
@@ -259,9 +236,9 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
                   <p className="mt-3">
                     {typeof n === 'number' ? (
                       n > 0 ? (
-                        <Badge tone="green">Siap · {n} materi diujikan</Badge>
+                        <Badge tone="green">Siap · {n} materi</Badge>
                       ) : (
-                        <Badge tone="peach">Belum diatur materi ujian</Badge>
+                        <Badge tone="peach">Belum diatur</Badge>
                       )
                     ) : tulis && hubStatus === null ? (
                       <span className="text-[12px] text-muted">Memuat…</span>
@@ -281,14 +258,15 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-4">
         <BackLink to={`/akademik/nilai-sts?jenis=${jenis}`}>Pilih mata pelajaran</BackLink>
-        <Notice tone="error">Anda tidak mengampu {mapel} di kelas {kelas}.</Notice>
+        <Notice tone="error">
+          Anda tidak mengampu {mapel} di kelas {kelas}.
+        </Notice>
       </div>
     )
   }
 
   return (
     <Detail
-      profile={profile}
       jenis={jenis}
       mapel={mapel}
       kelas={kelas}
@@ -311,10 +289,9 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
   )
 }
 
-// ---- Halaman detail: cakupan + isi nilai --------------------------------------------------------
+// ---- Detail: satu tabel spreadsheet + panel kanan materi ---------------------------------------
 
 function Detail(props: {
-  profile: AppUser
   jenis: JenisAsesmen
   mapel: string
   kelas: string
@@ -336,9 +313,11 @@ function Detail(props: {
 }) {
   const { jenis, mapel, kelas, tingkatan, tulis, config, tp, siswa, siap } = props
   const [busy, setBusy] = useState(false)
+  const [busyCakupan, setBusyCakupan] = useState(false)
+  /** draf[tpId][siswaId] = teks input */
   const [draf, setDraf] = useState<Record<string, Record<string, string>>>({})
-  const [tpAktif, setTpAktif] = useState<string | null>(null)
-  const [modeCakupan, setModeCakupan] = useState(false)
+  /** Panel materi di kanan (desktop) / atas (mobile) — bisa disembunyikan */
+  const [panelMateri, setPanelMateri] = useState(true)
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   useEffect(() => {
@@ -352,17 +331,60 @@ function Detail(props: {
     setDraf(awal)
   }, [props.nilai])
 
-  // Buka otomatis TP pertama yang ada di cakupan
-  useEffect(() => {
-    if (!siap || !tp || !props.cakupanId) return
-    const terpilih = tp.filter((t) => props.pilihTp.includes(t.id))
-    if (terpilih.length && !tpAktif) {
-      setTpAktif(terpilih[0].id)
-    }
-  }, [siap, tp, props.cakupanId, props.pilihTp, tpAktif])
+  const terpilih = useMemo(
+    () => (tp ?? []).filter((t) => props.pilihTp.includes(t.id)),
+    [tp, props.pilihTp],
+  )
 
-  const terpilih = (tp ?? []).filter((t) => props.pilihTp.includes(t.id))
-  const tpSedang = terpilih.find((t) => t.id === tpAktif) ?? terpilih[0] ?? null
+  /** Hitung berapa sel berubah dibanding data tersimpan */
+  const perubahan = useMemo(() => {
+    if (!siswa) return [] as { tpId: string; siswaId: string; nilai: number }[]
+    const out: { tpId: string; siswaId: string; nilai: number }[] = []
+    for (const t of terpilih) {
+      for (const s of siswa) {
+        const teks = draf[t.id]?.[s.id]
+        if (teks === undefined || teks.trim() === '') continue
+        const n = parseNilai(teks)
+        if (n === null || Number.isNaN(n) || n < 0 || n > 100) continue
+        const lama = props.nilai[t.id]?.[s.id]?.nilai
+        if (lama === n) continue
+        out.push({ tpId: t.id, siswaId: s.id, nilai: n })
+      }
+    }
+    return out
+  }, [draf, terpilih, siswa, props.nilai])
+
+  /** Sel invalid (bukan kosong, tapi bukan 0–100) */
+  const adaInvalid = useMemo(() => {
+    if (!siswa) return false
+    for (const t of terpilih) {
+      for (const s of siswa) {
+        const teks = draf[t.id]?.[s.id]
+        if (teks === undefined || teks.trim() === '') continue
+        const n = parseNilai(teks)
+        if (n === null || Number.isNaN(n) || n < 0 || n > 100) return true
+      }
+    }
+    return false
+  }, [draf, terpilih, siswa])
+
+  /** Progress: berapa sel terisi / total (siswa × materi terpilih) */
+  const progress = useMemo(() => {
+    if (!siswa || !terpilih.length) return { terisi: 0, total: 0 }
+    let terisi = 0
+    const total = siswa.length * terpilih.length
+    for (const t of terpilih) {
+      for (const s of siswa) {
+        const teks = draf[t.id]?.[s.id]
+        if (teks !== undefined && teks.trim() !== '') {
+          terisi++
+          continue
+        }
+        if (props.nilai[t.id]?.[s.id]?.nilai != null) terisi++
+      }
+    }
+    return { terisi, total }
+  }, [draf, terpilih, siswa, props.nilai])
 
   async function simpanCakupan() {
     if (!config || !tulis) return
@@ -370,7 +392,7 @@ function Detail(props: {
       props.show('Centang minimal 1 materi yang diujikan.', true)
       return
     }
-    setBusy(true)
+    setBusyCakupan(true)
     try {
       await saveCakupanTP(
         {
@@ -384,48 +406,53 @@ function Detail(props: {
         },
         props.cakupanId,
       )
-      props.show('Materi ujian disimpan. Silakan isi nilai.')
-      setModeCakupan(false)
+      props.show('Materi ujian disimpan.')
       await props.muat()
     } catch (e) {
       console.error(e)
       props.show('Gagal menyimpan materi ujian.', true)
     } finally {
-      setBusy(false)
+      setBusyCakupan(false)
     }
   }
 
-  async function simpanNilai(tpId: string) {
+  async function simpanSemuaNilai() {
     if (!config || !tulis || !siswa) return
-    const baris = draf[tpId] ?? {}
-    const existing = props.nilai[tpId] ?? {}
-    const entries: { siswaId: string; nilai: number }[] = []
-    for (const s of siswa) {
-      const teks = baris[s.id]
-      if (teks === undefined || teks.trim() === '') continue
-      const n = parseNilai(teks)
-      if (n === null || Number.isNaN(n) || n < 0 || n > 100) {
-        props.show(`Nilai ${s.nama} harus angka 0–100.`, true)
-        // fokus ke input bermasalah
-        inputRefs.current[s.id]?.focus()
-        return
-      }
-      const lama = existing[s.id]?.nilai
-      if (lama === n) continue
-      entries.push({ siswaId: s.id, nilai: n })
+    if (adaInvalid) {
+      props.show('Ada nilai di luar 0–100. Perbaiki dulu.', true)
+      return
     }
-    if (!entries.length) {
+    if (!perubahan.length) {
       props.show('Tidak ada perubahan nilai.')
       return
     }
     setBusy(true)
     try {
-      const n = await saveNilaiAsesmenBatch(
-        { jenis, tpId, mapel, kelas, tingkatan, semester: config.semesterAktif, tahunAjaran: config.tahunAjaran },
-        entries,
-        existing,
-      )
-      props.show(`${n} nilai berhasil disimpan.`)
+      // Kelompokkan per TP lalu simpan batch
+      const byTp = new Map<string, { siswaId: string; nilai: number }[]>()
+      for (const p of perubahan) {
+        const list = byTp.get(p.tpId) ?? []
+        list.push({ siswaId: p.siswaId, nilai: p.nilai })
+        byTp.set(p.tpId, list)
+      }
+      let total = 0
+      for (const [tpId, entries] of byTp) {
+        const n = await saveNilaiAsesmenBatch(
+          {
+            jenis,
+            tpId,
+            mapel,
+            kelas,
+            tingkatan,
+            semester: config.semesterAktif,
+            tahunAjaran: config.tahunAjaran,
+          },
+          entries,
+          props.nilai[tpId] ?? {},
+        )
+        total += n
+      }
+      props.show(`${total} nilai berhasil disimpan.`)
       await props.muat()
     } catch (e) {
       console.error(e)
@@ -439,44 +466,175 @@ function Detail(props: {
     props.setPilihTp(props.pilihTp.includes(id) ? props.pilihTp.filter((x) => x !== id) : [...props.pilihTp, id])
   }
 
-  function centangSemua() {
-    props.setPilihTp((tp ?? []).map((t) => t.id))
+  function setNilaiCell(tpId: string, siswaId: string, value: string) {
+    setDraf((prev) => ({
+      ...prev,
+      [tpId]: { ...prev[tpId], [siswaId]: value },
+    }))
   }
 
-  function kosongkanSemua() {
-    props.setPilihTp([])
-  }
-
-  function onKeyDownSiswa(e: KeyboardEvent<HTMLInputElement>, _siswaId: string, index: number) {
-    if (e.key !== 'Enter') return
-    e.preventDefault()
-    if (!siswa) return
-    const next = siswa[index + 1]
-    if (next) {
-      inputRefs.current[next.id]?.focus()
-      inputRefs.current[next.id]?.select()
-    } else {
-      // terakhir: simpan
-      if (tpSedang) void simpanNilai(tpSedang.id)
+  /** Enter / ArrowRight → sel berikutnya di baris; ArrowDown → siswa berikutnya */
+  function onKeyCell(e: KeyboardEvent<HTMLInputElement>, siswaIdx: number, tpIdx: number) {
+    if (!siswa || !terpilih.length) return
+    const key = e.key
+    if (key !== 'Enter' && key !== 'ArrowRight' && key !== 'ArrowLeft' && key !== 'ArrowDown' && key !== 'ArrowUp') {
+      return
     }
+    e.preventDefault()
+    let sIdx = siswaIdx
+    let tIdx = tpIdx
+    if (key === 'Enter' || key === 'ArrowRight') {
+      tIdx++
+      if (tIdx >= terpilih.length) {
+        tIdx = 0
+        sIdx++
+      }
+    } else if (key === 'ArrowLeft') {
+      tIdx--
+      if (tIdx < 0) {
+        tIdx = terpilih.length - 1
+        sIdx--
+      }
+    } else if (key === 'ArrowDown') {
+      sIdx++
+    } else if (key === 'ArrowUp') {
+      sIdx--
+    }
+    if (sIdx < 0 || sIdx >= siswa.length || tIdx < 0 || tIdx >= terpilih.length) return
+    const refKey = `${terpilih[tIdx].id}__${siswa[sIdx].id}`
+    const el = inputRefs.current[refKey]
+    el?.focus()
+    el?.select()
   }
 
-  const progress = tpSedang && siswa ? hitungTerisi(tpSedang.id, siswa, draf, props.nilai) : null
-  const berubah =
-    tpSedang && siswa
-      ? siswa.filter((s) => {
-          const teks = draf[tpSedang.id]?.[s.id]
-          if (teks === undefined || teks.trim() === '') return false
-          const n = parseNilai(teks)
-          if (n === null || Number.isNaN(n)) return false
-          return props.nilai[tpSedang.id]?.[s.id]?.nilai !== n
-        }).length
-      : 0
+  const tombolSimpan = (
+    <button
+      type="button"
+      className={`${btnPrimary} h-12 w-full text-[15px] shadow-md`}
+      disabled={!tulis || busy || perubahan.length === 0 || adaInvalid}
+      onClick={() => void simpanSemuaNilai()}
+    >
+      {busy
+        ? 'Menyimpan…'
+        : perubahan.length > 0
+          ? `Simpan ${perubahan.length} perubahan`
+          : 'Tidak ada perubahan'}
+    </button>
+  )
 
-  const perluCakupan = !props.cakupanId || modeCakupan
+  const panelMateriIsi = (
+    <div className="flex h-full flex-col gap-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h2 className="text-[14px] font-bold text-slate-900">Materi diujikan</h2>
+          <p className="mt-0.5 text-[12px] leading-snug text-muted">
+            Centang materi yang masuk soal {labelPendek(jenis)}. Kolom tabel mengikuti pilihan ini.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="shrink-0 rounded-lg px-2 py-1 text-[12px] font-semibold text-muh-700 hover:bg-muh-50"
+          onClick={() => setPanelMateri(false)}
+          title="Sembunyikan panel"
+        >
+          Sembunyikan
+        </button>
+      </div>
+
+      {!tp || tp.length === 0 ? (
+        <Notice>Belum ada materi semester ini. Atur dulu di Bobot Semester.</Notice>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              className={`${btnGhost} py-1.5 text-[12px]`}
+              disabled={!tulis}
+              onClick={() => props.setPilihTp(tp.map((t) => t.id))}
+            >
+              Semua
+            </button>
+            <button
+              type="button"
+              className={`${btnGhost} py-1.5 text-[12px]`}
+              disabled={!tulis}
+              onClick={() => props.setPilihTp([])}
+            >
+              Kosongkan
+            </button>
+            <span className="self-center text-[12px] text-muted">
+              {props.pilihTp.length}/{tp.length}
+            </span>
+          </div>
+
+          <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1" style={{ maxHeight: 'min(50vh, 420px)' }}>
+            {tp.map((t) => {
+              const checked = props.pilihTp.includes(t.id)
+              return (
+                <li key={t.id}>
+                  <label
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-2.5 py-2 transition ${
+                      checked ? 'border-muh-400 bg-muh-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                    } ${!tulis ? 'cursor-default opacity-80' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-muh-600"
+                      checked={checked}
+                      disabled={!tulis}
+                      onChange={() => toggle(t.id)}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-[13px] font-semibold text-slate-900">Materi {t.nomorTp}</span>
+                      <span className="mt-0.5 block text-[11.5px] leading-snug text-slate-600">{t.namaTp}</span>
+                    </span>
+                  </label>
+                </li>
+              )
+            })}
+          </ul>
+
+          {tulis && (
+            <button
+              type="button"
+              className={`${btnGhost} h-10 w-full text-[13px]`}
+              disabled={busyCakupan || props.pilihTp.length === 0}
+              onClick={() => void simpanCakupan()}
+            >
+              {busyCakupan ? 'Menyimpan materi…' : 'Simpan daftar materi'}
+            </button>
+          )}
+        </>
+      )}
+
+      {/* Tombol simpan nilai — SELALU di panel kanan saat panel terbuka */}
+      <div className="mt-auto space-y-2 border-t border-border pt-3">
+        <div className="flex items-center justify-between text-[12px] text-muted">
+          <span>
+            Terisi {progress.terisi}/{progress.total}
+          </span>
+          {progress.total > 0 && (
+            <span className={progress.terisi === progress.total ? 'font-semibold text-muh-700' : ''}>
+              {Math.round((progress.terisi / progress.total) * 100)}%
+            </span>
+          )}
+        </div>
+        <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+          <div
+            className={`h-full rounded-full ${progress.terisi === progress.total && progress.total > 0 ? 'bg-muh-600' : 'bg-amber-400'}`}
+            style={{ width: `${progress.total ? (progress.terisi / progress.total) * 100 : 0}%` }}
+          />
+        </div>
+        {tombolSimpan}
+        <p className="text-[11px] leading-snug text-muted">
+          Tab / panah navigasi antar sel. Simpan bisa ditekan kapan saja.
+        </p>
+      </div>
+    </div>
+  )
 
   return (
-    <div className="space-y-4 pb-28">
+    <div className={`space-y-4 ${panelMateri ? '' : 'pb-24'}`}>
       <BackLink to={`/akademik/nilai-sts?jenis=${jenis}`}>Pilih mata pelajaran</BackLink>
 
       <HeroBanner
@@ -484,8 +642,8 @@ function Detail(props: {
         title={`${labelPendek(jenis)} — ${mapel} · Kelas ${kelas}`}
         subtitle={
           jenis === 'sts'
-            ? 'Isi nilai ujian tengah. Nilai STS hanya dipakai jika lebih tinggi dari nilai harian (SLM).'
-            : 'Isi nilai ujian akhir. Digabung dengan nilai harian sesuai bobot masing-masing materi.'
+            ? 'Satu tabel untuk semua materi. Centang materi di panel kanan, isi nilai, lalu simpan.'
+            : 'Satu tabel untuk semua materi SAS. Panel kanan untuk memilih materi ujian.'
         }
       />
 
@@ -493,271 +651,144 @@ function Detail(props: {
         <Spinner />
       ) : (
         <>
-          {/* ---- Langkah 1: Pilih materi yang diujikan ------------------------------------------- */}
-          {perluCakupan ? (
-            <section className="card-soft space-y-4 p-4 sm:p-5">
-              <div>
-                <h2 className="text-[16px] font-bold text-slate-900">1. Pilih materi yang diujikan</h2>
-                <p className="mt-1 text-[13px] leading-relaxed text-muted">
-                  Centang materi (TP) yang masuk soal {labelPendek(jenis)}. Yang tidak dicentang tidak perlu diisi nilainya.
-                </p>
-              </div>
+          {/* Toggle panel materi (saat tersembunyi) */}
+          {!panelMateri && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className={`${btnGhost} text-[13px]`}
+                onClick={() => setPanelMateri(true)}
+              >
+                Tampilkan materi diujikan ({props.pilihTp.length})
+              </button>
+              <span className="text-[12.5px] text-muted">
+                Terisi {progress.terisi}/{progress.total}
+                {perubahan.length > 0 ? ` · ${perubahan.length} belum disimpan` : ''}
+              </span>
+            </div>
+          )}
 
-              {tp.length === 0 ? (
-                <Notice>
-                  Belum ada materi untuk semester ini. Atur dulu di menu <strong>Bobot Semester</strong>.
+          {/* Layout: tabel + panel kanan (desktop) / panel atas (mobile) */}
+          <div className={`flex flex-col gap-4 ${panelMateri ? 'lg:flex-row lg:items-start' : ''}`}>
+            {/* Panel materi — di mobile di atas; di desktop di kanan */}
+            {panelMateri && (
+              <aside className="order-1 card-soft w-full shrink-0 p-4 lg:order-2 lg:sticky lg:top-4 lg:w-[320px] lg:self-start">
+                {panelMateriIsi}
+              </aside>
+            )}
+
+            {/* Tabel utama */}
+            <div className="order-2 min-w-0 flex-1 lg:order-1">
+              {terpilih.length === 0 ? (
+                <Notice tone="warn">
+                  Belum ada materi yang dicentang.
+                  {panelMateri
+                    ? ' Centang materi di panel kanan.'
+                    : ' Tampilkan panel materi, lalu centang yang diujikan.'}
                 </Notice>
               ) : (
-                <>
-                  <div className="flex flex-wrap gap-2">
-                    <button type="button" className={btnGhost} onClick={centangSemua} disabled={!tulis}>
-                      Centang semua
-                    </button>
-                    <button type="button" className={btnGhost} onClick={kosongkanSemua} disabled={!tulis}>
-                      Kosongkan
-                    </button>
-                    <span className="self-center text-[13px] text-muted">
-                      {props.pilihTp.length} dari {tp.length} dipilih
-                    </span>
-                  </div>
-
-                  <ul className="space-y-2">
-                    {tp.map((t) => {
-                      const checked = props.pilihTp.includes(t.id)
-                      return (
-                        <li key={t.id}>
-                          <label
-                            className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 px-3 py-3 transition ${
-                              checked ? 'border-muh-400 bg-muh-50' : 'border-slate-200 bg-white hover:border-slate-300'
-                            } ${!tulis ? 'cursor-default opacity-80' : ''}`}
-                          >
-                            <input
-                              type="checkbox"
-                              className="mt-1 h-5 w-5 shrink-0 accent-muh-600"
-                              checked={checked}
-                              disabled={!tulis}
-                              onChange={() => toggle(t.id)}
-                            />
-                            <span className="min-w-0">
-                              <span className="block text-[14px] font-semibold text-slate-900">
-                                Materi {t.nomorTp}
-                              </span>
-                              <span className="mt-0.5 block text-[13px] leading-snug text-slate-600">{t.namaTp}</span>
-                            </span>
-                          </label>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </>
-              )}
-
-              {tulis && tp.length > 0 && (
-                <button
-                  type="button"
-                  className={`${btnPrimary} h-12 w-full text-[15px]`}
-                  disabled={busy || props.pilihTp.length === 0}
-                  onClick={() => void simpanCakupan()}
-                >
-                  {busy ? 'Menyimpan…' : props.cakupanId ? 'Simpan perubahan materi' : 'Simpan & lanjut isi nilai'}
-                </button>
-              )}
-            </section>
-          ) : (
-            /* ---- Langkah 2: Isi nilai --------------------------------------------------------- */
-            <>
-              {/* Ringkasan cakupan + ubah */}
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-white px-3.5 py-3">
-                <p className="text-[13px] text-slate-700">
-                  <span className="font-semibold">{terpilih.length} materi</span> diujikan
-                  {siswa.length > 0 ? ` · ${siswa.length} siswa` : ''}
-                </p>
-                {tulis && (
-                  <button
-                    type="button"
-                    className="text-[13px] font-semibold text-muh-700 underline"
-                    onClick={() => setModeCakupan(true)}
-                  >
-                    Ubah materi ujian
-                  </button>
-                )}
-              </div>
-
-              {terpilih.length === 0 ? (
-                <Notice tone="warn">Belum ada materi yang dipilih. Tekan “Ubah materi ujian”.</Notice>
-              ) : (
-                <>
-                  {/* Pilih materi aktif — chip besar */}
-                  <div className="space-y-2">
-                    <p className="text-[13px] font-medium text-slate-600">Pilih materi untuk diisi:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {terpilih.map((t) => {
-                        const prog = hitungTerisi(t.id, siswa, draf, props.nilai)
-                        const aktif = (tpAktif ?? terpilih[0]?.id) === t.id
-                        const lengkap = prog.terisi === prog.total && prog.total > 0
-                        return (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => setTpAktif(t.id)}
-                            className={`rounded-xl border-2 px-3.5 py-2.5 text-left transition ${
-                              aktif
-                                ? 'border-muh-600 bg-muh-50 shadow-sm'
-                                : 'border-slate-200 bg-white hover:border-muh-300'
-                            }`}
-                          >
-                            <span className={`block text-[14px] font-bold ${aktif ? 'text-muh-800' : 'text-slate-800'}`}>
-                              Materi {t.nomorTp}
-                            </span>
-                            <span className="mt-0.5 block text-[11.5px] text-muted">
-                              {lengkap ? (
-                                <span className="font-semibold text-muh-700">Lengkap {prog.terisi}/{prog.total}</span>
-                              ) : (
-                                `${prog.terisi}/${prog.total} terisi`
-                              )}
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Form isi nilai — satu materi fokus */}
-                  {tpSedang && (
-                    <section className="card-soft overflow-hidden">
-                      <div className="border-b border-border bg-slate-50 px-4 py-3 sm:px-5">
-                        <h2 className="text-[15px] font-bold text-slate-900">
-                          Materi {tpSedang.nomorTp}. {tpSedang.namaTp}
-                        </h2>
-                        {progress && (
-                          <div className="mt-2">
-                            <div className="flex items-center justify-between text-[12.5px]">
-                              <span className="text-muted">
-                                Sudah diisi <strong className="text-slate-800">{progress.terisi}</strong> dari{' '}
-                                <strong className="text-slate-800">{progress.total}</strong> siswa
-                              </span>
-                              {progress.total > 0 && (
-                                <span
-                                  className={`font-semibold ${
-                                    progress.terisi === progress.total ? 'text-muh-700' : 'text-amber-700'
-                                  }`}
-                                >
-                                  {Math.round((progress.terisi / progress.total) * 100)}%
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-200">
-                              <div
-                                className={`h-full rounded-full transition-all ${
-                                  progress.terisi === progress.total ? 'bg-muh-600' : 'bg-amber-400'
-                                }`}
-                                style={{
-                                  width: `${progress.total ? (progress.terisi / progress.total) * 100 : 0}%`,
-                                }}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Header tabel sticky di mobile */}
-                      <div className="sticky top-0 z-10 hidden border-b border-border bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted sm:grid sm:grid-cols-[1fr_auto] sm:px-5">
-                        <span>Nama siswa</span>
-                        <span className="w-20 text-center sm:w-24">{labelPendek(jenis)}</span>
-                      </div>
-
-                      <ul className="divide-y divide-border">
-                        {siswa.map((s, idx) => {
-                          const teks = draf[tpSedang.id]?.[s.id] ?? ''
-                          const n = parseNilai(teks)
-                          const valid = n === null || (!Number.isNaN(n) && n >= 0 && n <= 100)
-                          const sudahAda = props.nilai[tpSedang.id]?.[s.id]?.nilai != null
-                          const slmN = jenis === 'sas' ? props.slm[tpSedang.id]?.[s.id]?.slm : undefined
-                          const stsN = jenis === 'sas' ? props.sts[tpSedang.id]?.[s.id]?.nilai : undefined
-                          const akhir =
-                            jenis === 'sas'
-                              ? hitungNilaiAkhirTP(slmN, teks === '' ? null : teks, tpSedang, stsN)
-                              : null
-
-                          return (
-                            <li
-                              key={s.id}
-                              className={`flex items-center gap-3 px-4 py-3 sm:px-5 ${
-                                !valid ? 'bg-red-50' : sudahAda || (teks && teks.trim()) ? 'bg-muh-50/40' : ''
-                              }`}
+                <div className="card-soft overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-max border-collapse text-left">
+                      <thead>
+                        <tr className="border-b border-border bg-slate-50">
+                          <th className="sticky left-0 z-20 bg-slate-50 px-3 py-3 text-[12px] font-semibold uppercase tracking-wide text-muted sm:px-4">
+                            Siswa
+                          </th>
+                          {terpilih.map((t) => (
+                            <th
+                              key={t.id}
+                              className="max-w-[7.5rem] px-2 py-2 text-center sm:px-3"
+                              title={t.namaTp}
                             >
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-[14px] font-medium text-slate-900 sm:text-[15px]">
-                                  {s.nama}
-                                </p>
-                                {jenis === 'sas' && (
-                                  <p className="mt-0.5 text-[11.5px] text-muted">
-                                    Harian {slmN ?? '—'}
-                                    {stsN != null ? ` · STS ${stsN}` : ''}
-                                    {akhir != null ? ` · Akhir ${akhir}` : ''}
-                                  </p>
-                                )}
-                              </div>
-                              <input
-                                ref={(el) => {
-                                  inputRefs.current[s.id] = el
-                                }}
-                                aria-label={`Nilai ${labelPendek(jenis)} ${s.nama}`}
-                                className={`${inputNilaiCls} ${
-                                  !valid ? 'border-red-400 ring-2 ring-red-200' : sudahAda || (teks && teks.trim()) ? 'border-muh-400' : ''
-                                }`}
-                                inputMode="decimal"
-                                value={teks}
-                                readOnly={!tulis}
-                                placeholder="–"
-                                onChange={(e) =>
-                                  setDraf((prev) => ({
-                                    ...prev,
-                                    [tpSedang.id]: { ...prev[tpSedang.id], [s.id]: e.target.value },
-                                  }))
-                                }
-                                onKeyDown={(e) => onKeyDownSiswa(e, s.id, idx)}
-                                onFocus={(e) => e.target.select()}
-                              />
-                            </li>
-                          )
-                        })}
-                      </ul>
-
-                      <p className="border-t border-border px-4 py-2 text-[12px] text-muted sm:px-5">
-                        Tip: tekan <kbd className="rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold">Enter</kbd> untuk pindah ke siswa berikutnya. Di baris terakhir, Enter = simpan.
-                      </p>
-                    </section>
-                  )}
-                </>
+                              <span className="block text-[12px] font-bold text-slate-800">M.{t.nomorTp}</span>
+                              <span className="mt-0.5 line-clamp-2 block text-[10.5px] font-normal leading-tight text-muted">
+                                {t.namaTp}
+                              </span>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {siswa.map((s, sIdx) => (
+                          <tr key={s.id} className="border-t border-border hover:bg-slate-50/80">
+                            <td className="sticky left-0 z-10 bg-white px-3 py-2 text-[13.5px] font-medium text-slate-900 sm:px-4">
+                              <span className="line-clamp-2 max-w-[10rem] sm:max-w-[14rem]">{s.nama}</span>
+                            </td>
+                            {terpilih.map((t, tIdx) => {
+                              const teks = draf[t.id]?.[s.id] ?? ''
+                              const n = parseNilai(teks)
+                              const invalid = teks.trim() !== '' && (n === null || Number.isNaN(n) || n < 0 || n > 100)
+                              const terisi = teks.trim() !== '' || props.nilai[t.id]?.[s.id]?.nilai != null
+                              const refKey = `${t.id}__${s.id}`
+                              // SAS: hint kecil SLM di title
+                              const slmN = jenis === 'sas' ? props.slm[t.id]?.[s.id]?.slm : undefined
+                              const stsN = jenis === 'sas' ? props.sts[t.id]?.[s.id]?.nilai : undefined
+                              const hint =
+                                jenis === 'sas'
+                                  ? `Harian ${slmN ?? '—'} · STS ${stsN ?? '—'}${
+                                      teks.trim() !== '' && !invalid
+                                        ? ` · Akhir ${hitungNilaiAkhirTP(slmN, teks, t, stsN) ?? '—'}`
+                                        : ''
+                                    }`
+                                  : undefined
+                              return (
+                                <td key={t.id} className="px-1.5 py-1.5 text-center sm:px-2">
+                                  <input
+                                    ref={(el) => {
+                                      inputRefs.current[refKey] = el
+                                    }}
+                                    aria-label={`${labelPendek(jenis)} ${s.nama} materi ${t.nomorTp}`}
+                                    title={hint}
+                                    className={`${cellInputCls} ${
+                                      invalid
+                                        ? 'border-red-400 ring-2 ring-red-200'
+                                        : terisi
+                                          ? 'border-muh-400 bg-muh-50/50'
+                                          : ''
+                                    }`}
+                                    inputMode="decimal"
+                                    value={teks}
+                                    readOnly={!tulis}
+                                    placeholder="–"
+                                    onChange={(e) => setNilaiCell(t.id, s.id, e.target.value)}
+                                    onKeyDown={(e) => onKeyCell(e, sIdx, tIdx)}
+                                    onFocus={(e) => e.target.select()}
+                                  />
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="border-t border-border px-3 py-2 text-[11.5px] text-muted sm:px-4">
+                    {siswa.length} siswa · {terpilih.length} materi · gulir horizontal jika kolom banyak
+                  </p>
+                </div>
               )}
-            </>
-          )}
+            </div>
+          </div>
         </>
       )}
 
-      {/* Sticky save bar — selalu terlihat */}
-      {tulis && !perluCakupan && tpSedang && siswa && siswa.length > 0 && (
+      {/* Sticky save — hanya saat panel materi disembunyikan (agar tombol selalu ada) */}
+      {tulis && !panelMateri && siap && terpilih.length > 0 && (
         <div className="fixed bottom-16 left-0 right-0 z-40 border-t border-border bg-white/95 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm md:bottom-0">
           <div className="mx-auto flex max-w-[1500px] items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-medium text-slate-800">
-                Materi {tpSedang.nomorTp}
-                {berubah > 0 ? (
-                  <span className="text-amber-700"> · {berubah} perubahan</span>
-                ) : (
-                  <span className="text-muted"> · tidak ada perubahan</span>
-                )}
-              </p>
+            <div className="min-w-0 flex-1 text-[13px] text-slate-700">
+              {perubahan.length > 0 ? (
+                <span className="font-semibold text-amber-700">{perubahan.length} perubahan belum disimpan</span>
+              ) : (
+                <span className="text-muted">Semua perubahan sudah disimpan</span>
+              )}
+              <span className="text-muted">
+                {' '}
+                · {progress.terisi}/{progress.total} terisi
+              </span>
             </div>
-            <button
-              type="button"
-              className={`${btnPrimary} h-12 min-w-[140px] shrink-0 text-[15px]`}
-              disabled={busy || berubah === 0}
-              onClick={() => void simpanNilai(tpSedang.id)}
-            >
-              {busy ? 'Menyimpan…' : berubah > 0 ? `Simpan (${berubah})` : 'Simpan'}
-            </button>
+            <div className="w-[180px] shrink-0 sm:w-[220px]">{tombolSimpan}</div>
           </div>
         </div>
       )}
