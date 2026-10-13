@@ -1,0 +1,4708 @@
+{
+  "version": "tp-import-1",
+  "sumber": "export-20261013",
+  "tingkatan": "5",
+  "fase": "C",
+  "catatan": "Dihasilkan dari tujuan-pembelajaran-20261013.json. materiBuku dihapus. nomorTp diulang 1..n per mapel (orderAsal disimpan sebagai metadata). Deskripsi level KKTP kosong — guru perlu mengisi di Setup TP.",
+  "items": [
+    {
+      "mapel": "Al-Islam",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 1,
+      "namaTp": "Melafalkan QS Al-A'la dengan menerapkan hukum nun sukun atau tanwin, serta menjelaskan pesan pokoknya tentang rasa syukur melalui penyajian lisan atau bagan sederhana.",
+      "cp": "Al-Qur'an dan Hadis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ISL-Q.1",
+      "source": "Buku Al-Islam Kelas 5 Fase C",
+      "element": "Al-Qur'an dan Hadis",
+      "orderAsal": 1
+    },
+    {
+      "mapel": "Al-Islam",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 2,
+      "namaTp": "Menjelaskan makna Asmaulhusna (Al-Qawiyy, Al-Qayyum, Al-Muhyiy, Al-Mumit, Al-Ba'is) dan menyajikan contoh konkret perilaku mandiri dan bermanfaat bagi sesama berdasarkan nilai nama-nama tersebut.",
+      "cp": "Aqidah",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ISL-A.1",
+      "source": "Buku Al-Islam Kelas 5 Fase C",
+      "element": "Aqidah",
+      "orderAsal": 2
+    },
+    {
+      "mapel": "Al-Islam",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 3,
+      "namaTp": "Menunjukkan adab berdoa dan sikap tawakal kepada Allah Swt. dengan menyimulasikan tata cara berdoa yang benar serta mencatat pengalaman bertawakal dalam jurnal keseharian.",
+      "cp": "Akhlak",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ISL-AK.1",
+      "source": "Buku Al-Islam Kelas 5 Fase C",
+      "element": "Akhlak",
+      "orderAsal": 3
+    },
+    {
+      "mapel": "Al-Islam",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 4,
+      "namaTp": "Membedakan macam-macam puasa sunah beserta ketentuan dan hikmahnya, lalu menyusun kalender atau rencana pribadi untuk mempraktikkan puasa sunah secara bertahap.",
+      "cp": "Fiqih",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ISL-F.1",
+      "source": "Buku Al-Islam Kelas 5 Fase C",
+      "element": "Fiqih",
+      "orderAsal": 4
+    },
+    {
+      "mapel": "Al-Islam",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 5,
+      "namaTp": "Menceritakan kronologi peristiwa Hijrah Nabi Muhammad saw. dan mengidentifikasi nilai keberanian serta kolaborasi untuk diterapkan sebagai komitmen dalam kegiatan kerja kelompok di kelas.",
+      "cp": "Sejarah Peradaban Islam",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ISL-S.1",
+      "source": "Buku Al-Islam Kelas 5 Fase C",
+      "element": "Sejarah Peradaban Islam",
+      "orderAsal": 5
+    },
+    {
+      "mapel": "Al-Islam",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 6,
+      "namaTp": "Melafalkan QS Al-Hujurat/49:13 dengan menerapkan hukum mad tabii, mad wajib muttasil, dan mad jaiz munfasil, serta menjelaskan pesan pokoknya tentang sikap moderat dan menghargai perbedaan.",
+      "cp": "Al-Qur'an dan Hadis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ISL-Q.2",
+      "source": "Buku Al-Islam Kelas 5 Fase C",
+      "element": "Al-Qur'an dan Hadis",
+      "orderAsal": 6
+    },
+    {
+      "mapel": "Al-Islam",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 7,
+      "namaTp": "Menjelaskan makna beriman kepada Hari Akhir beserta dalilnya, dan menyajikan contoh sikap gemar beramal saleh sebagai wujud keimanan tersebut dalam kehidupan sehari-hari.",
+      "cp": "Aqidah",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ISL-A.2",
+      "source": "Buku Al-Islam Kelas 5 Fase C",
+      "element": "Aqidah",
+      "orderAsal": 7
+    },
+    {
+      "mapel": "Al-Islam",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 8,
+      "namaTp": "Menjelaskan prinsip akhlak terhadap non-Muslim dan menunjukkan contoh sikap toleran serta menghargai perbedaan dalam kehidupan di sekolah dan dalam kehidupan bernegara.",
+      "cp": "Akhlak",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ISL-AK.2",
+      "source": "Buku Al-Islam Kelas 5 Fase C",
+      "element": "Akhlak",
+      "orderAsal": 8
+    },
+    {
+      "mapel": "Al-Islam",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 9,
+      "namaTp": "Membedakan infak, sedekah, dan hadiah beserta hikmahnya, lalu menyusun contoh rencana berbagi, termasuk berinfak dan bersedekah melalui Lazismu.",
+      "cp": "Fiqih",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ISL-F.2",
+      "source": "Buku Al-Islam Kelas 5 Fase C",
+      "element": "Fiqih",
+      "orderAsal": 9
+    },
+    {
+      "mapel": "Al-Islam",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 10,
+      "namaTp": "Menceritakan latar belakang dan proses Fathu Makkah serta mengidentifikasi nilai keberanian dan pengampunan untuk diterapkan dalam kehidupan sehari-hari.",
+      "cp": "Sejarah Peradaban Islam",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ISL-S.2",
+      "source": "Buku Al-Islam Kelas 5 Fase C",
+      "element": "Sejarah Peradaban Islam",
+      "orderAsal": 10
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 1,
+      "namaTp": "Mengidentifikasi dan mencatat informasi penting dari teks nonsastra aural sederhana (pengumuman, berita pendek, percakapan) yang dibacakan atau diperdengarkan, dengan respons yang tepat.",
+      "cp": "Menyimak",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-S.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Menyimak",
+      "orderAsal": 1
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 2,
+      "namaTp": "Menjelaskan hubungan antarbagian informasi (sebab-akibat atau urutan kejadian) dari teks aural yang diperdengarkan.",
+      "cp": "Menyimak",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-S.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Menyimak",
+      "orderAsal": 2
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 3,
+      "namaTp": "Membaca lancar kata-kata dengan pola kombinasi huruf yang kompleks (gabungan konsonan, kata serapan) dari teks tertulis otentik berbahasa Indonesia.",
+      "cp": "Membaca dan Memirsa",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-B.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Membaca dan Memirsa",
+      "orderAsal": 3
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 4,
+      "namaTp": "Menganalisis informasi dan nilai-nilai dalam teks nonsastra dan sastra berbentuk visual dan/atau audiovisual.",
+      "cp": "Membaca dan Memirsa",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-B.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Membaca dan Memirsa",
+      "orderAsal": 4
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 5,
+      "namaTp": "Mempresentasikan gagasan dari satu jenis teks (laporan pengamatan sederhana atau hasil diskusi kelompok) secara efektif dan santun di depan kelas.",
+      "cp": "Berbicara dan Mempresentasikan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-P.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Berbicara dan Mempresentasikan",
+      "orderAsal": 5
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 6,
+      "namaTp": "Menyampaikan perasaan dan imajinasi secara lisan dalam bentuk sastra sederhana (pembacaan cerita atau puisi pendek karya sendiri) dengan diksi sederhana.",
+      "cp": "Berbicara dan Mempresentasikan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-P.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Berbicara dan Mempresentasikan",
+      "orderAsal": 6
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 7,
+      "namaTp": "Menulis laporan hasil pengamatan sederhana terhadap objek atau peristiwa nyata di sekitar, dengan urutan yang sistematis dan kalimat majemuk dasar.",
+      "cp": "Menulis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-T.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Menulis",
+      "orderAsal": 7
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 8,
+      "namaTp": "Menulis cerita pendek berdasarkan pengalaman pribadi dengan struktur awal-tengah-akhir yang jelas dan rangkaian kalimat yang bervariasi.",
+      "cp": "Menulis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-T.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Menulis",
+      "orderAsal": 8
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 9,
+      "namaTp": "Menulis cerita imajinatif pendek dengan tokoh, latar, dan alur sederhana, menggunakan minimal satu contoh kosakata bermakna konotatif.",
+      "cp": "Menulis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-T.3",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Menulis",
+      "orderAsal": 9
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 10,
+      "namaTp": "Menulis teks berisi gagasan atau pendapat sederhana tentang suatu topik dengan alasan pendukung, menggunakan kalimat majemuk (karena, sehingga, meskipun).",
+      "cp": "Menulis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-T.4",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Menulis",
+      "orderAsal": 10
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 11,
+      "namaTp": "Peserta didik dapat menjelaskan pengertian dan ciri-ciri karya sastra fiksi serta memberikan contoh bentuknya (novel, puisi, cerpen).",
+      "cp": "Karya Sastra",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-7.1",
+      "source": "kurikulum-bin-kelas5",
+      "element": "Karya Sastra",
+      "orderAsal": 71
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 12,
+      "namaTp": "Peserta didik dapat mengidentifikasi unsur intrinsik karya sastra fiksi (tema, tokoh, penokohan, alur, latar, amanat, sudut pandang) dan membedakannya dari unsur ekstrinsik.",
+      "cp": "Karya Sastra",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-7.2",
+      "source": "kurikulum-bin-kelas5",
+      "element": "Karya Sastra",
+      "orderAsal": 72
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 13,
+      "namaTp": "Peserta didik dapat menerapkan teknik membaca puisi yang tepat (lafal, intonasi, ekspresi, jeda) saat membacakan puisi.",
+      "cp": "Karya Sastra",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-7.3",
+      "source": "kurikulum-bin-kelas5",
+      "element": "Karya Sastra",
+      "orderAsal": 73
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 14,
+      "namaTp": "Peserta didik dapat menjelaskan pengertian dan ciri-ciri majas serta membedakan jenis majas (metafora, hiperbola, simile, personifikasi, ironi, litotes, sarkasme).",
+      "cp": "Menulis Majas",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-8.1",
+      "source": "kurikulum-bin-kelas5",
+      "element": "Menulis Majas",
+      "orderAsal": 81
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 15,
+      "namaTp": "Peserta didik dapat mengidentifikasi dan menggunakan majas yang sesuai dalam kalimat atau teks sederhana.",
+      "cp": "Menulis Majas",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-8.2",
+      "source": "kurikulum-bin-kelas5",
+      "element": "Menulis Majas",
+      "orderAsal": 82
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 16,
+      "namaTp": "Peserta didik dapat membedakan makna denotatif dan konotatif pada kata atau frasa dalam teks.",
+      "cp": "Menulis Majas",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-8.3",
+      "source": "kurikulum-bin-kelas5",
+      "element": "Menulis Majas",
+      "orderAsal": 83
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 17,
+      "namaTp": "Peserta didik dapat menjelaskan pengertian, ciri-ciri, jenis (nonfiksi murni dan nonfiksi kreatif), struktur, dan unsur karya nonfiksi.",
+      "cp": "Informasi dari Teks Nonfiksi",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-9.1",
+      "source": "kurikulum-bin-kelas5",
+      "element": "Informasi dari Teks Nonfiksi",
+      "orderAsal": 91
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 18,
+      "namaTp": "Peserta didik dapat memilah informasi penting dari teks nonfiksi dengan teknik membaca sekilas (skimming) dan membaca memindai (scanning).",
+      "cp": "Informasi dari Teks Nonfiksi",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-9.2",
+      "source": "kurikulum-bin-kelas5",
+      "element": "Informasi dari Teks Nonfiksi",
+      "orderAsal": 92
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 19,
+      "namaTp": "Peserta didik dapat menjelaskan pengertian, ciri-ciri, dan struktur pantun (sampiran dan isi; pola sajak).",
+      "cp": "Pantun",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-10.1",
+      "source": "kurikulum-bin-kelas5",
+      "element": "Pantun",
+      "orderAsal": 101
+    },
+    {
+      "mapel": "Bahasa Indonesia",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 20,
+      "namaTp": "Peserta didik dapat membedakan jenis pantun (nasihat, jenaka, agama, peribahasa, teka-teki) dan menyusun pantun sederhana sesuai jenisnya.",
+      "cp": "Pantun",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BIN-10.2",
+      "source": "kurikulum-bin-kelas5",
+      "element": "Pantun",
+      "orderAsal": 102
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 1,
+      "namaTp": "Peserta didik dapat menyebutkan nama mata pelajaran dan hobi dalam bahasa Inggris (history, math, geography, English, music, art, PE, science, dan kegiatan sejenis).",
+      "cp": "Interests and Hobbies",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-S1.1",
+      "source": "buku-eng-kelas5-contents",
+      "element": "Interests and Hobbies",
+      "orderAsal": 1
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 2,
+      "namaTp": "Peserta didik dapat menggunakan kata sifat interesting, boring, easy, dan hard untuk menyatakan minat atau penilaian terhadap mata pelajaran/hobi.",
+      "cp": "Interests and Hobbies",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-S1.2",
+      "source": "buku-eng-kelas5-contents",
+      "element": "Interests and Hobbies",
+      "orderAsal": 2
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 3,
+      "namaTp": "Peserta didik dapat memahami dan menyebutkan waktu dalam bahasa Inggris (o'clock, half past, a quarter past, a quarter to, a.m., p.m.).",
+      "cp": "Busy Weekends",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-S2.1",
+      "source": "buku-eng-kelas5-contents",
+      "element": "Busy Weekends",
+      "orderAsal": 3
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 4,
+      "namaTp": "Peserta didik dapat menyebutkan kegiatan akhir pekan (play a game, study, sing songs, coloring) dan perasaan terkait (bored, excited, tired).",
+      "cp": "Busy Weekends",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-S2.2",
+      "source": "buku-eng-kelas5-contents",
+      "element": "Busy Weekends",
+      "orderAsal": 4
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 5,
+      "namaTp": "Peserta didik dapat mengidentifikasi bahan benda (plastic, metal, glass, card, paper, wood, glue) dan sifatnya (heavy, light, soft, hard) dalam bahasa Inggris.",
+      "cp": "The Science Competition",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-1.1",
+      "source": "buku-eng-kelas5-contents",
+      "element": "The Science Competition",
+      "orderAsal": 5
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 6,
+      "namaTp": "Peserta didik dapat mengenali bunyi fonik awal pl, bl, pr, br, sl, sw, sm, sn pada kata-kata sederhana (mis. plastic, black, project, bridge, slow, swim, small, snow).",
+      "cp": "The Science Competition",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-1.2",
+      "source": "buku-eng-kelas5-contents",
+      "element": "The Science Competition",
+      "orderAsal": 6
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 7,
+      "namaTp": "Peserta didik dapat menyebutkan bagian tubuh dinosaurus dalam bahasa Inggris (head, neck, teeth, wing, tail).",
+      "cp": "Dinosaurs",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-2.1",
+      "source": "buku-eng-kelas5-contents",
+      "element": "Dinosaurs",
+      "orderAsal": 7
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 8,
+      "namaTp": "Peserta didik dapat mendeskripsikan dinosaurus dengan kata sifat famous, dangerous, interesting, dan popular, termasuk perbandingan sederhana.",
+      "cp": "Dinosaurs",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-2.2",
+      "source": "buku-eng-kelas5-contents",
+      "element": "Dinosaurs",
+      "orderAsal": 8
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 9,
+      "namaTp": "Peserta didik dapat menyebutkan empat musim (spring, summer, autumn, winter) dan dua belas bulan (January–December) dalam bahasa Inggris.",
+      "cp": "Festivals and Holidays",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-3.1",
+      "source": "buku-eng-kelas5-contents",
+      "element": "Festivals and Holidays",
+      "orderAsal": 9
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 10,
+      "namaTp": "Peserta didik dapat menghubungkan bulan atau musim dengan konteks perayaan/liburan sederhana (mis. New Year di winter).",
+      "cp": "Festivals and Holidays",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-3.2",
+      "source": "buku-eng-kelas5-contents",
+      "element": "Festivals and Holidays",
+      "orderAsal": 10
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 11,
+      "namaTp": "Peserta didik dapat menggunakan angka urut (1st–31st) untuk menyatakan tanggal, termasuk tanggal ulang tahun.",
+      "cp": "The Birthday Party",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-4.1",
+      "source": "buku-eng-kelas5-contents",
+      "element": "The Birthday Party",
+      "orderAsal": 11
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 12,
+      "namaTp": "Peserta didik dapat menyebutkan kegiatan pesta (play games, make snacks, do magic) dan tempat terkait (restaurant, cinema, circus).",
+      "cp": "The Birthday Party",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-4.2",
+      "source": "buku-eng-kelas5-contents",
+      "element": "The Birthday Party",
+      "orderAsal": 12
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 13,
+      "namaTp": "Peserta didik dapat menyebutkan nama-nama pekerjaan dalam bahasa Inggris (businessman/businesswoman, secretary, cook, waiter/waitress, engineer, fireman, policeman/policewoman).",
+      "cp": "Off to Work",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-5.1",
+      "source": "buku-eng-kelas5-contents",
+      "element": "Off to Work",
+      "orderAsal": 13
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 14,
+      "namaTp": "Peserta didik dapat menghubungkan pekerjaan dengan tempat kerjanya (office, factory, fire station, police station, university).",
+      "cp": "Off to Work",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-5.2",
+      "source": "buku-eng-kelas5-contents",
+      "element": "Off to Work",
+      "orderAsal": 14
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 15,
+      "namaTp": "Peserta didik dapat menyebutkan arah mata angin (north, south, east, west) dan tempat umum (bus stop, hotel, museum, post office, theater, hospital).",
+      "cp": "Getting Around",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-6.1",
+      "source": "buku-eng-kelas5-contents",
+      "element": "Getting Around",
+      "orderAsal": 15
+    },
+    {
+      "mapel": "Bahasa Inggris",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 16,
+      "namaTp": "Peserta didik dapat memahami dan menyusun petunjuk jalan sederhana (go straight, turn left/right, on the corner, walk one block, cross the road).",
+      "cp": "Getting Around",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ENG-6.2",
+      "source": "buku-eng-kelas5-contents",
+      "element": "Getting Around",
+      "orderAsal": 16
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 1,
+      "namaTp": "Menyimak dan memahami isi teks geguritan (pupuh magatru, maskumambang) serta wawangsalan/tatarucingan yang diperdengarkan dengan respons yang tepat.",
+      "cp": "Menyimak",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-S.1",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Menyimak",
+      "orderAsal": 1
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 2,
+      "namaTp": "Menyimak sajak Sunda dan syair lagu (kawih) sederhana, lalu menyebutkan gagasan pokok dan pesan yang disampaikan.",
+      "cp": "Menyimak",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-S.2",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Menyimak",
+      "orderAsal": 2
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 3,
+      "namaTp": "Menyimak teks eksposisi dan argumentasi sederhana berbahasa Sunda, lalu mencatat informasi penting dan alasan pendukung yang disampaikan.",
+      "cp": "Menyimak",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-S.3",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Menyimak",
+      "orderAsal": 3
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 4,
+      "namaTp": "Membaca dan memahami teks geguritan (pupuh magatru) sederhana berbahasa Sunda serta mengidentifikasi strukturnya.",
+      "cp": "Membaca dan Memirsa",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-B.1",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Membaca dan Memirsa",
+      "orderAsal": 4
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 5,
+      "namaTp": "Membaca dan memahami teks sajak Sunda sederhana, mengidentifikasi ciri sajak, serta mengenal perkembangan sajak Sunda.",
+      "cp": "Membaca dan Memirsa",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-B.2",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Membaca dan Memirsa",
+      "orderAsal": 5
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 6,
+      "namaTp": "Membaca dan memahami teks eksposisi sederhana berbahasa Sunda tentang ragam makanan khas tradisional Sunda.",
+      "cp": "Membaca dan Memirsa",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-B.3",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Membaca dan Memirsa",
+      "orderAsal": 6
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 7,
+      "namaTp": "Membaca dan memahami teks argumentasi sederhana dalam bahasa Sunda serta mengidentifikasi ciri dan strukturnya.",
+      "cp": "Membaca dan Memirsa",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-B.4",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Membaca dan Memirsa",
+      "orderAsal": 7
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 8,
+      "namaTp": "Menghafal, mengidentifikasi, dan membaca aksara swara (u, o), aksara ngalagena (ja, nya, ta, da), serta rarangkén (panolong, pamepet, paneuleung, pamaèh) beserta fungsinya dengan benar.",
+      "cp": "Membaca dan Memirsa",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-B.5",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Membaca dan Memirsa",
+      "orderAsal": 8
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 9,
+      "namaTp": "Menyanyikan teks geguritan (pupuh magatru dan pupuh maskumambang) serta mendiskusikan isinya secara santun.",
+      "cp": "Berbicara dan Menyajikan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-P.1",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Berbicara dan Menyajikan",
+      "orderAsal": 9
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 10,
+      "namaTp": "Membaca dan mendeklamasikan sajak Sunda sederhana dengan intonasi dan ekspresi yang sesuai.",
+      "cp": "Berbicara dan Menyajikan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-P.2",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Berbicara dan Menyajikan",
+      "orderAsal": 10
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 11,
+      "namaTp": "Berbicara dan berdiskusi tentang makanan tradisional khas Sunda menggunakan bahasa Sunda yang komunikatif.",
+      "cp": "Berbicara dan Menyajikan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-P.3",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Berbicara dan Menyajikan",
+      "orderAsal": 11
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 12,
+      "namaTp": "Menjelaskan isi teks argumentasi sederhana berbahasa Sunda secara lisan dengan alasan yang runtut.",
+      "cp": "Berbicara dan Menyajikan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-P.4",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Berbicara dan Menyajikan",
+      "orderAsal": 12
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 13,
+      "namaTp": "Menuliskan perbandingan teks geguritan dengan tatarucingan dan wawangsalan dalam bahasa Sunda sederhana.",
+      "cp": "Menulis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-T.1",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Menulis",
+      "orderAsal": 13
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 14,
+      "namaTp": "Membedakan makna kata denotatif dan konotatif serta menulis dan menggunakan kata jadian dalam kalimat bahasa Sunda.",
+      "cp": "Menulis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-T.2",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Menulis",
+      "orderAsal": 14
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 15,
+      "namaTp": "Menuliskan dan mengenal istilah tempat atau geografi dalam bahasa Sunda serta menyusun kalimat keadaan (kalimah kaayaan) sederhana.",
+      "cp": "Menulis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-T.3",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Menulis",
+      "orderAsal": 15
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 16,
+      "namaTp": "Menuliskan kata, frasa, dan kalimat sederhana berbahasa Sunda mengenai buah-buahan, umbi, dan makanan tradisional khas Sunda, serta menulis syair lagu sederhana tentang makanan khas Sunda.",
+      "cp": "Menulis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-T.4",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Menulis",
+      "orderAsal": 16
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 17,
+      "namaTp": "Menyusun dan menuliskan kalimat argumentatif sederhana, membedakan serta mengubah kalimat aktif dan pasif, dan menggunakan sinonim dalam bahasa Sunda.",
+      "cp": "Menulis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-T.5",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Menulis",
+      "orderAsal": 17
+    },
+    {
+      "mapel": "Bahasa Sunda",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 18,
+      "namaTp": "Menuliskan aksara swara (u, o), aksara ngalagena (ja, nya, ta, da), dan rarangkén (panolong, pamepet, paneuleung, pamaèh) dengan tepat serta menerapkannya dalam kata atau kalimat sederhana.",
+      "cp": "Menulis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "BS-T.6",
+      "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
+      "element": "Menulis",
+      "orderAsal": 18
+    },
+    {
+      "mapel": "IPAS",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 1,
+      "namaTp": "Mengukur dan membandingkan respons tubuh (detak jantung, frekuensi napas) sebelum dan sesudah aktivitas fisik, lalu merefleksikan kaitannya dengan kebiasaan menjaga kesehatan diri sendiri.",
+      "cp": "Sistem Organ Tubuh dan Kesehatan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "IPAS-1.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Sistem Organ Tubuh dan Kesehatan",
+      "orderAsal": 1
+    },
+    {
+      "mapel": "IPAS",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 2,
+      "namaTp": "Menjelaskan struktur dan fungsi dasar organ-organ utama tubuh manusia (jantung, paru-paru, organ pencernaan) menggunakan model atau diagram sebagai pengetahuan pendukung.",
+      "cp": "Sistem Organ Tubuh dan Kesehatan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "IPAS-1.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Sistem Organ Tubuh dan Kesehatan",
+      "orderAsal": 2
+    },
+    {
+      "mapel": "IPAS",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 3,
+      "namaTp": "Mengamati komponen biotik dan abiotik di satu area lingkungan serta mengidentifikasi kemungkinan hubungan atau pengaruh antarkomponen tersebut.",
+      "cp": "Ekosistem",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "IPAS-2.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Ekosistem",
+      "orderAsal": 3
+    },
+    {
+      "mapel": "IPAS",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 4,
+      "namaTp": "Merencanakan dan melaksanakan percobaan sederhana untuk menguji pengaruh satu faktor lingkungan terhadap pertumbuhan tanaman, dengan panduan yang dikurangi secara bertahap menuju kemandirian.",
+      "cp": "Ekosistem",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "IPAS-2.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Ekosistem",
+      "orderAsal": 4
+    },
+    {
+      "mapel": "IPAS",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 5,
+      "namaTp": "Melakukan eksperimen tentang perambatan bunyi dan pemantulan cahaya pada berbagai bahan atau permukaan, lalu menjelaskan kaitannya dengan fenomena sehari-hari.",
+      "cp": "Gelombang Bunyi dan Cahaya",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "IPAS-3.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Gelombang Bunyi dan Cahaya",
+      "orderAsal": 5
+    },
+    {
+      "mapel": "IPAS",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 6,
+      "namaTp": "Menjelaskan letak dan kondisi geografis Indonesia (posisi antara dua benua dan dua samudra, bentang kepulauan) menggunakan peta konvensional atau digital.",
+      "cp": "Letak Geografis Indonesia",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "IPAS-4.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Letak Geografis Indonesia",
+      "orderAsal": 6
+    },
+    {
+      "mapel": "IPAS",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 7,
+      "namaTp": "Menumbuhkan rasa ingin tahu terhadap sejarah perjuangan dan keragaman budaya di lingkungan sekitar tempat tinggal, dengan merujuk pembelajaran pada Pendidikan Pancasila.",
+      "cp": "Sejarah dan Keragaman Budaya",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "IPAS-5.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Sejarah dan Keragaman Budaya",
+      "orderAsal": 7
+    },
+    {
+      "mapel": "IPAS",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 8,
+      "namaTp": "Mengamati dan mengklasifikasikan jenis-jenis kegiatan ekonomi (produksi, distribusi, konsumsi) di lingkungan sekitar rumah atau sekolah.",
+      "cp": "Kegiatan Ekonomi Masyarakat",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "IPAS-6.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Kegiatan Ekonomi Masyarakat",
+      "orderAsal": 8
+    },
+    {
+      "mapel": "Kemuhammadiyahan",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 1,
+      "namaTp": "Memahami karakter pelajar Muhammadiyah",
+      "cp": "Manhaj",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "KMDY-M.1",
+      "source": null,
+      "element": "Manhaj",
+      "orderAsal": 1
+    },
+    {
+      "mapel": "Kemuhammadiyahan",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 2,
+      "namaTp": "Memahami sejarah berdirinya Muhammadiyah dan Aisyiyah, serta organisasi otonom Muhammadiyah",
+      "cp": "Sejarah",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "KMDY-S.1",
+      "source": null,
+      "element": "Sejarah",
+      "orderAsal": 2
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 1,
+      "namaTp": "Membaca, menulis, menentukan nilai tempat, serta membandingkan dan mengurutkan bilangan cacah sampai 100.000.",
+      "cp": "Bilangan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-B.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Bilangan",
+      "orderAsal": 1
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 2,
+      "namaTp": "Melakukan operasi pengurangan bersusun dengan peminjaman berganda secara konsisten dan akurat.",
+      "cp": "Bilangan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-B.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Bilangan",
+      "orderAsal": 2
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 3,
+      "namaTp": "Melakukan operasi pembagian bersusun dengan pembagi lebih dari satu digit secara konsisten dan akurat.",
+      "cp": "Bilangan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-B.3",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Bilangan",
+      "orderAsal": 3
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 4,
+      "namaTp": "Menyelesaikan masalah sehari-hari yang berkaitan dengan KPK dan FPB.",
+      "cp": "Bilangan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-B.4",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Bilangan",
+      "orderAsal": 4
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 5,
+      "namaTp": "Menyelesaikan masalah sehari-hari yang berkaitan dengan uang (transaksi, kembalian, perbandingan harga) menggunakan operasi hitung bilangan cacah.",
+      "cp": "Bilangan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-B.5",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Bilangan",
+      "orderAsal": 5
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 6,
+      "namaTp": "Membandingkan, mengurutkan, dan mengoperasikan penjumlahan serta pengurangan pecahan, termasuk pecahan campuran.",
+      "cp": "Bilangan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-B.6",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Bilangan",
+      "orderAsal": 6
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 7,
+      "namaTp": "Melakukan operasi perkalian dan pembagian pecahan dengan bilangan asli, serta mengubah pecahan ke bentuk pecahan lain yang setara.",
+      "cp": "Bilangan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-B.7",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Bilangan",
+      "orderAsal": 7
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 8,
+      "namaTp": "Memahami simbol kesetaraan sebagai hubungan antara dua nilai, bukan sekadar penanda hasil.",
+      "cp": "Aljabar",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-A.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Aljabar",
+      "orderAsal": 8
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 9,
+      "namaTp": "Menemukan nilai yang belum diketahui dalam kalimat matematika yang melibatkan keempat operasi hitung pada bilangan cacah sampai 1.000.",
+      "cp": "Aljabar",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-A.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Aljabar",
+      "orderAsal": 9
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 10,
+      "namaTp": "Mengidentifikasi, meniru, dan mengembangkan pola bilangan membesar dan mengecil yang melibatkan perkalian dan pembagian.",
+      "cp": "Aljabar",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-A.3",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Aljabar",
+      "orderAsal": 10
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 11,
+      "namaTp": "Bernalar secara proporsional untuk menyelesaikan masalah sehari-hari dengan rasio satuan sederhana.",
+      "cp": "Aljabar",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-A.4",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Aljabar",
+      "orderAsal": 11
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 12,
+      "namaTp": "Menentukan keliling dan luas persegi, persegi panjang, dan segitiga melalui pemahaman konsep pengukuran, bukan rumus hafalan.",
+      "cp": "Pengukuran",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-U.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Pengukuran",
+      "orderAsal": 12
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 13,
+      "namaTp": "Menentukan keliling dan luas segi banyak sederhana serta bangun gabungan dari bangun-bangun dasar.",
+      "cp": "Pengukuran",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-U.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Pengukuran",
+      "orderAsal": 13
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 14,
+      "namaTp": "Menghitung durasi waktu termasuk konversi antarsatuan dan situasi lintas tengah malam.",
+      "cp": "Pengukuran",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-U.3",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Pengukuran",
+      "orderAsal": 14
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 15,
+      "namaTp": "Mengukur besar sudut pada bangun datar dan mengklasifikasikan jenis sudut (lancip, siku-siku, tumpul).",
+      "cp": "Pengukuran",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-U.4",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Pengukuran",
+      "orderAsal": 15
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 16,
+      "namaTp": "Mengonstruksi dan mengurai bangun ruang (kubus dan balok) melalui manipulasi fisik, serta mengenali visualisasi spasial dari berbagai sisi.",
+      "cp": "Geometri",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-G.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Geometri",
+      "orderAsal": 16
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 17,
+      "namaTp": "Membandingkan karakteristik antarbangun datar dan antarbangun ruang berdasarkan jumlah sisi, rusuk, dan titik sudut.",
+      "cp": "Geometri",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-G.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Geometri",
+      "orderAsal": 17
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 18,
+      "namaTp": "Menentukan lokasi pada peta atau bidang yang menggunakan sistem berpetak (koordinat sederhana).",
+      "cp": "Geometri",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-G.3",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Geometri",
+      "orderAsal": 18
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 19,
+      "namaTp": "Mengurutkan, membandingkan, dan menyajikan data hasil pengukuran atau pengamatan dalam bentuk piktogram, diagram batang, dan tabel frekuensi.",
+      "cp": "Analisis Data dan Peluang",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-D.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Analisis Data dan Peluang",
+      "orderAsal": 19
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 20,
+      "namaTp": "Mengenal secara informal konsep nilai rata-rata, nilai tengah, dan nilai yang paling sering muncul dari sekumpulan data sederhana.",
+      "cp": "Analisis Data dan Peluang",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-D.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Analisis Data dan Peluang",
+      "orderAsal": 20
+    },
+    {
+      "mapel": "Matematika",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 21,
+      "namaTp": "Menentukan kejadian dengan kemungkinan lebih besar atau lebih kecil melalui eksplorasi konkret.",
+      "cp": "Analisis Data dan Peluang",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MTK-D.3",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Analisis Data dan Peluang",
+      "orderAsal": 21
+    },
+    {
+      "mapel": "Pendidikan Pancasila",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 1,
+      "namaTp": "Menceritakan kronologi sejarah kelahiran Pancasila secara berurutan menggunakan kata-kata sendiri.",
+      "cp": "Pancasila",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "PP-1.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Pancasila",
+      "orderAsal": 1
+    },
+    {
+      "mapel": "Pendidikan Pancasila",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 2,
+      "namaTp": "Menunjukkan perilaku yang meneladani satu sikap spesifik tokoh perumus Pancasila secara konsisten dalam keseharian di sekolah.",
+      "cp": "Pancasila",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "PP-1.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Pancasila",
+      "orderAsal": 2
+    },
+    {
+      "mapel": "Pendidikan Pancasila",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 3,
+      "namaTp": "Mengenali kehadiran nilai-nilai kelima sila secara bersamaan dalam satu situasi sosial yang akrab dengan keseharian siswa.",
+      "cp": "Pancasila",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "PP-1.3",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Pancasila",
+      "orderAsal": 3
+    },
+    {
+      "mapel": "Pendidikan Pancasila",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 4,
+      "namaTp": "Menjelaskan gagasan pokok pada setiap alinea Pembukaan UUD 1945 dengan kata-kata sendiri.",
+      "cp": "UUD 1945",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "PP-2.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "UUD 1945",
+      "orderAsal": 4
+    },
+    {
+      "mapel": "Pendidikan Pancasila",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 5,
+      "namaTp": "Mengidentifikasi contoh norma, hak, dan kewajiban dalam lingkup keluarga dan sekolah sebagai dasar menjadi warga negara yang baik.",
+      "cp": "UUD 1945",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "PP-2.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "UUD 1945",
+      "orderAsal": 5
+    },
+    {
+      "mapel": "Pendidikan Pancasila",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 6,
+      "namaTp": "Mempraktikkan musyawarah untuk membuat kesepakatan dan aturan bersama di lingkungan kelas, serta menerapkannya secara konsisten.",
+      "cp": "UUD 1945",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "PP-2.3",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "UUD 1945",
+      "orderAsal": 6
+    },
+    {
+      "mapel": "Pendidikan Pancasila",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 7,
+      "namaTp": "Mengumpulkan dan menyajikan informasi tentang keberagaman budaya asal keluarga teman-teman sekelas.",
+      "cp": "Bhinneka Tunggal Ika",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "PP-3.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Bhinneka Tunggal Ika",
+      "orderAsal": 7
+    },
+    {
+      "mapel": "Pendidikan Pancasila",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 8,
+      "namaTp": "Menunjukkan sikap menghormati dan menjaga keberagaman budaya yang ditemukan di lingkungan sekitar melalui perilaku konkret sehari-hari.",
+      "cp": "Bhinneka Tunggal Ika",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "PP-3.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Bhinneka Tunggal Ika",
+      "orderAsal": 8
+    },
+    {
+      "mapel": "Pendidikan Pancasila",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 9,
+      "namaTp": "Menunjukkan rasa ingin tahu terhadap sejarah lingkungan tempat tinggal sebagai bagian dari keberagaman dan dinamika sejarah bangsa.",
+      "cp": "Bhinneka Tunggal Ika",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "PP-3.3",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Bhinneka Tunggal Ika",
+      "orderAsal": 9
+    },
+    {
+      "mapel": "Pendidikan Pancasila",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 10,
+      "namaTp": "Mengenal letak kabupaten atau kota dan provinsi tempat tinggal sebagai bagian dari wilayah Negara Kesatuan Republik Indonesia menggunakan peta.",
+      "cp": "NKRI",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "PP-4.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "NKRI",
+      "orderAsal": 10
+    },
+    {
+      "mapel": "Pendidikan Pancasila",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 11,
+      "namaTp": "Menunjukkan perilaku gotong royong yang menjaga persatuan di lingkungan sekolah melalui kegiatan nyata.",
+      "cp": "NKRI",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "PP-4.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "NKRI",
+      "orderAsal": 11
+    },
+    {
+      "mapel": "Seni Budaya",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 1,
+      "namaTp": "Mengenali dan menirukan pola irama sederhana menggunakan anggota tubuh dan alat musik ritmis yang tersedia di sekolah.",
+      "cp": "Semester 1 — Fondasi Irama",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MUS-1.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Semester 1 — Fondasi Irama",
+      "orderAsal": 1
+    },
+    {
+      "mapel": "Seni Budaya",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 2,
+      "namaTp": "Menjelaskan unsur rupa dan prinsip desain yang ditemukan pada benda nyata di sekitar sekolah, lalu mengapresiasi, menguji teknik, menciptakan, dan memajang karya berdasarkan pengamatan langsung.",
+      "cp": "Proyek 1 — Tekstur dan Lingkungan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "RUP-1.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Proyek 1 — Tekstur dan Lingkungan",
+      "orderAsal": 1
+    },
+    {
+      "mapel": "Seni Budaya",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 3,
+      "namaTp": "Mengenal istilah musik dasar (tempo, dinamika, ritme) melalui pengalaman langsung.",
+      "cp": "Semester 1 — Fondasi Irama",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MUS-1.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Semester 1 — Fondasi Irama",
+      "orderAsal": 2
+    },
+    {
+      "mapel": "Seni Budaya",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 4,
+      "namaTp": "Menguji coba variasi teknik penggunaan alat dan bahan untuk membuat karya yang mewakili pengalaman atau perasaan pribadi melalui rangkaian mengalami, mengapresiasi, dan berpikir artistik.",
+      "cp": "Proyek 2 — Warna dan Ekspresi",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "RUP-2.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Proyek 2 — Warna dan Ekspresi",
+      "orderAsal": 2
+    },
+    {
+      "mapel": "Seni Budaya",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 5,
+      "namaTp": "Memberikan umpan balik sederhana terhadap penampilan musik teman menggunakan istilah dasar yang telah dikenal.",
+      "cp": "Semester 1 — Fondasi Irama",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MUS-1.3",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Semester 1 — Fondasi Irama",
+      "orderAsal": 3
+    },
+    {
+      "mapel": "Seni Budaya",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 6,
+      "namaTp": "Mengenal simbol notasi musik paling dasar (not panjang dan pendek) sebagai pengantar literasi musik bertahap.",
+      "cp": "Semester 2 — Notasi dan Penciptaan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MUS-2.1",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Semester 2 — Notasi dan Penciptaan",
+      "orderAsal": 4
+    },
+    {
+      "mapel": "Seni Budaya",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 7,
+      "namaTp": "Mengeksplorasi bunyi dari material sederhana di lingkungan sekitar untuk menemukan variasi bunyi.",
+      "cp": "Semester 2 — Notasi dan Penciptaan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MUS-2.2",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Semester 2 — Notasi dan Penciptaan",
+      "orderAsal": 5
+    },
+    {
+      "mapel": "Seni Budaya",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 8,
+      "namaTp": "Membuat dan mengembangkan pola irama sederhana berdasarkan idiom musik dari daerah asal keluarga masing-masing siswa.",
+      "cp": "Semester 2 — Notasi dan Penciptaan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MUS-2.3",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Semester 2 — Notasi dan Penciptaan",
+      "orderAsal": 6
+    },
+    {
+      "mapel": "Seni Budaya",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 9,
+      "namaTp": "Menunjukkan minat dan rasa ingin tahu dalam kegiatan bermusik sebagai indikator keberhasilan proses, bukan vonis bakat individual.",
+      "cp": "Semester 2 — Notasi dan Penciptaan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "MUS-2.4",
+      "source": "Dokumen 2 Kelas 5 Fase C, 2026",
+      "element": "Semester 2 — Notasi dan Penciptaan",
+      "orderAsal": 7
+    },
+    {
+      "mapel": "Bahasa Arab",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 1,
+      "namaTp": "Memahami ungkapan sapaan perjumpaan serta pertanyaan dan jawaban sederhana yang disimak, lalu memilih respons yang tepat.",
+      "cp": "Menyimak",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ARB-M.1",
+      "source": "Buku Bahasa Arab Kelas 5 Fase C",
+      "element": "Menyimak",
+      "orderAsal": 1
+    },
+    {
+      "mapel": "Bahasa Arab",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 2,
+      "namaTp": "Mengucapkan ungkapan sapaan perjumpaan serta pertanyaan dan jawaban sederhana dalam percakapan berpasangan dengan lafal yang jelas.",
+      "cp": "Berbicara",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ARB-K.1",
+      "source": "Buku Bahasa Arab Kelas 5 Fase C",
+      "element": "Berbicara",
+      "orderAsal": 2
+    },
+    {
+      "mapel": "Bahasa Arab",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 3,
+      "namaTp": "Membaca dan memahami ungkapan sapaan perjumpaan serta pertanyaan dan jawaban sederhana dalam dialog pendek.",
+      "cp": "Membaca",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ARB-Q.1",
+      "source": "Buku Bahasa Arab Kelas 5 Fase C",
+      "element": "Membaca",
+      "orderAsal": 3
+    },
+    {
+      "mapel": "Bahasa Arab",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 4,
+      "namaTp": "Menulis ungkapan sapaan perjumpaan serta pertanyaan dan jawaban sederhana sesuai dengan kaidah penulisan.",
+      "cp": "Menulis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ARB-T.1",
+      "source": "Buku Bahasa Arab Kelas 5 Fase C",
+      "element": "Menulis",
+      "orderAsal": 4
+    },
+    {
+      "mapel": "Bahasa Arab",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 5,
+      "namaTp": "Memahami ungkapan sapaan perpisahan serta pertanyaan dan jawaban sederhana yang disimak, lalu memilih respons yang tepat.",
+      "cp": "Menyimak",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ARB-M.2",
+      "source": "Buku Bahasa Arab Kelas 5 Fase C",
+      "element": "Menyimak",
+      "orderAsal": 5
+    },
+    {
+      "mapel": "Bahasa Arab",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 6,
+      "namaTp": "Mengucapkan ungkapan sapaan perpisahan serta pertanyaan dan jawaban sederhana dalam percakapan berpasangan dengan lafal yang jelas.",
+      "cp": "Berbicara",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ARB-K.2",
+      "source": "Buku Bahasa Arab Kelas 5 Fase C",
+      "element": "Berbicara",
+      "orderAsal": 6
+    },
+    {
+      "mapel": "Bahasa Arab",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 7,
+      "namaTp": "Membaca dan memahami ungkapan sapaan perpisahan serta pertanyaan dan jawaban sederhana dalam dialog pendek.",
+      "cp": "Membaca",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ARB-Q.2",
+      "source": "Buku Bahasa Arab Kelas 5 Fase C",
+      "element": "Membaca",
+      "orderAsal": 7
+    },
+    {
+      "mapel": "Bahasa Arab",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 8,
+      "namaTp": "Menulis ungkapan sapaan perpisahan serta pertanyaan dan jawaban sederhana sesuai dengan kaidah penulisan.",
+      "cp": "Menulis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ARB-T.2",
+      "source": "Buku Bahasa Arab Kelas 5 Fase C",
+      "element": "Menulis",
+      "orderAsal": 8
+    },
+    {
+      "mapel": "Bahasa Arab",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 9,
+      "namaTp": "Memahami pertanyaan dan jawaban sederhana tentang profesi atau pekerjaan yang disimak, serta menyebutkan profesi yang dimaksud.",
+      "cp": "Menyimak",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ARB-M.3",
+      "source": "Buku Bahasa Arab Kelas 5 Fase C",
+      "element": "Menyimak",
+      "orderAsal": 9
+    },
+    {
+      "mapel": "Bahasa Arab",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 10,
+      "namaTp": "Menanyakan dan menyebutkan profesi sendiri maupun orang lain dalam percakapan sederhana dengan lafal yang jelas.",
+      "cp": "Berbicara",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ARB-K.3",
+      "source": "Buku Bahasa Arab Kelas 5 Fase C",
+      "element": "Berbicara",
+      "orderAsal": 10
+    },
+    {
+      "mapel": "Bahasa Arab",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 11,
+      "namaTp": "Membaca dan memahami teks pendek tentang profesi atau pekerjaan beserta pertanyaan dan jawaban sederhananya.",
+      "cp": "Membaca",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ARB-Q.3",
+      "source": "Buku Bahasa Arab Kelas 5 Fase C",
+      "element": "Membaca",
+      "orderAsal": 11
+    },
+    {
+      "mapel": "Bahasa Arab",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 12,
+      "namaTp": "Menulis kalimat sederhana tentang profesi atau pekerjaan sesuai dengan kaidah penulisan.",
+      "cp": "Menulis",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "code": "ARB-T.3",
+      "source": "Buku Bahasa Arab Kelas 5 Fase C",
+      "element": "Menulis",
+      "orderAsal": 12
+    }
+  ]
+}

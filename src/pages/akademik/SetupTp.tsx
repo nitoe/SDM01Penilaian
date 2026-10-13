@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import type { Mapel, TipeTp, TujuanPembelajaran } from '../../types/akademik'
@@ -10,10 +10,13 @@ import {
   getMapelByNama,
   getMapelList,
   getTPList,
+  importTPBatch,
   mapelBerlakuDiTingkatan,
   saveTP,
   validasiLevels,
+  type ModeImporTp,
 } from '../../lib/akademik'
+import { parseTpImport, type TpImportHasil } from '../../lib/tpImport'
 import { aksesMapelTingkatan } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { HeroBanner, Badge } from '../../components/ui'
@@ -88,7 +91,79 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const [cakupan, setCakupan] = useState<{ kunci: string; status: 'boleh' | 'di luar' } | null>(null)
   const [filterMapel, setFilterMapel] = useState('')
   const [filterStatus, setFilterStatus] = useState<'semua' | 'ada' | 'belum'>('semua')
+  const [panelImpor, setPanelImpor] = useState(false)
+  const [pratinjauImpor, setPratinjauImpor] = useState<TpImportHasil | null>(null)
+  const [modeImpor, setModeImpor] = useState<ModeImporTp>('tambah')
+  const [busyImpor, setBusyImpor] = useState(false)
+  const [refreshHub, setRefreshHub] = useState(0)
+  const fileImporRef = useRef<HTMLInputElement>(null)
   const { show, node } = useToast()
+
+  async function bacaFileImpor(file: File) {
+    try {
+      const teks = await file.text()
+      const data = JSON.parse(teks) as unknown
+      const hasil = parseTpImport(data)
+      setPratinjauImpor(hasil)
+      if (!hasil.items.length) show(hasil.peringatan[0] || 'Tidak ada TP di file.', true)
+    } catch (e) {
+      console.error(e)
+      setPratinjauImpor(null)
+      show('File JSON tidak bisa dibaca.', true)
+    }
+  }
+
+  async function jalankanImpor(hanyaMapelTingkatan?: { mapel: string; tingkatan: string }) {
+    if (!pratinjauImpor?.items.length) return
+    let daftar = pratinjauImpor.items
+    if (hanyaMapelTingkatan) {
+      daftar = daftar.filter(
+        (it) => it.mapel === hanyaMapelTingkatan.mapel && it.tingkatan === String(hanyaMapelTingkatan.tingkatan),
+      )
+      if (!daftar.length) {
+        show(`Tidak ada TP ${hanyaMapelTingkatan.mapel} tingkat ${hanyaMapelTingkatan.tingkatan} di file.`, true)
+        return
+      }
+    }
+    // Batasi ke mapel yang user berhak tulis
+    const boleh = new Set(pilihan.map((p) => `${p.mapel}|${p.tingkatan}`))
+    const sebelum = daftar.length
+    daftar = daftar.filter((it) => boleh.has(`${it.mapel}|${it.tingkatan}`) || admin)
+    if (!daftar.length) {
+      show('Tidak ada TP di file yang sesuai penugasan Anda.', true)
+      return
+    }
+    if (daftar.length < sebelum) {
+      show(`${sebelum - daftar.length} TP di luar penugasan dilewati.`)
+    }
+    if (
+      modeImpor === 'ganti' &&
+      !window.confirm(
+        `Mode GANTI akan menghapus TP yang sudah ada untuk pasangan mapel×tingkatan di file, lalu menulis ulang.\n\nLanjutkan impor ${daftar.length} TP?`,
+      )
+    ) {
+      return
+    }
+    setBusyImpor(true)
+    try {
+      const hasil = await importTPBatch(daftar, modeImpor)
+      show(
+        `Impor selesai: ${hasil.ditulis} ditulis` +
+          (hasil.dilewati ? `, ${hasil.dilewati} dilewati (nomor sudah ada)` : '') +
+          (hasil.dihapus ? `, ${hasil.dihapus} dihapus dulu` : '') +
+          '.',
+      )
+      setPratinjauImpor(null)
+      setPanelImpor(false)
+      if (mapel && tingkatan) await muat()
+      else setRefreshHub((n) => n + 1)
+    } catch (e) {
+      console.error(e)
+      show('Gagal mengimpor TP. Periksa hak akses Firestore.', true)
+    } finally {
+      setBusyImpor(false)
+    }
+  }
 
   const kunciCakupan = `${mapel}|${tingkatan}`
   const statusCakupan: 'memeriksa' | 'boleh' | 'di luar' =
@@ -140,7 +215,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [mapel, tingkatan, tulis, admin, pilihan])
+  }, [mapel, tingkatan, tulis, admin, pilihan, refreshHub])
 
   useEffect(() => {
     if (!mapel || !tingkatan || !berhak || (!tulis && !admin)) return
@@ -192,7 +267,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
           </Notice>
         ) : (
           <>
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
               <input
                 type="search"
                 value={filterMapel}
@@ -220,7 +296,92 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                   </button>
                 ))}
               </div>
+              </div>
+              {tulis && (
+                <button type="button" className={btnGhost} onClick={() => setPanelImpor((v) => !v)}>
+                  {panelImpor ? 'Tutup impor' : 'Impor JSON'}
+                </button>
+              )}
             </div>
+
+            {panelImpor && tulis && (
+              <section className="card-soft space-y-3 p-4">
+                <h2 className="text-[14px] font-semibold text-slate-900">Impor Tujuan Pembelajaran</h2>
+                <p className="text-[12.5px] leading-relaxed text-muted">
+                  Unggah file JSON format kurikulum (<code className="text-[11px]">tp[]</code> +{' '}
+                  <code className="text-[11px]">subjectKey</code>) atau format sistem (
+                  <code className="text-[11px]">items[]</code>). Field materi buku diabaikan. Deskripsi level
+                  KKTP yang kosong bisa dilengkapi setelah impor.
+                </p>
+                <input
+                  ref={fileImporRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="block w-full text-[13px] file:mr-3 file:rounded-lg file:border-0 file:bg-muh-50 file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-muh-800"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) void bacaFileImpor(f)
+                    e.target.value = ''
+                  }}
+                />
+                <div className="flex flex-wrap gap-3 text-[12.5px]">
+                  <label className="inline-flex items-center gap-1.5">
+                    <input
+                      type="radio"
+                      name="modeImporHub"
+                      checked={modeImpor === 'tambah'}
+                      onChange={() => setModeImpor('tambah')}
+                    />
+                    Tambah saja (lewati nomor yang sudah ada)
+                  </label>
+                  <label className="inline-flex items-center gap-1.5">
+                    <input
+                      type="radio"
+                      name="modeImporHub"
+                      checked={modeImpor === 'ganti'}
+                      onChange={() => setModeImpor('ganti')}
+                    />
+                    Ganti (hapus dulu TP mapel×tingkatan yang ada di file)
+                  </label>
+                </div>
+                {pratinjauImpor && (
+                  <div className="space-y-2 rounded-xl border border-border bg-slate-50/80 p-3 text-[12.5px]">
+                    <p className="font-semibold text-slate-800">
+                      Pratinjau: {pratinjauImpor.items.length} TP
+                    </p>
+                    <ul className="max-h-36 space-y-0.5 overflow-y-auto text-slate-600">
+                      {Object.entries(pratinjauImpor.ringkasan)
+                        .sort(([a], [b]) => a.localeCompare(b, 'id'))
+                        .map(([k, n]) => (
+                          <li key={k}>
+                            {k.replace('|', ' · tingkat ')} — {n} TP
+                          </li>
+                        ))}
+                    </ul>
+                    {pratinjauImpor.peringatan.length > 0 && (
+                      <Notice tone="warn">
+                        <ul className="list-inside list-disc">
+                          {pratinjauImpor.peringatan.slice(0, 8).map((p, i) => (
+                            <li key={i}>{p}</li>
+                          ))}
+                          {pratinjauImpor.peringatan.length > 8 && (
+                            <li>…dan {pratinjauImpor.peringatan.length - 8} peringatan lain</li>
+                          )}
+                        </ul>
+                      </Notice>
+                    )}
+                    <button
+                      type="button"
+                      className={btnPrimary}
+                      disabled={busyImpor || !pratinjauImpor.items.length}
+                      onClick={() => void jalankanImpor()}
+                    >
+                      {busyImpor ? 'Mengimpor…' : `Impor ${pratinjauImpor.items.length} TP`}
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {pilihan
                 .filter((p) => {
@@ -384,6 +545,9 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
           >
             + Tambah TP
           </button>
+          <button type="button" className={btnGhost} onClick={() => setPanelImpor((v) => !v)}>
+            {panelImpor ? 'Tutup impor' : 'Impor JSON'}
+          </button>
           <Link
             to={`/akademik/bobot-semester?mapel=${encodeURIComponent(mapel)}&tingkatan=${tingkatan}`}
             className={`${btnGhost} no-underline`}
@@ -391,6 +555,84 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
             Atur semester &amp; bobot
           </Link>
         </div>
+      )}
+
+      {panelImpor && tulis && !form && (
+        <section className="card-soft space-y-3 p-4">
+          <h2 className="text-[14px] font-semibold text-slate-900">
+            Impor TP — {mapel} tingkat {tingkatan}
+          </h2>
+          <p className="text-[12.5px] leading-relaxed text-muted">
+            Hanya baris yang cocok dengan mapel &amp; tingkatan ini yang akan ditulis. Mode ganti hanya
+            menghapus TP pasangan ini.
+          </p>
+          <input
+            type="file"
+            accept="application/json,.json"
+            className="block w-full text-[13px] file:mr-3 file:rounded-lg file:border-0 file:bg-muh-50 file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-muh-800"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) void bacaFileImpor(f)
+              e.target.value = ''
+            }}
+          />
+          <div className="flex flex-wrap gap-3 text-[12.5px]">
+            <label className="inline-flex items-center gap-1.5">
+              <input
+                type="radio"
+                name="modeImporDetail"
+                checked={modeImpor === 'tambah'}
+                onChange={() => setModeImpor('tambah')}
+              />
+              Tambah saja
+            </label>
+            <label className="inline-flex items-center gap-1.5">
+              <input
+                type="radio"
+                name="modeImporDetail"
+                checked={modeImpor === 'ganti'}
+                onChange={() => setModeImpor('ganti')}
+              />
+              Ganti (hapus dulu TP mapel ini)
+            </label>
+          </div>
+          {pratinjauImpor && (
+            <div className="space-y-2 rounded-xl border border-border bg-slate-50/80 p-3 text-[12.5px]">
+              {(() => {
+                const cocok = pratinjauImpor.items.filter(
+                  (it) => it.mapel === mapel && it.tingkatan === String(tingkatan),
+                )
+                return (
+                  <>
+                    <p className="font-semibold text-slate-800">
+                      Cocok untuk {mapel} tingkat {tingkatan}: {cocok.length} dari{' '}
+                      {pratinjauImpor.items.length} TP di file
+                    </p>
+                    {cocok.length > 0 && (
+                      <ul className="max-h-28 space-y-0.5 overflow-y-auto text-slate-600">
+                        {cocok.slice(0, 12).map((it) => (
+                          <li key={`${it.nomorTp}-${it.namaTp.slice(0, 24)}`}>
+                            TP {it.nomorTp}: {it.namaTp.slice(0, 80)}
+                            {it.namaTp.length > 80 ? '…' : ''}
+                          </li>
+                        ))}
+                        {cocok.length > 12 && <li>…dan {cocok.length - 12} lainnya</li>}
+                      </ul>
+                    )}
+                    <button
+                      type="button"
+                      className={btnPrimary}
+                      disabled={busyImpor || cocok.length === 0}
+                      onClick={() => void jalankanImpor({ mapel, tingkatan })}
+                    >
+                      {busyImpor ? 'Mengimpor…' : `Impor ${cocok.length} TP ke sini`}
+                    </button>
+                  </>
+                )
+              })()}
+            </div>
+          )}
+        </section>
       )}
 
       {form && (
