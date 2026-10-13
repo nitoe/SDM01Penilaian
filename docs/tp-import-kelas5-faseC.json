@@ -1,9 +1,9 @@
 {
   "version": "tp-import-1",
-  "sumber": "export-20261013",
+  "sumber": "export-20261013 + Dokumen2_TP_Kelas5_PJOK.docx",
   "tingkatan": "5",
   "fase": "C",
-  "catatan": "Contoh impor TP kelas 5A fase C (dari tujuan-pembelajaran-20261013.json). materiBuku dihapus. Field kelas wajib (5A ≠ 5B). Untuk kelas paralel lain, ubah nilai \"kelas\" di root dan tiap item, atau impor ulang per rombel. Deskripsi level KKTP boleh kosong — dilengkapi di Setup TP.",
+  "catatan": "Contoh impor TP kelas 5A fase C. IPAS: 8 item dari kurikulum. PJOK: 10 item dari Dokumen2_TP_Kelas5_PJOK (koreksi sadar di luar bunyi literal CP). Field kelas wajib (5A ≠ 5B). Deskripsi level KKTP boleh kosong. Impor mode Tambah: nomorTp atau teks namaTp yang sama di mapel×kelas dilewati (tidak ganda).",
   "items": [
     {
       "mapel": "Al-Islam",
@@ -4830,6 +4830,366 @@
       "element": "Menulis",
       "orderAsal": 12,
       "kelas": "5A"
+    },
+    {
+      "mapel": "PJOK",
+      "kelas": "5A",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 1,
+      "namaTp": "Melakukan teknik dasar lari (start, langkah, finis) dan lompat (awalan, tumpuan, mendarat) dengan koreksi teknis eksplisit dari guru, sebagai pemulihan fondasi yang absen dari CP.",
+      "cp": "Terampil Bergerak",
+      "tipe": "kinerja",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "source": "Dokumen2_TP_Kelas5_PJOK.docx",
+      "element": "Terampil Bergerak"
+    },
+    {
+      "mapel": "PJOK",
+      "kelas": "5A",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 2,
+      "namaTp": "Melakukan teknik dasar lempar-tangkap dan menendang dengan akurasi yang meningkat melalui latihan berulang dan terstruktur.",
+      "cp": "Terampil Bergerak",
+      "tipe": "kinerja",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "source": "Dokumen2_TP_Kelas5_PJOK.docx",
+      "element": "Terampil Bergerak"
+    },
+    {
+      "mapel": "PJOK",
+      "kelas": "5A",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 3,
+      "namaTp": "Melakukan rangkaian gerak dasar senam lantai sederhana (guling depan, sikap lilin, keseimbangan) dengan teknik yang benar dan aman.",
+      "cp": "Terampil Bergerak",
+      "tipe": "kinerja",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "source": "Dokumen2_TP_Kelas5_PJOK.docx",
+      "element": "Terampil Bergerak"
+    },
+    {
+      "mapel": "PJOK",
+      "kelas": "5A",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 4,
+      "namaTp": "Berpartisipasi dalam permainan kelompok (bola besar/kecil sederhana) sambil menerapkan satu-dua aturan fair play yang dipahami secara konkret.",
+      "cp": "Belajar Melalui Gerak",
+      "tipe": "kinerja",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "source": "Dokumen2_TP_Kelas5_PJOK.docx",
+      "element": "Belajar Melalui Gerak"
+    },
+    {
+      "mapel": "PJOK",
+      "kelas": "5A",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 5,
+      "namaTp": "Menjalankan satu peran sederhana dalam tim (menyerang/bertahan/mendukung) untuk mendukung keberhasilan kelompok, dengan penekanan pada kerja sama nyata.",
+      "cp": "Belajar Melalui Gerak",
+      "tipe": "kinerja",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "source": "Dokumen2_TP_Kelas5_PJOK.docx",
+      "element": "Belajar Melalui Gerak"
+    },
+    {
+      "mapel": "PJOK",
+      "kelas": "5A",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 6,
+      "namaTp": "Berpartisipasi secara nyata dan terukur dalam aktivitas jasmani terjadwal, dicatat dalam jurnal aktivitas mingguan.",
+      "cp": "Bergaya Hidup Aktif",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "source": "Dokumen2_TP_Kelas5_PJOK.docx",
+      "element": "Bergaya Hidup Aktif"
+    },
+    {
+      "mapel": "PJOK",
+      "kelas": "5A",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 7,
+      "namaTp": "Menjelaskan secara sederhana pengaruh aktivitas fisik teratur terhadap tubuh, berdasarkan pengalaman pribadi dari jurnal aktivitas yang telah dijalani.",
+      "cp": "Bergaya Hidup Aktif",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "source": "Dokumen2_TP_Kelas5_PJOK.docx",
+      "element": "Bergaya Hidup Aktif"
+    },
+    {
+      "mapel": "PJOK",
+      "kelas": "5A",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 8,
+      "namaTp": "Melakukan pemanasan yang sistematis dan tepat (peregangan, mobilisasi sendi) sebelum setiap aktivitas fisik, sebagai kebiasaan wajib yang dipraktikkan secara konsisten.",
+      "cp": "Memilih Hidup yang Menyehatkan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "source": "Dokumen2_TP_Kelas5_PJOK.docx",
+      "element": "Memilih Hidup yang Menyehatkan"
+    },
+    {
+      "mapel": "PJOK",
+      "kelas": "5A",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 9,
+      "namaTp": "Mengenali tanda-tanda cedera ringan dan langkah dasar mencari bantuan orang dewasa/tenaga terpercaya.",
+      "cp": "Memilih Hidup yang Menyehatkan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "source": "Dokumen2_TP_Kelas5_PJOK.docx",
+      "element": "Memilih Hidup yang Menyehatkan"
+    },
+    {
+      "mapel": "PJOK",
+      "kelas": "5A",
+      "tingkatan": "5",
+      "fase": "C",
+      "nomorTp": 10,
+      "namaTp": "Mengidentifikasi makanan sehat sederhana yang menunjang aktivitas fisik berdasarkan pengamatan kandungan gizi pada kemasan makanan sehari-hari.",
+      "cp": "Memilih Hidup yang Menyehatkan",
+      "tipe": "pengetahuan",
+      "bobotSlm": 60,
+      "bobotSas": 40,
+      "levels": [
+        {
+          "min": 0,
+          "maks": 60,
+          "deskripsi": ""
+        },
+        {
+          "min": 61,
+          "maks": 75,
+          "deskripsi": ""
+        },
+        {
+          "min": 76,
+          "maks": 85,
+          "deskripsi": ""
+        },
+        {
+          "min": 86,
+          "maks": 100,
+          "deskripsi": ""
+        }
+      ],
+      "source": "Dokumen2_TP_Kelas5_PJOK.docx",
+      "element": "Memilih Hidup yang Menyehatkan"
     }
   ],
   "kelas": "5A"

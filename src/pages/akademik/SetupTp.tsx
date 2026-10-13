@@ -193,7 +193,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
       const hasil = await importTPBatch(daftar, modeImpor)
       show(
         `Impor selesai: ${hasil.ditulis} ditulis` +
-          (hasil.dilewati ? `, ${hasil.dilewati} dilewati (nomor sudah ada)` : '') +
+          (hasil.dilewati ? `, ${hasil.dilewati} dilewati (nomor/teks TP sama)` : '') +
           (hasil.dihapus ? `, ${hasil.dihapus} dihapus dulu` : '') +
           '.',
       )

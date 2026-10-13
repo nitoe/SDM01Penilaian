@@ -219,9 +219,21 @@ export async function deleteTP(id: string): Promise<void> {
 
 export type ModeImporTp = 'tambah' | 'ganti'
 
+/** Normalisasi teks TP untuk deteksi duplikat (abaikan spasi/tanda baca/kapital). */
+function kunciNamaTp(nama: string): string {
+  return String(nama || '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 /**
  * Impor banyak TP sekaligus.
- * - mode `tambah`: hanya menambah; nomor yang sudah ada di Firestore dilewati.
+ * - mode `tambah`: lewati jika nomorTp ATAU teks namaTp (dinormalisasi) sudah ada di mapel×kelas.
+ *   Duplikat di dalam file yang sama juga dilewati (pertahankan yang pertama).
  * - mode `ganti`: hapus dulu semua TP mapel×kelas yang muncul di payload, lalu tulis ulang.
  * Tidak menyentuh semester/bobotMapel (milik halaman Bobot Semester).
  */
@@ -253,10 +265,29 @@ export async function importTPBatch(
   let dilewati = 0
   let dihapus = 0
 
-  for (const [kunci, daftar] of grup) {
+  for (const [kunci, daftarMentah] of grup) {
     const [mapel, kelas] = kunci.split('|') as [string, string]
+
+    // Dedup di dalam payload: nomorTp sama atau namaTp sama → ambil yang pertama
+    const seenNomorFile = new Set<number>()
+    const seenNamaFile = new Set<string>()
+    const daftar: typeof items = []
+    for (const it of daftarMentah) {
+      const kn = kunciNamaTp(it.namaTp)
+      if (seenNomorFile.has(it.nomorTp) || (kn && seenNamaFile.has(kn))) {
+        dilewati += 1
+        continue
+      }
+      seenNomorFile.add(it.nomorTp)
+      if (kn) seenNamaFile.add(kn)
+      daftar.push(it)
+    }
+
     const existing = await getTPList(mapel, kelas)
     const byNomor = new Map(existing.map((t) => [t.nomorTp, t]))
+    const byNama = new Map(
+      existing.map((t) => [kunciNamaTp(t.namaTp), t] as const).filter(([k]) => k),
+    )
 
     if (mode === 'ganti') {
       for (let i = 0; i < existing.length; i += 400) {
@@ -266,13 +297,19 @@ export async function importTPBatch(
         dihapus += Math.min(400, existing.length - i)
       }
       byNomor.clear()
+      byNama.clear()
     }
 
     const yangAkanDitulis = daftar.filter((it) => {
-      if (mode === 'tambah' && byNomor.has(it.nomorTp)) {
+      if (mode !== 'tambah') return true
+      const kn = kunciNamaTp(it.namaTp)
+      if (byNomor.has(it.nomorTp) || (kn && byNama.has(kn))) {
         dilewati += 1
         return false
       }
+      // Cegah dua item file yang lolos filter internal tetap bentrok dengan yang baru ditulis di batch ini
+      byNomor.set(it.nomorTp, { id: '', nomorTp: it.nomorTp, namaTp: it.namaTp } as TujuanPembelajaran)
+      if (kn) byNama.set(kn, { id: '', nomorTp: it.nomorTp, namaTp: it.namaTp } as TujuanPembelajaran)
       return true
     })
 
