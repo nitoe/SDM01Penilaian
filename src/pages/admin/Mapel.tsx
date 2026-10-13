@@ -26,6 +26,7 @@ export default function SetupMapel({ profile }: Props) {
   const [pesan, setPesan] = useState<string | null>(null)
   const [namaBaru, setNamaBaru] = useState('')
   const [tingkatBaru, setTingkatBaru] = useState<string[]>([...TINGKATAN])
+  const [cari, setCari] = useState('')
 
   const muat = useCallback(async () => {
     setLoading(true)
@@ -156,6 +157,17 @@ export default function SetupMapel({ profile }: Props) {
 
       {pesan && <p className="rounded-xl border border-border bg-white px-3 py-2 text-[12px] text-slate-700">{pesan}</p>}
 
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <input
+          type="search"
+          value={cari}
+          onChange={(e) => setCari(e.target.value)}
+          placeholder="Cari mata pelajaran…"
+          className="w-full rounded-xl border border-border bg-white px-3.5 py-2 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15 sm:max-w-xs"
+        />
+        <p className="text-[11.5px] text-muted">{list.length} mapel</p>
+      </div>
+
       <section className="card-soft overflow-hidden">
         {loading ? (
           <p className="p-6 text-center text-[12px] text-muted">Memuat…</p>
@@ -169,7 +181,9 @@ export default function SetupMapel({ profile }: Props) {
               </tr>
             </thead>
             <tbody>
-              {list.map((m) => (
+              {list
+                .filter((m) => !cari.trim() || m.nama.toLowerCase().includes(cari.trim().toLowerCase()))
+                .map((m) => (
                 <tr key={m.id} className="border-t border-border">
                   <td className="px-3 py-2 font-medium text-slate-900">{m.nama}</td>
                   <td className="px-3 py-2">
