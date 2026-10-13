@@ -3,7 +3,7 @@
   "sumber": "export-20261013",
   "tingkatan": "5",
   "fase": "C",
-  "catatan": "Dihasilkan dari tujuan-pembelajaran-20261013.json. materiBuku dihapus. nomorTp diulang 1..n per mapel (orderAsal disimpan sebagai metadata). Deskripsi level KKTP kosong — guru perlu mengisi di Setup TP.",
+  "catatan": "Contoh impor TP kelas 5A fase C (dari tujuan-pembelajaran-20261013.json). materiBuku dihapus. Field kelas wajib (5A ≠ 5B). Untuk kelas paralel lain, ubah nilai \"kelas\" di root dan tiap item, atau impor ulang per rombel. Deskripsi level KKTP boleh kosong — dilengkapi di Setup TP.",
   "items": [
     {
       "mapel": "Al-Islam",
@@ -40,7 +40,8 @@
       "code": "ISL-Q.1",
       "source": "Buku Al-Islam Kelas 5 Fase C",
       "element": "Al-Qur'an dan Hadis",
-      "orderAsal": 1
+      "orderAsal": 1,
+      "kelas": "5A"
     },
     {
       "mapel": "Al-Islam",
@@ -77,7 +78,8 @@
       "code": "ISL-A.1",
       "source": "Buku Al-Islam Kelas 5 Fase C",
       "element": "Aqidah",
-      "orderAsal": 2
+      "orderAsal": 2,
+      "kelas": "5A"
     },
     {
       "mapel": "Al-Islam",
@@ -114,7 +116,8 @@
       "code": "ISL-AK.1",
       "source": "Buku Al-Islam Kelas 5 Fase C",
       "element": "Akhlak",
-      "orderAsal": 3
+      "orderAsal": 3,
+      "kelas": "5A"
     },
     {
       "mapel": "Al-Islam",
@@ -151,7 +154,8 @@
       "code": "ISL-F.1",
       "source": "Buku Al-Islam Kelas 5 Fase C",
       "element": "Fiqih",
-      "orderAsal": 4
+      "orderAsal": 4,
+      "kelas": "5A"
     },
     {
       "mapel": "Al-Islam",
@@ -188,7 +192,8 @@
       "code": "ISL-S.1",
       "source": "Buku Al-Islam Kelas 5 Fase C",
       "element": "Sejarah Peradaban Islam",
-      "orderAsal": 5
+      "orderAsal": 5,
+      "kelas": "5A"
     },
     {
       "mapel": "Al-Islam",
@@ -225,7 +230,8 @@
       "code": "ISL-Q.2",
       "source": "Buku Al-Islam Kelas 5 Fase C",
       "element": "Al-Qur'an dan Hadis",
-      "orderAsal": 6
+      "orderAsal": 6,
+      "kelas": "5A"
     },
     {
       "mapel": "Al-Islam",
@@ -262,7 +268,8 @@
       "code": "ISL-A.2",
       "source": "Buku Al-Islam Kelas 5 Fase C",
       "element": "Aqidah",
-      "orderAsal": 7
+      "orderAsal": 7,
+      "kelas": "5A"
     },
     {
       "mapel": "Al-Islam",
@@ -299,7 +306,8 @@
       "code": "ISL-AK.2",
       "source": "Buku Al-Islam Kelas 5 Fase C",
       "element": "Akhlak",
-      "orderAsal": 8
+      "orderAsal": 8,
+      "kelas": "5A"
     },
     {
       "mapel": "Al-Islam",
@@ -336,7 +344,8 @@
       "code": "ISL-F.2",
       "source": "Buku Al-Islam Kelas 5 Fase C",
       "element": "Fiqih",
-      "orderAsal": 9
+      "orderAsal": 9,
+      "kelas": "5A"
     },
     {
       "mapel": "Al-Islam",
@@ -373,7 +382,8 @@
       "code": "ISL-S.2",
       "source": "Buku Al-Islam Kelas 5 Fase C",
       "element": "Sejarah Peradaban Islam",
-      "orderAsal": 10
+      "orderAsal": 10,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -410,7 +420,8 @@
       "code": "BIN-S.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Menyimak",
-      "orderAsal": 1
+      "orderAsal": 1,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -447,7 +458,8 @@
       "code": "BIN-S.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Menyimak",
-      "orderAsal": 2
+      "orderAsal": 2,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -484,7 +496,8 @@
       "code": "BIN-B.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Membaca dan Memirsa",
-      "orderAsal": 3
+      "orderAsal": 3,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -521,7 +534,8 @@
       "code": "BIN-B.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Membaca dan Memirsa",
-      "orderAsal": 4
+      "orderAsal": 4,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -558,7 +572,8 @@
       "code": "BIN-P.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Berbicara dan Mempresentasikan",
-      "orderAsal": 5
+      "orderAsal": 5,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -595,7 +610,8 @@
       "code": "BIN-P.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Berbicara dan Mempresentasikan",
-      "orderAsal": 6
+      "orderAsal": 6,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -632,7 +648,8 @@
       "code": "BIN-T.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Menulis",
-      "orderAsal": 7
+      "orderAsal": 7,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -669,7 +686,8 @@
       "code": "BIN-T.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Menulis",
-      "orderAsal": 8
+      "orderAsal": 8,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -706,7 +724,8 @@
       "code": "BIN-T.3",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Menulis",
-      "orderAsal": 9
+      "orderAsal": 9,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -743,7 +762,8 @@
       "code": "BIN-T.4",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Menulis",
-      "orderAsal": 10
+      "orderAsal": 10,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -780,7 +800,8 @@
       "code": "BIN-7.1",
       "source": "kurikulum-bin-kelas5",
       "element": "Karya Sastra",
-      "orderAsal": 71
+      "orderAsal": 71,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -817,7 +838,8 @@
       "code": "BIN-7.2",
       "source": "kurikulum-bin-kelas5",
       "element": "Karya Sastra",
-      "orderAsal": 72
+      "orderAsal": 72,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -854,7 +876,8 @@
       "code": "BIN-7.3",
       "source": "kurikulum-bin-kelas5",
       "element": "Karya Sastra",
-      "orderAsal": 73
+      "orderAsal": 73,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -891,7 +914,8 @@
       "code": "BIN-8.1",
       "source": "kurikulum-bin-kelas5",
       "element": "Menulis Majas",
-      "orderAsal": 81
+      "orderAsal": 81,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -928,7 +952,8 @@
       "code": "BIN-8.2",
       "source": "kurikulum-bin-kelas5",
       "element": "Menulis Majas",
-      "orderAsal": 82
+      "orderAsal": 82,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -965,7 +990,8 @@
       "code": "BIN-8.3",
       "source": "kurikulum-bin-kelas5",
       "element": "Menulis Majas",
-      "orderAsal": 83
+      "orderAsal": 83,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -1002,7 +1028,8 @@
       "code": "BIN-9.1",
       "source": "kurikulum-bin-kelas5",
       "element": "Informasi dari Teks Nonfiksi",
-      "orderAsal": 91
+      "orderAsal": 91,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -1039,7 +1066,8 @@
       "code": "BIN-9.2",
       "source": "kurikulum-bin-kelas5",
       "element": "Informasi dari Teks Nonfiksi",
-      "orderAsal": 92
+      "orderAsal": 92,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -1076,7 +1104,8 @@
       "code": "BIN-10.1",
       "source": "kurikulum-bin-kelas5",
       "element": "Pantun",
-      "orderAsal": 101
+      "orderAsal": 101,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Indonesia",
@@ -1113,7 +1142,8 @@
       "code": "BIN-10.2",
       "source": "kurikulum-bin-kelas5",
       "element": "Pantun",
-      "orderAsal": 102
+      "orderAsal": 102,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1150,7 +1180,8 @@
       "code": "ENG-S1.1",
       "source": "buku-eng-kelas5-contents",
       "element": "Interests and Hobbies",
-      "orderAsal": 1
+      "orderAsal": 1,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1187,7 +1218,8 @@
       "code": "ENG-S1.2",
       "source": "buku-eng-kelas5-contents",
       "element": "Interests and Hobbies",
-      "orderAsal": 2
+      "orderAsal": 2,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1224,7 +1256,8 @@
       "code": "ENG-S2.1",
       "source": "buku-eng-kelas5-contents",
       "element": "Busy Weekends",
-      "orderAsal": 3
+      "orderAsal": 3,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1261,7 +1294,8 @@
       "code": "ENG-S2.2",
       "source": "buku-eng-kelas5-contents",
       "element": "Busy Weekends",
-      "orderAsal": 4
+      "orderAsal": 4,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1298,7 +1332,8 @@
       "code": "ENG-1.1",
       "source": "buku-eng-kelas5-contents",
       "element": "The Science Competition",
-      "orderAsal": 5
+      "orderAsal": 5,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1335,7 +1370,8 @@
       "code": "ENG-1.2",
       "source": "buku-eng-kelas5-contents",
       "element": "The Science Competition",
-      "orderAsal": 6
+      "orderAsal": 6,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1372,7 +1408,8 @@
       "code": "ENG-2.1",
       "source": "buku-eng-kelas5-contents",
       "element": "Dinosaurs",
-      "orderAsal": 7
+      "orderAsal": 7,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1409,7 +1446,8 @@
       "code": "ENG-2.2",
       "source": "buku-eng-kelas5-contents",
       "element": "Dinosaurs",
-      "orderAsal": 8
+      "orderAsal": 8,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1446,7 +1484,8 @@
       "code": "ENG-3.1",
       "source": "buku-eng-kelas5-contents",
       "element": "Festivals and Holidays",
-      "orderAsal": 9
+      "orderAsal": 9,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1483,7 +1522,8 @@
       "code": "ENG-3.2",
       "source": "buku-eng-kelas5-contents",
       "element": "Festivals and Holidays",
-      "orderAsal": 10
+      "orderAsal": 10,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1520,7 +1560,8 @@
       "code": "ENG-4.1",
       "source": "buku-eng-kelas5-contents",
       "element": "The Birthday Party",
-      "orderAsal": 11
+      "orderAsal": 11,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1557,7 +1598,8 @@
       "code": "ENG-4.2",
       "source": "buku-eng-kelas5-contents",
       "element": "The Birthday Party",
-      "orderAsal": 12
+      "orderAsal": 12,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1594,7 +1636,8 @@
       "code": "ENG-5.1",
       "source": "buku-eng-kelas5-contents",
       "element": "Off to Work",
-      "orderAsal": 13
+      "orderAsal": 13,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1631,7 +1674,8 @@
       "code": "ENG-5.2",
       "source": "buku-eng-kelas5-contents",
       "element": "Off to Work",
-      "orderAsal": 14
+      "orderAsal": 14,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1668,7 +1712,8 @@
       "code": "ENG-6.1",
       "source": "buku-eng-kelas5-contents",
       "element": "Getting Around",
-      "orderAsal": 15
+      "orderAsal": 15,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Inggris",
@@ -1705,7 +1750,8 @@
       "code": "ENG-6.2",
       "source": "buku-eng-kelas5-contents",
       "element": "Getting Around",
-      "orderAsal": 16
+      "orderAsal": 16,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -1742,7 +1788,8 @@
       "code": "BS-S.1",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Menyimak",
-      "orderAsal": 1
+      "orderAsal": 1,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -1779,7 +1826,8 @@
       "code": "BS-S.2",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Menyimak",
-      "orderAsal": 2
+      "orderAsal": 2,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -1816,7 +1864,8 @@
       "code": "BS-S.3",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Menyimak",
-      "orderAsal": 3
+      "orderAsal": 3,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -1853,7 +1902,8 @@
       "code": "BS-B.1",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Membaca dan Memirsa",
-      "orderAsal": 4
+      "orderAsal": 4,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -1890,7 +1940,8 @@
       "code": "BS-B.2",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Membaca dan Memirsa",
-      "orderAsal": 5
+      "orderAsal": 5,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -1927,7 +1978,8 @@
       "code": "BS-B.3",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Membaca dan Memirsa",
-      "orderAsal": 6
+      "orderAsal": 6,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -1964,7 +2016,8 @@
       "code": "BS-B.4",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Membaca dan Memirsa",
-      "orderAsal": 7
+      "orderAsal": 7,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -2001,7 +2054,8 @@
       "code": "BS-B.5",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Membaca dan Memirsa",
-      "orderAsal": 8
+      "orderAsal": 8,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -2038,7 +2092,8 @@
       "code": "BS-P.1",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Berbicara dan Menyajikan",
-      "orderAsal": 9
+      "orderAsal": 9,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -2075,7 +2130,8 @@
       "code": "BS-P.2",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Berbicara dan Menyajikan",
-      "orderAsal": 10
+      "orderAsal": 10,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -2112,7 +2168,8 @@
       "code": "BS-P.3",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Berbicara dan Menyajikan",
-      "orderAsal": 11
+      "orderAsal": 11,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -2149,7 +2206,8 @@
       "code": "BS-P.4",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Berbicara dan Menyajikan",
-      "orderAsal": 12
+      "orderAsal": 12,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -2186,7 +2244,8 @@
       "code": "BS-T.1",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Menulis",
-      "orderAsal": 13
+      "orderAsal": 13,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -2223,7 +2282,8 @@
       "code": "BS-T.2",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Menulis",
-      "orderAsal": 14
+      "orderAsal": 14,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -2260,7 +2320,8 @@
       "code": "BS-T.3",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Menulis",
-      "orderAsal": 15
+      "orderAsal": 15,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -2297,7 +2358,8 @@
       "code": "BS-T.4",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Menulis",
-      "orderAsal": 16
+      "orderAsal": 16,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -2334,7 +2396,8 @@
       "code": "BS-T.5",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Menulis",
-      "orderAsal": 17
+      "orderAsal": 17,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Sunda",
@@ -2371,7 +2434,8 @@
       "code": "BS-T.6",
       "source": "Materi Bahasa Sunda Kelas 5 (dokumentasi guru, 2026)",
       "element": "Menulis",
-      "orderAsal": 18
+      "orderAsal": 18,
+      "kelas": "5A"
     },
     {
       "mapel": "IPAS",
@@ -2408,7 +2472,8 @@
       "code": "IPAS-1.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Sistem Organ Tubuh dan Kesehatan",
-      "orderAsal": 1
+      "orderAsal": 1,
+      "kelas": "5A"
     },
     {
       "mapel": "IPAS",
@@ -2445,7 +2510,8 @@
       "code": "IPAS-1.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Sistem Organ Tubuh dan Kesehatan",
-      "orderAsal": 2
+      "orderAsal": 2,
+      "kelas": "5A"
     },
     {
       "mapel": "IPAS",
@@ -2482,7 +2548,8 @@
       "code": "IPAS-2.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Ekosistem",
-      "orderAsal": 3
+      "orderAsal": 3,
+      "kelas": "5A"
     },
     {
       "mapel": "IPAS",
@@ -2519,7 +2586,8 @@
       "code": "IPAS-2.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Ekosistem",
-      "orderAsal": 4
+      "orderAsal": 4,
+      "kelas": "5A"
     },
     {
       "mapel": "IPAS",
@@ -2556,7 +2624,8 @@
       "code": "IPAS-3.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Gelombang Bunyi dan Cahaya",
-      "orderAsal": 5
+      "orderAsal": 5,
+      "kelas": "5A"
     },
     {
       "mapel": "IPAS",
@@ -2593,7 +2662,8 @@
       "code": "IPAS-4.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Letak Geografis Indonesia",
-      "orderAsal": 6
+      "orderAsal": 6,
+      "kelas": "5A"
     },
     {
       "mapel": "IPAS",
@@ -2630,7 +2700,8 @@
       "code": "IPAS-5.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Sejarah dan Keragaman Budaya",
-      "orderAsal": 7
+      "orderAsal": 7,
+      "kelas": "5A"
     },
     {
       "mapel": "IPAS",
@@ -2667,7 +2738,8 @@
       "code": "IPAS-6.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Kegiatan Ekonomi Masyarakat",
-      "orderAsal": 8
+      "orderAsal": 8,
+      "kelas": "5A"
     },
     {
       "mapel": "Kemuhammadiyahan",
@@ -2704,7 +2776,8 @@
       "code": "KMDY-M.1",
       "source": null,
       "element": "Manhaj",
-      "orderAsal": 1
+      "orderAsal": 1,
+      "kelas": "5A"
     },
     {
       "mapel": "Kemuhammadiyahan",
@@ -2741,7 +2814,8 @@
       "code": "KMDY-S.1",
       "source": null,
       "element": "Sejarah",
-      "orderAsal": 2
+      "orderAsal": 2,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -2778,7 +2852,8 @@
       "code": "MTK-B.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Bilangan",
-      "orderAsal": 1
+      "orderAsal": 1,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -2815,7 +2890,8 @@
       "code": "MTK-B.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Bilangan",
-      "orderAsal": 2
+      "orderAsal": 2,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -2852,7 +2928,8 @@
       "code": "MTK-B.3",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Bilangan",
-      "orderAsal": 3
+      "orderAsal": 3,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -2889,7 +2966,8 @@
       "code": "MTK-B.4",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Bilangan",
-      "orderAsal": 4
+      "orderAsal": 4,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -2926,7 +3004,8 @@
       "code": "MTK-B.5",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Bilangan",
-      "orderAsal": 5
+      "orderAsal": 5,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -2963,7 +3042,8 @@
       "code": "MTK-B.6",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Bilangan",
-      "orderAsal": 6
+      "orderAsal": 6,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3000,7 +3080,8 @@
       "code": "MTK-B.7",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Bilangan",
-      "orderAsal": 7
+      "orderAsal": 7,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3037,7 +3118,8 @@
       "code": "MTK-A.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Aljabar",
-      "orderAsal": 8
+      "orderAsal": 8,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3074,7 +3156,8 @@
       "code": "MTK-A.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Aljabar",
-      "orderAsal": 9
+      "orderAsal": 9,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3111,7 +3194,8 @@
       "code": "MTK-A.3",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Aljabar",
-      "orderAsal": 10
+      "orderAsal": 10,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3148,7 +3232,8 @@
       "code": "MTK-A.4",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Aljabar",
-      "orderAsal": 11
+      "orderAsal": 11,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3185,7 +3270,8 @@
       "code": "MTK-U.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Pengukuran",
-      "orderAsal": 12
+      "orderAsal": 12,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3222,7 +3308,8 @@
       "code": "MTK-U.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Pengukuran",
-      "orderAsal": 13
+      "orderAsal": 13,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3259,7 +3346,8 @@
       "code": "MTK-U.3",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Pengukuran",
-      "orderAsal": 14
+      "orderAsal": 14,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3296,7 +3384,8 @@
       "code": "MTK-U.4",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Pengukuran",
-      "orderAsal": 15
+      "orderAsal": 15,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3333,7 +3422,8 @@
       "code": "MTK-G.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Geometri",
-      "orderAsal": 16
+      "orderAsal": 16,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3370,7 +3460,8 @@
       "code": "MTK-G.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Geometri",
-      "orderAsal": 17
+      "orderAsal": 17,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3407,7 +3498,8 @@
       "code": "MTK-G.3",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Geometri",
-      "orderAsal": 18
+      "orderAsal": 18,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3444,7 +3536,8 @@
       "code": "MTK-D.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Analisis Data dan Peluang",
-      "orderAsal": 19
+      "orderAsal": 19,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3481,7 +3574,8 @@
       "code": "MTK-D.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Analisis Data dan Peluang",
-      "orderAsal": 20
+      "orderAsal": 20,
+      "kelas": "5A"
     },
     {
       "mapel": "Matematika",
@@ -3518,7 +3612,8 @@
       "code": "MTK-D.3",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Analisis Data dan Peluang",
-      "orderAsal": 21
+      "orderAsal": 21,
+      "kelas": "5A"
     },
     {
       "mapel": "Pendidikan Pancasila",
@@ -3555,7 +3650,8 @@
       "code": "PP-1.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Pancasila",
-      "orderAsal": 1
+      "orderAsal": 1,
+      "kelas": "5A"
     },
     {
       "mapel": "Pendidikan Pancasila",
@@ -3592,7 +3688,8 @@
       "code": "PP-1.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Pancasila",
-      "orderAsal": 2
+      "orderAsal": 2,
+      "kelas": "5A"
     },
     {
       "mapel": "Pendidikan Pancasila",
@@ -3629,7 +3726,8 @@
       "code": "PP-1.3",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Pancasila",
-      "orderAsal": 3
+      "orderAsal": 3,
+      "kelas": "5A"
     },
     {
       "mapel": "Pendidikan Pancasila",
@@ -3666,7 +3764,8 @@
       "code": "PP-2.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "UUD 1945",
-      "orderAsal": 4
+      "orderAsal": 4,
+      "kelas": "5A"
     },
     {
       "mapel": "Pendidikan Pancasila",
@@ -3703,7 +3802,8 @@
       "code": "PP-2.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "UUD 1945",
-      "orderAsal": 5
+      "orderAsal": 5,
+      "kelas": "5A"
     },
     {
       "mapel": "Pendidikan Pancasila",
@@ -3740,7 +3840,8 @@
       "code": "PP-2.3",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "UUD 1945",
-      "orderAsal": 6
+      "orderAsal": 6,
+      "kelas": "5A"
     },
     {
       "mapel": "Pendidikan Pancasila",
@@ -3777,7 +3878,8 @@
       "code": "PP-3.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Bhinneka Tunggal Ika",
-      "orderAsal": 7
+      "orderAsal": 7,
+      "kelas": "5A"
     },
     {
       "mapel": "Pendidikan Pancasila",
@@ -3814,7 +3916,8 @@
       "code": "PP-3.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Bhinneka Tunggal Ika",
-      "orderAsal": 8
+      "orderAsal": 8,
+      "kelas": "5A"
     },
     {
       "mapel": "Pendidikan Pancasila",
@@ -3851,7 +3954,8 @@
       "code": "PP-3.3",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Bhinneka Tunggal Ika",
-      "orderAsal": 9
+      "orderAsal": 9,
+      "kelas": "5A"
     },
     {
       "mapel": "Pendidikan Pancasila",
@@ -3888,7 +3992,8 @@
       "code": "PP-4.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "NKRI",
-      "orderAsal": 10
+      "orderAsal": 10,
+      "kelas": "5A"
     },
     {
       "mapel": "Pendidikan Pancasila",
@@ -3925,7 +4030,8 @@
       "code": "PP-4.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "NKRI",
-      "orderAsal": 11
+      "orderAsal": 11,
+      "kelas": "5A"
     },
     {
       "mapel": "Seni Budaya",
@@ -3962,7 +4068,8 @@
       "code": "MUS-1.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Semester 1 — Fondasi Irama",
-      "orderAsal": 1
+      "orderAsal": 1,
+      "kelas": "5A"
     },
     {
       "mapel": "Seni Budaya",
@@ -3999,7 +4106,8 @@
       "code": "RUP-1.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Proyek 1 — Tekstur dan Lingkungan",
-      "orderAsal": 1
+      "orderAsal": 1,
+      "kelas": "5A"
     },
     {
       "mapel": "Seni Budaya",
@@ -4036,7 +4144,8 @@
       "code": "MUS-1.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Semester 1 — Fondasi Irama",
-      "orderAsal": 2
+      "orderAsal": 2,
+      "kelas": "5A"
     },
     {
       "mapel": "Seni Budaya",
@@ -4073,7 +4182,8 @@
       "code": "RUP-2.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Proyek 2 — Warna dan Ekspresi",
-      "orderAsal": 2
+      "orderAsal": 2,
+      "kelas": "5A"
     },
     {
       "mapel": "Seni Budaya",
@@ -4110,7 +4220,8 @@
       "code": "MUS-1.3",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Semester 1 — Fondasi Irama",
-      "orderAsal": 3
+      "orderAsal": 3,
+      "kelas": "5A"
     },
     {
       "mapel": "Seni Budaya",
@@ -4147,7 +4258,8 @@
       "code": "MUS-2.1",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Semester 2 — Notasi dan Penciptaan",
-      "orderAsal": 4
+      "orderAsal": 4,
+      "kelas": "5A"
     },
     {
       "mapel": "Seni Budaya",
@@ -4184,7 +4296,8 @@
       "code": "MUS-2.2",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Semester 2 — Notasi dan Penciptaan",
-      "orderAsal": 5
+      "orderAsal": 5,
+      "kelas": "5A"
     },
     {
       "mapel": "Seni Budaya",
@@ -4221,7 +4334,8 @@
       "code": "MUS-2.3",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Semester 2 — Notasi dan Penciptaan",
-      "orderAsal": 6
+      "orderAsal": 6,
+      "kelas": "5A"
     },
     {
       "mapel": "Seni Budaya",
@@ -4258,7 +4372,8 @@
       "code": "MUS-2.4",
       "source": "Dokumen 2 Kelas 5 Fase C, 2026",
       "element": "Semester 2 — Notasi dan Penciptaan",
-      "orderAsal": 7
+      "orderAsal": 7,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Arab",
@@ -4295,7 +4410,8 @@
       "code": "ARB-M.1",
       "source": "Buku Bahasa Arab Kelas 5 Fase C",
       "element": "Menyimak",
-      "orderAsal": 1
+      "orderAsal": 1,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Arab",
@@ -4332,7 +4448,8 @@
       "code": "ARB-K.1",
       "source": "Buku Bahasa Arab Kelas 5 Fase C",
       "element": "Berbicara",
-      "orderAsal": 2
+      "orderAsal": 2,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Arab",
@@ -4369,7 +4486,8 @@
       "code": "ARB-Q.1",
       "source": "Buku Bahasa Arab Kelas 5 Fase C",
       "element": "Membaca",
-      "orderAsal": 3
+      "orderAsal": 3,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Arab",
@@ -4406,7 +4524,8 @@
       "code": "ARB-T.1",
       "source": "Buku Bahasa Arab Kelas 5 Fase C",
       "element": "Menulis",
-      "orderAsal": 4
+      "orderAsal": 4,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Arab",
@@ -4443,7 +4562,8 @@
       "code": "ARB-M.2",
       "source": "Buku Bahasa Arab Kelas 5 Fase C",
       "element": "Menyimak",
-      "orderAsal": 5
+      "orderAsal": 5,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Arab",
@@ -4480,7 +4600,8 @@
       "code": "ARB-K.2",
       "source": "Buku Bahasa Arab Kelas 5 Fase C",
       "element": "Berbicara",
-      "orderAsal": 6
+      "orderAsal": 6,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Arab",
@@ -4517,7 +4638,8 @@
       "code": "ARB-Q.2",
       "source": "Buku Bahasa Arab Kelas 5 Fase C",
       "element": "Membaca",
-      "orderAsal": 7
+      "orderAsal": 7,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Arab",
@@ -4554,7 +4676,8 @@
       "code": "ARB-T.2",
       "source": "Buku Bahasa Arab Kelas 5 Fase C",
       "element": "Menulis",
-      "orderAsal": 8
+      "orderAsal": 8,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Arab",
@@ -4591,7 +4714,8 @@
       "code": "ARB-M.3",
       "source": "Buku Bahasa Arab Kelas 5 Fase C",
       "element": "Menyimak",
-      "orderAsal": 9
+      "orderAsal": 9,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Arab",
@@ -4628,7 +4752,8 @@
       "code": "ARB-K.3",
       "source": "Buku Bahasa Arab Kelas 5 Fase C",
       "element": "Berbicara",
-      "orderAsal": 10
+      "orderAsal": 10,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Arab",
@@ -4665,7 +4790,8 @@
       "code": "ARB-Q.3",
       "source": "Buku Bahasa Arab Kelas 5 Fase C",
       "element": "Membaca",
-      "orderAsal": 11
+      "orderAsal": 11,
+      "kelas": "5A"
     },
     {
       "mapel": "Bahasa Arab",
@@ -4702,7 +4828,9 @@
       "code": "ARB-T.3",
       "source": "Buku Bahasa Arab Kelas 5 Fase C",
       "element": "Menulis",
-      "orderAsal": 12
+      "orderAsal": 12,
+      "kelas": "5A"
     }
-  ]
+  ],
+  "kelas": "5A"
 }

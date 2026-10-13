@@ -191,8 +191,15 @@ export function parseTpImport(data: unknown): TpImportHasil {
 
   // --- Format sistem (items[]) ---
   if (Array.isArray(root.items)) {
+    // kelas wajib. Boleh di root (berlaku semua item) atau per item.
+    // tingkatan saja (angka) TIDAK cukup — butuh rombel (5A/5B/…).
     const kelasDefault = normalisasiKelas(root.kelas || root.className)
     const faseDefault = clean(root.fase || root.phase) || undefined
+    if (!kelasDefault && !root.items.some((row) => row && typeof row === 'object' && normalisasiKelas((row as Record<string, unknown>).kelas || (row as Record<string, unknown>).className))) {
+      peringatan.push(
+        'File items[] tidak punya field "kelas" (contoh: "5A"). TP kini per kelas paralel — isi "kelas" di root atau tiap item. Field "tingkatan": "5" saja tidak cukup.',
+      )
+    }
 
     for (const row of root.items) {
       if (!row || typeof row !== 'object') continue
@@ -201,7 +208,20 @@ export function parseTpImport(data: unknown): TpImportHasil {
       const kelas = normalisasiKelas(r.kelas || r.className) || kelasDefault
       const namaTp = clean(r.namaTp || r.statement || r.nama)
       if (!mapel || !kelas || !namaTp) {
-        peringatan.push('Item items[] tidak lengkap (mapel/kelas/namaTp) — dilewati.')
+        if (!kelas) {
+          peringatan.push(
+            `Item tanpa kelas dilewati (mapel=${mapel || '?'}, namaTp=${namaTp.slice(0, 40) || '?'}). Isi kolom/field "kelas" misalnya "5A".`,
+          )
+        } else {
+          peringatan.push('Item items[] tidak lengkap (mapel/kelas/namaTp) — dilewati.')
+        }
+        continue
+      }
+      // Tolak tingkatan-only yang lolos normalisasiKelas sebagai "5" tanpa huruf rombel
+      if (!/[A-Z]/.test(kelas)) {
+        peringatan.push(
+          `Kelas "${kelas}" tanpa huruf rombel (harusnya 5A/5B/…). Item dilewati — mapel ${mapel}.`,
+        )
         continue
       }
       items.push({
