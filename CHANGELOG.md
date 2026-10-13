@@ -240,3 +240,9 @@
 - Tombol **Simpan** selalu tersedia: di bawah panel materi saat panel terbuka, atau sticky di bawah layar saat panel disembunyikan. Menyimpan semua perubahan di semua kolom sekaligus.
 - Navigasi sel: Enter / panah kanan-kiri-atas-bawah.
 - Default cakupan: semua TP semester aktif dicentang jika belum pernah disimpan.
+
+## Belum dirilis — Nilai SLM: layout spreadsheet sama seperti STS/SAS
+
+- `NilaiSlm.tsx`: diganti **satu tabel** (siswa × materi semester), panel kanan tampil/sembunyi kolom, simpan semua perubahan sekaligus, navigasi panah/Enter, kolom rata-rata tertimbang live, badge level KKTP per sel.
+- `/akademik/nilai-slm` masuk HALAMAN_LEBAR.
+- SAS sudah memakai layout spreadsheet yang sama di `NilaiStsSas.tsx` (toggle Ujian Akhir).

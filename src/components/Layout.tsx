@@ -20,7 +20,7 @@ interface NavItem {
 }
 
 /** Halaman kerja harian yang memakai lebar layar penuh (dua kolom di PC); lainnya tetap berlebar baca. */
-const HALAMAN_LEBAR = ['/tahsin/input-setoran', '/tahsin/riwayat', '/tahsin/target', '/tahsin/menulis', '/admin/siswa', '/admin/users', '/akademik/laporan-slm', '/akademik/nilai-sts']
+const HALAMAN_LEBAR = ['/tahsin/input-setoran', '/tahsin/riwayat', '/tahsin/target', '/tahsin/menulis', '/admin/siswa', '/admin/users', '/akademik/laporan-slm', '/akademik/nilai-sts', '/akademik/nilai-slm']
 
 function sectionTitle(pathname: string): string {
   if (pathname.startsWith('/tahsin')) return 'Tahsin & Tahfizh'

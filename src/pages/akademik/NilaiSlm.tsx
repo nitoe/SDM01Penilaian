@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import type { ConfigAkademik, Mapel, NilaiTpDoc, TujuanPembelajaran } from '../../types/akademik'
@@ -20,153 +20,44 @@ import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import type { SiswaTahsin } from '../../types/tahsin'
 import { Badge, HeroBanner } from '../../components/ui'
-import { BackLink, LEVEL_WARNA, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, inputCls, useToast } from './shared'
+import { BackLink, LEVEL_WARNA, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, useToast } from './shared'
 
-type Draf = Record<string, string>
 type NilaiKelas = Record<string, Record<string, NilaiTpDoc>>
 type StatusKartu =
   | { jenis: 'tanpa-tp'; siswa: number }
   | { jenis: 'ada'; lengkap: number; total: number; siswa: number }
   | { jenis: 'gagal' }
 
-const KOSONG: Record<string, NilaiTpDoc> = {}
+const cellInputCls =
+  'h-11 w-[3.75rem] rounded-lg border-2 border-slate-200 bg-white text-center text-[16px] font-semibold tabular-nums text-slate-900 outline-none transition focus:border-muh-500 focus:ring-2 focus:ring-muh-500/25 disabled:bg-slate-50 disabled:text-slate-400 sm:h-12 sm:w-16 sm:text-[17px]'
 
-function drafDari(existing: Record<string, NilaiTpDoc>): Draf {
-  return Object.fromEntries(
-    Object.values(existing).map((n) => [n.siswaId, n.slm == null ? '' : String(n.slm)]),
-  )
+function parseNilai(t: string | undefined): number | null {
+  if (t === undefined || t.trim() === '') return null
+  const n = Number(t.replace(',', '.'))
+  return Number.isFinite(n) ? n : NaN
 }
 
 function rataSlm(
   siswaId: string,
   daftar: TujuanPembelajaran[],
   nilai: NilaiKelas,
+  draf: Record<string, Record<string, string>>,
   semester: string,
 ): number | null {
   return hitungNilaiAkhirMapel(
     daftar.map((tp) => {
-      const slm = nilai[tp.id]?.[siswaId]?.slm
+      const teks = draf[tp.id]?.[siswaId]
+      let slm: number | null | undefined = nilai[tp.id]?.[siswaId]?.slm
+      if (teks !== undefined && teks.trim() !== '') {
+        const n = parseNilai(teks)
+        if (n !== null && !Number.isNaN(n)) slm = n
+      }
       const bobot = bobotTpDiSemester(tp, semester)
       return {
         nilai: slm == null ? null : hitungNilaiAkhirTP(slm, null, tp),
         bobot: bobot == null ? 0 : bobot,
       }
     }),
-  )
-}
-
-function TpNilai({
-  tp,
-  siswa,
-  ctx,
-  config,
-  existing,
-  tulis,
-  onSelesai,
-  onPesan,
-}: {
-  tp: TujuanPembelajaran
-  siswa: SiswaTahsin[]
-  ctx: { mapel: string; kelas: string; tingkatan: string }
-  config: ConfigAkademik
-  existing: Record<string, NilaiTpDoc>
-  tulis: boolean
-  onSelesai: () => Promise<void>
-  onPesan: (msg: string, err?: boolean) => void
-}) {
-  const [draf, setDraf] = useState<Draf>(() => drafDari(existing))
-  const [busy, setBusy] = useState(false)
-
-  useEffect(() => {
-    setDraf(drafDari(existing))
-  }, [existing])
-
-  const parse = (t: string | undefined): number | null => {
-    if (t === undefined || t.trim() === '') return null
-    const n = Number(t.replace(',', '.'))
-    return Number.isFinite(n) ? n : NaN
-  }
-
-  const berubah = siswa.filter((s) => {
-    const n = parse(draf[s.id])
-    if (n === null) return false
-    const lama = existing[s.id]?.slm
-    return lama === undefined || lama !== n
-  })
-  const terisi = siswa.filter((s) => parse(draf[s.id]) !== null).length
-
-  async function simpan() {
-    const galat = berubah.find((s) => {
-      const n = parse(draf[s.id])
-      return n === null || Number.isNaN(n) || n < 0 || n > 100
-    })
-    if (galat) return onPesan(`Nilai ${galat.nama} harus angka 0–100.`, true)
-    if (!berubah.length) return onPesan('Tidak ada perubahan untuk disimpan.')
-    setBusy(true)
-    try {
-      const n = await saveNilaiTPBatch(
-        {
-          tpId: tp.id,
-          mapel: ctx.mapel,
-          kelas: ctx.kelas,
-          tingkatan: ctx.tingkatan,
-          semester: config.semesterAktif,
-          tahunAjaran: config.tahunAjaran,
-        },
-        berubah.map((s) => ({ siswaId: s.id, slm: parse(draf[s.id]) as number })),
-        existing,
-      )
-      await onSelesai()
-      onPesan(`${n} nilai disimpan.`)
-    } catch (err) {
-      console.error(err)
-      onPesan('Gagal menyimpan nilai.', true)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="space-y-2">
-      <p className="text-[11.5px] text-muted">
-        Terisi {terisi}/{siswa.length} siswa · SLM saja (STS dan SAS diinput di menu terpisah)
-      </p>
-      <ul className="divide-y divide-border">
-        {siswa.map((s) => {
-          const n = parse(draf[s.id])
-          const valid = n !== null && !Number.isNaN(n) && n >= 0 && n <= 100
-          const lv = valid ? tentukanLevel(hitungNilaiAkhirTP(n, null, tp), tp) : null
-          return (
-            <li key={s.id} className="flex items-center gap-2 py-2">
-              <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-slate-800">{s.nama}</span>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
-                  lv ? LEVEL_WARNA[lv.index] : 'bg-slate-100 text-slate-400'
-                }`}
-              >
-                {lv ? lv.label : '—'}
-              </span>
-              <input
-                aria-label={`Nilai SLM ${s.nama}`}
-                className={`${inputCls} w-[68px] shrink-0 text-center ${
-                  n !== null && !valid ? 'border-red-400 ring-2 ring-red-200' : ''
-                }`}
-                inputMode="decimal"
-                value={draf[s.id] ?? ''}
-                readOnly={!tulis}
-                onChange={(e) => setDraf((d) => ({ ...d, [s.id]: e.target.value }))}
-                placeholder="–"
-              />
-            </li>
-          )
-        })}
-      </ul>
-      {tulis && (
-      <button type="button" className={`${btnPrimary} w-full`} disabled={busy || !berubah.length} onClick={() => void simpan()}>
-        {busy ? 'Menyimpan…' : berubah.length ? `Simpan ${berubah.length} perubahan` : 'Tidak ada perubahan'}
-      </button>
-      )}
-    </div>
   )
 }
 
@@ -190,7 +81,6 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
   const [siswa, setSiswa] = useState<SiswaTahsin[] | null>(null)
   const [nilai, setNilai] = useState<NilaiKelas | null>(null)
   const [status, setStatus] = useState<Record<string, StatusKartu> | null>(null)
-  const [terbuka, setTerbuka] = useState<string | null>(null)
   const [gagalMuat, setGagalMuat] = useState(false)
   const { show, node } = useToast()
 
@@ -222,9 +112,9 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
     })
     setConfig(c)
     setTpList(t)
-    setSiswa(s)
+    setSiswa(s.sort((a, b) => a.nama.localeCompare(b.nama, 'id')))
     setNilai(n)
-  }, [mapel, kelas, tingkatan, profile.role])
+  }, [mapel, kelas, profile.role])
 
   useEffect(() => {
     if (mapel || kelas || !tulis || pilihan.length === 0) return
@@ -316,8 +206,8 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
         <BackLink to="/akademik">Akademik & Rapor</BackLink>
         <HeroBanner
           eyebrow="Akademik"
-          title="Input Nilai SLM"
-          subtitle="Pilih mata pelajaran dan kelas. Status di kartu adalah kelengkapan nilai semester yang sedang berjalan."
+          title="Input Nilai Harian (SLM)"
+          subtitle="Pilih mata pelajaran dan kelas. Status di kartu adalah kelengkapan nilai semester berjalan."
         />
         {mapelMaster === null ? (
           <Spinner />
@@ -336,18 +226,18 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
                     to={`/akademik/nilai-slm?mapel=${encodeURIComponent(p.mapel)}&kelas=${encodeURIComponent(p.kelas)}`}
                     className="block no-underline"
                   >
-                    <p className="text-[14px] font-semibold text-slate-900">{p.mapel}</p>
-                    <p className="mt-0.5 text-[12px] text-muted">
+                    <p className="text-[15px] font-semibold text-slate-900">{p.mapel}</p>
+                    <p className="mt-1 text-[13px] text-muted">
                       Kelas {p.kelas}
                       {st && st.jenis !== 'gagal' ? ` · ${st.siswa} siswa` : ''}
-                      {tulis && status === null ? ' · Memuat status…' : st?.jenis === 'gagal' ? ' · Gagal memuat status' : ''}
+                      {tulis && status === null ? ' · Memuat…' : st?.jenis === 'gagal' ? ' · Gagal memuat' : ''}
                     </p>
                   </Link>
                   {st?.jenis === 'tanpa-tp' && (
                     <p className="mt-2 flex flex-wrap items-center gap-2">
-                      <Badge tone="peach">Belum ada TP</Badge>
+                      <Badge tone="peach">Belum ada materi</Badge>
                       <Link
-                        className="text-[11.5px] font-semibold text-muh-700 underline"
+                        className="text-[12px] font-semibold text-muh-700 underline"
                         to={`/akademik/setup-tp?mapel=${encodeURIComponent(p.mapel)}&kelas=${encodeURIComponent(p.kelas)}`}
                       >
                         Buat TP dulu
@@ -357,9 +247,11 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
                   {st?.jenis === 'ada' && (
                     <p className="mt-2">
                       {st.lengkap === st.total ? (
-                        <Badge tone="green">SLM lengkap semua TP ({st.total})</Badge>
+                        <Badge tone="green">Lengkap semua materi ({st.total})</Badge>
                       ) : (
-                        <Badge tone="peach">SLM lengkap {st.lengkap}/{st.total} TP</Badge>
+                        <Badge tone="peach">
+                          Lengkap {st.lengkap}/{st.total} materi
+                        </Badge>
                       )}
                     </p>
                   )}
@@ -377,36 +269,360 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik/nilai-slm">Pilih mata pelajaran</BackLink>
-        <Notice tone="error">Anda tidak memiliki penugasan untuk {mapel} kelas {kelas}.</Notice>
+        <Notice tone="error">
+          Anda tidak memiliki penugasan untuk {mapel} kelas {kelas}.
+        </Notice>
       </div>
     )
   }
 
-  const tampil = (tpList ?? []).filter((t) => config && tpMasukSemester(t, config.semesterAktif))
+  return (
+    <Detail
+      mapel={mapel}
+      kelas={kelas}
+      tingkatan={tingkatan}
+      tulis={tulis}
+      config={config}
+      tpList={tpList}
+      siswa={siswa}
+      nilai={nilai}
+      gagalMuat={gagalMuat}
+      show={show}
+      node={node}
+      onSegarkan={segarkanNilai}
+    />
+  )
+}
+
+// ---- Detail: satu tabel spreadsheet + panel materi ---------------------------------------------
+
+function Detail({
+  mapel,
+  kelas,
+  tingkatan,
+  tulis,
+  config,
+  tpList,
+  siswa,
+  nilai,
+  gagalMuat,
+  show,
+  node,
+  onSegarkan,
+}: {
+  mapel: string
+  kelas: string
+  tingkatan: string
+  tulis: boolean
+  config: ConfigAkademik | null
+  tpList: TujuanPembelajaran[] | null
+  siswa: SiswaTahsin[] | null
+  nilai: NilaiKelas | null
+  gagalMuat: boolean
+  show: (msg: string, err?: boolean) => void
+  node: React.ReactNode
+  onSegarkan: () => Promise<void>
+}) {
+  const [busy, setBusy] = useState(false)
+  const [draf, setDraf] = useState<Record<string, Record<string, string>>>({})
+  const [tampilKolom, setTampilKolom] = useState<string[] | null>(null)
+  const [panelMateri, setPanelMateri] = useState(true)
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  const tampil = useMemo(
+    () => (tpList ?? []).filter((t) => config && tpMasukSemester(t, config.semesterAktif)),
+    [tpList, config],
+  )
   const tersembunyi = (tpList?.length ?? 0) - tampil.length
   const belumKelompok = (tpList ?? []).filter((t) => {
     if (!config) return false
-    // Belum dialokasikan sama sekali (tidak masuk semester mana pun lewat bobotPerSemester/legacy)
     const b1 = bobotTpDiSemester(t, '1')
     const b2 = bobotTpDiSemester(t, '2')
-    // Legacy: tanpa semester = "ikut semua" di tpMasukSemester, tapi belum diatur bobotnya
     if (!t.semester && (!t.bobotPerSemester || Object.keys(t.bobotPerSemester).length === 0)) return true
     return b1 == null && b2 == null
   }).length
+
+  // Sinkron draf dari nilai tersimpan
+  useEffect(() => {
+    if (!nilai) return
+    const awal: Record<string, Record<string, string>> = {}
+    for (const [tpId, perSiswa] of Object.entries(nilai)) {
+      awal[tpId] = {}
+      for (const [siswaId, doc] of Object.entries(perSiswa)) {
+        awal[tpId][siswaId] = doc.slm == null ? '' : String(doc.slm)
+      }
+    }
+    setDraf(awal)
+  }, [nilai])
+
+  // Default: tampilkan semua kolom semester
+  useEffect(() => {
+    if (tampil.length && tampilKolom === null) {
+      setTampilKolom(tampil.map((t) => t.id))
+    }
+  }, [tampil, tampilKolom])
+
+  const kolom = useMemo(
+    () => tampil.filter((t) => (tampilKolom ?? tampil.map((x) => x.id)).includes(t.id)),
+    [tampil, tampilKolom],
+  )
+
+  const perubahan = useMemo(() => {
+    if (!siswa || !nilai) return [] as { tpId: string; siswaId: string; slm: number }[]
+    const out: { tpId: string; siswaId: string; slm: number }[] = []
+    for (const t of kolom) {
+      for (const s of siswa) {
+        const teks = draf[t.id]?.[s.id]
+        if (teks === undefined || teks.trim() === '') continue
+        const n = parseNilai(teks)
+        if (n === null || Number.isNaN(n) || n < 0 || n > 100) continue
+        const lama = nilai[t.id]?.[s.id]?.slm
+        if (lama === n) continue
+        out.push({ tpId: t.id, siswaId: s.id, slm: n })
+      }
+    }
+    return out
+  }, [draf, kolom, siswa, nilai])
+
+  const adaInvalid = useMemo(() => {
+    if (!siswa) return false
+    for (const t of kolom) {
+      for (const s of siswa) {
+        const teks = draf[t.id]?.[s.id]
+        if (teks === undefined || teks.trim() === '') continue
+        const n = parseNilai(teks)
+        if (n === null || Number.isNaN(n) || n < 0 || n > 100) return true
+      }
+    }
+    return false
+  }, [draf, kolom, siswa])
+
+  const progress = useMemo(() => {
+    if (!siswa || !kolom.length || !nilai) return { terisi: 0, total: 0 }
+    let terisi = 0
+    const total = siswa.length * kolom.length
+    for (const t of kolom) {
+      for (const s of siswa) {
+        const teks = draf[t.id]?.[s.id]
+        if (teks !== undefined && teks.trim() !== '') {
+          terisi++
+          continue
+        }
+        if (nilai[t.id]?.[s.id]?.slm != null) terisi++
+      }
+    }
+    return { terisi, total }
+  }, [draf, kolom, siswa, nilai])
+
+  async function simpanSemua() {
+    if (!config || !tulis || !siswa || !nilai) return
+    if (adaInvalid) {
+      show('Ada nilai di luar 0–100. Perbaiki dulu.', true)
+      return
+    }
+    if (!perubahan.length) {
+      show('Tidak ada perubahan nilai.')
+      return
+    }
+    setBusy(true)
+    try {
+      const byTp = new Map<string, { siswaId: string; slm: number }[]>()
+      for (const p of perubahan) {
+        const list = byTp.get(p.tpId) ?? []
+        list.push({ siswaId: p.siswaId, slm: p.slm })
+        byTp.set(p.tpId, list)
+      }
+      let total = 0
+      for (const [tpId, entries] of byTp) {
+        const n = await saveNilaiTPBatch(
+          {
+            tpId,
+            mapel,
+            kelas,
+            tingkatan,
+            semester: config.semesterAktif,
+            tahunAjaran: config.tahunAjaran,
+          },
+          entries,
+          nilai[tpId] ?? {},
+        )
+        total += n
+      }
+      show(`${total} nilai berhasil disimpan.`)
+      await onSegarkan()
+    } catch (e) {
+      console.error(e)
+      show('Gagal menyimpan nilai. Periksa hak akses.', true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function setNilaiCell(tpId: string, siswaId: string, value: string) {
+    setDraf((prev) => ({
+      ...prev,
+      [tpId]: { ...prev[tpId], [siswaId]: value },
+    }))
+  }
+
+  function toggleKolom(id: string) {
+    const cur = tampilKolom ?? tampil.map((t) => t.id)
+    setTampilKolom(cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id])
+  }
+
+  function onKeyCell(e: KeyboardEvent<HTMLInputElement>, siswaIdx: number, tpIdx: number) {
+    if (!siswa || !kolom.length) return
+    const key = e.key
+    if (key !== 'Enter' && key !== 'ArrowRight' && key !== 'ArrowLeft' && key !== 'ArrowDown' && key !== 'ArrowUp') {
+      return
+    }
+    e.preventDefault()
+    let sIdx = siswaIdx
+    let tIdx = tpIdx
+    if (key === 'Enter' || key === 'ArrowRight') {
+      tIdx++
+      if (tIdx >= kolom.length) {
+        tIdx = 0
+        sIdx++
+      }
+    } else if (key === 'ArrowLeft') {
+      tIdx--
+      if (tIdx < 0) {
+        tIdx = kolom.length - 1
+        sIdx--
+      }
+    } else if (key === 'ArrowDown') {
+      sIdx++
+    } else if (key === 'ArrowUp') {
+      sIdx--
+    }
+    if (sIdx < 0 || sIdx >= siswa.length || tIdx < 0 || tIdx >= kolom.length) return
+    const refKey = `${kolom[tIdx].id}__${siswa[sIdx].id}`
+    const el = inputRefs.current[refKey]
+    el?.focus()
+    el?.select()
+  }
+
+  const tombolSimpan = (
+    <button
+      type="button"
+      className={`${btnPrimary} h-12 w-full text-[15px] shadow-md`}
+      disabled={!tulis || busy || perubahan.length === 0 || adaInvalid}
+      onClick={() => void simpanSemua()}
+    >
+      {busy
+        ? 'Menyimpan…'
+        : perubahan.length > 0
+          ? `Simpan ${perubahan.length} perubahan`
+          : 'Tidak ada perubahan'}
+    </button>
+  )
+
   const laporan = `/akademik/laporan-slm?mapel=${encodeURIComponent(mapel)}&kelas=${encodeURIComponent(kelas)}`
 
+  const panelIsi = (
+    <div className="flex h-full flex-col gap-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h2 className="text-[14px] font-bold text-slate-900">Materi di tabel</h2>
+          <p className="mt-0.5 text-[12px] leading-snug text-muted">
+            Centang materi yang ingin ditampilkan sebagai kolom. Semua materi semester tetap tersimpan.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="shrink-0 rounded-lg px-2 py-1 text-[12px] font-semibold text-muh-700 hover:bg-muh-50"
+          onClick={() => setPanelMateri(false)}
+        >
+          Sembunyikan
+        </button>
+      </div>
+
+      {tampil.length === 0 ? (
+        <Notice>Belum ada materi semester ini.</Notice>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              className={`${btnGhost} py-1.5 text-[12px]`}
+              onClick={() => setTampilKolom(tampil.map((t) => t.id))}
+            >
+              Semua
+            </button>
+            <button type="button" className={`${btnGhost} py-1.5 text-[12px]`} onClick={() => setTampilKolom([])}>
+              Kosongkan
+            </button>
+            <span className="self-center text-[12px] text-muted">
+              {(tampilKolom ?? tampil.map((t) => t.id)).length}/{tampil.length}
+            </span>
+          </div>
+          <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1" style={{ maxHeight: 'min(50vh, 420px)' }}>
+            {tampil.map((t) => {
+              const checked = (tampilKolom ?? tampil.map((x) => x.id)).includes(t.id)
+              const b = config ? bobotTpDiSemester(t, config.semesterAktif) : null
+              return (
+                <li key={t.id}>
+                  <label
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-2.5 py-2 transition ${
+                      checked ? 'border-muh-400 bg-muh-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-muh-600"
+                      checked={checked}
+                      onChange={() => toggleKolom(t.id)}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-[13px] font-semibold text-slate-900">
+                        Materi {t.nomorTp}
+                        {b != null ? <span className="ml-1 font-normal text-muted">· {b}%</span> : null}
+                      </span>
+                      <span className="mt-0.5 block text-[11.5px] leading-snug text-slate-600">{t.namaTp}</span>
+                    </span>
+                  </label>
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      )}
+
+      <div className="mt-auto space-y-2 border-t border-border pt-3">
+        <div className="flex items-center justify-between text-[12px] text-muted">
+          <span>
+            Terisi {progress.terisi}/{progress.total}
+          </span>
+          {progress.total > 0 && (
+            <span className={progress.terisi === progress.total ? 'font-semibold text-muh-700' : ''}>
+              {Math.round((progress.terisi / progress.total) * 100)}%
+            </span>
+          )}
+        </div>
+        <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+          <div
+            className={`h-full rounded-full ${progress.terisi === progress.total && progress.total > 0 ? 'bg-muh-600' : 'bg-amber-400'}`}
+            style={{ width: `${progress.total ? (progress.terisi / progress.total) * 100 : 0}%` }}
+          />
+        </div>
+        {tombolSimpan}
+        <Link to={laporan} className={`${btnGhost} flex h-10 w-full items-center justify-center text-[13px] no-underline`}>
+          Laporan SLM
+        </Link>
+      </div>
+    </div>
+  )
+
   return (
-    <div className="space-y-5">
+    <div className={`space-y-4 ${panelMateri ? '' : 'pb-24'}`}>
       <BackLink to="/akademik/nilai-slm">Pilih mata pelajaran</BackLink>
       <HeroBanner
-        eyebrow={`Kelas ${kelas}`}
-        title={`Nilai SLM — ${mapel}`}
-        subtitle={
-          config?.tahunAjaran
-            ? `Semester ${config.semesterAktif} · Tahun ajaran ${config.tahunAjaran}${tulis ? '' : ' · mode lihat'}`
-            : 'Memuat…'
-        }
+        eyebrow={config ? `Semester ${config.semesterAktif} · ${config.tahunAjaran}` : `Kelas ${kelas}`}
+        title={`Nilai Harian (SLM) — ${mapel} · ${kelas}`}
+        subtitle="Satu tabel untuk semua materi. Panel kanan mengatur kolom yang ditampilkan. Simpan kapan saja."
       />
+
       {gagalMuat ? (
         <Notice tone="error">Gagal memuat data kelas. Periksa koneksi, lalu muat ulang halaman.</Notice>
       ) : tpList === null || siswa === null || config === null || nilai === null ? (
@@ -414,7 +630,10 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
       ) : tpList.length === 0 ? (
         <Notice>
           Belum ada TP untuk {mapel} tingkat {tingkatan}. Susun dulu di{' '}
-          <Link className="font-semibold underline" to={`/akademik/setup-tp?mapel=${encodeURIComponent(mapel)}&tingkatan=${tingkatan}`}>
+          <Link
+            className="font-semibold underline"
+            to={`/akademik/setup-tp?mapel=${encodeURIComponent(mapel)}&kelas=${encodeURIComponent(kelas)}`}
+          >
             Setup TP & KKTP
           </Link>
           .
@@ -423,96 +642,159 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
         <Notice tone="warn">Tidak ada siswa aktif di kelas {kelas}.</Notice>
       ) : (
         <>
-          <div className="flex flex-wrap gap-2">
-            <Link to={laporan} className={`${btnGhost} no-underline`}>
-              Laporan SLM
-            </Link>
-          </div>
           {belumKelompok > 0 && (
             <Notice tone="warn">
-              {belumKelompok} TP belum dikelompokkan ke semester, jadi ikut tampil di sini. Atur di{' '}
-              <Link className="font-semibold underline" to={`/akademik/bobot-semester?mapel=${encodeURIComponent(mapel)}&kelas=${encodeURIComponent(kelas)}`}>
+              {belumKelompok} materi belum dikelompokkan ke semester. Atur di{' '}
+              <Link
+                className="font-semibold underline"
+                to={`/akademik/bobot-semester?mapel=${encodeURIComponent(mapel)}&kelas=${encodeURIComponent(kelas)}`}
+              >
                 Bobot Semester
               </Link>
               .
             </Notice>
           )}
           {tersembunyi > 0 && (
-            <p className="text-[11.5px] text-muted">{tersembunyi} TP semester lain disembunyikan.</p>
+            <p className="text-[12px] text-muted">{tersembunyi} materi semester lain disembunyikan.</p>
           )}
-          <div className="space-y-2.5">
-            {tampil.map((tp) => {
-              const buka = terbuka === tp.id
-              const isi = siswa.filter((s) => nilai[tp.id]?.[s.id]?.slm != null).length
-              return (
-                <article key={tp.id} className="card-soft overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setTerbuka(buka ? null : tp.id)}
-                    className="flex w-full items-center gap-3 p-3.5 text-left"
-                    aria-expanded={buka}
-                  >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muh-50 text-[13px] font-bold text-muh-700">
-                      {tp.nomorTp}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[13.5px] font-semibold leading-snug text-slate-900">{tp.namaTp}</span>
-                      <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                        <Badge>
-                          {isi}/{siswa.length} siswa
-                        </Badge>
-                        {(() => {
-                          const b = config ? bobotTpDiSemester(tp, config.semesterAktif) : null
-                          return (
-                            <Badge tone={b == null ? 'peach' : 'neutral'}>
-                              {b == null ? 'Bobot belum diatur' : `${b}% dari nilai mapel`}
-                            </Badge>
-                          )
-                        })()}
-                      </span>
-                    </span>
-                  </button>
-                  {buka && (
-                    <div className="border-t border-border p-3.5">
-                      <TpNilai
-                        tp={tp}
-                        siswa={siswa}
-                        ctx={{ mapel, kelas, tingkatan }}
-                        config={config}
-                        existing={nilai[tp.id] ?? KOSONG}
-                        tulis={tulis}
-                        onSelesai={segarkanNilai}
-                        onPesan={show}
-                      />
-                    </div>
-                  )}
-                </article>
-              )
-            })}
-          </div>
 
-          <section className="card-soft p-4">
-            <h2 className="text-[14px] font-semibold text-slate-900">Ringkasan SLM (sementara)</h2>
-            <p className="mt-1 text-[12px] leading-relaxed text-muted">
-              Rata-rata tertimbang SLM saja, sesuai bobot TP dalam mapel pada semester ini. Belum termasuk STS/SAS.
-              TP yang bobotnya belum diatur dihitung setara.
-            </p>
-            <ul className="mt-2 divide-y divide-border">
-              {siswa.map((s) => {
-                const akhir = config ? rataSlm(s.id, tampil, nilai, config.semesterAktif) : null
-                return (
-                  <li key={s.id} className="flex items-center gap-3 py-2">
-                    <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-slate-800">{s.nama}</span>
-                    <span className={`w-10 text-center text-[14px] font-bold ${akhir === null ? 'text-slate-400' : 'text-muh-700'}`}>
-                      {akhir === null ? '–' : akhir}
-                    </span>
-                  </li>
-                )
-              })}
-            </ul>
-          </section>
+          {!panelMateri && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" className={`${btnGhost} text-[13px]`} onClick={() => setPanelMateri(true)}>
+                Tampilkan daftar materi ({kolom.length})
+              </button>
+              <span className="text-[12.5px] text-muted">
+                Terisi {progress.terisi}/{progress.total}
+                {perubahan.length > 0 ? ` · ${perubahan.length} belum disimpan` : ''}
+              </span>
+            </div>
+          )}
+
+          <div className={`flex flex-col gap-4 ${panelMateri ? 'lg:flex-row lg:items-start' : ''}`}>
+            {panelMateri && (
+              <aside className="order-1 card-soft w-full shrink-0 p-4 lg:order-2 lg:sticky lg:top-4 lg:w-[320px] lg:self-start">
+                {panelIsi}
+              </aside>
+            )}
+
+            <div className="order-2 min-w-0 flex-1 lg:order-1">
+              {kolom.length === 0 ? (
+                <Notice tone="warn">
+                  Tidak ada kolom materi yang ditampilkan.
+                  {panelMateri ? ' Centang materi di panel kanan.' : ' Tampilkan panel materi dulu.'}
+                </Notice>
+              ) : (
+                <div className="card-soft overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-max border-collapse text-left">
+                      <thead>
+                        <tr className="border-b border-border bg-slate-50">
+                          <th className="sticky left-0 z-20 bg-slate-50 px-3 py-3 text-[12px] font-semibold uppercase tracking-wide text-muted sm:px-4">
+                            Siswa
+                          </th>
+                          {kolom.map((t) => (
+                            <th key={t.id} className="max-w-[7.5rem] px-2 py-2 text-center sm:px-3" title={t.namaTp}>
+                              <span className="block text-[12px] font-bold text-slate-800">M.{t.nomorTp}</span>
+                              <span className="mt-0.5 line-clamp-2 block text-[10.5px] font-normal leading-tight text-muted">
+                                {t.namaTp}
+                              </span>
+                            </th>
+                          ))}
+                          <th className="px-2 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted sm:px-3">
+                            Rata*
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {siswa.map((s, sIdx) => {
+                          const rata = rataSlm(s.id, tampil, nilai, draf, config.semesterAktif)
+                          return (
+                            <tr key={s.id} className="border-t border-border hover:bg-slate-50/80">
+                              <td className="sticky left-0 z-10 bg-white px-3 py-2 text-[13.5px] font-medium text-slate-900 sm:px-4">
+                                <span className="line-clamp-2 max-w-[10rem] sm:max-w-[14rem]">{s.nama}</span>
+                              </td>
+                              {kolom.map((t, tIdx) => {
+                                const teks = draf[t.id]?.[s.id] ?? ''
+                                const n = parseNilai(teks)
+                                const invalid =
+                                  teks.trim() !== '' && (n === null || Number.isNaN(n) || n < 0 || n > 100)
+                                const terisi = teks.trim() !== '' || nilai[t.id]?.[s.id]?.slm != null
+                                const valid = n !== null && !Number.isNaN(n) && n >= 0 && n <= 100
+                                const lv = valid ? tentukanLevel(hitungNilaiAkhirTP(n, null, t), t) : null
+                                const refKey = `${t.id}__${s.id}`
+                                return (
+                                  <td key={t.id} className="px-1.5 py-1.5 text-center sm:px-2">
+                                    <div className="flex flex-col items-center gap-0.5">
+                                      <input
+                                        ref={(el) => {
+                                          inputRefs.current[refKey] = el
+                                        }}
+                                        aria-label={`SLM ${s.nama} materi ${t.nomorTp}`}
+                                        className={`${cellInputCls} ${
+                                          invalid
+                                            ? 'border-red-400 ring-2 ring-red-200'
+                                            : terisi
+                                              ? 'border-muh-400 bg-muh-50/50'
+                                              : ''
+                                        }`}
+                                        inputMode="decimal"
+                                        value={teks}
+                                        readOnly={!tulis}
+                                        placeholder="–"
+                                        onChange={(e) => setNilaiCell(t.id, s.id, e.target.value)}
+                                        onKeyDown={(e) => onKeyCell(e, sIdx, tIdx)}
+                                        onFocus={(e) => e.target.select()}
+                                      />
+                                      {lv && (
+                                        <span
+                                          className={`rounded px-1 text-[9px] font-semibold ${LEVEL_WARNA[lv.index]}`}
+                                        >
+                                          {lv.label}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                )
+                              })}
+                              <td className="px-2 py-2 text-center text-[13px] font-semibold tabular-nums text-slate-700 sm:px-3">
+                                {rata ?? '—'}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="border-t border-border px-3 py-2 text-[11.5px] text-muted sm:px-4">
+                    {siswa.length} siswa · {kolom.length} materi · *Rata = rata-rata tertimbang SLM (belum STS/SAS) ·
+                    gulir horizontal jika kolom banyak
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </>
       )}
+
+      {tulis && !panelMateri && siswa && kolom.length > 0 && nilai && (
+        <div className="fixed bottom-16 left-0 right-0 z-40 border-t border-border bg-white/95 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm md:bottom-0">
+          <div className="mx-auto flex max-w-[1500px] items-center gap-3">
+            <div className="min-w-0 flex-1 text-[13px] text-slate-700">
+              {perubahan.length > 0 ? (
+                <span className="font-semibold text-amber-700">{perubahan.length} perubahan belum disimpan</span>
+              ) : (
+                <span className="text-muted">Semua perubahan sudah disimpan</span>
+              )}
+              <span className="text-muted">
+                {' '}
+                · {progress.terisi}/{progress.total} terisi
+              </span>
+            </div>
+            <div className="w-[180px] shrink-0 sm:w-[220px]">{tombolSimpan}</div>
+          </div>
+        </div>
+      )}
+
       {node}
     </div>
   )
