@@ -5,6 +5,14 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "mapel", "order": "ASCENDING" },
+        { "fieldPath": "kelas", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tp_kktp",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mapel", "order": "ASCENDING" },
         { "fieldPath": "tingkatan", "order": "ASCENDING" }
       ]
     },

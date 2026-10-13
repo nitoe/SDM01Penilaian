@@ -7,6 +7,7 @@ import {
   LEVEL_RANGE_DEFAULT,
   deleteTP,
   faseDariTingkatan,
+  tingkatanDariKelas,
   getMapelByNama,
   getMapelList,
   getTPList,
@@ -16,8 +17,16 @@ import {
   validasiLevels,
   type ModeImporTp,
 } from '../../lib/akademik'
-import { parseTpImport, type TpImportHasil } from '../../lib/tpImport'
-import { aksesMapelTingkatan } from '../../lib/aksesAkademik'
+import {
+  buatExcelTp,
+  bacaExcelTp,
+  parseTpExcelRows,
+  parseTpImport,
+  unduhBlob,
+  type TpImportHasil,
+  type TpImportItem,
+} from '../../lib/tpImport'
+import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { HeroBanner, Badge } from '../../components/ui'
 import {
@@ -73,15 +82,16 @@ function formDariTp(tp: TujuanPembelajaran): FormState {
 export default function SetupTp({ profile }: { profile: AppUser }) {
   const [params] = useSearchParams()
   const mapel = params.get('mapel') || ''
-  const tingkatan = params.get('tingkatan') || ''
+  const kelas = (params.get('kelas') || '').toUpperCase()
+  const tingkatan = kelas.replace(/[^0-9]/g, '')
   const tulis = isGuruAkademikRole(profile.role)
   const admin = isAdminRole(profile.role)
   const [mapelMaster, setMapelMaster] = useState<Mapel[] | null>(null)
   const pilihan = useMemo(
-    () => (mapelMaster ? aksesMapelTingkatan(profile, mapelMaster) : []),
+    () => (mapelMaster ? aksesMapelKelas(profile, mapelMaster) : []),
     [profile, mapelMaster],
   )
-  const berhak = pilihan.some((p) => p.mapel === mapel && p.tingkatan === tingkatan)
+  const berhak = pilihan.some((p) => p.mapel === mapel && p.kelas === kelas)
 
   const [list, setList] = useState<TujuanPembelajaran[] | null>(null)
   const [form, setForm] = useState<FormState | null>(null)
@@ -100,35 +110,69 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const { show, node } = useToast()
 
   async function bacaFileImpor(file: File) {
+    const nama = file.name.toLowerCase()
+    const excel = nama.endsWith('.xlsx') || nama.endsWith('.xls') || file.type.includes('sheet') || file.type.includes('excel')
     try {
-      const teks = await file.text()
-      const data = JSON.parse(teks) as unknown
-      const hasil = parseTpImport(data)
+      let hasil: TpImportHasil
+      if (excel) {
+        const rows = await bacaExcelTp(await file.arrayBuffer())
+        hasil = parseTpExcelRows(rows)
+      } else {
+        const teks = await file.text()
+        const data = JSON.parse(teks) as unknown
+        hasil = parseTpImport(data)
+      }
       setPratinjauImpor(hasil)
       if (!hasil.items.length) show(hasil.peringatan[0] || 'Tidak ada TP di file.', true)
     } catch (e) {
       console.error(e)
       setPratinjauImpor(null)
-      show('File JSON tidak bisa dibaca.', true)
+      show(excel ? 'File Excel tidak bisa dibaca.' : 'File JSON tidak bisa dibaca.', true)
     }
   }
 
-  async function jalankanImpor(hanyaMapelTingkatan?: { mapel: string; tingkatan: string }) {
+  async function unduhTemplateExcel(isi?: {
+    items?: TpImportItem[]
+    mapel?: string
+    kelas?: string
+    namaFile?: string
+  }) {
+    try {
+      const blob = await buatExcelTp({
+        items: isi?.items,
+        mapel: isi?.mapel,
+        kelas: isi?.kelas,
+      })
+      const nama =
+        isi?.namaFile ||
+        (isi?.mapel && isi?.kelas
+          ? `template-tp-${isi.mapel.replace(/\s+/g, '-').toLowerCase()}-${isi.kelas.toLowerCase()}.xlsx`
+          : 'template-tp.xlsx')
+      unduhBlob(blob, nama)
+      show(isi?.items?.length ? `Diekspor ${isi.items.length} TP ke Excel.` : 'Template Excel diunduh.')
+    } catch (e) {
+      console.error(e)
+      show('Gagal membuat file Excel.', true)
+    }
+  }
+
+  async function jalankanImpor(hanyaMapelTingkatan?: { mapel: string; kelas: string }) {
     if (!pratinjauImpor?.items.length) return
     let daftar = pratinjauImpor.items
     if (hanyaMapelTingkatan) {
+      const kls = String(hanyaMapelTingkatan.kelas).toUpperCase()
       daftar = daftar.filter(
-        (it) => it.mapel === hanyaMapelTingkatan.mapel && it.tingkatan === String(hanyaMapelTingkatan.tingkatan),
+        (it) => it.mapel === hanyaMapelTingkatan.mapel && it.kelas.toUpperCase() === kls,
       )
       if (!daftar.length) {
-        show(`Tidak ada TP ${hanyaMapelTingkatan.mapel} tingkat ${hanyaMapelTingkatan.tingkatan} di file.`, true)
+        show(`Tidak ada TP ${hanyaMapelTingkatan.mapel} kelas ${kls} di file.`, true)
         return
       }
     }
-    // Batasi ke mapel yang user berhak tulis
-    const boleh = new Set(pilihan.map((p) => `${p.mapel}|${p.tingkatan}`))
+    // Batasi ke mapel×kelas yang user berhak tulis
+    const boleh = new Set(pilihan.map((p) => `${p.mapel}|${p.kelas}`))
     const sebelum = daftar.length
-    daftar = daftar.filter((it) => boleh.has(`${it.mapel}|${it.tingkatan}`) || admin)
+    daftar = daftar.filter((it) => boleh.has(`${it.mapel}|${it.kelas}`) || admin)
     if (!daftar.length) {
       show('Tidak ada TP di file yang sesuai penugasan Anda.', true)
       return
@@ -139,7 +183,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     if (
       modeImpor === 'ganti' &&
       !window.confirm(
-        `Mode GANTI akan menghapus TP yang sudah ada untuk pasangan mapel×tingkatan di file, lalu menulis ulang.\n\nLanjutkan impor ${daftar.length} TP?`,
+        `Mode GANTI akan menghapus TP yang sudah ada untuk pasangan mapel×kelas di file, lalu menulis ulang.\n\nLanjutkan impor ${daftar.length} TP?`,
       )
     ) {
       return
@@ -155,7 +199,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
       )
       setPratinjauImpor(null)
       setPanelImpor(false)
-      if (mapel && tingkatan) await muat()
+      if (mapel && kelas) await muat()
       else setRefreshHub((n) => n + 1)
     } catch (e) {
       console.error(e)
@@ -165,20 +209,20 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     }
   }
 
-  const kunciCakupan = `${mapel}|${tingkatan}`
+  const kunciCakupan = `${mapel}|${kelas}`
   const statusCakupan: 'memeriksa' | 'boleh' | 'di luar' =
-    !mapel || !tingkatan ? 'boleh' : cakupan?.kunci === kunciCakupan ? cakupan.status : 'memeriksa'
+    !mapel || !kelas ? 'boleh' : cakupan?.kunci === kunciCakupan ? cakupan.status : 'memeriksa'
 
   const muat = useCallback(async () => {
     setList(null)
     try {
-      setList(await getTPList(mapel, tingkatan))
+      setList(await getTPList(mapel, kelas))
     } catch (e) {
       console.error(e)
       show('Gagal memuat TP. Periksa koneksi dan hak akses.', true)
       setList([])
     }
-  }, [mapel, tingkatan, show])
+  }, [mapel, kelas, show])
 
   useEffect(() => {
     let batal = false
@@ -195,14 +239,14 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   }, [])
 
   useEffect(() => {
-    if (mapel || tingkatan || (!tulis && !admin) || pilihan.length === 0) return
+    if (mapel || kelas || (!tulis && !admin) || pilihan.length === 0) return
     let batal = false
     setJumlahTp(null)
     void Promise.all(
       pilihan.map(async (p) => {
-        const kunci = `${p.mapel}|${p.tingkatan}`
+        const kunci = `${p.mapel}|${p.kelas}`
         try {
-          const daftar = await getTPList(p.mapel, p.tingkatan)
+          const daftar = await getTPList(p.mapel, p.kelas)
           return [kunci, daftar.length] as const
         } catch (e) {
           console.error(e)
@@ -215,11 +259,11 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [mapel, tingkatan, tulis, admin, pilihan, refreshHub])
+  }, [mapel, kelas, tulis, admin, pilihan, refreshHub])
 
   useEffect(() => {
-    if (!mapel || !tingkatan || !berhak || (!tulis && !admin)) return
-    const kunci = `${mapel}|${tingkatan}`
+    if (!mapel || !kelas || !berhak || (!tulis && !admin)) return
+    const kunci = `${mapel}|${kelas}`
     let batal = false
     void getMapelByNama(mapel)
       .then((m) => {
@@ -234,11 +278,11 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [mapel, tingkatan, berhak, tulis, admin])
+  }, [mapel, kelas, tingkatan, berhak, tulis, admin])
 
   useEffect(() => {
-    if (mapel && tingkatan && berhak && statusCakupan === 'boleh') void muat()
-  }, [mapel, tingkatan, berhak, statusCakupan, muat])
+    if (mapel && kelas && berhak && statusCakupan === 'boleh') void muat()
+  }, [mapel, kelas, berhak, statusCakupan, muat])
 
   if (!tulis && !admin) {
     return (
@@ -249,15 +293,15 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     )
   }
 
-  // ---- Pemilih mapel × tingkatan --------------------------------------
-  if (!mapel || !tingkatan) {
+  // ---- Pemilih mapel × kelas --------------------------------------
+  if (!mapel || !kelas) {
     return (
       <div className="space-y-5">
         <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
         <HeroBanner
           eyebrow="Akademik"
           title="Setup TP & KKTP"
-          subtitle="Pilih mata pelajaran dan tingkatan. TP berlaku untuk semua kelas paralel di tingkatan yang sama."
+          subtitle="Pilih mata pelajaran dan kelas. TP disusun per kelas paralel (5A tidak dipakai di 5B/5C) agar setiap guru menyusun TP & KKTP sendiri."
         />
         {mapelMaster === null ? (
           <Spinner />
@@ -267,16 +311,15 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
           </Notice>
         ) : (
           <>
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 type="search"
                 value={filterMapel}
                 onChange={(e) => setFilterMapel(e.target.value)}
                 placeholder="Cari mapel…"
-                className="w-full rounded-xl border border-border bg-white px-3.5 py-2 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15 sm:max-w-xs"
+                className="min-w-[10rem] flex-1 rounded-xl border border-border bg-white px-3.5 py-2 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15 sm:max-w-xs sm:flex-none"
               />
-              <div className="flex flex-wrap gap-1.5">
+              <div className="inline-flex flex-wrap items-center gap-1.5">
                 {(
                   [
                     ['semua', 'Semua'],
@@ -288,7 +331,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                     key={id}
                     type="button"
                     onClick={() => setFilterStatus(id)}
-                    className={`rounded-full px-3 py-1 text-[11.5px] font-semibold ${
+                    className={`rounded-full px-3 py-1 text-[11.5px] font-semibold whitespace-nowrap ${
                       filterStatus === id ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600'
                     }`}
                   >
@@ -296,27 +339,33 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                   </button>
                 ))}
               </div>
-              </div>
               {tulis && (
-                <button type="button" className={btnGhost} onClick={() => setPanelImpor((v) => !v)}>
-                  {panelImpor ? 'Tutup impor' : 'Impor JSON'}
+                <button type="button" className={`${btnGhost} ml-auto whitespace-nowrap`} onClick={() => setPanelImpor((v) => !v)}>
+                  {panelImpor ? 'Tutup panel' : 'Impor / Ekspor'}
                 </button>
               )}
             </div>
 
             {panelImpor && tulis && (
               <section className="card-soft space-y-3 p-4">
-                <h2 className="text-[14px] font-semibold text-slate-900">Impor Tujuan Pembelajaran</h2>
+                <h2 className="text-[14px] font-semibold text-slate-900">Impor &amp; ekspor Tujuan Pembelajaran</h2>
                 <p className="text-[12.5px] leading-relaxed text-muted">
-                  Unggah file JSON format kurikulum (<code className="text-[11px]">tp[]</code> +{' '}
-                  <code className="text-[11px]">subjectKey</code>) atau format sistem (
-                  <code className="text-[11px]">items[]</code>). Field materi buku diabaikan. Deskripsi level
-                  KKTP yang kosong bisa dilengkapi setelah impor.
+                  Guru dapat mengisi TP di Excel lalu mengimpornya ke sini. Format JSON kurikulum tetap
+                  didukung. Unduh template kosong, isi di Excel/Google Sheets, lalu unggah kembali.
                 </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={btnGhost}
+                    onClick={() => void unduhTemplateExcel()}
+                  >
+                    Unduh template Excel
+                  </button>
+                </div>
                 <input
                   ref={fileImporRef}
                   type="file"
-                  accept="application/json,.json"
+                  accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/json,.json"
                   className="block w-full text-[13px] file:mr-3 file:rounded-lg file:border-0 file:bg-muh-50 file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-muh-800"
                   onChange={(e) => {
                     const f = e.target.files?.[0]
@@ -341,7 +390,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                       checked={modeImpor === 'ganti'}
                       onChange={() => setModeImpor('ganti')}
                     />
-                    Ganti (hapus dulu TP mapel×tingkatan yang ada di file)
+                    Ganti (hapus dulu TP mapel×kelas yang ada di file)
                   </label>
                 </div>
                 {pratinjauImpor && (
@@ -354,7 +403,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                         .sort(([a], [b]) => a.localeCompare(b, 'id'))
                         .map(([k, n]) => (
                           <li key={k}>
-                            {k.replace('|', ' · tingkat ')} — {n} TP
+                            {k.replace('|', ' · kelas ')} — {n} TP
                           </li>
                         ))}
                     </ul>
@@ -388,23 +437,23 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                   const q = filterMapel.trim().toLowerCase()
                   if (q && !p.mapel.toLowerCase().includes(q)) return false
                   if (filterStatus === 'semua' || jumlahTp === null) return true
-                  const n = jumlahTp[`${p.mapel}|${p.tingkatan}`]
+                  const n = jumlahTp[`${p.mapel}|${p.kelas}`]
                   if (typeof n !== 'number') return true
                   if (filterStatus === 'ada') return n > 0
                   return n === 0
                 })
                 .map((p) => {
-                  const kunci = `${p.mapel}|${p.tingkatan}`
+                  const kunci = `${p.mapel}|${p.kelas}`
                   const n = jumlahTp?.[kunci]
                   return (
                     <Link
                       key={kunci}
-                      to={`/akademik/setup-tp?mapel=${encodeURIComponent(p.mapel)}&tingkatan=${p.tingkatan}`}
+                      to={`/akademik/setup-tp?mapel=${encodeURIComponent(p.mapel)}&kelas=${encodeURIComponent(p.kelas)}`}
                       className="card-soft block p-4 no-underline transition hover:border-muh-300"
                     >
                       <p className="text-[14px] font-semibold text-slate-900">{p.mapel}</p>
                       <p className="mt-0.5 text-[12px] text-muted">
-                        Tingkat {p.tingkatan} · Fase {faseDariTingkatan(p.tingkatan)}
+                        Kelas {p.kelas} · Fase {faseDariTingkatan(tingkatanDariKelas(p.kelas))}
                         {jumlahTp === null
                           ? ' · Memuat status…'
                           : n === 'gagal'
@@ -434,7 +483,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik/setup-tp">Pilih mata pelajaran</BackLink>
-        <Notice tone="error">Anda tidak memiliki penugasan untuk {mapel} tingkat {tingkatan}.</Notice>
+        <Notice tone="error">Anda tidak memiliki penugasan untuk {mapel} kelas {kelas}.</Notice>
       </div>
     )
   }
@@ -444,7 +493,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
       <div className="space-y-4">
         <BackLink to="/akademik/setup-tp">Pilih mata pelajaran</BackLink>
         <Notice tone="warn">
-          {mapel} tidak diajarkan di kelas tingkat {tingkatan}. Cek kembali data mapel di Administrasi → Mata
+          {mapel} tidak diajarkan di kelas {kelas}. Cek kembali data mapel di Administrasi → Mata
           Pelajaran kalau ini seharusnya diajarkan.
         </Notice>
       </div>
@@ -479,7 +528,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
       await saveTP({
         id: form.id,
         mapel,
-        tingkatan,
+        kelas,
         nomorTp: nomor,
         namaTp,
         cp: form.cp.trim(),
@@ -523,7 +572,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     <div className="space-y-5">
       <BackLink to="/akademik/setup-tp">Pilih mata pelajaran</BackLink>
       <HeroBanner
-        eyebrow={`Tingkat ${tingkatan} · Fase ${faseDariTingkatan(tingkatan)}`}
+        eyebrow={`Kelas ${kelas} · Fase ${faseDariTingkatan(tingkatan)}`}
         title={`TP & KKTP — ${mapel}`}
         subtitle={
           tulis
@@ -546,10 +595,10 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
             + Tambah TP
           </button>
           <button type="button" className={btnGhost} onClick={() => setPanelImpor((v) => !v)}>
-            {panelImpor ? 'Tutup impor' : 'Impor JSON'}
+            {panelImpor ? 'Tutup panel' : 'Impor / Ekspor'}
           </button>
           <Link
-            to={`/akademik/bobot-semester?mapel=${encodeURIComponent(mapel)}&tingkatan=${tingkatan}`}
+            to={`/akademik/bobot-semester?mapel=${encodeURIComponent(mapel)}&kelas=${encodeURIComponent(kelas)}`}
             className={`${btnGhost} no-underline`}
           >
             Atur semester &amp; bobot
@@ -560,15 +609,62 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
       {panelImpor && tulis && !form && (
         <section className="card-soft space-y-3 p-4">
           <h2 className="text-[14px] font-semibold text-slate-900">
-            Impor TP — {mapel} tingkat {tingkatan}
+            Impor / ekspor — {mapel} kelas {kelas}
           </h2>
           <p className="text-[12.5px] leading-relaxed text-muted">
-            Hanya baris yang cocok dengan mapel &amp; tingkatan ini yang akan ditulis. Mode ganti hanya
-            menghapus TP pasangan ini.
+            Unduh template (kosong atau terisi TP saat ini), edit di Excel, lalu unggah. Saat impor, hanya
+            baris mapel &amp; tingkatan ini yang ditulis. Mode ganti hanya menghapus TP pasangan ini.
           </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={btnGhost}
+              onClick={() =>
+                void unduhTemplateExcel({
+                  mapel,
+                  kelas,
+                  namaFile: `template-tp-${mapel.replace(/\s+/g, '-').toLowerCase()}-${kelas.toLowerCase()}.xlsx`,
+                })
+              }
+            >
+              Template kosong
+            </button>
+            <button
+              type="button"
+              className={btnGhost}
+              disabled={!list?.length}
+              onClick={() => {
+                const items: TpImportItem[] = (list ?? []).map((tp) => ({
+                  mapel: tp.mapel,
+                  kelas: tp.kelas || kelas,
+                  tingkatan: tp.tingkatan,
+                  nomorTp: tp.nomorTp,
+                  namaTp: tp.namaTp,
+                  cp: tp.cp,
+                  tipe: tp.tipe,
+                  bobotSlm: tp.bobotSlm ?? 60,
+                  bobotSas: tp.bobotSas ?? 40,
+                  levels: tp.levels?.length === 4 ? tp.levels : [
+                    { min: 0, maks: 60, deskripsi: '' },
+                    { min: 61, maks: 75, deskripsi: '' },
+                    { min: 76, maks: 85, deskripsi: '' },
+                    { min: 86, maks: 100, deskripsi: '' },
+                  ],
+                }))
+                void unduhTemplateExcel({
+                  items,
+                  mapel,
+                  kelas,
+                  namaFile: `tp-${mapel.replace(/\s+/g, '-').toLowerCase()}-${kelas.toLowerCase()}.xlsx`,
+                })
+              }}
+            >
+              Ekspor TP saat ini ({list?.length ?? 0})
+            </button>
+          </div>
           <input
             type="file"
-            accept="application/json,.json"
+            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/json,.json"
             className="block w-full text-[13px] file:mr-3 file:rounded-lg file:border-0 file:bg-muh-50 file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-muh-800"
             onChange={(e) => {
               const f = e.target.files?.[0]
@@ -600,12 +696,12 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
             <div className="space-y-2 rounded-xl border border-border bg-slate-50/80 p-3 text-[12.5px]">
               {(() => {
                 const cocok = pratinjauImpor.items.filter(
-                  (it) => it.mapel === mapel && it.tingkatan === String(tingkatan),
+                  (it) => it.mapel === mapel && it.kelas.toUpperCase() === kelas,
                 )
                 return (
                   <>
                     <p className="font-semibold text-slate-800">
-                      Cocok untuk {mapel} tingkat {tingkatan}: {cocok.length} dari{' '}
+                      Cocok untuk {mapel} kelas {kelas}: {cocok.length} dari{' '}
                       {pratinjauImpor.items.length} TP di file
                     </p>
                     {cocok.length > 0 && (
@@ -623,7 +719,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                       type="button"
                       className={btnPrimary}
                       disabled={busyImpor || cocok.length === 0}
-                      onClick={() => void jalankanImpor({ mapel, tingkatan })}
+                      onClick={() => void jalankanImpor({ mapel, kelas })}
                     >
                       {busyImpor ? 'Mengimpor…' : `Impor ${cocok.length} TP ke sini`}
                     </button>

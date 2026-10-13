@@ -72,7 +72,7 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
     setSiap(false)
     const c = await getConfigAkademik()
     const [daftarTp, anak, cakupan, angka] = await Promise.all([
-      getTPList(mapel, tingkatan),
+      getTPList(mapel, kelas),
       getSiswaList(kelas, { role: profile.role, kelasAmpu: [] }),
       getCakupanTP({ mapel, kelas, semester: c.semesterAktif, tahunAjaran: c.tahunAjaran, jenis }),
       getNilaiAsesmenKelas({ jenis, mapel, kelas, semester: c.semesterAktif, tahunAjaran: c.tahunAjaran }),

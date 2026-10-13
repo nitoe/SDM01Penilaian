@@ -13,7 +13,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
-import { faseDariTingkatan, LEVEL_RANGE_DEFAULT } from './akademikRumus'
+import { faseDariTingkatan, LEVEL_RANGE_DEFAULT, tingkatanDariKelas } from './akademikRumus'
 import { MAPEL_BAWAAN } from './mapelBawaan'
 import type {
   AsesmenCakupan,
@@ -156,11 +156,15 @@ export async function simpanProfilSekolah(p: {
   )
 }
 
-export async function getTPList(mapel: string, tingkatan: string): Promise<TujuanPembelajaran[]> {
+/**
+ * Daftar TP satu mapel di satu kelas paralel (5A ≠ 5B).
+ * Argumen kedua adalah KELAS (mis. "5A"), bukan tingkatan.
+ */
+export async function getTPList(mapel: string, kelas: string): Promise<TujuanPembelajaran[]> {
   const q = query(
     collection(db, 'tp_kktp'),
     where('mapel', '==', mapel),
-    where('tingkatan', '==', String(tingkatan)),
+    where('kelas', '==', String(kelas).toUpperCase()),
   )
   const snap = await getDocs(q)
   return snap.docs
@@ -171,7 +175,8 @@ export async function getTPList(mapel: string, tingkatan: string): Promise<Tujua
 export interface TpPayload {
   id?: string
   mapel: string
-  tingkatan: string
+  /** Kelas paralel, contoh "5A". */
+  kelas: string
   nomorTp: number
   namaTp: string
   cp?: string
@@ -186,10 +191,13 @@ export interface TpPayload {
  * Bobot Semester. Menulisnya di sini menimpa balik pengaturan guru (v2 antiregresi §20.3).
  */
 export async function saveTP(p: TpPayload): Promise<void> {
+  const kelas = String(p.kelas || '').toUpperCase()
+  const tingkatan = tingkatanDariKelas(kelas)
   const data = {
     mapel: p.mapel,
-    tingkatan: String(p.tingkatan),
-    fase: faseDariTingkatan(p.tingkatan),
+    kelas,
+    tingkatan,
+    fase: faseDariTingkatan(tingkatan),
     nomorTp: p.nomorTp,
     namaTp: p.namaTp,
     cp: p.cp || '',
@@ -214,13 +222,13 @@ export type ModeImporTp = 'tambah' | 'ganti'
 /**
  * Impor banyak TP sekaligus.
  * - mode `tambah`: hanya menambah; nomor yang sudah ada di Firestore dilewati.
- * - mode `ganti`: hapus dulu semua TP mapel×tingkatan yang muncul di payload, lalu tulis ulang.
+ * - mode `ganti`: hapus dulu semua TP mapel×kelas yang muncul di payload, lalu tulis ulang.
  * Tidak menyentuh semester/bobotMapel (milik halaman Bobot Semester).
  */
 export async function importTPBatch(
   items: {
     mapel: string
-    tingkatan: string
+    kelas: string
     nomorTp: number
     namaTp: string
     cp?: string
@@ -233,10 +241,10 @@ export async function importTPBatch(
 ): Promise<{ ditulis: number; dilewati: number; dihapus: number }> {
   if (!items.length) return { ditulis: 0, dilewati: 0, dihapus: 0 }
 
-  // Kelompokkan per mapel|tingkatan
+  // Kelompokkan per mapel|kelas
   const grup = new Map<string, typeof items>()
   for (const it of items) {
-    const k = `${it.mapel}|${String(it.tingkatan)}`
+    const k = `${it.mapel}|${String(it.kelas).toUpperCase()}`
     if (!grup.has(k)) grup.set(k, [])
     grup.get(k)!.push(it)
   }
@@ -246,12 +254,11 @@ export async function importTPBatch(
   let dihapus = 0
 
   for (const [kunci, daftar] of grup) {
-    const [mapel, tingkatan] = kunci.split('|') as [string, string]
-    const existing = await getTPList(mapel, tingkatan)
+    const [mapel, kelas] = kunci.split('|') as [string, string]
+    const existing = await getTPList(mapel, kelas)
     const byNomor = new Map(existing.map((t) => [t.nomorTp, t]))
 
     if (mode === 'ganti') {
-      // Hapus semua yang sudah ada di pasangan ini
       for (let i = 0; i < existing.length; i += 400) {
         const batch = writeBatch(db)
         existing.slice(i, i + 400).forEach((t) => batch.delete(doc(db, 'tp_kktp', t.id)))
@@ -273,10 +280,13 @@ export async function importTPBatch(
       const batch = writeBatch(db)
       for (const it of yangAkanDitulis.slice(i, i + 400)) {
         const ref = doc(collection(db, 'tp_kktp'))
+        const kls = String(it.kelas).toUpperCase()
+        const tingkatan = tingkatanDariKelas(kls)
         batch.set(ref, {
           mapel: it.mapel,
-          tingkatan: String(it.tingkatan),
-          fase: faseDariTingkatan(it.tingkatan),
+          kelas: kls,
+          tingkatan,
+          fase: faseDariTingkatan(tingkatan),
           nomorTp: it.nomorTp,
           namaTp: it.namaTp,
           cp: it.cp || '',

@@ -1,7 +1,7 @@
 import { collection, doc, getCountFromServer, getDoc, getDocs, query, where } from 'firebase/firestore'
 import { db } from './firebase'
 import { getMapelList, getTPList } from './akademik'
-import { aksesMapelTingkatan } from './aksesAkademik'
+import { aksesMapelKelas } from './aksesAkademik'
 import { SEMUA_KELAS } from '../types/tahsin'
 import type { AppUser } from '../types/user'
 
@@ -67,11 +67,11 @@ export interface GuruAkademikProgress {
 
 /**
  * Hitung progres Setup TP / bobot untuk akun guru akademik.
- * Query paralel per kombinasi mapel×tingkatan (biasanya kecil: 5–20).
+ * Query paralel per kombinasi mapel×kelas (biasanya kecil: 5–20).
  */
 export async function loadGuruAkademikProgress(profile: AppUser): Promise<GuruAkademikProgress> {
   const mapel = await getMapelList()
-  const pilihan = aksesMapelTingkatan(profile, mapel)
+  const pilihan = aksesMapelKelas(profile, mapel)
   if (pilihan.length === 0) {
     return { totalKombinasi: 0, sudahAdaTp: 0, belumAdaTp: 0, totalTp: 0, tpTanpaBobot: 0 }
   }
@@ -79,7 +79,7 @@ export async function loadGuruAkademikProgress(profile: AppUser): Promise<GuruAk
   const hasil = await Promise.all(
     pilihan.map(async (p) => {
       try {
-        const daftar = await getTPList(p.mapel, p.tingkatan)
+        const daftar = await getTPList(p.mapel, p.kelas)
         return {
           n: daftar.length,
           tanpaBobot: daftar.filter((t) => !t.semester).length,

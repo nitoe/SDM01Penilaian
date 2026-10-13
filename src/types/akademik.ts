@@ -17,10 +17,16 @@ export interface Mapel {
   tingkatanBerlaku?: string[]
 }
 
-/** Dokumen `tp_kktp/{id}` — satu TP per mapel per TINGKATAN (bukan per kelas paralel). */
+/**
+ * Dokumen `tp_kktp/{id}` — satu TP per mapel per KELAS paralel.
+ * Sengaja tidak dibagi antarkelas (5A ≠ 5B) agar setiap guru menyusun TP & KKTP sendiri.
+ * `tingkatan` disimpan sebagai turunan kelas (untuk fase), bukan kunci unik.
+ */
 export interface TujuanPembelajaran {
   id: string
   mapel: string
+  /** Kelas paralel, contoh "5A". Wajib untuk dokumen baru. */
+  kelas: string
   tingkatan: string
   fase?: string
   nomorTp: number

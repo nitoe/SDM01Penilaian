@@ -201,7 +201,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
   const muatDetail = useCallback(async () => {
     const [c, t, s] = await Promise.all([
       getConfigAkademik(),
-      getTPList(mapel, tingkatan),
+      getTPList(mapel, kelas),
       getSiswaList(kelas, { role: profile.role, kelasAmpu: [] }),
     ])
     const n = await getNilaiTPKelas({
@@ -228,7 +228,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
             const kunci = `${p.mapel}|${p.kelas}`
             try {
               const [daftar, anak] = await Promise.all([
-                getTPList(p.mapel, tingkatanDariKelas(p.kelas)),
+                getTPList(p.mapel, p.kelas),
                 getSiswaList(p.kelas, { role: profile.role, kelasAmpu: [] }),
               ])
               const tampil = daftar.filter((t) => tpMasukSemester(t, cfg.semesterAktif))
@@ -338,7 +338,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
                       <Badge tone="peach">Belum ada TP</Badge>
                       <Link
                         className="text-[11.5px] font-semibold text-muh-700 underline"
-                        to={`/akademik/setup-tp?mapel=${encodeURIComponent(p.mapel)}&tingkatan=${tingkatanDariKelas(p.kelas)}`}
+                        to={`/akademik/setup-tp?mapel=${encodeURIComponent(p.mapel)}&kelas=${encodeURIComponent(p.kelas)}`}
                       >
                         Buat TP dulu
                       </Link>
@@ -413,7 +413,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
           {belumKelompok > 0 && (
             <Notice tone="warn">
               {belumKelompok} TP belum dikelompokkan ke semester, jadi ikut tampil di sini. Atur di{' '}
-              <Link className="font-semibold underline" to={`/akademik/bobot-semester?mapel=${encodeURIComponent(mapel)}&tingkatan=${tingkatan}`}>
+              <Link className="font-semibold underline" to={`/akademik/bobot-semester?mapel=${encodeURIComponent(mapel)}&kelas=${encodeURIComponent(kelas)}`}>
                 Bobot Semester
               </Link>
               .

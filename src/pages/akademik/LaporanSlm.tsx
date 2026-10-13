@@ -77,7 +77,7 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
       try {
         const [c, t, s] = await Promise.all([
           getConfigAkademik(),
-          getTPList(mapel, tingkatan),
+          getTPList(mapel, kelas),
           getSiswaList(kelas, { role: profile.role, kelasAmpu: [] }),
         ])
         const n = await getNilaiTPKelas({

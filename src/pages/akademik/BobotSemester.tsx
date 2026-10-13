@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import type { Mapel, Semester, TujuanPembelajaran } from '../../types/akademik'
 import { getMapelList, getTPList, normalisasiPersenBobotMapel, saveBobotSemesterBatch } from '../../lib/akademik'
-import { aksesMapelTingkatan } from '../../lib/aksesAkademik'
+import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { HeroBanner } from '../../components/ui'
 import { BackLink, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, inputCls, useToast } from './shared'
@@ -19,15 +19,15 @@ const TOLERANSI = 0.5
 export default function BobotSemester({ profile }: { profile: AppUser }) {
   const [params] = useSearchParams()
   const mapel = params.get('mapel') || ''
-  const tingkatan = params.get('tingkatan') || ''
+  const kelas = (params.get('kelas') || '').toUpperCase()
   const tulis = isGuruAkademikRole(profile.role)
   const admin = isAdminRole(profile.role)
   const [mapelMaster, setMapelMaster] = useState<Mapel[] | null>(null)
   const pilihan = useMemo(
-    () => (mapelMaster ? aksesMapelTingkatan(profile, mapelMaster) : []),
+    () => (mapelMaster ? aksesMapelKelas(profile, mapelMaster) : []),
     [profile, mapelMaster],
   )
-  const berhak = pilihan.some((p) => p.mapel === mapel && p.tingkatan === tingkatan)
+  const berhak = pilihan.some((p) => p.mapel === mapel && p.kelas === kelas)
 
   const [baris, setBaris] = useState<Baris[] | null>(null)
   const [kotor, setKotor] = useState(false)
@@ -49,9 +49,9 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
   }, [])
 
   useEffect(() => {
-    if (!mapel || !tingkatan || !berhak) return
+    if (!mapel || !kelas || !berhak) return
     let batal = false
-    getTPList(mapel, tingkatan)
+    getTPList(mapel, kelas)
       .then((l) => {
         if (batal) return
         setBaris(l.map((tp) => ({ tp, semester: tp.semester ?? '', bobot: tp.bobotMapel != null ? String(tp.bobotMapel) : '' })))
@@ -65,7 +65,7 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [mapel, tingkatan, berhak, show])
+  }, [mapel, kelas, berhak, show])
 
   if (!tulis && !admin) {
     return (
@@ -76,11 +76,11 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     )
   }
 
-  if (!mapel || !tingkatan) {
+  if (!mapel || !kelas) {
     return (
       <div className="space-y-5">
         <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
-        <HeroBanner eyebrow="Akademik" title="Bobot Semester TP" subtitle="Pilih mata pelajaran dan tingkatan." />
+        <HeroBanner eyebrow="Akademik" title="Bobot Semester TP" subtitle="Pilih mata pelajaran dan kelas. Bobot TP mengikuti TP per kelas." />
         {mapelMaster === null ? (
           <Spinner />
         ) : pilihan.length === 0 ? (
@@ -91,12 +91,12 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {pilihan.map((p) => (
               <Link
-                key={`${p.mapel}-${p.tingkatan}`}
-                to={`/akademik/bobot-semester?mapel=${encodeURIComponent(p.mapel)}&tingkatan=${p.tingkatan}`}
+                key={`${p.mapel}-${p.kelas}`}
+                to={`/akademik/bobot-semester?mapel=${encodeURIComponent(p.mapel)}&kelas=${encodeURIComponent(p.kelas)}`}
                 className="card-soft block p-4 no-underline transition hover:border-muh-300"
               >
                 <p className="text-[14px] font-semibold text-slate-900">{p.mapel}</p>
-                <p className="mt-0.5 text-[12px] text-muted">Tingkat {p.tingkatan}</p>
+                <p className="mt-0.5 text-[12px] text-muted">Kelas {p.kelas}</p>
               </Link>
             ))}
           </div>
@@ -109,7 +109,7 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik/bobot-semester">Pilih mata pelajaran</BackLink>
-        <Notice tone="error">Anda tidak memiliki penugasan untuk {mapel} tingkat {tingkatan}.</Notice>
+        <Notice tone="error">Anda tidak memiliki penugasan untuk {mapel} kelas {kelas}.</Notice>
       </div>
     )
   }
@@ -246,7 +246,7 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     <div className="space-y-5">
       <BackLink to="/akademik/bobot-semester">Pilih mata pelajaran</BackLink>
       <HeroBanner
-        eyebrow={`Tingkat ${tingkatan}`}
+        eyebrow={`Kelas ${kelas}`}
         title={`Bobot Semester TP — ${mapel}`}
         subtitle={
           tulis
