@@ -1,7 +1,9 @@
 // Uji rumus nilai Akademik. Jalankan: node --experimental-strip-types scripts/cek-rumus-akademik.mjs
 import assert from 'node:assert/strict'
 import {
-  hitungNilaiAkhirTP, hitungNilaiAkhirMapel, normalisasiPersenBobotMapel, tentukanLevel, tpMasukSemester, validasiLevels,
+  bobotTpDiSemester,
+  hitungNilaiAkhirTP, hitungNilaiAkhirMapel, normalisasiAlokasiTp, normalisasiPersenBobotMapel,
+  tentukanLevel, tpMasukSemester, validasiLevels,
 } from '../src/lib/akademikRumus.ts'
 
 const tp = { bobotSlm: 60, bobotSas: 40, tipe: 'pengetahuan', levels: [
@@ -35,6 +37,16 @@ assert.equal(hitungNilaiAkhirMapel([{ nilai: 100, bobot: 15 }, { nilai: 0, bobot
 assert.equal(tpMasukSemester({ semester: '1' }, '1'), true)
 assert.equal(tpMasukSemester({ semester: '2' }, '1'), false)
 assert.equal(tpMasukSemester({}, '2'), true)
+// Dual-semester via bobotPerSemester
+assert.equal(tpMasukSemester({ bobotPerSemester: { '1': 40, '2': 30 } }, '1'), true)
+assert.equal(tpMasukSemester({ bobotPerSemester: { '1': 40, '2': 30 } }, '2'), true)
+assert.equal(tpMasukSemester({ bobotPerSemester: { '1': 40 } }, '2'), false)
+assert.equal(bobotTpDiSemester({ bobotPerSemester: { '1': 40, '2': 25 } }, '1'), 40)
+assert.equal(bobotTpDiSemester({ bobotPerSemester: { '1': 40, '2': 25 } }, '2'), 25)
+assert.equal(bobotTpDiSemester({ semester: '1', bobotMapel: 15 }, '1'), 15)
+assert.equal(bobotTpDiSemester({ semester: '1', bobotMapel: 15 }, '2'), null)
+assert.deepEqual(normalisasiAlokasiTp({ semester: '2', bobotMapel: 20 }), { '2': 20 })
+assert.deepEqual(normalisasiAlokasiTp({ bobotPerSemester: { '1': 10, '2': 30 } }), { '1': 10, '2': 30 })
 
 // Normalisasi persen: total selalu 100 dan rasio terjaga
 for (const n of [1, 2, 3, 7, 11]) {

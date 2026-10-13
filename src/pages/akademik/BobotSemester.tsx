@@ -2,19 +2,32 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import type { Mapel, Semester, TujuanPembelajaran } from '../../types/akademik'
-import { getMapelList, getTPList, normalisasiPersenBobotMapel, saveBobotSemesterBatch } from '../../lib/akademik'
+import {
+  getMapelList,
+  getTPList,
+  normalisasiAlokasiTp,
+  normalisasiPersenBobotMapel,
+  saveBobotSemesterBatch,
+} from '../../lib/akademik'
 import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { HeroBanner } from '../../components/ui'
 import { BackLink, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, inputCls, useToast } from './shared'
 
+/** State UI per TP: alokasi bisa 0, 1, atau 2 semester sekaligus. */
 interface Baris {
   tp: TujuanPembelajaran
-  semester: Semester | ''
-  bobot: string
+  /** Bobot string per semester; key ada = dialokasikan. */
+  bobot: Partial<Record<Semester, string>>
 }
 
 const TOLERANSI = 0.5
+const SEMS: Semester[] = ['1', '2']
+
+function parseBobot(s: string | undefined): number {
+  if (s == null || s.trim() === '') return NaN
+  return Number(s)
+}
 
 export default function BobotSemester({ profile }: { profile: AppUser }) {
   const [params] = useSearchParams()
@@ -54,7 +67,15 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     getTPList(mapel, kelas)
       .then((l) => {
         if (batal) return
-        setBaris(l.map((tp) => ({ tp, semester: tp.semester ?? '', bobot: tp.bobotMapel != null ? String(tp.bobotMapel) : '' })))
+        setBaris(
+          l.map((tp) => {
+            const alokasi = normalisasiAlokasiTp(tp)
+            const bobot: Partial<Record<Semester, string>> = {}
+            if (alokasi['1'] != null) bobot['1'] = String(alokasi['1'])
+            if (alokasi['2'] != null) bobot['2'] = String(alokasi['2'])
+            return { tp, bobot }
+          }),
+        )
         setKotor(false)
       })
       .catch((e) => {
@@ -80,7 +101,11 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-5">
         <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
-        <HeroBanner eyebrow="Akademik" title="Bobot Semester TP" subtitle="Pilih mata pelajaran dan kelas. Bobot TP mengikuti TP per kelas." />
+        <HeroBanner
+          eyebrow="Akademik"
+          title="Bobot Semester TP"
+          subtitle="Pilih mata pelajaran dan kelas. Satu TP boleh dialokasikan ke semester 1, 2, atau keduanya."
+        />
         {mapelMaster === null ? (
           <Spinner />
         ) : pilihan.length === 0 ? (
@@ -109,45 +134,88 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik/bobot-semester">Pilih mata pelajaran</BackLink>
-        <Notice tone="error">Anda tidak memiliki penugasan untuk {mapel} kelas {kelas}.</Notice>
+        <Notice tone="error">
+          Anda tidak memiliki penugasan untuk {mapel} kelas {kelas}.
+        </Notice>
       </div>
     )
   }
 
-  const ubah = (id: string, patch: Partial<Pick<Baris, 'semester' | 'bobot'>>) => {
-    setBaris((b) => (b ? b.map((r) => (r.tp.id === id ? { ...r, ...patch } : r)) : b))
+  const setAlokasi = (id: string, semester: Semester, aktif: boolean) => {
+    setBaris((prev) => {
+      if (!prev) return prev
+      return prev.map((r) => {
+        if (r.tp.id !== id) return r
+        const next = { ...r.bobot }
+        if (aktif) {
+          if (next[semester] == null) next[semester] = '1'
+        } else {
+          delete next[semester]
+        }
+        return { ...r, bobot: next }
+      })
+    })
     setKotor(true)
   }
 
-  const nilaiBobot = (r: Baris) => (r.bobot.trim() === '' ? NaN : Number(r.bobot))
+  const setBobot = (id: string, semester: Semester, value: string) => {
+    setBaris((prev) => {
+      if (!prev) return prev
+      return prev.map((r) => {
+        if (r.tp.id !== id) return r
+        if (r.bobot[semester] == null) return r
+        return { ...r, bobot: { ...r.bobot, [semester]: value } }
+      })
+    })
+    setKotor(true)
+  }
+
   const totalSemester = (s: Semester) =>
-    (baris ?? []).filter((r) => r.semester === s).reduce((a, r) => a + (Number.isFinite(nilaiBobot(r)) ? nilaiBobot(r) : 0), 0)
+    (baris ?? []).reduce((a, r) => {
+      if (r.bobot[s] == null) return a
+      const n = parseBobot(r.bobot[s])
+      return a + (Number.isFinite(n) ? n : 0)
+    }, 0)
+
+  const jumlahTpSemester = (s: Semester) => (baris ?? []).filter((r) => r.bobot[s] != null).length
 
   function ratakan(s: Semester) {
     if (!baris) return
-    const kelompok = baris.filter((r) => r.semester === s)
+    const kelompok = baris.filter((r) => r.bobot[s] != null)
     if (!kelompok.length) return
     const hasil = normalisasiPersenBobotMapel(
-      kelompok.map((r) => ({ id: r.tp.id, bobotMapel: Number.isFinite(nilaiBobot(r)) ? nilaiBobot(r) : 1 })),
+      kelompok.map((r) => ({
+        id: r.tp.id,
+        bobotMapel: Number.isFinite(parseBobot(r.bobot[s])) ? parseBobot(r.bobot[s]) : 1,
+      })),
     )
     const peta = new Map(hasil.map((h) => [h.id, h.bobotBaru]))
-    setBaris(baris.map((r) => (peta.has(r.tp.id) ? { ...r, bobot: String(peta.get(r.tp.id)) } : r)))
+    setBaris(
+      baris.map((r) =>
+        peta.has(r.tp.id) ? { ...r, bobot: { ...r.bobot, [s]: String(peta.get(r.tp.id)) } } : r,
+      ),
+    )
     setKotor(true)
   }
 
   async function simpan() {
     if (!baris) return
-    const terkelompok = baris.filter((r) => r.semester !== '')
-    if (terkelompok.some((r) => !Number.isFinite(nilaiBobot(r)) || nilaiBobot(r) < 0 || nilaiBobot(r) > 100)) {
-      return show('Persentase bobot harus angka 0–100 untuk semua TP yang sudah dikelompokkan.', true)
+    const teralokasi = baris.filter((r) => Object.keys(r.bobot).length > 0)
+    for (const r of teralokasi) {
+      for (const s of SEMS) {
+        if (r.bobot[s] == null) continue
+        const n = parseBobot(r.bobot[s])
+        if (!Number.isFinite(n) || n < 0 || n > 100) {
+          return show(`Persentase bobot harus angka 0–100 (TP ${r.tp.nomorTp}, Semester ${s}).`, true)
+        }
+      }
     }
     const peringatan: string[] = []
-    const belum = baris.filter((r) => r.semester === '').length
-    if (belum) peringatan.push(`${belum} TP belum dikelompokkan ke semester (tidak akan disimpan).`)
-    ;(['1', '2'] as Semester[]).forEach((s) => {
-      const ada = baris.some((r) => r.semester === s)
-      if (ada && Math.abs(totalSemester(s) - 100) > TOLERANSI) {
-        peringatan.push(`Total bobot Semester ${s} = ${totalSemester(s)}%, bukan 100%.`)
+    const belum = baris.filter((r) => Object.keys(r.bobot).length === 0).length
+    if (belum) peringatan.push(`${belum} TP belum dialokasikan ke semester mana pun (tidak akan disimpan).`)
+    SEMS.forEach((s) => {
+      if (jumlahTpSemester(s) > 0 && Math.abs(totalSemester(s) - 100) > TOLERANSI) {
+        peringatan.push(`Total bobot Semester ${s} = ${totalSemester(s).toFixed(1)}%, bukan 100%.`)
       }
     })
     if (peringatan.length && !window.confirm(`${peringatan.join('\n')}\n\nTetap simpan?`)) return
@@ -155,9 +223,18 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     setBusy(true)
     try {
       await saveBobotSemesterBatch(
-        terkelompok.map((r) => ({ id: r.tp.id, semester: r.semester as Semester, bobotMapel: nilaiBobot(r) })),
+        baris.map((r) => {
+          const bps: Partial<Record<Semester, number>> = {}
+          SEMS.forEach((s) => {
+            if (r.bobot[s] != null) {
+              const n = parseBobot(r.bobot[s])
+              bps[s] = Number.isFinite(n) ? n : 0
+            }
+          })
+          return { id: r.tp.id, bobotPerSemester: bps }
+        }),
       )
-      show('Semester dan bobot TP disimpan.')
+      show('Alokasi semester dan bobot TP disimpan.')
       setKotor(false)
     } catch (e) {
       console.error(e)
@@ -167,80 +244,114 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     }
   }
 
-  const kelompok = (s: Semester | '') => (baris ?? []).filter((r) => r.semester === s)
-
-  // Fungsi render (bukan komponen) agar input tidak di-remount & kehilangan fokus tiap ketikan.
-  const renderKartu = (r: Baris) => (
-    <li key={r.tp.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-white p-2.5">
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muh-50 text-[12px] font-bold text-muh-700">
-        {r.tp.nomorTp}
-      </span>
-      <span className="min-w-0 flex-1 basis-40 text-[12.5px] leading-snug text-slate-800">{r.tp.namaTp}</span>
-      {r.semester !== '' && (
-        <label className="flex items-center gap-1 text-[12px] text-slate-600">
-          <input
-            aria-label={`Bobot TP ${r.tp.nomorTp} (persen)`}
-            className={`${inputCls} w-16 text-center`}
-            inputMode="decimal"
-            value={r.bobot}
-            readOnly={!tulis}
-            onChange={(e) => ubah(r.tp.id, { bobot: e.target.value })}
-          />
-          %
-        </label>
-      )}
-      {tulis && (
-      <span className="flex gap-1">
-        {(['1', '2'] as Semester[])
-          .filter((s) => s !== r.semester)
-          .map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => ubah(r.tp.id, { semester: s, bobot: r.bobot === '' ? '1' : r.bobot })}
-              className="rounded-lg border border-border px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
-            >
-              {r.semester === '' ? `Ke Sem ${s}` : `Pindah ke Sem ${s}`}
-            </button>
-          ))}
-      </span>
-      )}
-    </li>
-  )
-
-  const renderKelompok = (s: Semester) => {
-    const isi = kelompok(s)
+  const ringkasan = (s: Semester) => {
     const total = totalSemester(s)
-    const pas = Math.abs(total - 100) <= TOLERANSI
+    const n = jumlahTpSemester(s)
+    const pas = n === 0 || Math.abs(total - 100) <= TOLERANSI
+    const sisa = 100 - total
+    return { total, n, pas, sisa }
+  }
+
+  const renderProgress = (s: Semester) => {
+    const { total, n, pas, sisa } = ringkasan(s)
+    const pct = Math.min(100, Math.max(0, total))
     return (
-      <section key={s} className="card-soft space-y-2.5 p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-[14px] font-semibold text-slate-900">Semester {s}</h2>
-          {isi.length > 0 && (
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                pas ? 'bg-muh-50 text-muh-700' : 'bg-amber-50 text-amber-700'
-              }`}
-            >
-              {pas ? '✓' : '⚠'} Total {total}%
-            </span>
-          )}
-          {isi.length > 0 && tulis && (
-            <button type="button" className={`${btnGhost} ml-auto !px-2.5 !py-1 !text-[12px]`} onClick={() => ratakan(s)}>
-              Ratakan ke 100%
-            </button>
-          )}
+      <div className="flex flex-1 flex-col gap-1.5 rounded-xl border border-border bg-white p-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[13px] font-semibold text-slate-800">Semester {s}</span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+              n === 0
+                ? 'bg-slate-100 text-slate-500'
+                : pas
+                  ? 'bg-muh-50 text-muh-700'
+                  : 'bg-amber-50 text-amber-700'
+            }`}
+          >
+            {n === 0 ? 'kosong' : pas ? `✓ ${total}%` : `⚠ ${total}%`}
+          </span>
         </div>
-        {isi.length === 0 ? (
-          <p className="text-[12.5px] text-muted">Belum ada TP di semester ini.</p>
-        ) : (
-          <ul className="space-y-1.5">
-            {isi.map(renderKartu)}
-          </ul>
-        )}
-      </section>
+        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+          <div
+            className={`h-full rounded-full transition-all ${
+              n === 0 ? 'bg-slate-200' : pas ? 'bg-muh-500' : total > 100 ? 'bg-rose-400' : 'bg-amber-400'
+            }`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <p className="text-[11.5px] text-muted">
+          {n === 0
+            ? 'Belum ada TP'
+            : pas
+              ? `${n} TP · total tepat 100%`
+              : sisa > 0
+                ? `${n} TP · sisa ${sisa.toFixed(1)}% lagi ke 100%`
+                : `${n} TP · kelebihan ${Math.abs(sisa).toFixed(1)}%`}
+        </p>
+      </div>
     )
   }
+
+  const renderKartu = (r: Baris) => {
+    const dual = r.bobot['1'] != null && r.bobot['2'] != null
+    return (
+      <li key={r.tp.id} className="rounded-xl border border-border bg-white p-3">
+        <div className="flex flex-wrap items-start gap-2">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muh-50 text-[12px] font-bold text-muh-700">
+            {r.tp.nomorTp}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12.5px] leading-snug text-slate-800">{r.tp.namaTp}</p>
+            {dual && (
+              <span className="mt-1 inline-block rounded-full bg-peach-50 px-2 py-0.5 text-[10.5px] font-medium text-peach-800">
+                Dipakai di kedua semester
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          {SEMS.map((s) => {
+            const aktif = r.bobot[s] != null
+            return (
+              <div
+                key={s}
+                className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 ${
+                  aktif ? 'border-muh-200 bg-muh-50/60' : 'border-border bg-slate-50'
+                }`}
+              >
+                <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5 rounded border-slate-300 text-muh-600 focus:ring-muh-500"
+                    checked={aktif}
+                    disabled={!tulis}
+                    onChange={(e) => setAlokasi(r.tp.id, s, e.target.checked)}
+                  />
+                  Sem {s}
+                </label>
+                {aktif && (
+                  <label className="flex items-center gap-0.5 text-[12px] text-slate-600">
+                    <input
+                      aria-label={`Bobot TP ${r.tp.nomorTp} Semester ${s}`}
+                      className={`${inputCls} w-14 text-center !py-0.5`}
+                      inputMode="decimal"
+                      value={r.bobot[s] ?? ''}
+                      readOnly={!tulis}
+                      onChange={(e) => setBobot(r.tp.id, s, e.target.value)}
+                    />
+                    %
+                  </label>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </li>
+    )
+  }
+
+  const belum = (baris ?? []).filter((r) => Object.keys(r.bobot).length === 0)
+  const sudah = (baris ?? []).filter((r) => Object.keys(r.bobot).length > 0)
 
   return (
     <div className="space-y-5">
@@ -250,8 +361,8 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
         title={`Bobot Semester TP — ${mapel}`}
         subtitle={
           tulis
-            ? 'Kelompokkan TP ke Semester 1 atau 2, lalu atur persentase kontribusi tiap TP terhadap nilai akhir mapel (per semester total 100%).'
-            : 'Mode lihat. Administrator tidak mengubah semester atau bobot.'
+            ? 'Centang semester yang memakai TP, lalu atur persentase kontribusi. Satu TP boleh masuk semester 1 dan 2 sekaligus. Total ideal tiap semester = 100%.'
+            : 'Mode lihat. Administrator tidak mengubah alokasi atau bobot.'
         }
       />
       {baris === null ? (
@@ -260,27 +371,72 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
         <Notice>Belum ada TP. Susun dulu di menu Setup TP &amp; KKTP.</Notice>
       ) : (
         <>
+          {/* Ringkasan live per semester */}
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {renderProgress('1')}
+            {renderProgress('2')}
+          </div>
+
           <Notice>
-            Nilai akhir mapel dihitung dari rata-rata tertimbang TP yang sudah bernilai. Mengubah persentase di sini tidak
-            mengubah isi TP maupun nilai siswa yang sudah diinput.
+            Nilai akhir mapel dihitung dari rata-rata tertimbang TP yang sudah bernilai di semester berjalan.
+            Mengubah persentase di sini tidak mengubah isi TP maupun nilai siswa yang sudah diinput.
           </Notice>
-          {kelompok('').length > 0 && (
+
+          {belum.length > 0 && (
             <section className="card-soft space-y-2.5 border-amber-200 p-4">
-              <h2 className="text-[14px] font-semibold text-slate-900">Belum dikelompokkan</h2>
-              <ul className="space-y-1.5">
-                {kelompok('').map(renderKartu)}
-              </ul>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-[14px] font-semibold text-slate-900">Belum dialokasikan</h2>
+                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                  {belum.length} TP
+                </span>
+              </div>
+              <p className="text-[12px] text-muted">
+                Centang semester di bawah tiap TP. TP yang belum dialokasikan tidak ikut dihitung di nilai mapel.
+              </p>
+              <ul className="space-y-1.5">{belum.map(renderKartu)}</ul>
             </section>
           )}
-          {renderKelompok('1')}
-          {renderKelompok('2')}
+
+          {sudah.length > 0 && (
+            <section className="card-soft space-y-2.5 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-[14px] font-semibold text-slate-900">Sudah dialokasikan</h2>
+                <span className="rounded-full bg-muh-50 px-2 py-0.5 text-[11px] font-semibold text-muh-700">
+                  {sudah.length} TP
+                </span>
+                {tulis && (
+                  <div className="ml-auto flex flex-wrap gap-1.5">
+                    {SEMS.map((s) =>
+                      jumlahTpSemester(s) > 0 ? (
+                        <button
+                          key={s}
+                          type="button"
+                          className={`${btnGhost} !px-2.5 !py-1 !text-[12px]`}
+                          onClick={() => ratakan(s)}
+                        >
+                          Ratakan Sem {s} → 100%
+                        </button>
+                      ) : null,
+                    )}
+                  </div>
+                )}
+              </div>
+              <ul className="space-y-1.5">{sudah.map(renderKartu)}</ul>
+            </section>
+          )}
+
           {tulis && (
-          <div className="sticky bottom-16 z-10 flex items-center gap-2 rounded-2xl border border-border bg-white/95 p-3 shadow-lg backdrop-blur md:bottom-4">
-            <button type="button" className={btnPrimary} disabled={busy || !kotor} onClick={() => void simpan()}>
-              {busy ? 'Menyimpan…' : 'Simpan semua'}
-            </button>
-            {kotor && <span className="text-[12px] text-amber-700">Ada perubahan yang belum disimpan.</span>}
-          </div>
+            <div className="sticky bottom-16 z-10 flex items-center gap-2 rounded-2xl border border-border bg-white/95 p-3 shadow-lg backdrop-blur md:bottom-4">
+              <button type="button" className={btnPrimary} disabled={busy || !kotor} onClick={() => void simpan()}>
+                {busy ? 'Menyimpan…' : 'Simpan semua'}
+              </button>
+              {kotor && <span className="text-[12px] text-amber-700">Ada perubahan yang belum disimpan.</span>}
+              {!kotor && baris.length > 0 && (
+                <span className="text-[12px] text-muted">
+                  Sem 1: {ringkasan('1').total}% · Sem 2: {ringkasan('2').total}%
+                </span>
+              )}
+            </div>
           )}
         </>
       )}

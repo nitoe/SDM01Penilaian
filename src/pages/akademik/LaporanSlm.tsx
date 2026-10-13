@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import type { ConfigAkademik, Mapel, NilaiTpDoc, TujuanPembelajaran } from '../../types/akademik'
 import {
+  bobotTpDiSemester,
   getConfigAkademik,
   getMapelList,
   getNilaiTPKelas,
@@ -22,11 +23,20 @@ import { BackLink, LEVEL_WARNA, Notice, NoticeAksesGuru, Spinner, btnGhost, btnP
 
 type NilaiKelas = Record<string, Record<string, NilaiTpDoc>>
 
-function rataSlm(siswaId: string, daftar: TujuanPembelajaran[], nilai: NilaiKelas): number | null {
+function rataSlm(
+  siswaId: string,
+  daftar: TujuanPembelajaran[],
+  nilai: NilaiKelas,
+  semester: string,
+): number | null {
   return hitungNilaiAkhirMapel(
     daftar.map((tp) => {
       const slm = nilai[tp.id]?.[siswaId]?.slm
-      return { nilai: slm == null ? null : hitungNilaiAkhirTP(slm, null, tp), bobot: tp.bobotMapel ?? 1 }
+      const bobot = bobotTpDiSemester(tp, semester)
+      return {
+        nilai: slm == null ? null : hitungNilaiAkhirTP(slm, null, tp),
+        bobot: bobot == null ? 0 : bobot,
+      }
     }),
   )
 }
@@ -205,7 +215,10 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
                       <th key={tp.id} className="px-2 py-2 text-center font-semibold" title={tp.namaTp}>
                         TP {tp.nomorTp}
                         <span className="mt-0.5 block font-medium normal-case tracking-normal text-slate-400">
-                          {tp.bobotMapel == null ? 'setara' : `${tp.bobotMapel}%`}
+                          {(() => {
+                            const b = bobotTpDiSemester(tp, config.semesterAktif)
+                            return b == null ? 'setara' : `${b}%`
+                          })()}
                         </span>
                       </th>
                     ))}
@@ -232,7 +245,7 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
                         )
                       })}
                       <td className="px-3 py-2 text-center text-[14px] font-bold text-muh-800">
-                        {rataSlm(s.id, tpList, nilai) ?? '–'}
+                        {rataSlm(s.id, tpList, nilai, config.semesterAktif) ?? '–'}
                       </td>
                     </tr>
                   ))}

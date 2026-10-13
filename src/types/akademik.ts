@@ -36,9 +36,19 @@ export interface TujuanPembelajaran {
   /** Bobot SLM/SAS di dalam satu TP (persen, default 60/40). */
   bobotSlm?: number
   bobotSas?: number
-  /** Bobot TP di dalam nilai akhir mapel (persen per SEMESTER). Diatur di halaman Bobot Semester. */
-  bobotMapel?: number
+  /**
+   * Legacy: semester eksklusif (1 ATAU 2). Dipertahankan untuk dokumen lama.
+   * Sumber kebenaran baru: `bobotPerSemester` (boleh keduanya).
+   */
   semester?: Semester
+  /** Legacy: bobot % di semester eksklusif. Fallback bila `bobotPerSemester` kosong. */
+  bobotMapel?: number
+  /**
+   * Alokasi bobot per semester. Key yang ada = TP dipakai di semester itu.
+   * Nilai = % kontribusi terhadap nilai akhir mapel di semester tersebut (total ideal 100 per semester).
+   * TP boleh masuk semester 1 dan 2 sekaligus dengan bobot berbeda.
+   */
+  bobotPerSemester?: Partial<Record<Semester, number>>
   levels: LevelKktp[]
 }
 

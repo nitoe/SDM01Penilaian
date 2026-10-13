@@ -13,6 +13,7 @@ import {
   getTPList,
   importTPBatch,
   mapelBerlakuDiTingkatan,
+  normalisasiAlokasiTp,
   saveTP,
   validasiLevels,
   type ModeImporTp,
@@ -902,13 +903,18 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                       <Badge>
                         SLM {tp.bobotSlm ?? 60}% · SAS {tp.bobotSas ?? 40}%
                       </Badge>
-                      {tp.semester ? (
-                        <Badge>
-                          Sem {tp.semester} · {tp.bobotMapel ?? '–'}%
-                        </Badge>
-                      ) : (
-                        <Badge tone="peach">Semester &amp; bobot belum diatur</Badge>
-                      )}
+                      {(() => {
+                        const alokasi = normalisasiAlokasiTp(tp)
+                        const keys = (Object.keys(alokasi) as ('1' | '2')[]).sort()
+                        if (!keys.length) {
+                          return <Badge tone="peach">Semester &amp; bobot belum diatur</Badge>
+                        }
+                        return (
+                          <Badge>
+                            {keys.map((s) => `Sem ${s} ${alokasi[s]}%`).join(' · ')}
+                          </Badge>
+                        )
+                      })()}
                     </span>
                   </span>
                 </button>

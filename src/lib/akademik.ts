@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteField,
   doc,
   deleteDoc,
   getDoc,
@@ -187,8 +188,9 @@ export interface TpPayload {
 }
 
 /**
- * Simpan TP. `semester` & `bobotMapel` SENGAJA tidak ditulis di sini — keduanya milik halaman
- * Bobot Semester. Menulisnya di sini menimpa balik pengaturan guru (v2 antiregresi §20.3).
+ * Simpan TP. `semester`, `bobotMapel`, dan `bobotPerSemester` SENGAJA tidak ditulis di sini —
+ * ketiganya milik halaman Bobot Semester. Menulisnya di sini menimpa balik pengaturan guru
+ * (v2 antiregresi §20.3).
  */
 export async function saveTP(p: TpPayload): Promise<void> {
   const kelas = String(p.kelas || '').toUpperCase()
@@ -235,7 +237,7 @@ function kunciNamaTp(nama: string): string {
  * - mode `tambah`: lewati jika nomorTp ATAU teks namaTp (dinormalisasi) sudah ada di mapel×kelas.
  *   Duplikat di dalam file yang sama juga dilewati (pertahankan yang pertama).
  * - mode `ganti`: hapus dulu semua TP mapel×kelas yang muncul di payload, lalu tulis ulang.
- * Tidak menyentuh semester/bobotMapel (milik halaman Bobot Semester).
+ * Tidak menyentuh semester/bobotMapel/bobotPerSemester (milik halaman Bobot Semester).
  */
 export async function importTPBatch(
   items: {
@@ -343,15 +345,45 @@ export async function importTPBatch(
   return { ditulis, dilewati, dihapus }
 }
 
-/** Simpan semester + bobot banyak TP sekaligus (hanya dua field ini). */
+/**
+ * Simpan alokasi semester + bobot TP.
+ * Menulis `bobotPerSemester` (sumber kebenaran baru) serta field legacy
+ * `semester` + `bobotMapel` agar dokumen tetap terbaca oleh klien lama.
+ * TP tanpa alokasi (kosong) → hapus ketiga field.
+ */
 export async function saveBobotSemesterBatch(
-  daftar: { id: string; semester: Semester; bobotMapel: number }[],
+  daftar: {
+    id: string
+    /** Alokasi modern: key = semester yang dipakai, value = bobot %. */
+    bobotPerSemester: Partial<Record<Semester, number>>
+  }[],
 ): Promise<void> {
   for (let i = 0; i < daftar.length; i += 400) {
     const batch = writeBatch(db)
-    daftar.slice(i, i + 400).forEach((d) =>
-      batch.update(doc(db, 'tp_kktp', d.id), { semester: d.semester, bobotMapel: d.bobotMapel }),
-    )
+    daftar.slice(i, i + 400).forEach((d) => {
+      const keys = (Object.keys(d.bobotPerSemester) as Semester[]).filter(
+        (s) => d.bobotPerSemester[s] != null,
+      )
+      if (!keys.length) {
+        batch.update(doc(db, 'tp_kktp', d.id), {
+          semester: deleteField(),
+          bobotMapel: deleteField(),
+          bobotPerSemester: deleteField(),
+        })
+        return
+      }
+      const bps: Partial<Record<Semester, number>> = {}
+      keys.forEach((s) => {
+        bps[s] = Number(d.bobotPerSemester[s])
+      })
+      // Legacy: semester primer = yang pertama (urut 1 lalu 2); bobotMapel = bobot semester primer
+      const primer: Semester = keys.includes('1') ? '1' : '2'
+      batch.update(doc(db, 'tp_kktp', d.id), {
+        bobotPerSemester: bps,
+        semester: primer,
+        bobotMapel: bps[primer] ?? 0,
+      })
+    })
     await batch.commit()
   }
 }

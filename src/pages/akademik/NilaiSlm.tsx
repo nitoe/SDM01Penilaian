@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import type { ConfigAkademik, Mapel, NilaiTpDoc, TujuanPembelajaran } from '../../types/akademik'
 import {
+  bobotTpDiSemester,
   getConfigAkademik,
   getMapelList,
   getNilaiTPKelas,
@@ -36,11 +37,20 @@ function drafDari(existing: Record<string, NilaiTpDoc>): Draf {
   )
 }
 
-function rataSlm(siswaId: string, daftar: TujuanPembelajaran[], nilai: NilaiKelas): number | null {
+function rataSlm(
+  siswaId: string,
+  daftar: TujuanPembelajaran[],
+  nilai: NilaiKelas,
+  semester: string,
+): number | null {
   return hitungNilaiAkhirMapel(
     daftar.map((tp) => {
       const slm = nilai[tp.id]?.[siswaId]?.slm
-      return { nilai: slm == null ? null : hitungNilaiAkhirTP(slm, null, tp), bobot: tp.bobotMapel ?? 1 }
+      const bobot = bobotTpDiSemester(tp, semester)
+      return {
+        nilai: slm == null ? null : hitungNilaiAkhirTP(slm, null, tp),
+        bobot: bobot == null ? 0 : bobot,
+      }
     }),
   )
 }
@@ -374,7 +384,15 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
 
   const tampil = (tpList ?? []).filter((t) => config && tpMasukSemester(t, config.semesterAktif))
   const tersembunyi = (tpList?.length ?? 0) - tampil.length
-  const belumKelompok = tampil.filter((t) => !t.semester).length
+  const belumKelompok = (tpList ?? []).filter((t) => {
+    if (!config) return false
+    // Belum dialokasikan sama sekali (tidak masuk semester mana pun lewat bobotPerSemester/legacy)
+    const b1 = bobotTpDiSemester(t, '1')
+    const b2 = bobotTpDiSemester(t, '2')
+    // Legacy: tanpa semester = "ikut semua" di tpMasukSemester, tapi belum diatur bobotnya
+    if (!t.semester && (!t.bobotPerSemester || Object.keys(t.bobotPerSemester).length === 0)) return true
+    return b1 == null && b2 == null
+  }).length
   const laporan = `/akademik/laporan-slm?mapel=${encodeURIComponent(mapel)}&kelas=${encodeURIComponent(kelas)}`
 
   return (
@@ -443,9 +461,14 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
                         <Badge>
                           {isi}/{siswa.length} siswa
                         </Badge>
-                        <Badge tone={tp.bobotMapel == null ? 'peach' : 'neutral'}>
-                          {tp.bobotMapel == null ? 'Bobot belum diatur' : `${tp.bobotMapel}% dari nilai mapel`}
-                        </Badge>
+                        {(() => {
+                          const b = config ? bobotTpDiSemester(tp, config.semesterAktif) : null
+                          return (
+                            <Badge tone={b == null ? 'peach' : 'neutral'}>
+                              {b == null ? 'Bobot belum diatur' : `${b}% dari nilai mapel`}
+                            </Badge>
+                          )
+                        })()}
                       </span>
                     </span>
                   </button>
@@ -476,7 +499,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
             </p>
             <ul className="mt-2 divide-y divide-border">
               {siswa.map((s) => {
-                const akhir = rataSlm(s.id, tampil, nilai)
+                const akhir = config ? rataSlm(s.id, tampil, nilai, config.semesterAktif) : null
                 return (
                   <li key={s.id} className="flex items-center gap-3 py-2">
                     <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-slate-800">{s.nama}</span>

@@ -85,9 +85,66 @@ export function tentukanLevel(
   return { index: last, label: labels[last], deskripsi: levels[last]?.deskripsi || '' }
 }
 
-/** TP tanpa semester ikut semester yang sedang berjalan (belum dikelompokkan). */
-export function tpMasukSemester(tp: { semester?: string | null }, semester: string): boolean {
+/**
+ * Apakah TP dialokasikan ke semester tertentu.
+ * - Jika `bobotPerSemester` ada: key semester harus terisi (boleh 0).
+ * - Legacy: field `semester` eksklusif; tanpa semester = ikut semua (belum dikelompokkan).
+ */
+export function tpMasukSemester(
+  tp: {
+    semester?: string | null
+    bobotPerSemester?: Partial<Record<string, number>> | null
+  },
+  semester: string,
+): boolean {
+  const bps = tp.bobotPerSemester
+  if (bps && typeof bps === 'object' && Object.keys(bps).length > 0) {
+    return Object.prototype.hasOwnProperty.call(bps, semester) && bps[semester] != null
+  }
   return !tp.semester || tp.semester === semester
+}
+
+/**
+ * Bobot % TP di dalam nilai akhir mapel untuk satu semester.
+ * Prefer `bobotPerSemester[semester]`; fallback legacy `bobotMapel` bila semester cocok.
+ * Mengembalikan null jika TP tidak dialokasikan ke semester itu.
+ */
+export function bobotTpDiSemester(
+  tp: {
+    semester?: string | null
+    bobotMapel?: number | null
+    bobotPerSemester?: Partial<Record<string, number>> | null
+  },
+  semester: string,
+): number | null {
+  const bps = tp.bobotPerSemester
+  if (bps && typeof bps === 'object' && Object.keys(bps).length > 0) {
+    if (!Object.prototype.hasOwnProperty.call(bps, semester) || bps[semester] == null) return null
+    return Number(bps[semester])
+  }
+  if (!tp.semester || tp.semester === semester) {
+    return tp.bobotMapel != null ? Number(tp.bobotMapel) : 1
+  }
+  return null
+}
+
+/** Normalisasi dokumen TP lama → bentuk alokasi modern (tanpa menulis Firestore). */
+export function normalisasiAlokasiTp(tp: {
+  semester?: string | null
+  bobotMapel?: number | null
+  bobotPerSemester?: Partial<Record<string, number>> | null
+}): Partial<Record<'1' | '2', number>> {
+  const bps = tp.bobotPerSemester
+  if (bps && typeof bps === 'object' && Object.keys(bps).length > 0) {
+    const out: Partial<Record<'1' | '2', number>> = {}
+    if (bps['1'] != null) out['1'] = Number(bps['1'])
+    if (bps['2'] != null) out['2'] = Number(bps['2'])
+    return out
+  }
+  if (tp.semester === '1' || tp.semester === '2') {
+    return { [tp.semester]: tp.bobotMapel != null ? Number(tp.bobotMapel) : 1 }
+  }
+  return {}
 }
 
 /** Rata-rata tertimbang nilai akhir TP; dinormalisasi terhadap entri yang punya nilai. */
