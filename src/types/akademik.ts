@@ -50,6 +50,8 @@ export interface TujuanPembelajaran {
    */
   bobotPerSemester?: Partial<Record<Semester, number>>
   levels: LevelKktp[]
+  /** Hanya untuk mapel Seni Budaya: Seni Rupa | Seni Musik | Seni Tari | Seni Teater. */
+  disiplinSeni?: string
 }
 
 export interface ConfigAkademik {

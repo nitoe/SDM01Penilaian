@@ -31,6 +31,8 @@ import {
 import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { HeroBanner, Badge } from '../../components/ui'
+import SeniBudayaPanel from '../../components/SeniBudayaPanel'
+import { DISIPLIN_SENI } from '../../lib/seniKelas'
 import {
   BackLink,
   LEVEL_WARNA,
@@ -94,6 +96,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     [profile, mapelMaster],
   )
   const berhak = pilihan.some((p) => p.mapel === mapel && p.kelas === kelas)
+  const isSeniBudaya = mapel === 'Seni Budaya'
 
   const [list, setList] = useState<TujuanPembelajaran[] | null>(null)
   const [form, setForm] = useState<FormState | null>(null)
@@ -108,6 +111,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const [modeImpor, setModeImpor] = useState<ModeImporTp>('tambah')
   const [busyImpor, setBusyImpor] = useState(false)
   const [refreshHub, setRefreshHub] = useState(0)
+  /** Tab khusus Seni Budaya: 'setup' | nama disiplin | 'semua' */
+  const [tabSeni, setTabSeni] = useState<string>('setup')
   const fileImporRef = useRef<HTMLInputElement>(null)
   const { show, node } = useToast()
 
@@ -512,7 +517,13 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     )
   }
 
-  async function simpan() {
+  const listTampil = (() => {
+    if (!list) return null
+    if (!isSeniBudaya || tabSeni === 'setup' || tabSeni === 'semua') return list
+    return list.filter((tp) => (tp.disiplinSeni || '') === tabSeni)
+  })()
+
+    async function simpan() {
     if (!form) return
     const namaTp = form.namaTp.trim()
     const nomor = parseInt(form.nomorTp, 10)
@@ -548,6 +559,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         bobotSlm: bSlm,
         bobotSas: bSas,
         levels,
+        disiplinSeni:
+          isSeniBudaya && tabSeni !== 'setup' && tabSeni !== 'semua' ? tabSeni : undefined,
       })
       show(form.id ? 'TP diperbarui.' : 'TP ditambahkan.')
       setForm(null)
@@ -587,13 +600,54 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         eyebrow={`Kelas ${kelas} · Fase ${faseDariTingkatan(tingkatan)}`}
         title={`TP & KKTP — ${mapel}`}
         subtitle={
-          tulis
-            ? 'TP & KKTP dipakai bersama di kelas ini untuk mapel ini — guru kelas dan guru bidang studi yang mengampu melihat data yang sama. Semester & bobot diatur di menu Bobot Semester.'
-            : 'Mode lihat. Administrator dapat membaca TP yang disusun guru, tetapi tidak mengubahnya.'
+          isSeniBudaya
+            ? 'Seni Budaya punya tab khusus: atur disiplin aktif per semester, lalu susun TP per cabang seni (rupa, musik, tari, teater).'
+            : tulis
+              ? 'TP & KKTP dipakai bersama di kelas ini untuk mapel ini — guru kelas dan guru bidang studi yang mengampu melihat data yang sama. Semester & bobot diatur di menu Bobot Semester.'
+              : 'Mode lihat. Administrator dapat membaca TP yang disusun guru, tetapi tidak mengubahnya.'
         }
       />
 
-      {statusCakupan !== 'boleh' ? (
+      {isSeniBudaya && (
+        <div className="flex flex-wrap gap-1.5 border-b border-border pb-2">
+          <button
+            type="button"
+            onClick={() => { setTabSeni('setup'); setForm(null) }}
+            className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
+              tabSeni === 'setup' ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Setup Seni Budaya
+          </button>
+          {DISIPLIN_SENI.map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => { setTabSeni(d); setForm(null) }}
+              className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
+                tabSeni === d ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              TP {d.replace('Seni ', '')}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => { setTabSeni('semua'); setForm(null) }}
+            className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
+              tabSeni === 'semua' ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Semua TP
+          </button>
+        </div>
+      )}
+
+      {isSeniBudaya && tabSeni === 'setup' ? (
+        <section className="card-soft p-4">
+          <SeniBudayaPanel kelas={kelas} bolehTulis={tulis} />
+        </section>
+      ) : statusCakupan !== 'boleh' ? (
         <Spinner />
       ) : (
         <>
@@ -877,13 +931,17 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         </section>
       )}
 
-      {list === null ? (
+      {list === null || listTampil === null ? (
         <Spinner />
-      ) : list.length === 0 ? (
-        <Notice>Belum ada TP untuk {mapel} tingkat {tingkatan}. Tambahkan TP pertama.</Notice>
+      ) : listTampil.length === 0 ? (
+        <Notice>
+          {isSeniBudaya && tabSeni !== 'semua' && tabSeni !== 'setup'
+            ? `Belum ada TP untuk ${tabSeni} di kelas ${kelas}. Tambahkan TP di tab ini.`
+            : `Belum ada TP untuk ${mapel} kelas ${kelas}. Tambahkan TP pertama.`}
+        </Notice>
       ) : (
         <div className="space-y-2.5">
-          {list.map((tp) => {
+          {listTampil.map((tp) => {
             const buka = terbuka === tp.id
             return (
               <article key={tp.id} className="card-soft overflow-hidden">
@@ -900,6 +958,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                     <span className="block text-[13.5px] font-semibold leading-snug text-slate-900">{tp.namaTp}</span>
                     <span className="mt-1 flex flex-wrap items-center gap-1.5">
                       <Badge tone="green">{tp.tipe}</Badge>
+                      {tp.disiplinSeni && <Badge tone="peach">{tp.disiplinSeni}</Badge>}
                       <Badge>
                         SLM {tp.bobotSlm ?? 60}% · SAS {tp.bobotSas ?? 40}%
                       </Badge>

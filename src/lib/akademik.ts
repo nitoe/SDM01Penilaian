@@ -197,6 +197,8 @@ export interface TpPayload {
   bobotSlm?: number
   bobotSas?: number
   levels: LevelKktp[]
+  /** Seni Budaya saja: disiplin aktif untuk TP ini. */
+  disiplinSeni?: string
 }
 
 /**
@@ -207,7 +209,7 @@ export interface TpPayload {
 export async function saveTP(p: TpPayload): Promise<void> {
   const kelas = String(p.kelas || '').toUpperCase()
   const tingkatan = tingkatanDariKelas(kelas)
-  const data = {
+  const data: Record<string, unknown> = {
     mapel: p.mapel,
     kelas,
     tingkatan,
@@ -219,6 +221,11 @@ export async function saveTP(p: TpPayload): Promise<void> {
     bobotSlm: p.bobotSlm ?? 60,
     bobotSas: p.bobotSas ?? 40,
     levels: p.levels,
+  }
+  if (p.mapel === 'Seni Budaya' && p.disiplinSeni) {
+    data.disiplinSeni = p.disiplinSeni
+  } else if (p.mapel === 'Seni Budaya' && p.id && !p.disiplinSeni) {
+    // biarkan field lama; jangan paksa hapus di sini
   }
   if (p.id) {
     await updateDoc(doc(db, 'tp_kktp', p.id), { ...data, updatedAt: serverTimestamp(), updatedBy: uid() })

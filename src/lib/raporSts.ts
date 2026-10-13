@@ -328,7 +328,10 @@ tr{page-break-inside:avoid}
 .rpr-ttd-nbm{font-size:9pt;margin-top:1pt}
 `
 
-/** Buka jendela cetak A4 dengan footer otomatis. */
+/**
+ * Cetak rapor lewat iframe tersembunyi — tidak memakai window.open,
+ * sehingga tidak diblokir popup blocker browser.
+ */
 export function cetakRaporSts(d: DataRaporSts): void {
   const body = buildBodyPrintSts(d)
   const css = PRINT_CSS
@@ -345,16 +348,42 @@ export function cetakRaporSts(d: DataRaporSts): void {
 </head>
 <body>
 ${body}
-<script>window.onload=function(){window.focus();window.print();}</script>
 </body>
 </html>`
 
-  const w = window.open('', '_blank', 'noopener,noreferrer')
-  if (!w) {
-    alert('Popup diblokir. Izinkan popup untuk mencetak rapor.')
+  const FRAME_ID = 'sdm-rapor-print-frame'
+  let iframe = document.getElementById(FRAME_ID) as HTMLIFrameElement | null
+  if (!iframe) {
+    iframe = document.createElement('iframe')
+    iframe.id = FRAME_ID
+    iframe.setAttribute('aria-hidden', 'true')
+    iframe.style.cssText =
+      'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none'
+    document.body.appendChild(iframe)
+  }
+
+  const win = iframe.contentWindow
+  const doc = iframe.contentDocument
+  if (!win || !doc) {
+    alert('Browser tidak mendukung cetak lewat iframe. Coba peramban lain.')
     return
   }
-  w.document.open()
-  w.document.write(html)
-  w.document.close()
+
+  doc.open()
+  doc.write(html)
+  doc.close()
+
+  // Tunggu layout siap, lalu panggil print di konteks iframe (bukan jendela baru).
+  const doPrint = () => {
+    try {
+      win.focus()
+      win.print()
+    } catch (e) {
+      console.error(e)
+      alert('Gagal membuka dialog cetak. Coba lagi.')
+    }
+  }
+  // load event + cadangan timeout (beberapa browser tidak memicu onload setelah document.write)
+  iframe.onload = () => setTimeout(doPrint, 50)
+  setTimeout(doPrint, 250)
 }

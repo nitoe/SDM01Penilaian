@@ -1,16 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import { namaDenganGelar } from '../../types/user'
 import type { SiswaTahsin } from '../../types/tahsin'
 import { getSiswaList } from '../../lib/tahsinData'
 import { kelasSaya } from '../../lib/kelasSaya'
 import { isAdminRole } from '../../lib/roles'
-import {
-  DISIPLIN_SENI,
-  getSeniKelas,
-  simpanSeniKelas,
-  type SeniKelasDoc,
-} from '../../lib/seniKelas'
 import {
   buildBodyPrintSts,
   cetakRaporSts,
@@ -23,7 +18,7 @@ import { BackLink, Notice, Spinner, btnGhost, btnPrimary, inputCls } from './sha
 /**
  * Rapor STS — khusus wali kelas.
  * Alur: pilih kelas (hanya kelas yang diwalikan) → pilih siswa → pratinjau + cetak PDF.
- * Pengaturan disiplin Seni Budaya per kelas juga di sini (bukan di admin).
+ * Pengaturan disiplin Seni Budaya: Setup TP → Seni Budaya → tab Setup.
  */
 export default function Rapor({ profile }: { profile: AppUser }) {
   const admin = isAdminRole(profile.role)
@@ -37,11 +32,6 @@ export default function Rapor({ profile }: { profile: AppUser }) {
   const [loadingSiswa, setLoadingSiswa] = useState(false)
   const [loadingRapor, setLoadingRapor] = useState(false)
   const [galat, setGalat] = useState('')
-
-  const [seni, setSeni] = useState<SeniKelasDoc>({ ganjil: [], genap: [] })
-  const [seniDirty, setSeniDirty] = useState(false)
-  const [seniBusy, setSeniBusy] = useState(false)
-  const [seniPesan, setSeniPesan] = useState<string | null>(null)
 
   useEffect(() => {
     if (!kelas && kelasWali.length) setKelas(kelasWali[0])
@@ -59,17 +49,11 @@ export default function Rapor({ profile }: { profile: AppUser }) {
     setSiswaId('')
     setData(null)
     setGalat('')
-    setSeniPesan(null)
-    setSeniDirty(false)
     void (async () => {
       try {
-        const [list, seniDoc] = await Promise.all([
-          getSiswaList(kelas, { role: profile.role, kelasAmpu: [] }),
-          getSeniKelas(kelas),
-        ])
+        const list = await getSiswaList(kelas, { role: profile.role, kelasAmpu: [] })
         if (batal) return
         setSiswaList(list)
-        setSeni(seniDoc)
       } catch (e) {
         console.error(e)
         if (!batal) {
@@ -117,43 +101,6 @@ export default function Rapor({ profile }: { profile: AppUser }) {
       batal = true
     }
   }, [kelas, siswaId, siswaList, profile])
-
-  const toggleSeni = useCallback((sem: 'ganjil' | 'genap', nama: string) => {
-    setSeni((prev) => {
-      const list = prev[sem]
-      const next = list.includes(nama) ? list.filter((x) => x !== nama) : [...list, nama]
-      return { ...prev, [sem]: next }
-    })
-    setSeniDirty(true)
-    setSeniPesan(null)
-  }, [])
-
-  const simpanSeni = useCallback(async () => {
-    if (!kelas) return
-    setSeniBusy(true)
-    setSeniPesan(null)
-    try {
-      await simpanSeniKelas(kelas, seni)
-      setSeniDirty(false)
-      setSeniPesan('Pilihan seni budaya tersimpan.')
-      if (siswaId && siswaList) {
-        const siswa = siswaList.find((s) => s.id === siswaId)
-        if (siswa) {
-          const d = await muatDataRaporSts({
-            siswa: { id: siswa.id, nama: siswa.nama, nisn: siswa.nisn, nipd: siswa.nipd },
-            kelas,
-            waliNama: namaDenganGelar(profile),
-          })
-          setData(d)
-        }
-      }
-    } catch (e) {
-      console.error(e)
-      setSeniPesan('Gagal menyimpan. Pastikan Anda wali kelas ini.')
-    } finally {
-      setSeniBusy(false)
-    }
-  }, [kelas, seni, siswaId, siswaList, profile])
 
   if (admin) {
     return (
@@ -221,60 +168,16 @@ export default function Rapor({ profile }: { profile: AppUser }) {
       </div>
 
       {kelas && (
-        <section className="card-soft p-4 print:hidden">
-          <h2 className="text-[13px] font-semibold text-slate-800">Seni Budaya — Kelas {kelas}</h2>
-          <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted">
-            Pilih disiplin yang dipakai di kelas ini per semester. Boleh lebih dari satu. Muncul di
-            kolom mata pelajaran rapor sebagai &quot;Seni Budaya (…)&quot;.
-          </p>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            {(['ganjil', 'genap'] as const).map((sem) => (
-              <div key={sem}>
-                <p className="mb-1.5 text-[11px] font-medium text-slate-600">
-                  Semester {sem === 'ganjil' ? '1 (ganjil)' : '2 (genap)'}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {DISIPLIN_SENI.map((d) => {
-                    const on = seni[sem].includes(d)
-                    return (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => toggleSeni(sem, d)}
-                        className={`rounded-full px-3 py-1 text-[12px] font-medium transition ${
-                          on
-                            ? 'bg-muh-600 text-white shadow-sm'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {d}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className={btnPrimary}
-              disabled={!seniDirty || seniBusy}
-              onClick={() => void simpanSeni()}
-            >
-              {seniBusy ? 'Menyimpan…' : 'Simpan pilihan seni'}
-            </button>
-            {seniPesan && (
-              <span
-                className={`text-[12px] ${
-                  seniPesan.startsWith('Gagal') ? 'text-red-700' : 'text-muh-800'
-                }`}
-              >
-                {seniPesan}
-              </span>
-            )}
-          </div>
-        </section>
+        <p className="text-[11.5px] text-muted print:hidden">
+          Pengaturan disiplin Seni Budaya ada di{' '}
+          <Link
+            to={`/akademik/setup-tp?mapel=${encodeURIComponent('Seni Budaya')}&kelas=${encodeURIComponent(kelas)}`}
+            className="font-medium text-muh-700 underline"
+          >
+            Setup TP → Seni Budaya
+          </Link>
+          .
+        </p>
       )}
 
       {galat && (
