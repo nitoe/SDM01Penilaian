@@ -13,7 +13,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
-import { faseDariTingkatan } from './akademikRumus'
+import { faseDariTingkatan, LEVEL_RANGE_DEFAULT } from './akademikRumus'
 import { MAPEL_BAWAAN } from './mapelBawaan'
 import type {
   AsesmenCakupan,
@@ -207,6 +207,93 @@ export async function saveTP(p: TpPayload): Promise<void> {
 
 export async function deleteTP(id: string): Promise<void> {
   await deleteDoc(doc(db, 'tp_kktp', id))
+}
+
+export type ModeImporTp = 'tambah' | 'ganti'
+
+/**
+ * Impor banyak TP sekaligus.
+ * - mode `tambah`: hanya menambah; nomor yang sudah ada di Firestore dilewati.
+ * - mode `ganti`: hapus dulu semua TP mapel×tingkatan yang muncul di payload, lalu tulis ulang.
+ * Tidak menyentuh semester/bobotMapel (milik halaman Bobot Semester).
+ */
+export async function importTPBatch(
+  items: {
+    mapel: string
+    tingkatan: string
+    nomorTp: number
+    namaTp: string
+    cp?: string
+    tipe?: TipeTp
+    bobotSlm?: number
+    bobotSas?: number
+    levels?: LevelKktp[]
+  }[],
+  mode: ModeImporTp = 'tambah',
+): Promise<{ ditulis: number; dilewati: number; dihapus: number }> {
+  if (!items.length) return { ditulis: 0, dilewati: 0, dihapus: 0 }
+
+  // Kelompokkan per mapel|tingkatan
+  const grup = new Map<string, typeof items>()
+  for (const it of items) {
+    const k = `${it.mapel}|${String(it.tingkatan)}`
+    if (!grup.has(k)) grup.set(k, [])
+    grup.get(k)!.push(it)
+  }
+
+  let ditulis = 0
+  let dilewati = 0
+  let dihapus = 0
+
+  for (const [kunci, daftar] of grup) {
+    const [mapel, tingkatan] = kunci.split('|') as [string, string]
+    const existing = await getTPList(mapel, tingkatan)
+    const byNomor = new Map(existing.map((t) => [t.nomorTp, t]))
+
+    if (mode === 'ganti') {
+      // Hapus semua yang sudah ada di pasangan ini
+      for (let i = 0; i < existing.length; i += 400) {
+        const batch = writeBatch(db)
+        existing.slice(i, i + 400).forEach((t) => batch.delete(doc(db, 'tp_kktp', t.id)))
+        await batch.commit()
+        dihapus += Math.min(400, existing.length - i)
+      }
+      byNomor.clear()
+    }
+
+    const yangAkanDitulis = daftar.filter((it) => {
+      if (mode === 'tambah' && byNomor.has(it.nomorTp)) {
+        dilewati += 1
+        return false
+      }
+      return true
+    })
+
+    for (let i = 0; i < yangAkanDitulis.length; i += 400) {
+      const batch = writeBatch(db)
+      for (const it of yangAkanDitulis.slice(i, i + 400)) {
+        const ref = doc(collection(db, 'tp_kktp'))
+        batch.set(ref, {
+          mapel: it.mapel,
+          tingkatan: String(it.tingkatan),
+          fase: faseDariTingkatan(it.tingkatan),
+          nomorTp: it.nomorTp,
+          namaTp: it.namaTp,
+          cp: it.cp || '',
+          tipe: it.tipe === 'kinerja' ? 'kinerja' : 'pengetahuan',
+          bobotSlm: it.bobotSlm ?? 60,
+          bobotSas: it.bobotSas ?? 40,
+          levels: it.levels?.length === 4 ? it.levels : LEVEL_RANGE_DEFAULT.map((l) => ({ ...l, deskripsi: '' })),
+          createdAt: serverTimestamp(),
+          createdBy: uid(),
+        })
+        ditulis += 1
+      }
+      await batch.commit()
+    }
+  }
+
+  return { ditulis, dilewati, dihapus }
 }
 
 /** Simpan semester + bobot banyak TP sekaligus (hanya dua field ini). */
