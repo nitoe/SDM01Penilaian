@@ -104,13 +104,21 @@ function ProgressCard({
   tone?: 'peach' | 'green' | 'ink' | 'sky'
   alert?: boolean
 }) {
+  const accent =
+    tone === 'green'
+      ? 'border-l-muh-500'
+      : tone === 'sky'
+        ? 'border-l-sky-500'
+        : tone === 'ink'
+          ? 'border-l-slate-500'
+          : 'border-l-peach-400'
   const ring = alert
     ? 'ring-1 ring-peach-300 bg-peach-50/60'
     : 'hover:border-muh-300'
   return (
     <Link
       to={to}
-      className={`card-soft group flex flex-col gap-1 p-4 transition hover:-translate-y-0.5 hover:shadow-md ${ring}`}
+      className={`card-soft group flex flex-col gap-1 border-l-4 p-4 transition hover:-translate-y-0.5 hover:shadow-md ${accent} ${ring}`}
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-[12px] font-medium text-muted">{title}</p>
