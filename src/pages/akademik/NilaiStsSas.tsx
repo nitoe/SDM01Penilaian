@@ -16,6 +16,16 @@ import {
   tingkatanDariKelas,
   tpMasukSemester,
 } from '../../lib/akademik'
+import {
+  bacaDrafLokal,
+  baselineDariNilaiAsesmen,
+  drafLokalBerbedaDariServer,
+  gabungDrafDenganServer,
+  hapusDrafLokal,
+  kunciDraf,
+  tulisDrafLokal,
+} from '../../lib/nilaiDraftCache'
+import { useUnsavedGuard } from '../../lib/useUnsavedGuard'
 import { getSiswaList } from '../../lib/tahsinData'
 import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
@@ -318,18 +328,40 @@ function Detail(props: {
   const [draf, setDraf] = useState<Record<string, Record<string, string>>>({})
   /** Panel materi di kanan (desktop) / atas (mobile) — bisa disembunyikan */
   const [panelMateri, setPanelMateri] = useState(true)
+  const [drafPulih, setDrafPulih] = useState(false)
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const skipCacheWrite = useRef(false)
+
+  const kunciCache = useMemo(() => {
+    if (!config) return null
+    return kunciDraf({
+      jenis,
+      mapel,
+      kelas,
+      semester: config.semesterAktif,
+      tahunAjaran: config.tahunAjaran,
+    })
+  }, [config, jenis, mapel, kelas])
 
   useEffect(() => {
-    const awal: Record<string, Record<string, string>> = {}
-    for (const [tpId, perSiswa] of Object.entries(props.nilai)) {
-      awal[tpId] = {}
-      for (const [siswaId, doc] of Object.entries(perSiswa)) {
-        awal[tpId][siswaId] = Number.isFinite(doc.nilai) ? String(doc.nilai) : ''
-      }
+    if (!config) return
+    const baseline = baselineDariNilaiAsesmen(props.nilai)
+    if (!kunciCache) {
+      setDraf(baseline)
+      return
     }
-    setDraf(awal)
-  }, [props.nilai])
+    const lokal = bacaDrafLokal(kunciCache)
+    if (lokal && drafLokalBerbedaDariServer(lokal.draf, props.nilai, 'asesmen')) {
+      skipCacheWrite.current = true
+      setDraf(gabungDrafDenganServer(baseline, lokal.draf))
+      setDrafPulih(true)
+      props.show('Draf lokal dipulihkan — nilai belum disimpan ke server. Silakan periksa lalu tekan Simpan.')
+    } else {
+      setDraf(baseline)
+      setDrafPulih(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hanya saat nilai server / kunci berubah
+  }, [props.nilai, kunciCache, config])
 
   const terpilih = useMemo(
     () => (tp ?? []).filter((t) => props.pilihTp.includes(t.id)),
@@ -385,6 +417,20 @@ function Detail(props: {
     }
     return { terisi, total }
   }, [draf, terpilih, siswa, props.nilai])
+
+  const dirty = perubahan.length > 0
+  const { dialogNode } = useUnsavedGuard(dirty && tulis)
+
+  useEffect(() => {
+    if (!kunciCache || !tulis) return
+    if (skipCacheWrite.current) {
+      skipCacheWrite.current = false
+      return
+    }
+    if (!dirty) return
+    const t = window.setTimeout(() => tulisDrafLokal(kunciCache, draf), 400)
+    return () => window.clearTimeout(t)
+  }, [draf, dirty, kunciCache, tulis])
 
   async function simpanCakupan() {
     if (!config || !tulis) return
@@ -452,6 +498,8 @@ function Detail(props: {
         )
         total += n
       }
+      if (kunciCache) hapusDrafLokal(kunciCache)
+      setDrafPulih(false)
       props.show(`${total} nilai berhasil disimpan.`)
       await props.muat()
     } catch (e) {
@@ -651,6 +699,12 @@ function Detail(props: {
         <Spinner />
       ) : (
         <>
+          {drafPulih && dirty && (
+            <Notice tone="warn">
+              Ada draf nilai dari sesi sebelumnya di perangkat ini yang belum disimpan ke server. Periksa tabel lalu tekan{' '}
+              <strong>Simpan</strong>.
+            </Notice>
+          )}
           {/* Toggle panel materi (saat tersembunyi) */}
           {!panelMateri && (
             <div className="flex flex-wrap items-center gap-2">
@@ -794,6 +848,7 @@ function Detail(props: {
       )}
 
       {props.node}
+      {dialogNode}
     </div>
   )
 }

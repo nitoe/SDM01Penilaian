@@ -15,6 +15,16 @@ import {
   tingkatanDariKelas,
   tpMasukSemester,
 } from '../../lib/akademik'
+import {
+  bacaDrafLokal,
+  baselineDariNilaiSlm,
+  drafLokalBerbedaDariServer,
+  gabungDrafDenganServer,
+  hapusDrafLokal,
+  kunciDraf,
+  tulisDrafLokal,
+} from '../../lib/nilaiDraftCache'
+import { useUnsavedGuard } from '../../lib/useUnsavedGuard'
 import { getSiswaList } from '../../lib/tahsinData'
 import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
@@ -327,7 +337,20 @@ function Detail({
   const [draf, setDraf] = useState<Record<string, Record<string, string>>>({})
   const [tampilKolom, setTampilKolom] = useState<string[] | null>(null)
   const [panelMateri, setPanelMateri] = useState(true)
+  const [drafPulih, setDrafPulih] = useState(false)
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const skipCacheWrite = useRef(false)
+
+  const kunciCache = useMemo(() => {
+    if (!config) return null
+    return kunciDraf({
+      jenis: 'slm',
+      mapel,
+      kelas,
+      semester: config.semesterAktif,
+      tahunAjaran: config.tahunAjaran,
+    })
+  }, [config, mapel, kelas])
 
   const tampil = useMemo(
     () => (tpList ?? []).filter((t) => config && tpMasukSemester(t, config.semesterAktif)),
@@ -342,18 +365,21 @@ function Detail({
     return b1 == null && b2 == null
   }).length
 
-  // Sinkron draf dari nilai tersimpan
+  // Sinkron draf dari server + pulihkan cache lokal bila ada
   useEffect(() => {
-    if (!nilai) return
-    const awal: Record<string, Record<string, string>> = {}
-    for (const [tpId, perSiswa] of Object.entries(nilai)) {
-      awal[tpId] = {}
-      for (const [siswaId, doc] of Object.entries(perSiswa)) {
-        awal[tpId][siswaId] = doc.slm == null ? '' : String(doc.slm)
-      }
+    if (!nilai || !kunciCache) return
+    const baseline = baselineDariNilaiSlm(nilai)
+    const lokal = bacaDrafLokal(kunciCache)
+    if (lokal && drafLokalBerbedaDariServer(lokal.draf, nilai, 'slm')) {
+      skipCacheWrite.current = true
+      setDraf(gabungDrafDenganServer(baseline, lokal.draf))
+      setDrafPulih(true)
+      show('Draf lokal dipulihkan — nilai belum disimpan ke server. Silakan periksa lalu tekan Simpan.')
+    } else {
+      setDraf(baseline)
+      setDrafPulih(false)
     }
-    setDraf(awal)
-  }, [nilai])
+  }, [nilai, kunciCache, show])
 
   // Default: tampilkan semua kolom semester
   useEffect(() => {
@@ -414,6 +440,21 @@ function Detail({
     return { terisi, total }
   }, [draf, kolom, siswa, nilai])
 
+  const dirty = perubahan.length > 0
+  const { dialogNode } = useUnsavedGuard(dirty && tulis)
+
+  // Tulis cache lokal saat ada perubahan (debounce)
+  useEffect(() => {
+    if (!kunciCache || !tulis) return
+    if (skipCacheWrite.current) {
+      skipCacheWrite.current = false
+      return
+    }
+    if (!dirty) return
+    const t = window.setTimeout(() => tulisDrafLokal(kunciCache, draf), 400)
+    return () => window.clearTimeout(t)
+  }, [draf, dirty, kunciCache, tulis])
+
   async function simpanSemua() {
     if (!config || !tulis || !siswa || !nilai) return
     if (adaInvalid) {
@@ -448,6 +489,8 @@ function Detail({
         )
         total += n
       }
+      if (kunciCache) hapusDrafLokal(kunciCache)
+      setDrafPulih(false)
       show(`${total} nilai berhasil disimpan.`)
       await onSegarkan()
     } catch (e) {
@@ -642,6 +685,12 @@ function Detail({
         <Notice tone="warn">Tidak ada siswa aktif di kelas {kelas}.</Notice>
       ) : (
         <>
+          {drafPulih && dirty && (
+            <Notice tone="warn">
+              Ada draf nilai dari sesi sebelumnya di perangkat ini yang belum disimpan ke server. Periksa tabel lalu tekan{' '}
+              <strong>Simpan</strong>.
+            </Notice>
+          )}
           {belumKelompok > 0 && (
             <Notice tone="warn">
               {belumKelompok} materi belum dikelompokkan ke semester. Atur di{' '}
@@ -796,6 +845,7 @@ function Detail({
       )}
 
       {node}
+      {dialogNode}
     </div>
   )
 }
