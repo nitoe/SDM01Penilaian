@@ -6,7 +6,7 @@ const items: { to: string; title: string; desc: string; icon: IconName; tone: To
   { to: '/akademik/bobot-semester', title: 'Bobot Semester TP', desc: 'Kelompokkan TP per semester dan atur persentase bobot', icon: 'calendar', tone: 'sky', ready: true },
   { to: '/akademik/nilai-slm', title: 'Input Nilai SLM', desc: 'Nilai sumatif lingkup materi per TP', icon: 'pencil', tone: 'green', ready: true },
   { to: '/akademik/laporan-slm', title: 'Laporan SLM', desc: 'Rekap nilai SLM per kelas, bisa dicetak', icon: 'printer', tone: 'violet', ready: true },
-  { to: '/akademik/nilai-sts', title: 'Nilai STS & SAS', desc: 'Cakupan dan nilai sumatif tengah dan akhir semester', icon: 'clipboard', tone: 'ink', ready: true },
+  { to: '/akademik/nilai-sts', title: 'Nilai STS & SAS', desc: 'Ujian tengah & akhir — input besar, progress jelas, nyaman untuk guru', icon: 'clipboard', tone: 'ink', ready: true },
   { to: '/akademik/rapor', title: 'Rapor', desc: 'Pratinjau tanda tangan dengan gelar', icon: 'printer', tone: 'violet', ready: true },
   { to: '/akademik/absensi', title: 'Absensi & Keputusan', desc: 'Rekap kehadiran dan keputusan kenaikan kelas', icon: 'calendar', tone: 'ink', ready: false },
   { to: '/akademik/kokurikuler', title: 'Kokurikuler', desc: 'Proyek STEM, 7KAIH, dan deskripsi gabungan', icon: 'bars', tone: 'peach', ready: false },

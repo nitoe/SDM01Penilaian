@@ -219,3 +219,16 @@
 - **Simpan** (`saveBobotSemesterBatch`): menulis `bobotPerSemester` + legacy `semester`/`bobotMapel` (primer = Sem 1 jika ada). TP tanpa alokasi → hapus ketiga field.
 - **UI Bobot Semester**: checkbox per semester per TP (boleh centang keduanya), input bobot per semester, ringkasan live (progress bar + sisa/% kelebihan) di atas halaman, badge "Dipakai di kedua semester", tombol ratakan per semester.
 - **Konsumen**: Nilai SLM, Laporan SLM, Setup TP memakai `bobotTpDiSemester` / `normalisasiAlokasiTp` agar bobot yang ditampilkan sesuai semester aktif.
+
+## Belum dirilis — UI/UX Nilai STS & SAS (fokus guru senior)
+
+- `src/pages/akademik/NilaiStsSas.tsx` dirombak untuk kenyamanan guru 50+:
+  - Label lengkap: **Ujian Tengah (STS)** / **Ujian Akhir (SAS)** — bukan singkatan saja.
+  - Cakupan diganti bahasa sehari-hari: **Pilih materi yang diujikan**; tombol Centang semua / Kosongkan; kartu checkbox besar.
+  - Default: jika belum pernah atur cakupan, semua TP semester aktif sudah dicentang (guru hanya uncentang yang tidak diujikan).
+  - Isi nilai: **satu materi fokus** (chip pilih materi), input besar (h-12 / h-14, font 17–18px), progress bar terisi, warna baris sudah/belum.
+  - **Enter** = siswa berikutnya; di baris terakhir Enter = simpan.
+  - Sticky tombol Simpan di bawah layar (mobile & desktop).
+  - Halaman memakai lebar penuh (`HALAMAN_LEBAR`).
+- `src/components/Layout.tsx`: `/akademik/nilai-sts` masuk daftar halaman lebar.
+- `src/pages/AkademikHub.tsx`: deskripsi kartu STS/SAS diperjelas.
