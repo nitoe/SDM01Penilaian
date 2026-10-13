@@ -86,6 +86,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const [terbuka, setTerbuka] = useState<string | null>(null)
   const [jumlahTp, setJumlahTp] = useState<Record<string, number | 'gagal'> | null>(null)
   const [cakupan, setCakupan] = useState<{ kunci: string; status: 'boleh' | 'di luar' } | null>(null)
+  const [filterMapel, setFilterMapel] = useState('')
+  const [filterStatus, setFilterStatus] = useState<'semua' | 'ada' | 'belum'>('semua')
   const { show, node } = useToast()
 
   const kunciCakupan = `${mapel}|${tingkatan}`
@@ -189,30 +191,79 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
             Akun ini belum menjadi guru kelas dan belum memiliki mapel bidang studi. Hubungi admin.
           </Notice>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {pilihan.map((p) => {
-              const kunci = `${p.mapel}|${p.tingkatan}`
-              const n = jumlahTp?.[kunci]
-              return (
-                <Link
-                  key={kunci}
-                  to={`/akademik/setup-tp?mapel=${encodeURIComponent(p.mapel)}&tingkatan=${p.tingkatan}`}
-                  className="card-soft block p-4 no-underline transition hover:border-muh-300"
-                >
-                  <p className="text-[14px] font-semibold text-slate-900">{p.mapel}</p>
-                  <p className="mt-0.5 text-[12px] text-muted">
-                    Tingkat {p.tingkatan} · Fase {faseDariTingkatan(p.tingkatan)}
-                    {jumlahTp === null ? ' · Memuat status…' : n === 'gagal' ? ' · Gagal memuat status' : ''}
-                  </p>
-                  {typeof n === 'number' && (
-                    <p className="mt-2">
-                      {n > 0 ? <Badge tone="green">{n} TP</Badge> : <Badge tone="peach">Belum ada TP</Badge>}
-                    </p>
-                  )}
-                </Link>
-              )
-            })}
-          </div>
+          <>
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+              <input
+                type="search"
+                value={filterMapel}
+                onChange={(e) => setFilterMapel(e.target.value)}
+                placeholder="Cari mapel…"
+                className="w-full rounded-xl border border-border bg-white px-3.5 py-2 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15 sm:max-w-xs"
+              />
+              <div className="flex flex-wrap gap-1.5">
+                {(
+                  [
+                    ['semua', 'Semua'],
+                    ['ada', 'Sudah ada TP'],
+                    ['belum', 'Belum ada TP'],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setFilterStatus(id)}
+                    className={`rounded-full px-3 py-1 text-[11.5px] font-semibold ${
+                      filterStatus === id ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {pilihan
+                .filter((p) => {
+                  const q = filterMapel.trim().toLowerCase()
+                  if (q && !p.mapel.toLowerCase().includes(q)) return false
+                  if (filterStatus === 'semua' || jumlahTp === null) return true
+                  const n = jumlahTp[`${p.mapel}|${p.tingkatan}`]
+                  if (typeof n !== 'number') return true
+                  if (filterStatus === 'ada') return n > 0
+                  return n === 0
+                })
+                .map((p) => {
+                  const kunci = `${p.mapel}|${p.tingkatan}`
+                  const n = jumlahTp?.[kunci]
+                  return (
+                    <Link
+                      key={kunci}
+                      to={`/akademik/setup-tp?mapel=${encodeURIComponent(p.mapel)}&tingkatan=${p.tingkatan}`}
+                      className="card-soft block p-4 no-underline transition hover:border-muh-300"
+                    >
+                      <p className="text-[14px] font-semibold text-slate-900">{p.mapel}</p>
+                      <p className="mt-0.5 text-[12px] text-muted">
+                        Tingkat {p.tingkatan} · Fase {faseDariTingkatan(p.tingkatan)}
+                        {jumlahTp === null
+                          ? ' · Memuat status…'
+                          : n === 'gagal'
+                            ? ' · Gagal memuat status'
+                            : ''}
+                      </p>
+                      {typeof n === 'number' && (
+                        <p className="mt-2">
+                          {n > 0 ? (
+                            <Badge tone="green">{n} TP</Badge>
+                          ) : (
+                            <Badge tone="peach">Belum ada TP</Badge>
+                          )}
+                        </p>
+                      )}
+                    </Link>
+                  )
+                })}
+            </div>
+          </>
         )}
       </div>
     )

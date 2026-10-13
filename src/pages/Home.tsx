@@ -1,19 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   loadAkademikConfig,
   loadDashboardStats,
+  loadGuruAkademikProgress,
+  loadSetoranMingguIni,
+  loadSiswaCountKelas,
   type AkademikConfig,
   type DashboardStats,
+  type GuruAkademikProgress,
 } from '../lib/dashboardStats'
 import { kelasSaya } from '../lib/kelasSaya'
-import { getMapelList } from '../lib/akademik'
-import { aksesMapelKelas } from '../lib/aksesAkademik'
 import { canAkademik, canTahsin, isAdminRole, isGuruAkademikRole, isStaff } from '../lib/roles'
 import { SEMUA_KELAS } from '../types/tahsin'
-import type { Mapel } from '../types/akademik'
 import type { AppUser } from '../types/user'
 import { ROLE_LABEL } from '../types/user'
-import { Chip, HeroBanner, ModuleCard, SectionTitle, StatCard } from '../components/ui'
+import { Chip, HeroBanner, ModuleCard, SectionTitle, StatCard, Badge } from '../components/ui'
+import Icon from '../components/Icon'
 
 interface HomeProps {
   profile: AppUser
@@ -85,11 +88,54 @@ function KelasBars({
   )
 }
 
+/** Kartu progres interaktif — klik menuju halaman terkait. */
+function ProgressCard({
+  to,
+  title,
+  value,
+  hint,
+  tone = 'peach',
+  alert,
+}: {
+  to: string
+  title: string
+  value: string | number | null
+  hint?: string
+  tone?: 'peach' | 'green' | 'ink' | 'sky'
+  alert?: boolean
+}) {
+  const ring = alert
+    ? 'ring-1 ring-peach-300 bg-peach-50/60'
+    : 'hover:border-muh-300'
+  return (
+    <Link
+      to={to}
+      className={`card-soft group flex flex-col gap-1 p-4 transition hover:-translate-y-0.5 hover:shadow-md ${ring}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[12px] font-medium text-muted">{title}</p>
+        {alert && <Badge tone="peach">Perlu aksi</Badge>}
+      </div>
+      <p className="text-[24px] font-semibold leading-tight tracking-tight text-slate-900">
+        {value ?? '—'}
+      </p>
+      {hint && <p className="text-[11.5px] leading-snug text-muted">{hint}</p>}
+      <span className="mt-1 inline-flex items-center gap-1 text-[11.5px] font-semibold text-muh-700 opacity-0 transition group-hover:opacity-100">
+        Buka <Icon name="arrow" />
+      </span>
+    </Link>
+  )
+}
+
 export default function Home({ profile }: HomeProps) {
   const staff = isStaff(profile.role)
   const admin = isAdminRole(profile.role)
   const adaAkademik = canAkademik(profile.role)
   const adaTahsin = canTahsin(profile.role)
+  const guruMapel = isGuruAkademikRole(profile.role)
+  const guruTahsinOnly =
+    profile.role === 'guru_tahsin_tahfizh' ||
+    (profile.role === 'guru' && (profile.kelasAmpu?.length ?? 0) > 0)
   /** Info Tahsin disembunyikan di layar kecil bila pengguna juga punya modul lain. */
   const sembunyikanTahsinDiHP = adaAkademik || admin
 
@@ -97,7 +143,10 @@ export default function Home({ profile }: HomeProps) {
   const [statsState, setStatsState] = useState<Muat>(staff ? 'loading' : 'ok')
   const [config, setConfig] = useState<AkademikConfig | null>(null)
   const [configState, setConfigState] = useState<Muat>(staff ? 'loading' : 'ok')
-  const [mapelMaster, setMapelMaster] = useState<Mapel[]>([])
+  const [progress, setProgress] = useState<GuruAkademikProgress | null>(null)
+  const [progressState, setProgressState] = useState<Muat>('ok')
+  const [siswaAmpu, setSiswaAmpu] = useState<number | null>(null)
+  const [setoranMinggu, setSetoranMinggu] = useState<number | null>(null)
 
   useEffect(() => {
     if (!staff) return
@@ -126,28 +175,41 @@ export default function Home({ profile }: HomeProps) {
   }, [staff])
 
   useEffect(() => {
-    if (!isGuruAkademikRole(profile.role)) return
+    if (!guruMapel) return
     let batal = false
-    getMapelList()
-      .then((daftar) => {
-        if (!batal) setMapelMaster(daftar)
+    setProgressState('loading')
+    loadGuruAkademikProgress(profile)
+      .then((p) => {
+        if (!batal) {
+          setProgress(p)
+          setProgressState('ok')
+        }
       })
       .catch(() => {
-        if (!batal) setMapelMaster([])
+        if (!batal) setProgressState('error')
       })
     return () => {
       batal = true
     }
-  }, [profile.role])
+  }, [guruMapel, profile])
+
+  useEffect(() => {
+    const kelasAmpu = profile.kelasAmpu ?? []
+    if (!guruTahsinOnly || kelasAmpu.length === 0) return
+    let batal = false
+    Promise.all([loadSiswaCountKelas(kelasAmpu), loadSetoranMingguIni(kelasAmpu)]).then(
+      ([nSiswa, nSetoran]) => {
+        if (batal) return
+        setSiswaAmpu(nSiswa)
+        setSetoranMinggu(nSetoran)
+      },
+    )
+    return () => {
+      batal = true
+    }
+  }, [guruTahsinOnly, profile.kelasAmpu])
 
   const saya = useMemo(() => kelasSaya(profile), [profile])
-  const guruMapel = isGuruAkademikRole(profile.role)
-  /** Mapel guru kelas = semua mapel di kelas wali; guru bidang studi = penugasannya. */
-  const mapelSaya = useMemo(() => {
-    const per = new Map<string, string[]>()
-    for (const x of aksesMapelKelas(profile, mapelMaster)) per.set(x.mapel, [...(per.get(x.mapel) ?? []), x.kelas])
-    return [...per.entries()]
-  }, [profile, mapelMaster])
   const siswaKelasSaya = stats
     ? stats.perKelas.filter((k) => saya.semua.includes(k.kelas)).reduce((n, k) => n + k.jumlah, 0)
     : null
@@ -161,7 +223,7 @@ export default function Home({ profile }: HomeProps) {
         title={profile.nama}
         subtitle={
           staff
-            ? 'Pilih modul di bawah untuk mulai mencatat dan memantau penilaian siswa.'
+            ? 'Ringkasan tugas dan akses cepat ke modul penilaian.'
             : `Halo ${depan}, portal untuk orang tua akan segera tersedia.`
         }
       >
@@ -169,7 +231,9 @@ export default function Home({ profile }: HomeProps) {
         {saya.wali.map((k) => (
           <Chip key={`w${k}`}>Wali kelas {k}</Chip>
         ))}
-        {saya.mengajar.length > 0 && <Chip>Mengajar di {saya.mengajar.length} kelas</Chip>}
+        {saya.mengajar.length > 0 && !saya.wali.length && (
+          <Chip>Mengajar di {saya.mengajar.length} kelas</Chip>
+        )}
         {profile.role === 'guru_tahsin_tahfizh' &&
           profile.kelasAmpu?.map((k) => (
             <span key={`t${k}`} className={sembunyikanTahsinDiHP ? 'hidden sm:inline-flex' : 'inline-flex'}>
@@ -180,6 +244,7 @@ export default function Home({ profile }: HomeProps) {
 
       {staff && (
         <>
+          {/* Ringkasan umum */}
           <div>
             <SectionTitle>Ringkasan</SectionTitle>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -232,29 +297,108 @@ export default function Home({ profile }: HomeProps) {
             )}
           </div>
 
-          {guruMapel && mapelSaya.length > 0 && (
-            <div className="card-soft p-5">
-              <h3 className="text-[15px] font-semibold text-slate-900">Mapel dan kelas saya</h3>
-              <ul className="mt-3 divide-y divide-border">
-                {mapelSaya.map(([mapel, kelas]) => (
-                  <li key={mapel} className="flex items-center justify-between gap-3 py-2.5">
-                    <span className="text-[13.5px] font-medium text-slate-800">{mapel}</span>
-                    <span className="flex flex-wrap justify-end gap-1.5">
-                      {kelas.map((k) => (
-                        <span
-                          key={k}
-                          className="rounded-full bg-peach-50 px-2.5 py-0.5 text-[11.5px] font-semibold text-peach-500"
-                        >
-                          {k}
-                        </span>
-                      ))}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+          {/* Progres akademik — data esensial untuk guru kelas & bidang studi */}
+          {guruMapel && (
+            <div>
+              <SectionTitle>Progres penilaian saya</SectionTitle>
+              {progressState === 'loading' && (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="card-soft h-28 animate-pulse bg-slate-50" />
+                  ))}
+                </div>
+              )}
+              {progressState === 'ok' && progress && (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <ProgressCard
+                    to="/akademik/setup-tp"
+                    title="Setup TP & KKTP"
+                    value={
+                      progress.totalKombinasi === 0
+                        ? '—'
+                        : `${progress.sudahAdaTp}/${progress.totalKombinasi}`
+                    }
+                    hint={
+                      progress.totalKombinasi === 0
+                        ? 'Belum ada penugasan mapel'
+                        : progress.belumAdaTp > 0
+                          ? `${progress.belumAdaTp} mapel×tingkat belum punya TP`
+                          : `${progress.totalTp} TP tersusun`
+                    }
+                    tone="peach"
+                    alert={progress.belumAdaTp > 0}
+                  />
+                  <ProgressCard
+                    to="/akademik/bobot-semester"
+                    title="Bobot semester"
+                    value={progress.tpTanpaBobot}
+                    hint={
+                      progress.totalTp === 0
+                        ? 'Belum ada TP untuk diatur'
+                        : progress.tpTanpaBobot > 0
+                          ? 'TP belum dikelompokkan semester'
+                          : 'Semua TP sudah punya semester'
+                    }
+                    tone="sky"
+                    alert={progress.tpTanpaBobot > 0}
+                  />
+                  <ProgressCard
+                    to="/akademik/nilai-slm"
+                    title="Input nilai SLM"
+                    value={progress.totalTp}
+                    hint={
+                      progress.totalTp === 0
+                        ? 'Susun TP dulu sebelum mengisi nilai'
+                        : 'Lanjut ke input nilai per kelas'
+                    }
+                    tone="green"
+                  />
+                </div>
+              )}
+              {progressState === 'error' && (
+                <p className="text-[12px] text-muted">Progres TP belum bisa dimuat.</p>
+              )}
             </div>
           )}
 
+          {/* Ringkasan khusus guru Tahsin */}
+          {guruTahsinOnly && (profile.kelasAmpu?.length ?? 0) > 0 && (
+            <div className={sembunyikanTahsinDiHP ? 'hidden sm:block' : ''}>
+              <SectionTitle>Ringkasan Tahsin-Tahfizh</SectionTitle>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <StatCard
+                  label="Siswa di kelas ampu"
+                  value={siswaAmpu}
+                  hint={(profile.kelasAmpu ?? []).join(', ')}
+                  icon="users"
+                  tone="green"
+                  loading={siswaAmpu === null}
+                />
+                <StatCard
+                  label="Setoran 7 hari terakhir"
+                  value={setoranMinggu}
+                  hint="Semua kelas ampu"
+                  icon="quran"
+                  tone="peach"
+                  loading={setoranMinggu === null}
+                />
+                <Link
+                  to="/tahsin/input-setoran"
+                  className="card-soft flex items-center gap-3 p-4 transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muh-600 text-white">
+                    <Icon name="pencil" />
+                  </span>
+                  <div>
+                    <p className="text-[14px] font-semibold text-slate-900">Input Setoran</p>
+                    <p className="text-[12px] text-muted">Catat setoran hari ini</p>
+                  </div>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Akses cepat akademik */}
           {guruMapel && (
             <div>
               <SectionTitle>Akses cepat</SectionTitle>
@@ -298,7 +442,10 @@ export default function Home({ profile }: HomeProps) {
             </div>
           )}
 
-          {stats && <KelasBars data={stats.perKelas} saya={saya.semua} />}
+          {stats && admin && <KelasBars data={stats.perKelas} saya={saya.semua} />}
+          {stats && !admin && saya.semua.length > 0 && (
+            <KelasBars data={stats.perKelas} saya={saya.semua} />
+          )}
 
           <div>
             <SectionTitle>Modul</SectionTitle>

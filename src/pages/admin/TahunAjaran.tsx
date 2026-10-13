@@ -182,7 +182,11 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
         </div>
       ) : (
         <form onSubmit={(e) => void simpan(e)} className="space-y-4">
-          <Section icon="book" title="Identitas sekolah" desc="Muncul di kop rapor dan dokumen resmi.">
+          <Section
+            icon="book"
+            title="Identitas sekolah"
+            desc="Muncul di kop rapor dan dokumen resmi."
+          >
             <label className="block">
               <Label required>Nama sekolah</Label>
               <input className={field} value={namaSekolah} onChange={(e) => setNamaSekolah(e.target.value)} />
@@ -190,7 +194,13 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <Label required>NPSN</Label>
-                <input className={field} value={npsn} onChange={(e) => setNpsn(e.target.value)} inputMode="numeric" placeholder="2022xxxx" />
+                <input
+                  className={field}
+                  value={npsn}
+                  onChange={(e) => setNpsn(e.target.value)}
+                  inputMode="numeric"
+                  placeholder="2022xxxx"
+                />
               </label>
               <label className="block">
                 <Label>Telepon atau email</Label>
@@ -216,10 +226,19 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
             </div>
           </Section>
 
-          <Section icon="calendar" title="Tahun ajaran dan semester" desc="Semua nilai SLM/STS/SAS baru menempel pada tahun dan semester ini.">
+          <Section
+            icon="calendar"
+            title="Tahun ajaran dan semester"
+            desc="Semua nilai SLM/STS/SAS baru menempel pada tahun dan semester ini."
+          >
             <label className="block">
               <Label required>Tahun ajaran</Label>
-              <input className={field} value={tahun} onChange={(e) => setTahun(e.target.value)} placeholder="2026/2027" />
+              <input
+                className={field}
+                value={tahun}
+                onChange={(e) => setTahun(e.target.value)}
+                placeholder="2026/2027"
+              />
             </label>
             <div>
               <Label required>Semester aktif</Label>
@@ -246,7 +265,9 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
                 <select className={field} value={seniGanjil} onChange={(e) => setSeniGanjil(e.target.value)}>
                   <option value="">— Pilih —</option>
                   {SENI.map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -255,19 +276,31 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
                 <select className={field} value={seniGenap} onChange={(e) => setSeniGenap(e.target.value)}>
                   <option value="">— Pilih —</option>
                   {SENI.map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
                   ))}
                 </select>
               </label>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
-                <Label>Tanggal rapor kelas 6 & sem. ganjil</Label>
-                <input className={field} value={tglRapor} onChange={(e) => setTglRapor(e.target.value)} placeholder="22 Desember 2026" />
+                <Label>Tanggal rapor kelas 6 &amp; sem. ganjil</Label>
+                <input
+                  className={field}
+                  value={tglRapor}
+                  onChange={(e) => setTglRapor(e.target.value)}
+                  placeholder="22 Desember 2026"
+                />
               </label>
               <label className="block">
                 <Label>Tanggal rapor kelas 1–5 sem. genap</Label>
-                <input className={field} value={tglRapor15} onChange={(e) => setTglRapor15(e.target.value)} placeholder="21 Juni 2027" />
+                <input
+                  className={field}
+                  value={tglRapor15}
+                  onChange={(e) => setTglRapor15(e.target.value)}
+                  placeholder="21 Juni 2027"
+                />
               </label>
             </div>
             <label className="block">
@@ -276,7 +309,11 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
             </label>
           </Section>
 
-          <Section icon="target" title="Dimensi profil lulusan semester ini" desc="Pilih minimal 3. Berlaku untuk semua kelas pada semester berjalan.">
+          <Section
+            icon="target"
+            title="Dimensi profil lulusan semester ini"
+            desc="Pilih minimal 3. Berlaku untuk semua kelas pada semester berjalan."
+          >
             <div className="flex flex-wrap gap-2">
               {DPL.map((d) => {
                 const aktif = dpl.includes(d.id)
@@ -286,7 +323,9 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
                     type="button"
                     onClick={() => toggleDpl(d.id)}
                     className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-medium transition ${
-                      aktif ? 'bg-muh-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      aktif
+                        ? 'bg-muh-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
                     {d.nama}
@@ -300,12 +339,17 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
           </Section>
 
           {pesan && (
-            <div className="rounded-xl border border-muh-200 bg-muh-50 px-3.5 py-2.5 text-[12.5px] text-muh-900">{pesan}</div>
+            <div className="rounded-xl border border-muh-200 bg-muh-50 px-3.5 py-2.5 text-[12.5px] text-muh-900">
+              {pesan}
+            </div>
           )}
           {galat && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-800">{galat}</div>
+            <div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-800">
+              {galat}
+            </div>
           )}
 
+          {/* Sticky save bar */}
           <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-white/95 px-4 py-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
             <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
               <p className="hidden text-[11.5px] text-muted sm:block">

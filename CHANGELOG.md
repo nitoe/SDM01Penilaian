@@ -180,3 +180,14 @@
 
 
 
+
+## Belum dirilis — Dashboard beranda per peran + filter admin + UI Data Sekolah
+
+- `src/pages/Home.tsx`: ringkasan beranda disesuaikan per peran.
+  - Guru akademik/kelas/bidang studi: **tidak lagi menampilkan daftar nama mapel**. Diganti kartu progres interaktif (Setup TP X/Y, TP tanpa bobot semester, pintasan nilai SLM) dengan badge "Perlu aksi".
+  - Guru Tahsin: ringkasan siswa di kelas ampu + setoran 7 hari terakhir + pintasan Input Setoran.
+  - Admin: tetap ringkasan sekolah + diagram siswa per kelas.
+- `src/lib/dashboardStats.ts`: ditambah `loadGuruAkademikProgress`, `loadSiswaCountKelas`, `loadSetoranMingguIni`.
+- `src/pages/akademik/SetupTp.tsx`: filter pencarian mapel + status (sudah/belum ada TP) di pemilih mapel×tingkatan.
+- `src/pages/admin/Mapel.tsx`: kotak pencarian daftar mapel.
+- `src/pages/admin/TahunAjaran.tsx` (Data Sekolah): UI dirapikan — section berikon, label wajib, layout 2 kolom, sticky tombol simpan di mobile, indikator jumlah DPL terpilih. Tidak mengikuti layout v2 secara ketat.
