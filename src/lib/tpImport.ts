@@ -21,15 +21,51 @@ export const SUBJECT_KEY_KE_MAPEL: Record<string, string> = {
   'bahasa-sunda': 'Bahasa Sunda',
   'bahasa-arab': 'Bahasa Arab',
   ipas: 'IPAS',
+  'ilmu-pengetahuan-alam-dan-sosial': 'IPAS',
+  'ilmu-pengetahuan-alam-&-sosial': 'IPAS',
   kemuhammadiyahan: 'Kemuhammadiyahan',
   matematika: 'Matematika',
   'pendidikan-pancasila': 'Pendidikan Pancasila',
+  ppkn: 'Pendidikan Pancasila',
   // Seni musik & rupa digabung ke Seni Budaya (satu mapel di sistem)
   'seni-musik': 'Seni Budaya',
   'seni-rupa': 'Seni Budaya',
   'seni-budaya': 'Seni Budaya',
   pjok: 'PJOK',
+  'pendidikan-jasmani-olahraga-dan-kesehatan': 'PJOK',
+  'pendidikan-jasmani,-olahraga,-dan-kesehatan': 'PJOK',
   informatika: 'Informatika',
+}
+
+/**
+ * Kelompok nama yang dianggap mapel yang sama.
+ * Berguna saat Firestore memakai nama panjang sedangkan file impor memakai singkatan.
+ */
+export const MAPEL_ALIAS_GROUPS: string[][] = [
+  ['IPAS', 'Ilmu Pengetahuan Alam dan Sosial', 'Ilmu Pengetahuan Alam & Sosial'],
+  ['PJOK', 'Pendidikan Jasmani, Olahraga, dan Kesehatan', 'Pendidikan Jasmani Olahraga dan Kesehatan'],
+  ['Pendidikan Pancasila', 'PPKn', 'Pendidikan Pancasila dan Kewarganegaraan'],
+  ['Seni Budaya', 'Seni Budaya dan Prakarya', 'SBdP'],
+]
+
+/** True jika dua nama mapel merujuk mapel yang sama (alias / normalisasi). */
+export function ekuivalenMapel(a: string, b: string): boolean {
+  const na = clean(a).toLowerCase()
+  const nb = clean(b).toLowerCase()
+  if (!na || !nb) return false
+  if (na === nb) return true
+  const ca = normalisasiMapel(a).toLowerCase()
+  const cb = normalisasiMapel(b).toLowerCase()
+  if (ca && cb && ca === cb) return true
+  for (const group of MAPEL_ALIAS_GROUPS) {
+    const set = new Set(group.map((g) => g.toLowerCase()))
+    if (set.has(na) && set.has(nb)) return true
+    // juga cocokkan bentuk yang sudah dinormalisasi ke anggota grup
+    if (set.has(ca) && set.has(nb)) return true
+    if (set.has(na) && set.has(cb)) return true
+    if (set.has(ca) && set.has(cb)) return true
+  }
+  return false
 }
 
 export interface TpImportItem {
@@ -85,11 +121,20 @@ export function normalisasiTingkatan(v: unknown): string {
 export function normalisasiMapel(raw: unknown): string {
   const t = clean(raw)
   if (!t) return ''
-  const key = t.toLowerCase().replace(/\s+/g, '-')
+  const key = t
+    .toLowerCase()
+    .replace(/&/g, 'dan')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
   if (SUBJECT_KEY_KE_MAPEL[key]) return SUBJECT_KEY_KE_MAPEL[key]
-  // Sudah nama resmi?
+  // Sudah nama resmi (nilai map)?
   const resmi = Object.values(SUBJECT_KEY_KE_MAPEL).find((m) => m.toLowerCase() === t.toLowerCase())
   if (resmi) return resmi
+  // Alias panjang → kanonik
+  for (const group of MAPEL_ALIAS_GROUPS) {
+    if (group.some((g) => g.toLowerCase() === t.toLowerCase())) return group[0]!
+  }
   return t
 }
 

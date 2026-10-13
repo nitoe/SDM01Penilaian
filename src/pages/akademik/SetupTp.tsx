@@ -22,6 +22,7 @@ import {
   bacaExcelTp,
   parseTpExcelRows,
   parseTpImport,
+  ekuivalenMapel,
   unduhBlob,
   type TpImportHasil,
   type TpImportItem,
@@ -161,18 +162,28 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     let daftar = pratinjauImpor.items
     if (hanyaMapelTingkatan) {
       const kls = String(hanyaMapelTingkatan.kelas).toUpperCase()
-      daftar = daftar.filter(
-        (it) => it.mapel === hanyaMapelTingkatan.mapel && it.kelas.toUpperCase() === kls,
-      )
+      const mapelTarget = hanyaMapelTingkatan.mapel
+      daftar = daftar
+        .filter((it) => ekuivalenMapel(it.mapel, mapelTarget) && it.kelas.toUpperCase() === kls)
+        // Samakan nama mapel dengan yang dipakai di sistem (Firestore/penugasan)
+        .map((it) => ({ ...it, mapel: mapelTarget }))
       if (!daftar.length) {
-        show(`Tidak ada TP ${hanyaMapelTingkatan.mapel} kelas ${kls} di file.`, true)
+        show(`Tidak ada TP ${mapelTarget} kelas ${kls} di file.`, true)
         return
       }
     }
-    // Batasi ke mapel×kelas yang user berhak tulis
-    const boleh = new Set(pilihan.map((p) => `${p.mapel}|${p.kelas}`))
+    // Batasi ke mapel×kelas yang user berhak tulis (dengan alias mapel)
     const sebelum = daftar.length
-    daftar = daftar.filter((it) => boleh.has(`${it.mapel}|${it.kelas}`) || admin)
+    daftar = daftar
+      .map((it) => {
+        const cocokPenugasan = pilihan.find(
+          (p) => ekuivalenMapel(it.mapel, p.mapel) && p.kelas === it.kelas.toUpperCase(),
+        )
+        if (cocokPenugasan) return { ...it, mapel: cocokPenugasan.mapel }
+        if (admin) return it
+        return null
+      })
+      .filter((it): it is NonNullable<typeof it> => it != null)
     if (!daftar.length) {
       show('Tidak ada TP di file yang sesuai penugasan Anda.', true)
       return
@@ -696,7 +707,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
             <div className="space-y-2 rounded-xl border border-border bg-slate-50/80 p-3 text-[12.5px]">
               {(() => {
                 const cocok = pratinjauImpor.items.filter(
-                  (it) => it.mapel === mapel && it.kelas.toUpperCase() === kelas,
+                  (it) => ekuivalenMapel(it.mapel, mapel) && it.kelas.toUpperCase() === kelas,
                 )
                 return (
                   <>
