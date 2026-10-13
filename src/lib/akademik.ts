@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
 import { faseDariTingkatan, LEVEL_RANGE_DEFAULT, tingkatanDariKelas } from './akademikRumus'
+import { aliasNamaMapel } from './tpImport'
 import { MAPEL_BAWAAN } from './mapelBawaan'
 import type {
   AsesmenCakupan,
@@ -160,17 +161,31 @@ export async function simpanProfilSekolah(p: {
 /**
  * Daftar TP satu mapel di satu kelas paralel (5A ≠ 5B).
  * Argumen kedua adalah KELAS (mis. "5A"), bukan tingkatan.
+ *
+ * Tidak difilter per penginput: TP milik "dapur" mapel×kelas — guru kelas dan
+ * guru bidang studi yang mengampu mapel ini di kelas yang sama melihat data yang sama.
+ * Nama mapel ekuivalen (IPAS ↔ nama panjang, PJOK ↔ …) digabung agar tidak "hilang"
+ * hanya karena beda penamaan di penugasan vs master mapel.
  */
 export async function getTPList(mapel: string, kelas: string): Promise<TujuanPembelajaran[]> {
-  const q = query(
-    collection(db, 'tp_kktp'),
-    where('mapel', '==', mapel),
-    where('kelas', '==', String(kelas).toUpperCase()),
+  const kelasU = String(kelas).toUpperCase()
+  const namaKandidat = aliasNamaMapel(mapel)
+  const hasil = await Promise.all(
+    namaKandidat.map(async (nama) => {
+      const q = query(
+        collection(db, 'tp_kktp'),
+        where('mapel', '==', nama),
+        where('kelas', '==', kelasU),
+      )
+      const snap = await getDocs(q)
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as TujuanPembelajaran)
+    }),
   )
-  const snap = await getDocs(q)
-  return snap.docs
-    .map((d) => ({ id: d.id, ...d.data() }) as TujuanPembelajaran)
-    .sort((a, b) => (a.nomorTp || 0) - (b.nomorTp || 0))
+  const byId = new Map<string, TujuanPembelajaran>()
+  for (const daftar of hasil) {
+    for (const tp of daftar) byId.set(tp.id, tp)
+  }
+  return [...byId.values()].sort((a, b) => (a.nomorTp || 0) - (b.nomorTp || 0))
 }
 
 export interface TpPayload {

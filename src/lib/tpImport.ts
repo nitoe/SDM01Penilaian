@@ -68,6 +68,24 @@ export function ekuivalenMapel(a: string, b: string): boolean {
   return false
 }
 
+/**
+ * Semua nama mapel yang ekuivalen (untuk query Firestore multi-nama).
+ * Contoh: "IPAS" → ["IPAS", "Ilmu Pengetahuan Alam dan Sosial", ...].
+ */
+export function aliasNamaMapel(nama: string): string[] {
+  const t = clean(nama)
+  if (!t) return []
+  const out = new Set<string>([t])
+  const canon = normalisasiMapel(t)
+  if (canon) out.add(canon)
+  for (const group of MAPEL_ALIAS_GROUPS) {
+    if (group.some((g) => ekuivalenMapel(g, t))) {
+      for (const g of group) out.add(g)
+    }
+  }
+  return [...out]
+}
+
 export interface TpImportItem {
   mapel: string
   /** Kelas paralel, contoh "5A". Kunci unik bersama mapel. */

@@ -313,7 +313,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         <HeroBanner
           eyebrow="Akademik"
           title="Setup TP & KKTP"
-          subtitle="Pilih mata pelajaran dan kelas. TP disusun per kelas paralel (5A tidak dipakai di 5B/5C) agar setiap guru menyusun TP & KKTP sendiri."
+          subtitle="Pilih mata pelajaran dan kelas. TP milik dapur mapel×kelas: guru kelas dan guru bidang studi yang mengampu mapel yang sama di kelas itu melihat data yang sama (siapa pun yang menginput). Kelas paralel (5A ≠ 5B) tetap terpisah."
         />
         {mapelMaster === null ? (
           <Spinner />
@@ -588,7 +588,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         title={`TP & KKTP — ${mapel}`}
         subtitle={
           tulis
-            ? 'Tujuan pembelajaran beserta empat level KKTP. Semester dan persentase bobot TP diatur di menu Bobot Semester.'
+            ? 'TP & KKTP dipakai bersama di kelas ini untuk mapel ini — guru kelas dan guru bidang studi yang mengampu melihat data yang sama. Semester & bobot diatur di menu Bobot Semester.'
             : 'Mode lihat. Administrator dapat membaca TP yang disusun guru, tetapi tidak mengubahnya.'
         }
       />
