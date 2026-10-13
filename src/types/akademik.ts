@@ -62,6 +62,7 @@ export interface ConfigAkademik {
   namaKepsek?: string
   nbmKepsek?: string
   kotaRapor?: string
+  /** @deprecated Pilihan seni sekarang per-kelas di koleksi seni_kelas. */
   seniSemesterGanjil?: string
   seniSemesterGenap?: string
   tglRapor?: string

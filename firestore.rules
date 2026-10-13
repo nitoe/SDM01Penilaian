@@ -273,6 +273,13 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Pilihan disiplin Seni Budaya per kelas — hanya wali kelas yang menulis.
+    // ID dokumen = kode kelas (mis. "5A").
+    match /seni_kelas/{kelas} {
+      allow read: if isGuru();
+      allow write: if bolehWaliKelas(kelas);
+    }
+
     // ---- Default: tolak semuanya -------------------------------------------
     match /{document=**} {
       allow read, write: if false;

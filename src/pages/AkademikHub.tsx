@@ -7,7 +7,7 @@ const items: { to: string; title: string; desc: string; icon: IconName; tone: To
   { to: '/akademik/nilai-slm', title: 'Input Nilai SLM', desc: 'Nilai harian — satu tabel spreadsheet, nyaman untuk guru', icon: 'pencil', tone: 'green', ready: true },
   { to: '/akademik/laporan-slm', title: 'Laporan SLM', desc: 'Rekap nilai SLM per kelas, bisa dicetak', icon: 'printer', tone: 'violet', ready: true },
   { to: '/akademik/nilai-sts', title: 'Nilai STS & SAS', desc: 'Ujian tengah & akhir — input besar, progress jelas, nyaman untuk guru', icon: 'clipboard', tone: 'ink', ready: true },
-  { to: '/akademik/rapor', title: 'Rapor', desc: 'Pratinjau tanda tangan dengan gelar', icon: 'printer', tone: 'violet', ready: true },
+  { to: '/akademik/rapor', title: 'Rapor STS', desc: 'Pratinjau & cetak rapor sumatif tengah semester (wali kelas)', icon: 'printer', tone: 'violet', ready: true },
   { to: '/akademik/absensi', title: 'Absensi & Keputusan', desc: 'Rekap kehadiran dan keputusan kenaikan kelas', icon: 'calendar', tone: 'ink', ready: false },
   { to: '/akademik/kokurikuler', title: 'Kokurikuler', desc: 'Proyek STEM, 7KAIH, dan deskripsi gabungan', icon: 'bars', tone: 'peach', ready: false },
   { to: '/akademik/ekskul', title: 'Ekstrakurikuler', desc: 'Predikat dan deskripsi ekskul', icon: 'bars', tone: 'sky', ready: false },

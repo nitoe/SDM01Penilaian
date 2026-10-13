@@ -129,33 +129,30 @@ export async function simpanProfilSekolah(p: {
   nbmKepsek: string
   tahunAjaran: string
   semesterAktif: Semester
-  seniSemesterGanjil: string
-  seniSemesterGenap: string
+  /** @deprecated Dipindah ke seni_kelas/{kelas} — diisi wali kelas. */
+  seniSemesterGanjil?: string
+  seniSemesterGenap?: string
   tglRapor: string
   tglRapor1sampai5: string
   kotaRapor: string
   dplSemesterIni: string[]
 }): Promise<void> {
-  await setDoc(
-    doc(db, 'config', 'akademik'),
-    {
-      namaSekolah: p.namaSekolah.trim(),
-      npsn: p.npsn.trim(),
-      alamatSekolah: p.alamatSekolah.trim(),
-      telpSekolah: p.telpSekolah.trim(),
-      namaKepsek: p.namaKepsek.trim(),
-      nbmKepsek: p.nbmKepsek.trim(),
-      tahunAjaran: p.tahunAjaran.trim(),
-      semesterAktif: p.semesterAktif,
-      seniSemesterGanjil: p.seniSemesterGanjil,
-      seniSemesterGenap: p.seniSemesterGenap,
-      tglRapor: p.tglRapor.trim(),
-      tglRapor1sampai5: p.tglRapor1sampai5.trim(),
-      kotaRapor: p.kotaRapor.trim(),
-      dplSemesterIni: p.dplSemesterIni,
-    },
-    { merge: true },
-  )
+  const data: Record<string, unknown> = {
+    namaSekolah: p.namaSekolah.trim(),
+    npsn: p.npsn.trim(),
+    alamatSekolah: p.alamatSekolah.trim(),
+    telpSekolah: p.telpSekolah.trim(),
+    namaKepsek: p.namaKepsek.trim(),
+    nbmKepsek: p.nbmKepsek.trim(),
+    tahunAjaran: p.tahunAjaran.trim(),
+    semesterAktif: p.semesterAktif,
+    tglRapor: p.tglRapor.trim(),
+    tglRapor1sampai5: p.tglRapor1sampai5.trim(),
+    kotaRapor: p.kotaRapor.trim(),
+    dplSemesterIni: p.dplSemesterIni,
+  }
+  // Legacy field global tidak lagi ditulis dari admin.
+  await setDoc(doc(db, 'config', 'akademik'), data, { merge: true })
 }
 
 /**

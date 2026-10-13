@@ -16,8 +16,6 @@ const DPL = [
   { id: 'DPL8', nama: 'Komunikasi' },
 ]
 
-const SENI = ['Seni Musik', 'Seni Rupa']
-
 const field =
   'w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-[13.5px] outline-none transition focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15'
 
@@ -66,8 +64,6 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
   const [nbm, setNbm] = useState('')
   const [tahun, setTahun] = useState('2026/2027')
   const [semester, setSemester] = useState<Semester>('1')
-  const [seniGanjil, setSeniGanjil] = useState('')
-  const [seniGenap, setSeniGenap] = useState('')
   const [tglRapor, setTglRapor] = useState('')
   const [tglRapor15, setTglRapor15] = useState('')
   const [kota, setKota] = useState('Depok')
@@ -88,8 +84,6 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
         if (c.nbmKepsek) setNbm(c.nbmKepsek)
         if (c.tahunAjaran) setTahun(c.tahunAjaran)
         setSemester(c.semesterAktif === '2' ? '2' : '1')
-        if (c.seniSemesterGanjil) setSeniGanjil(c.seniSemesterGanjil)
-        if (c.seniSemesterGenap) setSeniGenap(c.seniSemesterGenap)
         if (c.tglRapor) setTglRapor(c.tglRapor)
         if (c.tglRapor1sampai5) setTglRapor15(c.tglRapor1sampai5)
         if (c.kotaRapor) setKota(c.kotaRapor)
@@ -120,14 +114,6 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
       setGalat('Nama dan NBM kepala sekolah wajib diisi.')
       return
     }
-    if (!seniGanjil || !seniGenap) {
-      setGalat('Pilih Seni Budaya untuk semester ganjil dan genap.')
-      return
-    }
-    if (seniGanjil === seniGenap) {
-      setGalat('Seni Budaya semester ganjil dan genap tidak boleh sama.')
-      return
-    }
     if (dpl.length < 3) {
       setGalat('Pilih minimal 3 dimensi profil lulusan untuk semester ini.')
       return
@@ -145,8 +131,6 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
         nbmKepsek: nbm,
         tahunAjaran: t,
         semesterAktif: semester,
-        seniSemesterGanjil: seniGanjil,
-        seniSemesterGenap: seniGenap,
         tglRapor,
         tglRapor1sampai5: tglRapor15,
         kotaRapor: kota,
@@ -258,30 +242,6 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
                   </button>
                 ))}
               </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block">
-                <Label required>Seni Budaya semester ganjil</Label>
-                <select className={field} value={seniGanjil} onChange={(e) => setSeniGanjil(e.target.value)}>
-                  <option value="">— Pilih —</option>
-                  {SENI.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                <Label required>Seni Budaya semester genap</Label>
-                <select className={field} value={seniGenap} onChange={(e) => setSeniGenap(e.target.value)}>
-                  <option value="">— Pilih —</option>
-                  {SENI.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </label>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">

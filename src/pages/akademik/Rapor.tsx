@@ -1,114 +1,362 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import TandaTanganGuru from '../../components/TandaTanganGuru'
-import { listAkunStaf, type AkunStaf } from '../../lib/akunGuruData'
-import { SEMUA_KELAS } from '../../types/tahsin'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AppUser } from '../../types/user'
 import { namaDenganGelar } from '../../types/user'
+import type { SiswaTahsin } from '../../types/tahsin'
+import { getSiswaList } from '../../lib/tahsinData'
+import { kelasSaya } from '../../lib/kelasSaya'
+import { isAdminRole } from '../../lib/roles'
+import {
+  DISIPLIN_SENI,
+  getSeniKelas,
+  simpanSeniKelas,
+  type SeniKelasDoc,
+} from '../../lib/seniKelas'
+import {
+  buildBodyPrintSts,
+  cetakRaporSts,
+  muatDataRaporSts,
+  type DataRaporSts,
+} from '../../lib/raporSts'
+import { HeroBanner } from '../../components/ui'
+import { BackLink, Notice, Spinner, btnGhost, btnPrimary, inputCls } from './shared'
 
-interface Props {
-  profile: AppUser
-}
+/**
+ * Rapor STS — khusus wali kelas.
+ * Alur: pilih kelas (hanya kelas yang diwalikan) → pilih siswa → pratinjau + cetak PDF.
+ * Pengaturan disiplin Seni Budaya per kelas juga di sini (bukan di admin).
+ */
+export default function Rapor({ profile }: { profile: AppUser }) {
+  const admin = isAdminRole(profile.role)
+  const { wali } = kelasSaya(profile)
+  const kelasWali = useMemo(() => (admin ? [] : wali), [admin, wali])
 
-export default function Rapor({ profile }: Props) {
-  const [kelas, setKelas] = useState(profile.waliKelas?.[0] || '1A')
-  const [wali, setWali] = useState<AkunStaf | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [kelas, setKelas] = useState(kelasWali[0] || '')
+  const [siswaList, setSiswaList] = useState<SiswaTahsin[] | null>(null)
+  const [siswaId, setSiswaId] = useState('')
+  const [data, setData] = useState<DataRaporSts | null>(null)
+  const [loadingSiswa, setLoadingSiswa] = useState(false)
+  const [loadingRapor, setLoadingRapor] = useState(false)
+  const [galat, setGalat] = useState('')
+
+  const [seni, setSeni] = useState<SeniKelasDoc>({ ganjil: [], genap: [] })
+  const [seniDirty, setSeniDirty] = useState(false)
+  const [seniBusy, setSeniBusy] = useState(false)
+  const [seniPesan, setSeniPesan] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!kelas && kelasWali.length) setKelas(kelasWali[0])
+  }, [kelas, kelasWali])
+
+  useEffect(() => {
+    if (!kelas) {
+      setSiswaList(null)
+      setSiswaId('')
+      setData(null)
+      return
+    }
     let batal = false
-    setLoading(true)
-    listAkunStaf()
-      .then((list) => {
+    setLoadingSiswa(true)
+    setSiswaId('')
+    setData(null)
+    setGalat('')
+    setSeniPesan(null)
+    setSeniDirty(false)
+    void (async () => {
+      try {
+        const [list, seniDoc] = await Promise.all([
+          getSiswaList(kelas, { role: profile.role, kelasAmpu: [] }),
+          getSeniKelas(kelas),
+        ])
         if (batal) return
-        const ketemu = list.find((u) => (u.waliKelas ?? []).includes(kelas) && u.status !== 'pending')
-        setWali(ketemu ?? null)
-      })
-      .catch(() => setWali(null))
-      .finally(() => setLoading(false))
+        setSiswaList(list)
+        setSeni(seniDoc)
+      } catch (e) {
+        console.error(e)
+        if (!batal) {
+          setGalat('Gagal memuat daftar siswa. Periksa koneksi dan hak akses.')
+          setSiswaList([])
+        }
+      } finally {
+        if (!batal) setLoadingSiswa(false)
+      }
+    })()
     return () => {
       batal = true
     }
-  }, [kelas])
+  }, [kelas, profile.role])
 
-  const namaSaya = namaDenganGelar(profile)
+  useEffect(() => {
+    if (!kelas || !siswaId || !siswaList) {
+      setData(null)
+      return
+    }
+    const siswa = siswaList.find((s) => s.id === siswaId)
+    if (!siswa) {
+      setData(null)
+      return
+    }
+    let batal = false
+    setLoadingRapor(true)
+    setGalat('')
+    void muatDataRaporSts({
+      siswa: { id: siswa.id, nama: siswa.nama, nisn: siswa.nisn, nipd: siswa.nipd },
+      kelas,
+      waliNama: namaDenganGelar(profile),
+    })
+      .then((d) => {
+        if (!batal) setData(d)
+      })
+      .catch((e) => {
+        console.error(e)
+        if (!batal) setGalat('Gagal memuat data rapor. Coba muat ulang.')
+      })
+      .finally(() => {
+        if (!batal) setLoadingRapor(false)
+      })
+    return () => {
+      batal = true
+    }
+  }, [kelas, siswaId, siswaList, profile])
+
+  const toggleSeni = useCallback((sem: 'ganjil' | 'genap', nama: string) => {
+    setSeni((prev) => {
+      const list = prev[sem]
+      const next = list.includes(nama) ? list.filter((x) => x !== nama) : [...list, nama]
+      return { ...prev, [sem]: next }
+    })
+    setSeniDirty(true)
+    setSeniPesan(null)
+  }, [])
+
+  const simpanSeni = useCallback(async () => {
+    if (!kelas) return
+    setSeniBusy(true)
+    setSeniPesan(null)
+    try {
+      await simpanSeniKelas(kelas, seni)
+      setSeniDirty(false)
+      setSeniPesan('Pilihan seni budaya tersimpan.')
+      if (siswaId && siswaList) {
+        const siswa = siswaList.find((s) => s.id === siswaId)
+        if (siswa) {
+          const d = await muatDataRaporSts({
+            siswa: { id: siswa.id, nama: siswa.nama, nisn: siswa.nisn, nipd: siswa.nipd },
+            kelas,
+            waliNama: namaDenganGelar(profile),
+          })
+          setData(d)
+        }
+      }
+    } catch (e) {
+      console.error(e)
+      setSeniPesan('Gagal menyimpan. Pastikan Anda wali kelas ini.')
+    } finally {
+      setSeniBusy(false)
+    }
+  }, [kelas, seni, siswaId, siswaList, profile])
+
+  if (admin) {
+    return (
+      <div className="space-y-4">
+        <BackLink to="/akademik">Akademik & Rapor</BackLink>
+        <Notice tone="warn">
+          Rapor STS dibuka oleh wali kelas. Akun administrator tidak menjadi wali kelas.
+        </Notice>
+      </div>
+    )
+  }
+
+  if (!kelasWali.length) {
+    return (
+      <div className="space-y-4">
+        <BackLink to="/akademik">Akademik & Rapor</BackLink>
+        <Notice tone="warn">
+          Anda bukan wali kelas manapun saat ini. Hubungi admin agar kelas wali ditetapkan di Kelola
+          Akun.
+        </Notice>
+      </div>
+    )
+  }
+
+  const idxSiswa = siswaList?.findIndex((s) => s.id === siswaId) ?? -1
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Link to="/akademik" className="text-[11px] font-medium text-muh-700 hover:underline">
-          ← Akademik & Rapor
-        </Link>
-        <h1 className="mt-0.5 text-lg font-semibold tracking-tight">Pratinjau Rapor — Tanda Tangan</h1>
-        <p className="text-[12px] text-muted">
-          Nama guru ditampilkan dengan gelar pendidikan terakhir untuk penandatanganan rapor.
-        </p>
+    <div className="space-y-5 pb-16">
+      <div className="print:hidden">
+        <BackLink to="/akademik">Akademik & Rapor</BackLink>
+        <HeroBanner
+          eyebrow="Akademik"
+          title="Rapor STS"
+          subtitle="Pratinjau dan cetak Laporan Hasil Belajar Sumatif Tengah Semester. Hanya kelas yang Anda walikan."
+        />
       </div>
 
-      <div className="card-soft p-4">
-        <label className="block text-[11px] font-medium text-slate-600">Pilih kelas (untuk melihat wali kelas)</label>
-        <select
-          value={kelas}
-          onChange={(e) => setKelas(e.target.value)}
-          className="mt-1 w-full max-w-xs rounded-xl border border-border bg-white px-3 py-2 text-[13px] outline-none focus:border-muh-500"
-        >
-          {SEMUA_KELAS.map((k) => (
-            <option key={k} value={k}>
-              Kelas {k}
-            </option>
-          ))}
-        </select>
+      <div className="card-soft grid gap-3 p-4 print:hidden sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-1 block text-[11px] font-medium text-slate-600">Kelas</span>
+          <select className={inputCls} value={kelas} onChange={(e) => setKelas(e.target.value)}>
+            {kelasWali.map((k) => (
+              <option key={k} value={k}>
+                Kelas {k}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[11px] font-medium text-slate-600">Siswa</span>
+          <select
+            className={inputCls}
+            value={siswaId}
+            disabled={!siswaList || loadingSiswa}
+            onChange={(e) => setSiswaId(e.target.value)}
+          >
+            <option value="">— Pilih siswa —</option>
+            {(siswaList ?? []).map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nama}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Tanda tangan saya */}
-        <section className="card-soft p-5">
-          <h2 className="mb-3 text-[13px] font-semibold text-slate-800">Tanda tangan Anda</h2>
-          <p className="mb-4 text-[11px] text-muted">
-            Dipakai jika Anda menjadi guru mapel atau wali kelas. Saat ini: <strong>{namaSaya}</strong>
+      {kelas && (
+        <section className="card-soft p-4 print:hidden">
+          <h2 className="text-[13px] font-semibold text-slate-800">Seni Budaya — Kelas {kelas}</h2>
+          <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted">
+            Pilih disiplin yang dipakai di kelas ini per semester. Boleh lebih dari satu. Muncul di
+            kolom mata pelajaran rapor sebagai &quot;Seni Budaya (…)&quot;.
           </p>
-          <div className="rounded-xl border border-dashed border-border bg-slate-50/60 p-4">
-            <TandaTanganGuru
-              nama={profile.nama}
-              gelar={profile.gelar}
-              jabatan={profile.waliKelas?.length ? 'Wali Kelas' : 'Guru Mapel'}
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            {(['ganjil', 'genap'] as const).map((sem) => (
+              <div key={sem}>
+                <p className="mb-1.5 text-[11px] font-medium text-slate-600">
+                  Semester {sem === 'ganjil' ? '1 (ganjil)' : '2 (genap)'}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {DISIPLIN_SENI.map((d) => {
+                    const on = seni[sem].includes(d)
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => toggleSeni(sem, d)}
+                        className={`rounded-full px-3 py-1 text-[12px] font-medium transition ${
+                          on
+                            ? 'bg-muh-600 text-white shadow-sm'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className={btnPrimary}
+              disabled={!seniDirty || seniBusy}
+              onClick={() => void simpanSeni()}
+            >
+              {seniBusy ? 'Menyimpan…' : 'Simpan pilihan seni'}
+            </button>
+            {seniPesan && (
+              <span
+                className={`text-[12px] ${
+                  seniPesan.startsWith('Gagal') ? 'text-red-700' : 'text-muh-800'
+                }`}
+              >
+                {seniPesan}
+              </span>
+            )}
+          </div>
+        </section>
+      )}
+
+      {galat && (
+        <div className="print:hidden">
+          <Notice tone="error">{galat}</Notice>
+        </div>
+      )}
+
+      {loadingSiswa || loadingRapor ? (
+        <div className="print:hidden">
+          <Spinner />
+        </div>
+      ) : !siswaId ? (
+        <div className="card-soft p-8 text-center print:hidden">
+          <p className="text-[13px] text-muted">Pilih siswa untuk menampilkan pratinjau rapor STS.</p>
+        </div>
+      ) : data ? (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className={btnGhost}
+                disabled={idxSiswa <= 0}
+                onClick={() => {
+                  if (siswaList && idxSiswa > 0) setSiswaId(siswaList[idxSiswa - 1].id)
+                }}
+              >
+                ◀ Sebelumnya
+              </button>
+              <button
+                type="button"
+                className={btnGhost}
+                disabled={!siswaList || idxSiswa < 0 || idxSiswa >= siswaList.length - 1}
+                onClick={() => {
+                  if (siswaList && idxSiswa >= 0 && idxSiswa < siswaList.length - 1) {
+                    setSiswaId(siswaList[idxSiswa + 1].id)
+                  }
+                }}
+              >
+                Berikutnya ▶
+              </button>
+            </div>
+            <button type="button" className={btnPrimary} onClick={() => cetakRaporSts(data)}>
+              🖨️ Cetak / Simpan PDF
+            </button>
+          </div>
+
+          <div className="overflow-x-auto print:hidden">
+            <div
+              className="rapor-preview-frame mx-auto origin-top rounded-xl border border-border bg-white p-6 shadow-sm"
+              style={{ maxWidth: 720 }}
+              dangerouslySetInnerHTML={{ __html: buildBodyPrintSts(data) }}
             />
           </div>
-          {!profile.gelar && (
-            <p className="mt-3 text-[11px] text-amber-700">
-              Anda belum mengisi gelar. <Link to="/profil" className="font-medium underline">Isi di Profil Saya</Link> agar muncul di rapor.
-            </p>
-          )}
-        </section>
 
-        {/* Wali kelas terpilih */}
-        <section className="card-soft p-5">
-          <h2 className="mb-3 text-[13px] font-semibold text-slate-800">Wali Kelas {kelas}</h2>
-          {loading ? (
-            <p className="text-[12px] text-muted">Memuat…</p>
-          ) : wali ? (
-            <>
-              <p className="mb-4 text-[11px] text-muted">
-                Nama resmi: <strong>{namaDenganGelar(wali)}</strong>
-              </p>
-              <div className="rounded-xl border border-dashed border-border bg-slate-50/60 p-4">
-                <TandaTanganGuru nama={wali.nama} gelar={wali.gelar} jabatan="Wali Kelas" />
-              </div>
-            </>
-          ) : (
-            <p className="text-[12px] text-muted">Belum ada wali kelas yang ditetapkan untuk {kelas}.</p>
-          )}
-        </section>
-      </div>
-
-      <div className="card-soft p-4 text-[12px] text-muted">
-        <p className="font-medium text-slate-700">Catatan</p>
-        <ul className="mt-1 list-disc space-y-0.5 pl-4">
-          <li>Komponen <code>TandaTanganGuru</code> siap dipakai di halaman cetak rapor nantinya.</li>
-          <li>Format tetap: <em>Nama Lengkap, Gelar</em> (contoh: Arif Azwar Anas, S.Pd).</li>
-          <li>Gelar diisi guru sendiri di menu Profil, atau oleh admin di Kelola Akun.</li>
-        </ul>
-      </div>
+          <style>{`
+            .rapor-preview-frame .rpr-title{text-align:center;font-size:1.15rem;font-weight:700;margin-bottom:2px}
+            .rapor-preview-frame .rpr-subtitle{text-align:center;font-size:0.95rem;font-weight:600;margin-bottom:12px;color:#334155}
+            .rapor-preview-frame .rpr-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin-bottom:12px;font-size:12.5px}
+            .rapor-preview-frame .rpr-info-row{display:flex;gap:4px;margin-bottom:2px}
+            .rapor-preview-frame .rpr-info-label{min-width:130px;flex-shrink:0;color:#64748b}
+            .rapor-preview-frame .rpr-info-val{font-weight:600;color:#0f172a}
+            .rapor-preview-frame table{width:100%;border-collapse:collapse;font-size:12px}
+            .rapor-preview-frame th,.rapor-preview-frame td{border:1px solid #cbd5e1;padding:6px 8px;vertical-align:top}
+            .rapor-preview-frame th{background:#f8fafc;font-size:11px;font-weight:700;text-align:center}
+            .rapor-preview-frame .td-no{width:32px;text-align:center}
+            .rapor-preview-frame .td-nilai{width:56px;text-align:center;font-weight:700}
+            .rapor-preview-frame .td-mapel{font-weight:600}
+            .rapor-preview-frame .rpr-ttd-wrap{margin-top:28px}
+            .rapor-preview-frame .rpr-ttd-tanda{text-align:right;margin-bottom:10px;font-size:12.5px}
+            .rapor-preview-frame .rpr-ttd{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:12px}
+            .rapor-preview-frame .rpr-ttd-space{height:56px}
+            .rapor-preview-frame .rpr-ttd-name{font-weight:700;text-decoration:underline;text-underline-offset:2px}
+            .rapor-preview-frame .rpr-ttd-nbm{font-size:11px;margin-top:2px;color:#64748b}
+            @media (max-width:640px){
+              .rapor-preview-frame .rpr-info-grid{grid-template-columns:1fr}
+              .rapor-preview-frame .rpr-ttd{grid-template-columns:1fr}
+            }
+          `}</style>
+        </>
+      ) : null}
     </div>
   )
 }
