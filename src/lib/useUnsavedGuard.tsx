@@ -43,7 +43,6 @@ export function useUnsavedGuard(dirty: boolean) {
       if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return
       // tautan luar
       if (/^https?:\/\//i.test(href) && !href.startsWith(window.location.origin)) return
-      // same page query-only change still navigates — treat as leave if path changes or full href differs meaningfully
       const url = new URL(href, window.location.origin)
       const same =
         url.pathname === window.location.pathname &&
@@ -56,7 +55,6 @@ export function useUnsavedGuard(dirty: boolean) {
       pendingHref.current = url.pathname + url.search + url.hash
       setDialog({ href: pendingHref.current })
     }
-    // capture phase agar menang sebelum React Router
     document.addEventListener('click', onClick, true)
     return () => document.removeEventListener('click', onClick, true)
   }, [])
@@ -69,7 +67,6 @@ export function useUnsavedGuard(dirty: boolean) {
 
     function onPopState() {
       if (!dirtyRef.current) return
-      // batalkan back dulu
       window.history.pushState({ unsavedGuard: true }, '', sentinel)
       pendingHref.current = '__BACK__'
       setDialog({ href: '__BACK__' })
@@ -91,7 +88,6 @@ export function useUnsavedGuard(dirty: boolean) {
     setDialog(null)
     dirtyRef.current = false
     if (!href || href === '__BACK__') {
-      // izinkan back sungguhan
       window.history.go(-2)
       return
     }
