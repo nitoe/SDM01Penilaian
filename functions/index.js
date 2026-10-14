@@ -1,84 +1,60 @@
-/**
- * Hapus permanen akun staf: Firebase Auth + dokumen users/{uid}.
- * Hanya boleh dipanggil oleh admin yang login (token diverifikasi di server).
- *
- * Deploy: firebase deploy --only functions
- * Perlu paket Blaze (pay-as-you-go) agar Callable Functions aktif.
- */
-const { onCall, HttpsError } = require('firebase-functions/v2/https')
-const { initializeApp } = require('firebase-admin/app')
-const { getAuth } = require('firebase-admin/auth')
-const { getFirestore } = require('firebase-admin/firestore')
-const { setGlobalOptions } = require('firebase-functions/v2')
+import { initializeApp } from 'firebase-admin/app'
+import { getAuth } from 'firebase-admin/auth'
+import { getFirestore } from 'firebase-admin/firestore'
+import { logger } from 'firebase-functions'
+import { HttpsError, onCall } from 'firebase-functions/v2/https'
+import { periksaPenghapusan } from './aturan.js'
 
 initializeApp()
-setGlobalOptions({ region: 'asia-southeast2', maxInstances: 10 })
 
-const ROLE_ADMIN = 'admin'
-
-exports.hapusAkunPermanen = onCall(async (request) => {
+/**
+ * Hapus akun staf SEPENUHNYA: user Firebase Authentication + dokumen users/{uid}.
+ * Hanya administrator aktif. Wilayah HARUS sama dengan REGION_FUNGSI di src/lib/akunGuruData.ts.
+ * Urutan: Auth dulu, profil kemudian. Bila langkah kedua gagal, panggil ulang: user Auth yang sudah
+ * tidak ada dianggap berhasil.
+ */
+export const hapusAkunAuth = onCall({ region: 'asia-southeast2', maxInstances: 3 }, async (request) => {
   if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'Harus login sebagai admin.')
+    throw new HttpsError('unauthenticated', 'Masuk dulu sebagai administrator.')
   }
-
-  const callerUid = request.auth.uid
-  const targetUid = typeof request.data?.uid === 'string' ? request.data.uid.trim() : ''
-
-  if (!targetUid) {
-    throw new HttpsError('invalid-argument', 'Parameter uid wajib diisi.')
+  const uidTarget = request.data?.uid
+  if (typeof uidTarget !== 'string' || uidTarget.length === 0 || uidTarget.length > 128) {
+    throw new HttpsError('invalid-argument', 'UID akun tidak valid.')
   }
-  if (targetUid === callerUid) {
-    throw new HttpsError('invalid-argument', 'Tidak dapat menghapus akun sendiri.')
-  }
+  const uidPemanggil = request.auth.uid
 
   const db = getFirestore()
-  const callerSnap = await db.collection('users').doc(callerUid).get()
-  if (!callerSnap.exists) {
-    throw new HttpsError('permission-denied', 'Profil pemanggil tidak ditemukan.')
-  }
-  const caller = callerSnap.data() || {}
-  if (caller.role !== ROLE_ADMIN || caller.aktif === false) {
-    throw new HttpsError('permission-denied', 'Hanya administrator aktif yang boleh menghapus akun.')
+  const [pemanggilSnap, targetSnap, adminSnap] = await Promise.all([
+    db.doc(`users/${uidPemanggil}`).get(),
+    db.doc(`users/${uidTarget}`).get(),
+    db.collection('users').where('role', '==', 'admin').get(),
+  ])
+  const jumlahAdminAktif = adminSnap.docs.filter((d) => d.data().aktif !== false).length
+
+  const hasil = periksaPenghapusan({
+    uidPemanggil,
+    uidTarget,
+    pemanggil: pemanggilSnap.exists ? pemanggilSnap.data() : null,
+    target: targetSnap.exists ? targetSnap.data() : null,
+    jumlahAdminAktif,
+  })
+  if (!hasil.ok) {
+    throw new HttpsError(hasil.kode, hasil.pesan)
   }
 
-  const auth = getAuth()
-  let authDihapus = false
-  let authPesan = ''
+  let authDihapus = true
   try {
-    await auth.deleteUser(targetUid)
-    authDihapus = true
+    await getAuth().deleteUser(uidTarget)
   } catch (err) {
-    const code = err && err.code ? String(err.code) : ''
-    // Sudah tidak ada di Auth — tetap lanjut hapus Firestore
-    if (code === 'auth/user-not-found') {
-      authPesan = 'User Auth sudah tidak ada.'
+    if (err?.code === 'auth/user-not-found') {
+      authDihapus = false // sudah tidak ada (mis. dihapus manual di Console); lanjut hapus profil
     } else {
-      console.error('deleteUser gagal', targetUid, err)
-      throw new HttpsError(
-        'internal',
-        `Gagal menghapus Firebase Auth: ${err.message || code || 'unknown'}`,
-      )
+      logger.error('hapusAkunAuth: gagal menghapus user Auth', { uidTarget, kode: err?.code })
+      throw new HttpsError('internal', 'Gagal menghapus user di Firebase Authentication. Coba lagi.')
     }
   }
+  await db.doc(`users/${uidTarget}`).delete()
 
-  let profilDihapus = false
-  try {
-    await db.collection('users').doc(targetUid).delete()
-    profilDihapus = true
-  } catch (err) {
-    console.error('delete profile gagal', targetUid, err)
-    // Auth sudah terhapus — laporkan sebagian sukses
-    throw new HttpsError(
-      'internal',
-      `Auth ${authDihapus ? 'terhapus' : 'skip'}, tetapi profil Firestore gagal dihapus: ${err.message || err}`,
-    )
-  }
-
-  return {
-    ok: true,
-    uid: targetUid,
-    authDihapus,
-    profilDihapus,
-    authPesan: authPesan || undefined,
-  }
+  logger.info('hapusAkunAuth: akun dihapus', { oleh: uidPemanggil, uidTarget, authDihapus })
+  return { authDihapus, authSudahTidakAda: !authDihapus }
 })

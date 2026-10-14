@@ -1,12 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-} from 'firebase/auth'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { auth, db } from '../lib/firebase'
+import { sendPasswordResetEmail } from 'firebase/auth'
+import { auth } from '../lib/firebase'
+import { daftarMandiriGuru, kodeGalat } from '../lib/akunGuruData'
 import { GURU_RESMI, adalahNamaResmi } from '../lib/dataGuruResmi'
 import { getMapelList } from '../lib/akademik'
 import { MAPEL_BAWAAN } from '../lib/mapelBawaan'
@@ -39,6 +35,9 @@ export default function Register() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [sukses, setSukses] = useState(false)
+  /** Email sudah punya login lama di Auth dan passwordnya tidak cocok: tawarkan atur ulang password. */
+  const [bisaReset, setBisaReset] = useState(false)
+  const [infoReset, setInfoReset] = useState<string | null>(null)
 
   useEffect(() => {
     getMapelList()
@@ -50,9 +49,25 @@ export default function Register() {
   const butuhKelas = tugas.guruKelas
   const butuhMapel = tugas.bidangStudi
 
+  async function kirimReset() {
+    const emailNorm = email.trim().toLowerCase()
+    setInfoReset(null)
+    try {
+      await sendPasswordResetEmail(auth, emailNorm)
+      setInfoReset(
+        `Tautan atur ulang password dikirim ke ${emailNorm}. Setelah password baru dibuat, kembali ke halaman ini dan daftar lagi dengan password baru tersebut.`,
+      )
+    } catch (err) {
+      console.error('[daftar] kirim reset gagal:', err)
+      setInfoReset('Tautan atur ulang password gagal dikirim. Coba lagi, atau hubungi admin.')
+    }
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    setBisaReset(false)
+    setInfoReset(null)
     if (!adalahNamaResmi(nama)) {
       setError('Pilih nama guru dari daftar yang tersedia.')
       return
@@ -103,27 +118,23 @@ export default function Register() {
     }
     if (gelarBersih) profilBaru.gelar = gelarBersih
 
-    function kodeFirebase(err: unknown): string {
-      if (typeof err === 'object' && err && 'code' in err) return String((err as { code: string }).code)
-      return ''
-    }
     function pesanFirebase(err: unknown): string {
-      const code = kodeFirebase(err)
+      const code = kodeGalat(err)
       const msg = err instanceof Error ? err.message : String(err ?? 'Gagal mendaftar')
       // Log detail untuk admin/debug
       console.error('[daftar]', { code, msg, err })
-      if (code === 'auth/email-already-in-use' || msg.includes('email-already-in-use')) {
+      if (code === 'sdm/profil-sudah-ada' || code === 'sdm/timeout') return msg
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
+        setBisaReset(true)
         return (
-          'Email ini sudah ada di Firebase Authentication (bukan hanya di daftar staf). ' +
-          'Jika admin menghapus akun di Kelola Akun, user Auth masih tersisa. ' +
-          'Coba lagi dengan password lama yang sama, atau minta admin hapus email ini di Firebase Console → Authentication → Users.'
+          'Email ini sudah punya login di Firebase (mis. akunnya pernah dibuat atau dihapus admin), ' +
+          'tetapi password yang Anda ketik berbeda dengan password lamanya. ' +
+          'Kirim tautan atur ulang password ke email ini, buat password baru lewat tautan itu, ' +
+          'lalu daftar lagi memakai password baru tersebut.'
         )
       }
-      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
-        return (
-          'Email sudah terdaftar di Auth tetapi password tidak cocok. ' +
-          'Gunakan password lama, atau hapus user di Firebase Console → Authentication lalu daftar ulang.'
-        )
+      if (code === 'auth/email-already-in-use') {
+        return 'Email ini sudah terdaftar di Firebase Authentication. Hubungi admin untuk menghapus email ini di Firebase Console → Authentication → Users.'
       }
       if (code === 'auth/weak-password' || msg.includes('weak-password')) {
         return 'Password terlalu lemah (minimal 6 karakter, disarankan 8+).'
@@ -139,7 +150,7 @@ export default function Register() {
         return 'Terlalu banyak percobaan. Tunggu beberapa menit.'
       }
       if (code === 'permission-denied' || msg.includes('permission-denied') || msg.includes('Missing or insufficient permissions')) {
-        return 'Profil gagal disimpan (izin Firestore). Pastikan firestore.rules untuk create users guru pending sudah di-deploy.'
+        return 'Login sudah terbuat tetapi profil gagal disimpan (izin Firestore). Pastikan firestore.rules untuk create users guru pending sudah di-deploy, lalu coba daftar lagi dengan password yang sama.'
       }
       if (msg.includes('undefined') || msg.includes('Unsupported field value')) {
         return 'Data profil tidak valid. Kosongkan gelar atau isi singkat saja (mis. S.Pd).'
@@ -148,44 +159,8 @@ export default function Register() {
     }
 
     try {
-      let uid: string | null = null
-      try {
-        const cred = await createUserWithEmailAndPassword(auth, emailNorm, password)
-        uid = cred.user.uid
-        await setDoc(doc(db, 'users', uid), profilBaru)
-      } catch (err: unknown) {
-        const code = kodeFirebase(err)
-        const already =
-          code === 'auth/email-already-in-use' ||
-          (err instanceof Error && err.message.includes('email-already-in-use'))
-
-        if (!already) {
-          // createUser sukses tapi setDoc gagal → Auth yatim; tetap lempar pesan jelas
-          throw err
-        }
-
-        // Auth sudah ada (mis. profil dihapus admin) — login + tulis ulang profil pending
-        let cred
-        try {
-          cred = await signInWithEmailAndPassword(auth, emailNorm, password)
-        } catch (e2) {
-          console.error('[daftar] signIn recovery gagal:', e2)
-          throw e2
-        }
-        uid = cred.user.uid
-        const snap = await getDoc(doc(db, 'users', uid))
-        if (snap.exists()) {
-          await signOut(auth)
-          throw new Error(
-            'Email ini sudah terdaftar dan profilnya masih ada. Masuk lewat halaman login, atau hubungi admin.',
-          )
-        }
-        await setDoc(doc(db, 'users', uid), {
-          ...profilBaru,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        })
-      }
+      // Berjalan di app Firebase sekunder: sesi `auth` utama tidak disentuh (ANTIREGRESI §15.1).
+      await daftarMandiriGuru(emailNorm, password, profilBaru)
       setSukses(true)
     } catch (err: unknown) {
       console.error('Pendaftaran gagal:', err)
@@ -441,6 +416,20 @@ export default function Register() {
           {error && (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] font-medium text-red-700">
               {error}
+              {bisaReset && (
+                <button
+                  type="button"
+                  onClick={() => void kirimReset()}
+                  className="mt-2 block rounded-lg bg-red-700 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-red-800"
+                >
+                  Kirim tautan atur ulang password
+                </button>
+              )}
+            </div>
+          )}
+          {infoReset && (
+            <div className="rounded-2xl border border-muh-200 bg-muh-50 px-3.5 py-2.5 text-[12px] font-medium text-muh-800">
+              {infoReset}
             </div>
           )}
 

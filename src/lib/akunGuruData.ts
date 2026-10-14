@@ -5,16 +5,23 @@ import {
   inMemoryPersistence,
   sendPasswordResetEmail,
   setPersistence,
+  signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth'
-import { collection, deleteDoc, doc, getDocs, setDoc, type DocumentData } from 'firebase/firestore'
-import { adalahRole, susunDokumenAkun, type InputAkunGuru } from './akunGuru'
-import { auth, db, firebaseConfig, app } from './firebase'
+import { collection, deleteDoc, doc, getDoc, getDocs, getFirestore, setDoc, type DocumentData } from 'firebase/firestore'
 import { getFunctions, httpsCallable } from 'firebase/functions'
+import { adalahRole, susunDokumenAkun, type InputAkunGuru } from './akunGuru'
+import { app, auth, db, firebaseConfig } from './firebase'
 import type { AppUser, UserRole } from '../types/user'
 
 /** Nama app sekunder. Auth-nya in-memory supaya sesi admin di app utama tidak terganti. */
 const NAMA_APP_SEKUNDER = 'sdm-buat-akun'
+/** App sekunder untuk pendaftaran mandiri guru (halaman /register). Lihat `daftarMandiriGuru`. */
+const NAMA_APP_DAFTAR = 'sdm-daftar-mandiri'
+/** Batas tunggu pendaftaran. Tulis Firestore yang offline tidak pernah gagal, hanya menggantung. */
+const BATAS_DAFTAR_MS = 30_000
+/** Wilayah Cloud Function `hapusAkunAuth`. Harus sama dengan `region` di functions/index.js. */
+const REGION_FUNGSI = 'asia-southeast2'
 
 export interface AkunStaf extends AppUser {
   /** Terisi bila `role` di Firestore bukan salah satu peran yang dikenal. */
@@ -32,6 +39,9 @@ export function pesanGalatAuth(err: unknown): string {
     return 'Login email/password belum diaktifkan di Firebase Authentication.'
   }
   if (code === 'auth/too-many-requests') return 'Terlalu banyak percobaan. Coba lagi nanti.'
+  if (code === 'functions/internal' || code === 'functions/unavailable') {
+    return 'Cloud Function hapus akun tidak dapat dijangkau. Pastikan sudah di-deploy (npm run deploy:functions) dan koneksi stabil.'
+  }
   if (err instanceof Error && err.message) return err.message
   return 'Gagal menyimpan akun.'
 }
@@ -141,52 +151,114 @@ export async function kirimResetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email.trim().toLowerCase())
 }
 
+export interface HasilHapusAkun {
+  /** true = user Firebase Authentication ikut terhapus (atau memang sudah tidak ada). */
+  authDihapus: boolean
+}
+
 /**
- * Hapus permanen akun staf: Firebase Auth + profil Firestore.
- * Memanggil Cloud Function `hapusAkunPermanen` (Admin SDK di server).
- * Fallback: jika Function belum di-deploy, hapus profil Firestore saja
- * dan lempar error yang menjelaskan sisa user Auth.
+ * Hapus akun staf sepenuhnya lewat Cloud Function `hapusAkunAuth` (Admin SDK): user Firebase
+ * Authentication dan dokumen `users/{uid}`. SDK web tidak bisa menghapus user lain, karena itu lewat fungsi.
+ * Aturan (hanya admin aktif, bukan diri sendiri, bukan admin terakhir) dijaga di fungsi, bukan di UI.
+ *
+ * Bila fungsi belum di-deploy (`functions/not-found`), jatuh kembali ke cara lama: hanya profil Firestore
+ * yang dihapus dan `authDihapus` = false, supaya UI menampilkan petunjuk hapus manual di Console.
+ * Galat lain dilempar apa adanya (jangan menghapus profil diam-diam saat fungsi gagal di tengah jalan).
  */
-export async function hapusAkunStaf(uid: string): Promise<void> {
-  const functions = getFunctions(app, 'asia-southeast2')
-  const panggil = httpsCallable<{ uid: string }, {
-    ok: boolean
-    authDihapus?: boolean
-    profilDihapus?: boolean
-    authPesan?: string
-  }>(functions, 'hapusAkunPermanen')
+export async function hapusAkunStaf(uid: string): Promise<HasilHapusAkun> {
+  try {
+    const panggil = httpsCallable<{ uid: string }, { authDihapus: boolean; authSudahTidakAda: boolean }>(
+      getFunctions(app, REGION_FUNGSI),
+      'hapusAkunAuth',
+    )
+    await panggil({ uid })
+    return { authDihapus: true }
+  } catch (err) {
+    if (kodeGalat(err) !== 'functions/not-found') throw err
+    await deleteDoc(doc(db, 'users', uid))
+    return { authDihapus: false }
+  }
+}
+
+
+/** Kode galat Firebase (`auth/...`, `permission-denied`, dst.), atau string kosong. */
+export function kodeGalat(err: unknown): string {
+  return err && typeof err === 'object' && 'code' in err ? String((err as { code: unknown }).code) : ''
+}
+
+function batasWaktu<T>(janji: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((selesai, gagal) => {
+    const timer = setTimeout(() => {
+      gagal(Object.assign(new Error('Waktu tunggu habis. Periksa jaringan lalu coba lagi.'), { code: 'sdm/timeout' }))
+    }, ms)
+    janji.then(
+      (v) => {
+        clearTimeout(timer)
+        selesai(v)
+      },
+      (e) => {
+        clearTimeout(timer)
+        gagal(e)
+      },
+    )
+  })
+}
+
+export type HasilDaftar = 'dibuat' | 'dipulihkan'
+
+/**
+ * Pendaftaran mandiri guru dari halaman /register.
+ *
+ * Seluruhnya berjalan di app Firebase SEKUNDER (persistence memori), tidak menyentuh `auth` utama.
+ * Kalau memakai `auth` utama, `onAuthStateChanged` di App.tsx langsung melihat "user ada, profil belum ada"
+ * lalu memanggil `logout()` di tengah penulisan profil (ANTIREGRESI §15.1).
+ *
+ * - Email belum ada di Auth: buat user, tulis profil `pending`. Hasil `dibuat`.
+ * - Email sudah ada di Auth tetapi profil `users/{uid}` tidak ada (profil dihapus admin; user Auth tersisa):
+ *   masuk dengan password yang diketik, tulis ulang profil `pending`. Hasil `dipulihkan`.
+ *   Kalau passwordnya salah, galat `auth/invalid-credential` dilempar apa adanya agar UI menawarkan atur ulang password.
+ * - Email sudah ada dan profilnya masih ada: galat `sdm/profil-sudah-ada`.
+ */
+export async function daftarMandiriGuru(
+  email: string,
+  password: string,
+  profil: Record<string, unknown>,
+): Promise<HasilDaftar> {
+  const lama = getApps().find((a) => a.name === NAMA_APP_DAFTAR)
+  if (lama) await deleteApp(lama)
+  const sekunder = initializeApp(firebaseConfig, NAMA_APP_DAFTAR)
+
+  async function jalankan(): Promise<HasilDaftar> {
+    const authSekunder = getAuth(sekunder)
+    await setPersistence(authSekunder, inMemoryPersistence)
+    const dbSekunder = getFirestore(sekunder)
+
+    let uid: string
+    let hasil: HasilDaftar = 'dibuat'
+    try {
+      const cred = await createUserWithEmailAndPassword(authSekunder, email, password)
+      uid = cred.user.uid
+    } catch (err) {
+      if (kodeGalat(err) !== 'auth/email-already-in-use') throw err
+      const cred = await signInWithEmailAndPassword(authSekunder, email, password)
+      uid = cred.user.uid
+      hasil = 'dipulihkan'
+      const snap = await getDoc(doc(dbSekunder, 'users', uid))
+      if (snap.exists()) {
+        throw Object.assign(
+          new Error('Email ini sudah terdaftar dan profilnya masih ada. Masuk lewat halaman login, atau hubungi admin.'),
+          { code: 'sdm/profil-sudah-ada' },
+        )
+      }
+    }
+    await setDoc(doc(dbSekunder, 'users', uid), profil)
+    await signOut(authSekunder)
+    return hasil
+  }
 
   try {
-    const res = await panggil({ uid })
-    if (!res.data?.ok) {
-      throw new Error('Penghapusan tidak dikonfirmasi server.')
-    }
-    return
-  } catch (err: unknown) {
-    const code =
-      typeof err === 'object' && err && 'code' in err ? String((err as { code: string }).code) : ''
-    const msg = err instanceof Error ? err.message : String(err)
-
-    // Function belum ada / belum deploy
-    const belumDeploy =
-      code.includes('not-found') ||
-      code.includes('functions/not-found') ||
-      msg.includes('NOT_FOUND') ||
-      msg.includes('not-found')
-
-    if (belumDeploy) {
-      // Fallback sementara: hapus profil saja
-      await deleteDoc(doc(db, 'users', uid))
-      throw new Error(
-        'Profil staf dihapus, tetapi Cloud Function belum di-deploy. User Auth masih ada — hapus manual di Firebase Console → Authentication, atau jalankan: firebase deploy --only functions',
-      )
-    }
-
-    // permission / unauthenticated dari function
-    if (code.includes('permission-denied') || code.includes('unauthenticated')) {
-      throw new Error(msg || 'Tidak diizinkan menghapus akun.')
-    }
-
-    throw err instanceof Error ? err : new Error(msg)
+    return await batasWaktu(jalankan(), BATAS_DAFTAR_MS)
+  } finally {
+    await deleteApp(sekunder).catch(() => undefined)
   }
 }

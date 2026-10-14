@@ -171,3 +171,29 @@
 14.3 `saveTP` / `importTPBatch` **tidak** boleh menulis `semester`, `bobotMapel`, atau `bobotPerSemester` (milik halaman Bobot Semester). Melanggar ini menimpa pengaturan guru.
 
 14.4 Perhitungan nilai mapel (`hitungNilaiAkhirMapel`) memakai `bobotTpDiSemester(tp, semesterAktif)`, bukan `tp.bobotMapel` mentah.
+
+## §15. Pendaftaran mandiri guru dan penghapusan akun
+
+15.1 **Pendaftaran di `/register` tidak boleh memakai `auth` utama.** `createUserWithEmailAndPassword` dan `signInWithEmailAndPassword` pada `auth` utama memicu `onAuthStateChanged` di `App.tsx`, yang melihat user tanpa profil dan memanggil `logout()` di tengah penulisan profil. Pendaftaran wajib lewat `daftarMandiriGuru()` (app sekunder `sdm-daftar-mandiri`, persistence memori, `deleteApp` di akhir). Perluasan dari §12.1.
+
+15.2 Aturan `App.tsx` "user ada tapi profil tidak ada → logout" sengaja dipertahankan (menolak profil yang dihapus admin, §12.3). Jangan dilonggarkan untuk mengakali pendaftaran; perbaikannya ada di 15.1.
+
+15.3 Penulisan Firestore yang offline tidak pernah gagal, hanya menggantung. Operasi yang menahan tombol di keadaan "memuat" wajib punya batas waktu (`batasWaktu` di `daftarMandiriGuru`, 30 detik).
+
+15.4 **Menghapus profil di Kelola Akun tidak menghapus user Firebase Authentication** (tidak ada Admin SDK di klien). Label tombol dan teks konfirmasi harus tetap jujur tentang itu; jangan mengembalikan kata "permanen" tanpa Cloud Function yang benar-benar menghapus user Auth. Email baru bebas sepenuhnya setelah user dihapus di Firebase Console → Authentication. Koreksi atas label tombol yang dulu menyiratkan hapus total (lihat §12.3).
+
+15.5 Email yang masih ada di Auth tanpa profil dipulihkan lewat `/register` bila password cocok; bila tidak cocok, tawarkan atur ulang password, bukan meminta admin lewat Console sebagai satu-satunya jalan. Profil hasil pemulihan tetap `status: 'pending'` (rules §1.1 tidak berubah).
+
+## §16. Cloud Function hapus akun
+
+16.1 Penghapusan akun staf yang menghapus user Firebase Authentication hanya boleh lewat Cloud Function `hapusAkunAuth` (Admin SDK). Jangan mencoba menghapus user lain dari klien, dan jangan mengganti pemeriksaan di `functions/aturan.js` dengan pemeriksaan di UI saja. Melengkapi §15.4: label "Hapus permanen" kini sah karena fungsi menghapus Auth dan profil. Jika fungsi dilepas, kembalikan label jujur seperti di §15.4.
+
+16.2 Wilayah fungsi (`asia-southeast2`) harus sama di `functions/index.js` dan `REGION_FUNGSI` di `akunGuruData.ts`. Alamat `https://*.cloudfunctions.net` harus tetap ada di `connect-src` CSP (§2.1).
+
+16.3 Fungsi menolak: pemanggil bukan administrator aktif, menghapus akun sendiri, menghapus akun orang tua, menghapus administrator aktif terakhir. Setelah mengubah `functions/aturan.js` jalankan `node scripts/cek-hapus-akun.mjs`.
+
+16.4 Urutan di fungsi: hapus Auth dulu, profil kemudian, dan "user Auth tidak ditemukan" dianggap sukses, supaya pemanggilan ulang setelah gagal di tengah tetap menyelesaikan penghapusan. Jangan dibalik (profil lebih dulu bisa meninggalkan user Auth tanpa jejak di daftar).
+
+16.5 Fallback `functions/not-found` di `hapusAkunStaf` hanya untuk masa sebelum fungsi di-deploy. Jangan memperluasnya ke galat lain: menghapus profil diam-diam saat fungsi gagal di tengah jalan meninggalkan user Auth yatim.
+
+16.6 `functions/node_modules` tidak di-commit (sudah tercakup `.gitignore`). `functions/package-lock.json` di-commit.

@@ -21,6 +21,7 @@ import {
   type AkunStaf,
 } from '../../lib/akunGuruData'
 import { getMapelList } from '../../lib/akademik'
+import { firebaseConfig } from '../../lib/firebase'
 import { MAPEL_BAWAAN } from '../../lib/mapelBawaan'
 import { SEMUA_KELAS } from '../../types/tahsin'
 import type { Mapel } from '../../types/akademik'
@@ -214,6 +215,8 @@ export default function KelolaAkun({ profile }: Props) {
   /** UID yang diminta konfirmasi hapus permanen. */
   const [konfirmasiHapus, setKonfirmasiHapus] = useState<string | null>(null)
   const [ketikHapus, setKetikHapus] = useState('')
+  /** Profil sudah dihapus, tetapi user Firebase Auth-nya masih ada (SDK web tidak bisa menghapusnya). */
+  const [sisaAuth, setSisaAuth] = useState<{ nama: string; email: string } | null>(null)
   const [sebagaiAdmin, setSebagaiAdmin] = useState(false)
   const [tugas, setTugas] = useState<TugasGuru>({ tahsin: true, guruKelas: false, bidangStudi: false })
 
@@ -383,12 +386,19 @@ export default function KelolaAkun({ profile }: Props) {
     }
     setBusy(true)
     try {
-      await hapusAkunStaf(akun.uid)
+      const hasil = await hapusAkunStaf(akun.uid)
       setList((prev) => prev.filter((u) => u.uid !== akun.uid))
       setDipilih(null)
       setKonfirmasiHapus(null)
       setKetikHapus('')
-      showToast(`${akun.nama} dihapus permanen (Auth + profil). Email ini bisa didaftarkan lagi.`)
+      if (hasil.authDihapus) {
+        setSisaAuth(null)
+        showToast(`${akun.nama} dihapus permanen (login dan profil). Email ini bebas dipakai lagi.`)
+      } else {
+        // Cloud Function belum di-deploy: hanya profil yang terhapus.
+        setSisaAuth({ nama: akun.nama, email: akun.email })
+        showToast(`Profil ${akun.nama} dihapus, tetapi user login masih ada (Cloud Function belum di-deploy). Lihat petunjuk di bawah.`, true)
+      }
     } catch (e) {
       console.error(e)
       showToast(pesanGalatAuth(e), true)
@@ -485,6 +495,56 @@ export default function KelolaAkun({ profile }: Props) {
           }`}
         >
           {toast.msg}
+        </div>
+      )}
+
+      {sisaAuth && mode === 'list' && (
+        <div className="card-soft border-amber-200 bg-amber-50/70 p-4">
+          <p className="text-[13px] font-semibold text-slate-900">Profil {sisaAuth.nama} dihapus, login-nya belum</p>
+          <p className="mt-1 text-[12px] text-slate-700">
+            Cloud Function hapus akun belum aktif, jadi hanya profil staf yang terhapus. User login <strong>{sisaAuth.email || '(tanpa email)'}</strong> masih ada di
+            Firebase Authentication, jadi email itu belum bebas dipakai. Ada dua cara:
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-[12px] text-slate-700">
+            <li>
+              Hapus user itu di Firebase Console → Authentication → Users (email bebas sepenuhnya).
+            </li>
+            <li>
+              Atau biarkan: orangnya tetap bisa mendaftar ulang di halaman Daftar. Bila lupa password lamanya, halaman Daftar
+              menyediakan tombol atur ulang password.
+            </li>
+          </ul>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a
+              href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/users`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg bg-muh-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-muh-700"
+            >
+              Buka Firebase Authentication
+            </a>
+            {sisaAuth.email && (
+              <button
+                type="button"
+                onClick={() =>
+                  void navigator.clipboard.writeText(sisaAuth.email).then(
+                    () => showToast('Email disalin.'),
+                    () => showToast('Salin manual: clipboard ditolak browser.', true),
+                  )
+                }
+                className="rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-slate-700"
+              >
+                Salin email
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSisaAuth(null)}
+              className="rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600"
+            >
+              Tutup
+            </button>
+          </div>
         </div>
       )}
 
@@ -713,8 +773,9 @@ export default function KelolaAkun({ profile }: Props) {
                     {konfirmasiHapus === dipilih.uid ? (
                       <div className="rounded-lg border border-red-200 bg-red-50 p-2.5">
                         <p className="text-[11px] leading-relaxed text-red-900">
-                          Hapus permanen profil <strong>{dipilih.nama}</strong> dari sistem. Data nilai siswa
-                          tidak dihapus, tetapi akun hilang dari daftar staf dan tidak bisa login.
+                          Hapus permanen akun <strong>{dipilih.nama}</strong>: login (Firebase Authentication) dan profil
+                          staf dihapus, dan tidak bisa dibatalkan. Data nilai siswa yang pernah diinput tidak dihapus.
+                          Emailnya bebas dipakai mendaftar lagi.
                         </p>
                         <label className="mt-2 block text-[11px] font-medium text-red-800">
                           Ketik email akun untuk konfirmasi
@@ -798,7 +859,7 @@ export default function KelolaAkun({ profile }: Props) {
                 <input
                   className={inputCls}
                   value={form.gelar ?? ''}
-                  placeholder="contoh: S.Pd"
+                  placeholder="S.Pd / M.Pd / …"
                   onChange={(e) => setF('gelar', e.target.value)}
                 />
               </Field>

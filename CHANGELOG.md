@@ -252,3 +252,23 @@
 - `src/lib/nilaiDraftCache.ts` (baru): simpan/baca/hapus draf nilai di localStorage per mapel×kelas×semester×tahun×jenis (slm/sts/sas).
 - `src/lib/useUnsavedGuard.ts` (baru): konfirmasi sebelum keluar jika ada perubahan — beforeunload (tutup tab/refresh), klik menu/back link, tombol back browser.
 - `NilaiSlm.tsx` & `NilaiStsSas.tsx`: menulis draf lokal (debounce 400ms) saat ada perubahan; memulihkan draf saat buka ulang; menghapus cache setelah simpan sukses; dialog "Nilai belum disimpan".
+
+## Belum dirilis (basis: package.json 0.1.0) — Perbaikan pendaftaran ulang guru dan kejelasan "hapus" akun
+
+- **Masalah**: akun guru dibuat admin, profilnya dihapus lewat Kelola Akun, lalu orangnya mendaftar ulang di `/register`. Hasilnya pesan "email sudah terdaftar", dan setelah perbaikan sebelumnya tombol Daftar berhenti di "Mendaftar…". Di Console terlihat `POST accounts:signUp 400`, yaitu respons normal Firebase untuk email yang masih ada di Authentication.
+- **Penyebab 1**: tombol "Hapus permanen" hanya menghapus dokumen `users/{uid}`. User Firebase Authentication tidak ikut terhapus (SDK web tidak bisa menghapus user lain; perlu Admin SDK). Email itu karenanya tetap tercatat di Auth.
+- **Penyebab 2 (berhenti di "Mendaftar…")**: `Register.tsx` membuat/masuk akun lewat `auth` utama. `onAuthStateChanged` di `App.tsx` langsung melihat "user ada, profil belum ada" dan memanggil `logout()` di tengah penulisan profil. Selain itu penulisan Firestore yang offline tidak pernah gagal, hanya menggantung, sehingga tombol tidak kembali.
+- `src/lib/akunGuruData.ts`: `daftarMandiriGuru()` (baru) menjalankan seluruh pendaftaran di app Firebase sekunder `sdm-daftar-mandiri` (persistence memori), sama polanya dengan `buatAkunGuru`. Email baru → user dibuat dan profil `pending` ditulis. Email sudah ada di Auth tanpa profil → masuk dengan password yang diketik lalu profil `pending` ditulis ulang. Batas tunggu 30 detik. `kodeGalat()` (baru) diekspor. Komentar `hapusAkunStaf` diperjelas.
+- `src/pages/Register.tsx`: memakai `daftarMandiriGuru`; tidak lagi memakai `auth` utama untuk membuat/masuk akun. Bila password tidak cocok dengan login lama, muncul tombol "Kirim tautan atur ulang password" (`sendPasswordResetEmail`), lalu guru mendaftar lagi dengan password baru. Pesan galat diperbarui.
+- `src/pages/admin/KelolaAkun.tsx`: tombol "Hapus permanen" diganti "Hapus dari daftar staf" dengan keterangan bahwa user Authentication tidak ikut terhapus. Setelah penghapusan muncul kartu petunjuk yang tidak hilang sendiri: tautan ke Firebase Authentication project dan tombol salin email.
+- Tidak ada perubahan `firestore.rules` maupun `App.tsx`. Butuh `npm run deploy` (hosting) agar perbaikan tampil di situs.
+
+## Belum dirilis (basis: package.json 0.1.0) — Hapus akun benar-benar permanen (Cloud Function)
+
+- Project `sdm01kukusan-2e735` sudah di paket Blaze, sehingga Admin SDK bisa dipakai. Melanjutkan entri "Perbaikan pendaftaran ulang guru" di atas.
+- `functions/` (baru): Cloud Function callable `hapusAkunAuth` (wilayah `asia-southeast2`, Node 22, v2). Menghapus user Firebase Authentication lalu dokumen `users/{uid}`. Hanya administrator aktif; menolak menghapus akun sendiri, akun orang tua, dan administrator aktif terakhir. User Auth yang sudah tidak ada (dihapus manual di Console) dianggap berhasil dan profilnya tetap dibersihkan. Aturan murni ada di `functions/aturan.js`.
+- `scripts/cek-hapus-akun.mjs` (baru): uji aturan di atas (`node scripts/cek-hapus-akun.mjs`).
+- `src/lib/akunGuruData.ts`: `hapusAkunStaf` memanggil fungsi itu dan mengembalikan `{ authDihapus }`. Bila fungsi belum di-deploy (`functions/not-found`) jatuh ke cara lama (hanya profil Firestore). Galat lain tidak menghapus apa pun. `pesanGalatAuth` memetakan `functions/internal` dan `functions/unavailable`.
+- `src/pages/admin/KelolaAkun.tsx`: label kembali "Hapus permanen" dengan teks konfirmasi yang sesuai. Kartu petunjuk Console hanya muncul bila fungsi belum aktif (fallback).
+- `firebase.json`: blok `functions`; CSP `connect-src` ditambah `https://*.cloudfunctions.net`. `package.json`: skrip `deploy:functions` (versi tetap 0.1.0).
+- Urutan deploy: `npm run deploy:functions` DULU, baru `npm run deploy` (hosting). `firestore.rules` tidak berubah.
