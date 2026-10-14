@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { getConfigAkademik, simpanProfilSekolah } from '../../lib/akademik'
+import type { Semester } from '../../types/akademik'
 import type { AppUser } from '../../types/user'
 import Icon from '../../components/Icon'
 
@@ -13,7 +14,7 @@ function Section({
   desc,
   children,
 }: {
-  icon: 'book' | 'users'
+  icon: 'book' | 'users' | 'calendar' | 'target'
   title: string
   desc?: string
   children: React.ReactNode
@@ -43,6 +44,11 @@ function Label({ children, required }: { children: React.ReactNode; required?: b
   )
 }
 
+/**
+ * Data Sekolah — hanya identitas yang dipakai di kop rapor & dokumen.
+ * Tahun ajaran, semester, tanggal rapor → Kelola Periode Akademik.
+ * Dimensi profil lulusan → ditentukan guru kelas (bukan admin).
+ */
 export default function TahunAjaran({ profile }: { profile: AppUser }) {
   const [namaSekolah, setNamaSekolah] = useState('SD Muhammadiyah 01 Kukusan')
   const [npsn, setNpsn] = useState('')
@@ -50,6 +56,14 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
   const [telp, setTelp] = useState('')
   const [kepsek, setKepsek] = useState('')
   const [nbm, setNbm] = useState('')
+  /** Disimpan apa adanya agar simpanProfilSekolah tidak mengosongkan field konteks periode. */
+  const [legacyTahun, setLegacyTahun] = useState('2026/2027')
+  const [legacySemester, setLegacySemester] = useState<Semester>('1')
+  const [legacyTglRapor, setLegacyTglRapor] = useState('')
+  const [legacyTglRapor15, setLegacyTglRapor15] = useState('')
+  const [legacyKota, setLegacyKota] = useState('Depok')
+  const [legacyDpl, setLegacyDpl] = useState<string[]>([])
+
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [pesan, setPesan] = useState<string | null>(null)
@@ -64,6 +78,12 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
         if (c.telpSekolah) setTelp(c.telpSekolah)
         if (c.namaKepsek) setKepsek(c.namaKepsek)
         if (c.nbmKepsek) setNbm(c.nbmKepsek)
+        if (c.tahunAjaran) setLegacyTahun(c.tahunAjaran)
+        setLegacySemester(c.semesterAktif === '2' ? '2' : '1')
+        if (c.tglRapor) setLegacyTglRapor(c.tglRapor)
+        if (c.tglRapor1sampai5) setLegacyTglRapor15(c.tglRapor1sampai5)
+        if (c.kotaRapor) setLegacyKota(c.kotaRapor)
+        if (Array.isArray(c.dplSemesterIni)) setLegacyDpl(c.dplSemesterIni.map(String))
       })
       .catch(() => setGalat('Gagal memuat data sekolah.'))
       .finally(() => setLoading(false))
@@ -73,6 +93,8 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
 
   async function simpan(e: FormEvent) {
     e.preventDefault()
+    setPesan(null)
+    setGalat(null)
     if (!namaSekolah.trim() || !npsn.trim() || !alamat.trim()) {
       setGalat('Nama sekolah, NPSN, dan alamat wajib diisi.')
       return
@@ -82,26 +104,24 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
       return
     }
     setBusy(true)
-    setPesan(null)
-    setGalat(null)
     try {
-      // Simpan hanya profil sekolah. Tahun/semester/DPL/tanggal rapor sudah dipindah ke periode.
+      // Hanya tulis identitas. Tahun/semester/tanggal/DPL dipertahankan dari nilai yang ada
+      // agar tidak menimpa hasil sinkronisasi dari Periode Akademik.
       await simpanProfilSekolah({
-        namaSekolah,
-        npsn,
-        alamatSekolah: alamat,
-        telpSekolah: telp,
-        namaKepsek: kepsek,
-        nbmKepsek: nbm,
-        // Field lama dikirim kosong / default agar tidak merusak dokumen existing
-        tahunAjaran: '',
-        semesterAktif: '1',
-        tglRapor: '',
-        tglRapor1sampai5: '',
-        kotaRapor: '',
-        dplSemesterIni: [],
+        namaSekolah: namaSekolah.trim(),
+        npsn: npsn.trim(),
+        alamatSekolah: alamat.trim(),
+        telpSekolah: telp.trim(),
+        namaKepsek: kepsek.trim(),
+        nbmKepsek: nbm.trim(),
+        tahunAjaran: legacyTahun,
+        semesterAktif: legacySemester,
+        tglRapor: legacyTglRapor,
+        tglRapor1sampai5: legacyTglRapor15,
+        kotaRapor: legacyKota,
+        dplSemesterIni: legacyDpl,
       })
-      setPesan('Data sekolah tersimpan.')
+      setPesan('Identitas sekolah tersimpan. Tahun ajaran & semester diatur di Periode Akademik.')
     } catch (err) {
       console.error(err)
       setGalat('Gagal menyimpan.')
@@ -118,9 +138,35 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
         </Link>
         <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">Data Sekolah</h1>
         <p className="mt-1 text-[12.5px] leading-relaxed text-muted">
-          Identitas yang muncul di kop rapor dan dokumen resmi. Tahun ajaran & semester dikelola di
-          halaman Periode Akademik.
+          Identitas yang muncul di kop rapor dan dokumen resmi. Tahun ajaran, semester, dan tanggal
+          rapor dikelola di{' '}
+          <Link to="/admin/periode" className="font-medium text-muh-700 underline">
+            Periode Akademik
+          </Link>
+          .
         </p>
+      </div>
+
+      {/* Banner: konteks periode ada di menu lain */}
+      <div className="rounded-xl border border-muh-200 bg-muh-50/80 px-4 py-3 text-[12.5px] text-muh-900">
+        <p className="font-semibold">Tahun ajaran & semester</p>
+        <p className="mt-1 leading-snug text-muh-800/90">
+          Saat ini di sistem: <strong>{legacyTahun}</strong> · Semester{' '}
+          <strong>{legacySemester === '2' ? '2 (genap)' : '1 (ganjil)'}</strong>
+          {legacyKota ? (
+            <>
+              {' '}
+              · Kota rapor: <strong>{legacyKota}</strong>
+            </>
+          ) : null}
+          . Ubah lewat menu Periode Akademik (termasuk tanggal rapor kelas 1–6).
+        </p>
+        <Link
+          to="/admin/periode"
+          className="mt-2 inline-flex text-[12px] font-semibold text-muh-700 underline"
+        >
+          Buka Periode Akademik →
+        </Link>
       </div>
 
       {loading ? (
@@ -131,10 +177,18 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
         </div>
       ) : (
         <form onSubmit={(e) => void simpan(e)} className="space-y-4">
-          <Section icon="book" title="Identitas sekolah" desc="Muncul di kop rapor dan dokumen resmi.">
+          <Section
+            icon="book"
+            title="Identitas sekolah"
+            desc="Muncul di kop rapor dan dokumen resmi."
+          >
             <label className="block">
               <Label required>Nama sekolah</Label>
-              <input className={field} value={namaSekolah} onChange={(e) => setNamaSekolah(e.target.value)} />
+              <input
+                className={field}
+                value={namaSekolah}
+                onChange={(e) => setNamaSekolah(e.target.value)}
+              />
             </label>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
@@ -154,19 +208,34 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
             </div>
             <label className="block">
               <Label required>Alamat</Label>
-              <textarea className={field} rows={2} value={alamat} onChange={(e) => setAlamat(e.target.value)} />
+              <textarea
+                className={field}
+                rows={2}
+                value={alamat}
+                onChange={(e) => setAlamat(e.target.value)}
+              />
             </label>
           </Section>
 
           <Section icon="users" title="Kepala sekolah" desc="Penandatangan rapor.">
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
-                <Label required>Nama</Label>
-                <input className={field} value={kepsek} onChange={(e) => setKepsek(e.target.value)} />
+                <Label required>Nama lengkap</Label>
+                <input
+                  className={field}
+                  value={kepsek}
+                  onChange={(e) => setKepsek(e.target.value)}
+                  placeholder="dengan gelar"
+                />
               </label>
               <label className="block">
                 <Label required>NBM</Label>
-                <input className={field} value={nbm} onChange={(e) => setNbm(e.target.value)} />
+                <input
+                  className={field}
+                  value={nbm}
+                  onChange={(e) => setNbm(e.target.value)}
+                  inputMode="numeric"
+                />
               </label>
             </div>
           </Section>
