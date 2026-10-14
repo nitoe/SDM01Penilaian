@@ -46,7 +46,7 @@ function KelasBars({
     <div className="card-soft p-5">
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="text-[15px] font-semibold text-slate-900">Siswa per kelas</h3>
-        <span className="text-[11.5px] text-muted">Aktif dan nonaktif</span>
+        <span className="text-[12px] text-muted">Aktif dan nonaktif</span>
       </div>
       <div
         className="mt-5 flex h-44 items-end gap-1.5 sm:gap-2.5"
@@ -60,14 +60,14 @@ function KelasBars({
               key={d.kelas}
               className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5"
             >
-              <span className="text-[10.5px] font-medium text-slate-500">{d.jumlah}</span>
+              <span className="text-[11px] font-medium text-slate-500">{d.jumlah}</span>
               <div
                 title={`Kelas ${d.kelas}: ${d.jumlah} siswa`}
                 className={`w-full rounded-t-lg ${milikku ? 'bg-peach-400' : 'bg-muh-500'}`}
                 style={{ height: `${Math.max(4, (d.jumlah / max) * 100)}%` }}
               />
               <span
-                className={`text-[10.5px] ${milikku ? 'font-semibold text-peach-500' : 'text-muted'}`}
+                className={`text-[11px] ${milikku ? 'font-semibold text-peach-500' : 'text-muted'}`}
               >
                 {d.kelas}
               </span>
@@ -76,7 +76,7 @@ function KelasBars({
         })}
       </div>
       {saya.length > 0 && (
-        <div className="mt-4 flex gap-4 text-[11.5px] text-muted">
+        <div className="mt-4 flex gap-4 text-[12px] text-muted">
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-peach-400" /> Kelas saya
           </span>
@@ -119,7 +119,7 @@ function ProgressCard({
   return (
     <Link
       to={to}
-      className={`card-soft group flex flex-col gap-1 border-l-4 p-4 transition hover:-translate-y-0.5 hover:shadow-md ${accent} ${ring}`}
+      className={`card-soft group flex flex-col gap-1 border-l-4 p-4 transition ${accent} ${ring}`}
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-[12px] font-medium text-muted">{title}</p>
@@ -128,8 +128,8 @@ function ProgressCard({
       <p className="text-[24px] font-semibold leading-tight tracking-tight text-slate-900">
         {value ?? '—'}
       </p>
-      {hint && <p className="text-[11.5px] leading-snug text-muted">{hint}</p>}
-      <span className="mt-1 inline-flex items-center gap-1 text-[11.5px] font-semibold text-muh-700 opacity-0 transition group-hover:opacity-100">
+      {hint && <p className="text-[12px] leading-snug text-muted">{hint}</p>}
+      <span className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-muh-700 opacity-0 transition group-hover:opacity-100">
         Buka <Icon name="arrow" />
       </span>
     </Link>
@@ -402,9 +402,9 @@ export default function Home({ profile }: HomeProps) {
                 />
                 <Link
                   to="/tahsin/input-setoran"
-                  className="card-soft flex items-center gap-3 p-4 transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="card-soft flex items-center gap-3 p-4 transition"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muh-600 text-white">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muh-50 text-muh-700 ring-1 ring-muh-100">
                     <Icon name="pencil" />
                   </span>
                   <div>
