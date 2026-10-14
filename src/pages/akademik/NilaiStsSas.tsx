@@ -690,7 +690,7 @@ function Detail(props: {
       <BackLink to={`/akademik/nilai-sts?jenis=${jenis}`}>Pilih mata pelajaran</BackLink>
 
       <HeroBanner
-        eyebrow={periodeAk.ready ? periodeAk.label : (config ? `Semester ${config.semesterAktif} · ${config.tahunAjaran}` : 'Akademik')}
+        eyebrow={config ? `Semester ${config.semesterAktif} · ${config.tahunAjaran}` : 'Akademik'}
         title={`${labelPendek(jenis)} — ${mapel} · Kelas ${kelas}`}
         subtitle={
           jenis === 'sts'
