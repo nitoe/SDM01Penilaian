@@ -155,14 +155,14 @@ export default function Login() {
   }
 
   const field =
-    'w-full rounded-2xl border border-border bg-slate-50/80 px-3.5 py-2.5 text-[14px] outline-none transition focus:border-muh-500 focus:bg-white focus:ring-2 focus:ring-muh-500/15'
+    'w-full rounded-lg border border-border bg-slate-50/80 px-3.5 py-2.5 text-[14px] outline-none transition focus:border-muh-500 focus:bg-white focus:ring-2 focus:ring-muh-500/15'
 
   return (
     <div className="flex min-h-full items-stretch bg-surface-2 md:p-3">
-      <div className="mx-auto flex w-full max-w-5xl overflow-hidden bg-white md:rounded-[28px] md:border md:border-border md:shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
+      <div className="mx-auto flex w-full max-w-5xl overflow-hidden bg-white md:rounded-2xl md:border md:border-border md:shadow-[0_4px_24px_rgba(15,23,42,0.06)]">
         <div className="hero-banner hidden w-[44%] flex-col justify-between p-8 text-white lg:flex">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white">
               <img src="/favicon-32.png" alt="" className="h-7 w-7" />
             </span>
             <span className="text-[15px] font-semibold">SDM 01 Kukusan</span>
@@ -173,7 +173,7 @@ export default function Login() {
               <br />
               SD Muhammadiyah 01 Kukusan
             </h1>
-            <p className="mt-3 max-w-xs text-[13.5px] text-muh-100/85">
+            <p className="mt-3 max-w-xs text-[13px] text-muh-100/85">
               Catat penilaian, pantau perkembangan siswa, dan siapkan rapor dalam satu tempat.
               Pilih tahun ajaran dan semester saat masuk.
             </p>
@@ -184,13 +184,13 @@ export default function Login() {
         <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-10">
           <div className="w-full max-w-[380px]">
             <div className="mb-7 lg:hidden">
-              <img src="/favicon-32.png" alt="" className="mb-3 h-11 w-11 rounded-2xl" />
+              <img src="/favicon-32.png" alt="" className="mb-3 h-11 w-11 rounded-lg" />
               <p className="text-[15px] font-semibold text-slate-900">SDM 01 Kukusan</p>
-              <p className="text-[12.5px] text-muted">Sistem Penilaian</p>
+              <p className="text-[12px] text-muted">Sistem Penilaian</p>
             </div>
 
             {!isFirebaseConfigured && (
-              <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12px] font-medium text-amber-800">
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12px] font-medium text-amber-800">
                 Firebase belum dikonfigurasi. Isi file <code className="font-mono">.env</code>.
               </div>
             )}
@@ -252,14 +252,14 @@ export default function Login() {
               </div>
 
               {!periodeLoading && periodeList.length === 0 && (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12px] text-amber-900">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12px] text-amber-900">
                   Belum ada periode akademik aktif. Minta admin membuatnya di{' '}
                   <strong>Administrasi → Periode Akademik</strong>, lalu muat ulang halaman ini.
                 </div>
               )}
 
               {periodeTerpilih && (
-                <p className="text-[11.5px] text-muted">
+                <p className="text-[12px] text-muted">
                   Periode: <strong className="text-slate-700">{labelPeriode(periodeTerpilih)}</strong>
                   {periodeTerpilih.isDefault ? ' · default sekolah' : ''}
                 </p>
@@ -311,7 +311,7 @@ export default function Login() {
               {error && (
                 <div
                   role="alert"
-                  className="rounded-2xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] font-medium text-red-700"
+                  className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] font-medium text-red-700"
                 >
                   {error}
                 </div>
@@ -320,7 +320,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading || periodeLoading || (periodeList.length > 0 && !periodeTerpilih)}
-                className="flex w-full items-center justify-center rounded-2xl bg-muh-600 px-3 py-3 text-[14px] font-semibold text-white shadow-sm transition hover:bg-muh-700 disabled:opacity-60"
+                className="flex w-full items-center justify-center rounded-lg bg-muh-600 px-3 py-3 text-[14px] font-semibold text-white shadow-sm transition hover:bg-muh-700 disabled:opacity-60"
               >
                 {loading ? 'Memproses…' : 'Masuk'}
               </button>
