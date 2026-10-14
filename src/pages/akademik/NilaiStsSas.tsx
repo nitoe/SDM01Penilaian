@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import type { ConfigAkademik, JenisAsesmen, NilaiAsesmenDoc, NilaiTpDoc, TujuanPembelajaran } from '../../types/akademik'
 import type { Mapel } from '../../types/akademik'
@@ -31,6 +31,7 @@ import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import type { SiswaTahsin } from '../../types/tahsin'
 import { Badge, PageHeader } from '../../components/ui'
+import { MapelKelasPicker } from '../../components/MapelKelasPicker'
 import { BackLink, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, useToast } from './shared'
 
 /** Kotak nilai di sel tabel — cukup besar untuk disentuh */
@@ -201,70 +202,60 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
   if (!mapel || !kelas) {
     return (
       <div className="space-y-5">
-        <BackLink to="/akademik">Akademik & Rapor</BackLink>
         <PageHeader
           back={{ to: '/akademik', label: 'Akademik & Rapor' }}
-          eyebrow="Akademik"
           title="Nilai Ujian Tengah & Akhir"
-          subtitle="Pilih jenis ujian, lalu mata pelajaran dan kelas."
+          subtitle="Pilih jenis ujian, lalu mapel × kelas."
         />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:max-w-md">
           {(
             [
-              { j: 'sts' as JenisAsesmen, judul: 'Ujian Tengah', sub: 'STS · Tengah semester' },
-              { j: 'sas' as JenisAsesmen, judul: 'Ujian Akhir', sub: 'SAS · Akhir semester' },
+              { j: 'sts' as JenisAsesmen, judul: 'STS', sub: 'Ujian tengah semester' },
+              { j: 'sas' as JenisAsesmen, judul: 'SAS', sub: 'Ujian akhir semester' },
             ] as const
           ).map(({ j, judul, sub }) => (
             <button
               key={j}
               type="button"
               onClick={() => gantiJenis(j)}
-              className={`rounded-2xl border-2 px-4 py-4 text-left transition ${
-                jenis === j ? 'border-muh-600 bg-muh-50 shadow-sm' : 'border-slate-200 bg-white hover:border-muh-300'
+              className={`rounded-lg border-2 px-3 py-3 text-left transition ${
+                jenis === j ? 'border-muh-600 bg-muh-50' : 'border-border bg-white hover:border-muh-300'
               }`}
             >
-              <p className={`text-[15px] font-bold ${jenis === j ? 'text-muh-800' : 'text-slate-800'}`}>{judul}</p>
-              <p className="mt-0.5 text-[12px] text-muted">{sub}</p>
+              <p className={`text-[14px] font-bold ${jenis === j ? 'text-muh-800' : 'text-slate-800'}`}>{judul}</p>
+              <p className="mt-0.5 text-[11px] text-muted">{sub}</p>
             </button>
           ))}
         </div>
         <p className="text-[13px] font-medium text-slate-700">
-          Pilih mapel & kelas untuk <span className="font-bold text-muh-700">{labelJenis(jenis)}</span>
+          Mapel & kelas — <span className="font-semibold text-muh-700">{labelJenis(jenis)}</span>
         </p>
-        {mapelMaster === null ? (
-          <Spinner />
-        ) : pilihan.length === 0 ? (
-          <Notice tone="warn">Akun ini belum menjadi guru kelas dan belum memiliki mapel bidang studi. Hubungi admin.</Notice>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {pilihan.map((p) => {
-              const kunci = `${p.mapel}|${p.kelas}`
-              const n = hubStatus?.[kunci]
-              return (
-                <Link
-                  key={kunci}
-                  to={`/akademik/nilai-sts?jenis=${jenis}&mapel=${encodeURIComponent(p.mapel)}&kelas=${encodeURIComponent(p.kelas)}`}
-                  className="card-soft block p-4 no-underline transition hover:border-muh-400 hover:shadow-md active:scale-[0.99]"
-                >
-                  <p className="text-[15px] font-semibold text-slate-900">{p.mapel}</p>
-                  <p className="mt-1 text-[13px] text-muted">Kelas {p.kelas}</p>
-                  <p className="mt-3">
-                    {typeof n === 'number' ? (
-                      n > 0 ? (
-                        <Badge tone="green">Siap · {n} materi</Badge>
-                      ) : (
-                        <Badge tone="peach">Belum diatur</Badge>
-                      )
-                    ) : tulis && hubStatus === null ? (
-                      <span className="text-[12px] text-muted">Memuat…</span>
-                    ) : null}
-                  </p>
-                </Link>
+        <MapelKelasPicker
+          pilihan={pilihan}
+          loading={mapelMaster === null}
+          showStatusFilter
+          isAda={(m, k) => {
+            const n = hubStatus?.[`${m}|${k}`]
+            if (n == null) return null
+            return n > 0
+          }}
+          hrefFor={(m, k) =>
+            `/akademik/nilai-sts?jenis=${jenis}&mapel=${encodeURIComponent(m)}&kelas=${encodeURIComponent(k)}`
+          }
+          renderCell={(m, k) => {
+            const n = hubStatus?.[`${m}|${k}`]
+            if (hubStatus === null && tulis) return <span className="text-muted">…</span>
+            if (typeof n === 'number') {
+              return n > 0 ? (
+                <span className="text-muh-700">{n} TP</span>
+              ) : (
+                <span className="text-amber-700">Belum</span>
               )
-            })}
-          </div>
-        )}
-        {node}
+            }
+            return <span className="text-muh-700">Buka</span>
+          }}
+          footer={node}
+        />
       </div>
     )
   }

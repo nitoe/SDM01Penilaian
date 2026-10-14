@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import type { Mapel, Semester, TujuanPembelajaran } from '../../types/akademik'
 import {
@@ -12,6 +12,7 @@ import {
 import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { PageHeader } from '../../components/ui'
+import { MapelKelasPicker } from '../../components/MapelKelasPicker'
 import { BackLink, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, inputCls, useToast } from './shared'
 
 /** State UI per TP: alokasi bisa 0, 1, atau 2 semester sekaligus. */
@@ -100,33 +101,18 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
   if (!mapel || !kelas) {
     return (
       <div className="space-y-5">
-        <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
         <PageHeader
           back={{ to: '/akademik', label: 'Akademik & Rapor' }}
-          eyebrow="Akademik"
           title="Bobot Semester TP"
-          subtitle="Pilih mata pelajaran dan kelas. Satu TP boleh dipakai di semester 1, semester 2, atau keduanya."
+          subtitle="Pilih mapel × kelas. Satu TP boleh dipakai di semester 1, 2, atau keduanya."
         />
-        {mapelMaster === null ? (
-          <Spinner />
-        ) : pilihan.length === 0 ? (
-          <Notice tone="warn">
-            Akun ini belum menjadi guru kelas dan belum memiliki mapel bidang studi. Hubungi admin.
-          </Notice>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {pilihan.map((p) => (
-              <Link
-                key={`${p.mapel}-${p.kelas}`}
-                to={`/akademik/bobot-semester?mapel=${encodeURIComponent(p.mapel)}&kelas=${encodeURIComponent(p.kelas)}`}
-                className="card-soft block p-4 no-underline transition hover:border-muh-300"
-              >
-                <p className="text-[15px] font-semibold text-slate-900">{p.mapel}</p>
-                <p className="mt-1 text-[13px] text-muted">Kelas {p.kelas}</p>
-              </Link>
-            ))}
-          </div>
-        )}
+        <MapelKelasPicker
+          pilihan={pilihan}
+          loading={mapelMaster === null}
+          hrefFor={(m, k) =>
+            `/akademik/bobot-semester?mapel=${encodeURIComponent(m)}&kelas=${encodeURIComponent(k)}`
+          }
+        />
       </div>
     )
   }

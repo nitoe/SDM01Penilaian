@@ -19,6 +19,7 @@ import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import type { SiswaTahsin } from '../../types/tahsin'
 import { PageHeader } from '../../components/ui'
+import { MapelKelasPicker } from '../../components/MapelKelasPicker'
 import { BackLink, LEVEL_WARNA, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary } from './shared'
 
 type NilaiKelas = Record<string, Record<string, NilaiTpDoc>>
@@ -124,33 +125,18 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
   if (!mapel || !kelas) {
     return (
       <div className="space-y-5">
-        <BackLink to="/akademik">Akademik & Rapor</BackLink>
         <PageHeader
           back={{ to: '/akademik', label: 'Akademik & Rapor' }}
-          eyebrow="Akademik"
           title="Laporan SLM"
           subtitle="Rekap nilai sumatif lingkup materi per kelas. Belum termasuk STS dan SAS."
         />
-        {mapelMaster === null ? (
-          <Spinner />
-        ) : pilihan.length === 0 ? (
-          <Notice tone="warn">
-            Akun ini belum menjadi guru kelas dan belum memiliki mapel bidang studi. Hubungi admin.
-          </Notice>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {pilihan.map((p) => (
-              <Link
-                key={`${p.mapel}-${p.kelas}`}
-                to={`/akademik/laporan-slm?mapel=${encodeURIComponent(p.mapel)}&kelas=${encodeURIComponent(p.kelas)}`}
-                className="card-soft block p-4 no-underline transition hover:border-muh-300"
-              >
-                <p className="text-[14px] font-semibold text-slate-900">{p.mapel}</p>
-                <p className="mt-0.5 text-[12px] text-muted">Kelas {p.kelas}</p>
-              </Link>
-            ))}
-          </div>
-        )}
+        <MapelKelasPicker
+          pilihan={pilihan}
+          loading={mapelMaster === null}
+          hrefFor={(m, k) =>
+            `/akademik/laporan-slm?mapel=${encodeURIComponent(m)}&kelas=${encodeURIComponent(k)}`
+          }
+        />
       </div>
     )
   }

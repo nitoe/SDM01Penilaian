@@ -30,6 +30,7 @@ import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import type { SiswaTahsin } from '../../types/tahsin'
 import { Badge, PageHeader } from '../../components/ui'
+import { MapelKelasPicker } from '../../components/MapelKelasPicker'
 import { BackLink, LEVEL_WARNA, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, useToast } from './shared'
 
 type NilaiKelas = Record<string, Record<string, NilaiTpDoc>>
@@ -216,65 +217,44 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
   if (!mapel || !kelas) {
     return (
       <div className="space-y-5">
-        <BackLink to="/akademik">Akademik & Rapor</BackLink>
         <PageHeader
           back={{ to: '/akademik', label: 'Akademik & Rapor' }}
-          eyebrow="Akademik"
           title="Input Nilai Harian (SLM)"
-          subtitle={periodeAk.ready ? `Periode: ${periodeAk.label}. Status di kartu = kelengkapan nilai periode ini.` : "Pilih periode dulu (login ulang atau header). Status di kartu = kelengkapan nilai periode aktif."}
+          subtitle={
+            periodeAk.ready
+              ? `Periode ${periodeAk.label} · Status di sel = kelengkapan nilai periode ini.`
+              : 'Pilih periode dulu (login ulang atau header).'
+          }
         />
-        {mapelMaster === null ? (
-          <Spinner />
-        ) : pilihan.length === 0 ? (
-          <Notice tone="warn">
-            Akun ini belum menjadi guru kelas dan belum memiliki mapel bidang studi. Hubungi admin.
-          </Notice>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {pilihan.map((p) => {
-              const kunci = `${p.mapel}|${p.kelas}`
-              const st = status?.[kunci]
-              return (
-                <article key={kunci} className="card-soft p-4">
-                  <Link
-                    to={`/akademik/nilai-slm?mapel=${encodeURIComponent(p.mapel)}&kelas=${encodeURIComponent(p.kelas)}`}
-                    className="block no-underline"
-                  >
-                    <p className="text-[15px] font-semibold text-slate-900">{p.mapel}</p>
-                    <p className="mt-1 text-[13px] text-muted">
-                      Kelas {p.kelas}
-                      {st && st.jenis !== 'gagal' ? ` · ${st.siswa} siswa` : ''}
-                      {tulis && status === null ? ' · Memuat…' : st?.jenis === 'gagal' ? ' · Gagal memuat' : ''}
-                    </p>
-                  </Link>
-                  {st?.jenis === 'tanpa-tp' && (
-                    <p className="mt-2 flex flex-wrap items-center gap-2">
-                      <Badge tone="peach">Belum ada materi</Badge>
-                      <Link
-                        className="text-[12px] font-semibold text-muh-700 underline"
-                        to={`/akademik/setup-tp?mapel=${encodeURIComponent(p.mapel)}&kelas=${encodeURIComponent(p.kelas)}`}
-                      >
-                        Buat TP dulu
-                      </Link>
-                    </p>
-                  )}
-                  {st?.jenis === 'ada' && (
-                    <p className="mt-2">
-                      {st.lengkap === st.total ? (
-                        <Badge tone="green">Lengkap semua materi ({st.total})</Badge>
-                      ) : (
-                        <Badge tone="peach">
-                          Lengkap {st.lengkap}/{st.total} materi
-                        </Badge>
-                      )}
-                    </p>
-                  )}
-                </article>
-              )
-            })}
-          </div>
-        )}
-        {node}
+        <MapelKelasPicker
+          pilihan={pilihan}
+          loading={mapelMaster === null}
+          showStatusFilter
+          isAda={(m, k) => {
+            const st = status?.[`${m}|${k}`]
+            if (!st || st.jenis === 'gagal') return null
+            if (st.jenis === 'tanpa-tp') return false
+            return st.lengkap === st.total && st.total > 0
+          }}
+          hrefFor={(m, k) =>
+            `/akademik/nilai-slm?mapel=${encodeURIComponent(m)}&kelas=${encodeURIComponent(k)}`
+          }
+          renderCell={(m, k) => {
+            const st = status?.[`${m}|${k}`]
+            if (status === null && tulis) return <span className="text-muted">…</span>
+            if (!st) return <span className="text-muh-700">Buka</span>
+            if (st.jenis === 'gagal') return <span className="text-red-600">!</span>
+            if (st.jenis === 'tanpa-tp') return <span className="text-amber-700">Tanpa TP</span>
+            if (st.lengkap === st.total)
+              return <span className="text-muh-700">{st.lengkap}/{st.total}</span>
+            return (
+              <span className="text-amber-700">
+                {st.lengkap}/{st.total}
+              </span>
+            )
+          }}
+          footer={node}
+        />
       </div>
     )
   }
