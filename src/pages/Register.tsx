@@ -110,29 +110,41 @@ export default function Register() {
     function pesanFirebase(err: unknown): string {
       const code = kodeFirebase(err)
       const msg = err instanceof Error ? err.message : String(err ?? 'Gagal mendaftar')
+      // Log detail untuk admin/debug
+      console.error('[daftar]', { code, msg, err })
       if (code === 'auth/email-already-in-use' || msg.includes('email-already-in-use')) {
-        return 'Email ini sudah terdaftar di Firebase Auth.'
+        return (
+          'Email ini sudah ada di Firebase Authentication (bukan hanya di daftar staf). ' +
+          'Jika admin menghapus akun di Kelola Akun, user Auth masih tersisa. ' +
+          'Coba lagi dengan password lama yang sama, atau minta admin hapus email ini di Firebase Console → Authentication → Users.'
+        )
+      }
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
+        return (
+          'Email sudah terdaftar di Auth tetapi password tidak cocok. ' +
+          'Gunakan password lama, atau hapus user di Firebase Console → Authentication lalu daftar ulang.'
+        )
       }
       if (code === 'auth/weak-password' || msg.includes('weak-password')) {
         return 'Password terlalu lemah (minimal 6 karakter, disarankan 8+).'
       }
       if (code === 'auth/invalid-email') return 'Format email tidak valid.'
       if (code === 'auth/operation-not-allowed') {
-        return 'Pendaftaran email/password belum diaktifkan di Firebase Console.'
+        return 'Pendaftaran email/password belum diaktifkan di Firebase Console (Authentication → Sign-in method).'
       }
       if (code === 'auth/network-request-failed') {
-        return 'Jaringan gagal. Periksa koneksi internet lalu coba lagi.'
+        return 'Jaringan gagal (kadang error QUIC). Coba refresh, ganti Wi-Fi/browser, atau nonaktifkan VPN.'
       }
       if (code === 'auth/too-many-requests') {
         return 'Terlalu banyak percobaan. Tunggu beberapa menit.'
       }
       if (code === 'permission-denied' || msg.includes('permission-denied') || msg.includes('Missing or insufficient permissions')) {
-        return 'Profil gagal disimpan (izin Firestore). Pastikan rules users create untuk guru pending sudah di-deploy.'
+        return 'Profil gagal disimpan (izin Firestore). Pastikan firestore.rules untuk create users guru pending sudah di-deploy.'
       }
       if (msg.includes('undefined') || msg.includes('Unsupported field value')) {
-        return 'Data profil tidak valid. Coba kosongkan gelar atau isi singkat (S.Pd).'
+        return 'Data profil tidak valid. Kosongkan gelar atau isi singkat saja (mis. S.Pd).'
       }
-      return msg
+      return code ? `${msg} (${code})` : msg
     }
 
     try {
@@ -157,9 +169,8 @@ export default function Register() {
         try {
           cred = await signInWithEmailAndPassword(auth, emailNorm, password)
         } catch (e2) {
-          throw new Error(
-            'Email ini sudah pernah dipakai. Gunakan password lama yang sama, atau minta admin menghapus user di Firebase Authentication lalu daftar lagi.',
-          )
+          console.error('[daftar] signIn recovery gagal:', e2)
+          throw e2
         }
         uid = cred.user.uid
         const snap = await getDoc(doc(db, 'users', uid))
