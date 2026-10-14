@@ -7,7 +7,7 @@ export interface PeriodeAkademik {
   /** Format "2026/2027" */
   tahunAjaran: string
   semester: Semester
-  /** Apakah bisa dipilih oleh guru biasa */
+  /** Apakah bisa dipilih oleh guru biasa saat login */
   aktif: boolean
   /** Label tampilan, contoh "Ganjil 2026/2027" */
   label?: string
@@ -29,8 +29,14 @@ export function buatIdPeriode(tahunAjaran: string, semester: Semester): string {
   return `${normal}_${semester}`
 }
 
-export function labelPeriode(p: Pick<PeriodeAkademik, 'tahunAjaran' | 'semester' | 'label'>): string {
+export function labelPeriode(
+  p: Pick<PeriodeAkademik, 'tahunAjaran' | 'semester' | 'label'>,
+): string {
   if (p.label?.trim()) return p.label.trim()
   const sem = p.semester === '2' ? 'Genap' : 'Ganjil'
   return `${sem} ${p.tahunAjaran}`
+}
+
+export function labelSemester(s: Semester): string {
+  return s === '2' ? 'Semester 2 (Genap)' : 'Semester 1 (Ganjil)'
 }

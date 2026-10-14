@@ -4,8 +4,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  orderBy,
-  query,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -25,10 +23,15 @@ function kePeriode(id: string, data: Record<string, unknown>): PeriodeAkademik {
     aktif: data.aktif !== false,
     label: typeof data.label === 'string' ? data.label : undefined,
     tglRaporKelas1sampai6Sem1:
-      typeof data.tglRaporKelas1sampai6Sem1 === 'string' ? data.tglRaporKelas1sampai6Sem1 : undefined,
+      typeof data.tglRaporKelas1sampai6Sem1 === 'string'
+        ? data.tglRaporKelas1sampai6Sem1
+        : undefined,
     tglRaporKelas1sampai5Sem2:
-      typeof data.tglRaporKelas1sampai5Sem2 === 'string' ? data.tglRaporKelas1sampai5Sem2 : undefined,
-    tglRaporKelas6Sem2: typeof data.tglRaporKelas6Sem2 === 'string' ? data.tglRaporKelas6Sem2 : undefined,
+      typeof data.tglRaporKelas1sampai5Sem2 === 'string'
+        ? data.tglRaporKelas1sampai5Sem2
+        : undefined,
+    tglRaporKelas6Sem2:
+      typeof data.tglRaporKelas6Sem2 === 'string' ? data.tglRaporKelas6Sem2 : undefined,
     kotaRapor: typeof data.kotaRapor === 'string' ? data.kotaRapor : undefined,
     isDefault: data.isDefault === true,
     createdAt: data.createdAt,
@@ -36,11 +39,24 @@ function kePeriode(id: string, data: Record<string, unknown>): PeriodeAkademik {
   }
 }
 
-/** Semua periode (untuk admin). */
+function urutkan(list: PeriodeAkademik[]): PeriodeAkademik[] {
+  return [...list].sort((a, b) => {
+    // Tahun ajaran desc (2026/2027 > 2025/2026)
+    if (a.tahunAjaran !== b.tahunAjaran) return b.tahunAjaran.localeCompare(a.tahunAjaran)
+    // Semester desc (2 > 1)
+    return Number(b.semester) - Number(a.semester)
+  })
+}
+
+/**
+ * Semua periode (untuk admin).
+ * Sort di klien — tidak butuh composite index Firestore.
+ * Ini menghindari error "Gagal memuat daftar periode" saat indeks belum di-deploy.
+ */
 export async function listSemuaPeriode(): Promise<PeriodeAkademik[]> {
-  const q = query(collection(db, KOLEKSI), orderBy('tahunAjaran', 'desc'), orderBy('semester', 'desc'))
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => kePeriode(d.id, d.data() as Record<string, unknown>))
+  const snap = await getDocs(collection(db, KOLEKSI))
+  const list = snap.docs.map((d) => kePeriode(d.id, d.data() as Record<string, unknown>))
+  return urutkan(list)
 }
 
 /** Hanya yang aktif (untuk guru). */
@@ -95,7 +111,10 @@ export async function simpanPeriode(input: SimpanPeriodeInput): Promise<string> 
     let n = 0
     for (const p of semua) {
       if (p.id !== id && p.isDefault) {
-        batch.update(doc(db, KOLEKSI, p.id), { isDefault: false, updatedAt: serverTimestamp() })
+        batch.update(doc(db, KOLEKSI, p.id), {
+          isDefault: false,
+          updatedAt: serverTimestamp(),
+        })
         n++
       }
     }
@@ -114,6 +133,8 @@ export async function setDefaultPeriode(id: string): Promise<void> {
   for (const p of semua) {
     batch.update(doc(db, KOLEKSI, p.id), {
       isDefault: p.id === id,
+      // Default otomatis juga diaktifkan agar bisa dipilih guru
+      ...(p.id === id ? { aktif: true } : {}),
       updatedAt: serverTimestamp(),
     })
   }
