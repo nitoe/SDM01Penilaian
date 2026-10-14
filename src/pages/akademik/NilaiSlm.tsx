@@ -29,7 +29,7 @@ import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import type { SiswaTahsin } from '../../types/tahsin'
-import { Badge, PageHeader } from '../../components/ui'
+import { PageHeader } from '../../components/ui'
 import { MapelKelasPicker } from '../../components/MapelKelasPicker'
 import { BackLink, LEVEL_WARNA, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, useToast } from './shared'
 

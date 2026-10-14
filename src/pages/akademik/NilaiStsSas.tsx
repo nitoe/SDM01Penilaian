@@ -30,7 +30,7 @@ import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import type { SiswaTahsin } from '../../types/tahsin'
-import { Badge, PageHeader } from '../../components/ui'
+import { PageHeader } from '../../components/ui'
 import { MapelKelasPicker } from '../../components/MapelKelasPicker'
 import { BackLink, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, useToast } from './shared'
 
@@ -237,7 +237,8 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
           isAda={(m, k) => {
             const n = hubStatus?.[`${m}|${k}`]
             if (n == null) return null
-            return n > 0
+            const num = typeof n === 'number' ? n : Number(n)
+            return Number.isFinite(num) ? num > 0 : null
           }}
           hrefFor={(m, k) =>
             `/akademik/nilai-sts?jenis=${jenis}&mapel=${encodeURIComponent(m)}&kelas=${encodeURIComponent(k)}`
