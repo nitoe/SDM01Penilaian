@@ -5,8 +5,8 @@ import { SEMUA_KELAS } from '../../types/tahsin'
 import { getTargetHafalan, saveTargetHafalan } from '../../lib/tahsinData'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import { SURAH_LIST } from '../../lib/quranSurah'
-import {
 import { PageHeader } from '../../components/ui'
+import {
   SURAH_JUZ_29,
   SURAH_JUZ_30,
   bangunTarget,
