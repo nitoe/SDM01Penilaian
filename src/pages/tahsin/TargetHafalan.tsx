@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import { SEMUA_KELAS } from '../../types/tahsin'
 import { getTargetHafalan, saveTargetHafalan } from '../../lib/tahsinData'
+import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import { SURAH_LIST } from '../../lib/quranSurah'
 import {
   SURAH_JUZ_29,
@@ -25,6 +26,7 @@ const ringkasTarget = (t: Target | null | undefined): string => {
 
 /** Target hafalan per kelas: Iqro (jilid + halaman) untuk kelas 1–2, daftar surah untuk kelas 3–6. Format data sama dengan v2. */
 export default function TargetHafalan({ profile }: Props) {
+  const periodeAk = usePeriodeAkademik()
   const kelasOptions = useMemo(() => {
     if (profile.role === 'admin') return [...SEMUA_KELAS]
     return profile.kelasAmpu?.length ? profile.kelasAmpu : [...SEMUA_KELAS]
@@ -48,11 +50,14 @@ export default function TargetHafalan({ profile }: Props) {
     setTimeout(() => setToast(null), 3200)
   }, [])
 
-  // Ringkasan target semua kelas yang boleh diakses (satu pembacaan per kelas).
+  // Ringkasan target semua kelas untuk periode aktif.
   useEffect(() => {
     let batal = false
     setMemuat(true)
-    Promise.all(kelasOptions.map((k) => getTargetHafalan(k).catch(() => null))).then((hasil) => {
+    const scope = periodeAk.ready
+      ? { tahunAjaran: periodeAk.tahunAjaran, semester: periodeAk.semester }
+      : null
+    Promise.all(kelasOptions.map((k) => getTargetHafalan(k, scope).catch(() => null))).then((hasil) => {
       if (batal) return
       setSemua(Object.fromEntries(kelasOptions.map((k, i) => [k, hasil[i] ?? null])))
       setMemuat(false)
@@ -60,7 +65,7 @@ export default function TargetHafalan({ profile }: Props) {
     return () => {
       batal = true
     }
-  }, [kelasOptions])
+  }, [kelasOptions, periodeAk.ready, periodeAk.tahunAjaran, periodeAk.semester])
 
   // Pilih kelas → isi formulir dari target tersimpan.
   useEffect(() => {
@@ -92,10 +97,18 @@ export default function TargetHafalan({ profile }: Props) {
     }
     setMenyimpan(true)
     try {
+      if (!periodeAk.ready) {
+        tampilkan('Pilih periode akademik dulu (login ulang atau header).', true)
+        return
+      }
+      const scope = { tahunAjaran: periodeAk.tahunAjaran, semester: periodeAk.semester }
       const data = bangunTarget(kelas, { labelSemester, surah, jilid, halaman })
-      await saveTargetHafalan(kelas, data)
-      setSemua((lama) => ({ ...lama, [kelas]: { ...data, kelas } }))
-      tampilkan(`Target kelas ${kelas} tersimpan.`)
+      await saveTargetHafalan(kelas, data, scope)
+      setSemua((lama) => ({
+        ...lama,
+        [kelas]: { ...data, kelas, tahunAjaran: scope.tahunAjaran, semester: scope.semester },
+      }))
+      tampilkan(`Target kelas ${kelas} · ${periodeAk.label} tersimpan.`)
     } catch (e) {
       console.error(e)
       tampilkan('Gagal menyimpan target. Anda hanya dapat mengubah target kelas yang Anda ampu.', true)
@@ -117,7 +130,7 @@ export default function TargetHafalan({ profile }: Props) {
           </Link>
           <h1 className="text-[18px] font-semibold tracking-tight text-slate-900">Target Hafalan</h1>
         </div>
-        <p className="hidden text-[12px] text-muted md:block">Target per kelas untuk satu semester</p>
+        <p className="hidden text-[12px] text-muted md:block">{periodeAk.ready ? `Target per kelas · ${periodeAk.label}` : "Pilih periode dulu — target terikat tahun ajaran & semester"}</p>
       </div>
 
       {toast && (

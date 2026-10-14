@@ -198,9 +198,14 @@ service cloud.firestore {
     }
 
     // ID dokumen = kode kelas (mis. '3A').
-    match /target_hafalan/{kelas} {
+    // ID dokumen: "{kelas}" (legacy) atau "{kelas}_{tahun}-{semester}" (multi-periode).
+    // Otorisasi memakai field data.kelas, bukan path id.
+    match /target_hafalan/{id} {
       allow read: if isGuru();
-      allow write: if bolehKelas(kelas);
+      allow create: if bolehKelas(request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(['kelas', 'tahunAjaran', 'semester']);
+      allow update: if bolehKelas(resource.data.kelas);
+      allow delete: if isAdmin() || bolehKelas(resource.data.kelas);
     }
 
     match /kktp_tahsin_tahfizh/{jenjang} {

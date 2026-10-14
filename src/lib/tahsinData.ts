@@ -68,10 +68,35 @@ export async function updateTamatIqro(siswaId: string, value: boolean) {
 }
 
 /** Riwayat setoran satu siswa (terbaru dulu). Filter kelas wajib. Istilah status data lama disamakan (recordSetoran). */
+export interface ScopePeriode {
+  tahunAjaran: string
+  semester: '1' | '2'
+}
+
+/** Cocokkan dokumen setoran dengan periode aktif. Dokumen lama tanpa field → tidak ikut (isolasi). */
+function cocokPeriode(
+  data: { tahunAjaran?: string; semester?: string },
+  scope?: ScopePeriode | null,
+): boolean {
+  if (!scope?.tahunAjaran || !scope.semester) return true // tanpa scope = semua (admin/debug)
+  return data.tahunAjaran === scope.tahunAjaran && String(data.semester) === scope.semester
+}
+
+/**
+ * Riwayat setoran satu siswa (terbaru dulu).
+ * `scope` = periode login → hanya setoran tahun ajaran + semester itu.
+ * Dokumen lama tanpa tahunAjaran/semester tidak ditampilkan di mode ter-scope.
+ */
 export async function getRiwayatSetoran(
   siswaId: string,
   kelas: string,
+  scope?: ScopePeriode | null,
 ): Promise<SetoranRecord[]> {
+  const mapFilter = (docs: { id: string; data: () => Record<string, unknown> }[]) =>
+    docs
+      .map((d) => recordSetoran(d.id, d.data()))
+      .filter((r) => cocokPeriode(r, scope))
+
   try {
     const q = query(
       collection(db, 'setoran'),
@@ -80,16 +105,15 @@ export async function getRiwayatSetoran(
       orderBy('createdAt', 'desc'),
     )
     const snap = await getDocs(q)
-    return snap.docs.map((d) => recordSetoran(d.id, d.data()))
+    return mapFilter(snap.docs)
   } catch {
-    // Fallback jika index belum ada
     const q = query(
       collection(db, 'setoran'),
       where('siswaId', '==', siswaId),
       where('kelas', '==', kelas),
     )
     const snap = await getDocs(q)
-    const list = snap.docs.map((d) => recordSetoran(d.id, d.data()))
+    const list = mapFilter(snap.docs)
     return list.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
   }
 }
@@ -110,17 +134,63 @@ export async function deleteSetoran(id: string) {
   await deleteDoc(doc(db, 'setoran', id))
 }
 
-/** Target hafalan satu kelas; null bila belum diatur. */
-export async function getTargetHafalan(kelas: string): Promise<TargetHafalan | null> {
+/** ID dokumen target per kelas + periode, mis. "5A_2026-2027_1". */
+export function idTargetHafalan(
+  kelas: string,
+  tahunAjaran: string,
+  semester: '1' | '2' | string,
+): string {
+  const ta = tahunAjaran.trim().replace(/\//g, '-')
+  return `${kelas}_${ta}_${semester}`
+}
+
+/**
+ * Target hafalan satu kelas untuk periode tertentu.
+ * Baca dokumen ber-ID periode; fallback ke ID lama `target_hafalan/{kelas}` hanya jika
+ * dokumen lama belum punya tahunAjaran (migrasi sekali).
+ */
+export async function getTargetHafalan(
+  kelas: string,
+  scope?: ScopePeriode | null,
+): Promise<TargetHafalan | null> {
+  if (scope?.tahunAjaran && scope.semester) {
+    const id = idTargetHafalan(kelas, scope.tahunAjaran, scope.semester)
+    const snap = await getDoc(doc(db, 'target_hafalan', id))
+    if (snap.exists()) {
+      return { ...snap.data(), kelas, tahunAjaran: scope.tahunAjaran, semester: scope.semester } as TargetHafalan
+    }
+    // Fallback legacy (satu dokumen per kelas, tanpa periode) — hanya ditampilkan
+    // bila admin belum menyimpan target ber-periode.
+    const legacy = await getDoc(doc(db, 'target_hafalan', kelas))
+    if (legacy.exists()) {
+      const d = legacy.data() as Record<string, unknown>
+      // Jika legacy sudah punya tahun/semester dan tidak cocok, anggap kosong
+      if (d.tahunAjaran && d.semester && !cocokPeriode(d as { tahunAjaran?: string; semester?: string }, scope)) {
+        return null
+      }
+      return { ...d, kelas, tahunAjaran: scope.tahunAjaran, semester: scope.semester } as TargetHafalan
+    }
+    return null
+  }
   const snap = await getDoc(doc(db, 'target_hafalan', kelas))
   return snap.exists() ? ({ ...snap.data(), kelas } as TargetHafalan) : null
 }
 
-/** Simpan (timpa) target satu kelas. ID dokumen = kode kelas. Rules: admin atau guru yang mengampu kelas itu. */
-export async function saveTargetHafalan(kelas: string, data: Omit<TargetHafalan, 'kelas'>) {
-  await setDoc(doc(db, 'target_hafalan', kelas), {
+/**
+ * Simpan target satu kelas untuk periode aktif.
+ * ID dokumen = kelas_tahun-semester agar tidak saling timpa antar semester.
+ */
+export async function saveTargetHafalan(
+  kelas: string,
+  data: Omit<TargetHafalan, 'kelas'>,
+  scope: ScopePeriode,
+) {
+  const id = idTargetHafalan(kelas, scope.tahunAjaran, scope.semester)
+  await setDoc(doc(db, 'target_hafalan', id), {
     ...data,
     kelas,
+    tahunAjaran: scope.tahunAjaran,
+    semester: scope.semester,
     updatedBy: auth.currentUser?.uid || null,
     updatedAt: serverTimestamp(),
   })

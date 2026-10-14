@@ -23,6 +23,7 @@ import {
   toMillis,
   updateSetoranFields,
 } from '../../lib/tahsinData'
+import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import { ringkasDetailAyat, ringkasDetailIqro } from '../../lib/bacaTandai'
 import {
   hitungProgresSurah,
@@ -80,6 +81,7 @@ function statusBadge(status: StatusHafalan | null | undefined) {
 }
 
 export default function RiwayatSiswa({ profile }: Props) {
+  const periodeAk = usePeriodeAkademik()
   const scope = useMemo(
     () => ({ role: profile.role, kelasAmpu: profile.kelasAmpu }),
     [profile],
@@ -134,10 +136,13 @@ export default function RiwayatSiswa({ profile }: Props) {
     setLoadingHist(true)
     setError(null)
     try {
+      const scope = periodeAk.ready
+        ? { tahunAjaran: periodeAk.tahunAjaran, semester: periodeAk.semester }
+        : null
       const [r, m, t] = await Promise.all([
-        getRiwayatSetoran(s.id, s.kelas),
+        getRiwayatSetoran(s.id, s.kelas, scope),
         getMenulisLog(s.id, s.kelas),
-        getTargetHafalan(s.kelas).catch(() => null), // target boleh kosong/ditolak: Ringkasan tetap tampil
+        getTargetHafalan(s.kelas, scope).catch(() => null),
       ])
       setSetoran(r)
       setMenulis(m)
@@ -151,9 +156,13 @@ export default function RiwayatSiswa({ profile }: Props) {
     } finally {
       setLoadingHist(false)
     }
-  }, [])
+  }, [periodeAk.ready, periodeAk.tahunAjaran, periodeAk.semester])
 
-  function selectSiswa(s: SiswaTahsin) {
+  useEffect(() => {
+    if (selected) void loadHist(selected)
+  }, [periodeAk.tahunAjaran, periodeAk.semester]) // eslint-disable-line react-hooks/exhaustive-deps
+
+    function selectSiswa(s: SiswaTahsin) {
     setSelected(s)
     setPicking(false)
     setTab('membaca')
@@ -381,6 +390,11 @@ export default function RiwayatSiswa({ profile }: Props) {
           <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">
             Riwayat Siswa
           </h1>
+          {periodeAk.ready ? (
+            <p className="text-[12px] text-muted">Periode: <strong className="text-slate-700">{periodeAk.label}</strong> · hanya setoran semester ini</p>
+          ) : (
+            <p className="text-[12px] text-amber-700">Pilih periode di header agar riwayat terfilter per semester.</p>
+          )}
           <p className="text-[12px] text-muted">
             Progres membaca, hafalan, dan menulis per siswa
           </p>

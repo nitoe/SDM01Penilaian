@@ -16,6 +16,7 @@ import {
   saveSetoran,
   updateTamatIqro,
 } from '../../lib/tahsinData'
+import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import { rentangLanjutan } from '../../lib/lanjutan'
 import { SURAH_LIST, surahByNo, hitungTotalAyat } from '../../lib/quranSurah'
 import {
@@ -40,6 +41,7 @@ const JENIS_OPTIONS: { value: JenisSetoran; label: string }[] = [
 ]
 
 export default function InputSetoran({ profile }: Props) {
+  const periodeAk = usePeriodeAkademik()
   const scope = useMemo(
     () => ({ role: profile.role, kelasAmpu: profile.kelasAmpu }),
     [profile],
@@ -161,17 +163,21 @@ export default function InputSetoran({ profile }: Props) {
       return
     }
     try {
-      const list = await getRiwayatSetoran(s.id, s.kelas)
+      const scope =
+        periodeAk.ready
+          ? { tahunAjaran: periodeAk.tahunAjaran, semester: periodeAk.semester }
+          : null
+      const list = await getRiwayatSetoran(s.id, s.kelas, scope)
       setTerakhir(list[0] ?? null)
     } catch (err) {
       console.error(err)
       setTerakhir(null)
     }
-  }, [])
+  }, [periodeAk.ready, periodeAk.tahunAjaran, periodeAk.semester])
 
   useEffect(() => {
     void muatTerakhir(selected)
-  }, [selected?.id, muatTerakhir]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selected?.id, muatTerakhir, periodeAk.tahunAjaran, periodeAk.semester]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function pilihSiswa(s: SiswaTahsin) {
     setSelected(s)
@@ -249,6 +255,10 @@ export default function InputSetoran({ profile }: Props) {
             }`,
           }
 
+      if (!periodeAk.ready) {
+        showToast('Pilih periode akademik dulu (login ulang atau header).', true)
+        return
+      }
       await saveSetoran({
         siswaId: selected.id,
         siswaNama: selected.nama,
@@ -261,6 +271,8 @@ export default function InputSetoran({ profile }: Props) {
         statusHafalan: jenis === 'tahsin' ? null : statusHafalan,
         catatan: catatan.trim(),
         createdByNama: profile.nama,
+        tahunAjaran: periodeAk.tahunAjaran,
+        semester: periodeAk.semester,
       })
 
       showToast(`Setoran ${selected.nama.split(' ')[0]} tersimpan.`)
@@ -301,6 +313,11 @@ export default function InputSetoran({ profile }: Props) {
             ← Tahsin-Tahfizh
           </Link>
           <h1 className="text-[18px] font-semibold tracking-tight text-slate-900">Input Setoran</h1>
+          {periodeAk.ready ? (
+            <p className="text-[12px] text-muted">Periode: <strong className="text-slate-700">{periodeAk.label}</strong></p>
+          ) : (
+            <p className="text-[12px] text-amber-700">Pilih periode di header atau login ulang agar setoran tersimpan ke semester yang benar.</p>
+          )}
         </div>
         <p className="hidden text-[12px] text-muted md:block">Catat setoran bacaan dan hafalan siswa</p>
       </div>

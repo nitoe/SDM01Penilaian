@@ -93,6 +93,9 @@ export interface SetoranPayload {
   statusHafalan: StatusHafalan | null
   catatan: string
   createdByNama: string
+  /** Periode akademik — wajib diisi saat simpan (dokumen lama boleh kosong) */
+  tahunAjaran?: string
+  semester?: '1' | '2'
 }
 
 export interface SetoranRecord extends SetoranPayload {

@@ -10,6 +10,10 @@ import { SURAH_LIST, surahByNo } from './quranSurah'
 /** Dokumen `target_hafalan/{kelas}`. Kelas Iqro memakai targetJilid/targetHalaman; kelas Al-Qur'an memakai targetSurah. */
 export interface TargetHafalan {
   kelas: string
+  /** Periode yang berlaku (multi-tahun) */
+  tahunAjaran?: string
+  semester?: '1' | '2'
+
   jenjang: JenjangTahsin
   labelSemester?: string
   targetSurah?: number[]
