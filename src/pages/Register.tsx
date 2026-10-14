@@ -1,7 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { createUserWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc } from 'firebase/firestore'
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+} from 'firebase/auth'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { GURU_RESMI, adalahNamaResmi } from '../lib/dataGuruResmi'
 import { getMapelList } from '../lib/akademik'
@@ -79,29 +83,58 @@ export default function Register() {
     const role = roleDariTugas(tugas)
 
     setLoading(true)
+    const emailNorm = email.trim().toLowerCase()
+    const profilBaru = {
+      email: emailNorm,
+      nama: nama.trim(),
+      gelar: gelar.trim() || undefined,
+      role,
+      status: 'pending' as const,
+      aktif: true,
+      kelasAmpu: butuhTahsin ? kelasAmpu : [],
+      waliKelas: butuhKelas ? waliKelas : [],
+      penugasan: penugasanBersih,
+      penugasanKelas: turunan.penugasanKelas,
+      penugasanKelasMapel: turunan.penugasanKelasMapel,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password)
-      await setDoc(doc(db, 'users', cred.user.uid), {
-        email: email.trim().toLowerCase(),
-        nama: nama.trim(),
-        gelar: gelar.trim() || undefined,
-        role,
-        status: 'pending',
-        aktif: true,
-        kelasAmpu: butuhTahsin ? kelasAmpu : [],
-        waliKelas: butuhKelas ? waliKelas : [],
-        penugasan: penugasanBersih,
-        penugasanKelas: turunan.penugasanKelas,
-        penugasanKelasMapel: turunan.penugasanKelasMapel,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      })
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, emailNorm, password)
+        await setDoc(doc(db, 'users', cred.user.uid), profilBaru)
+      } catch (err: unknown) {
+        const code = typeof err === 'object' && err && 'code' in err ? String((err as { code: string }).code) : ''
+        const msg = err instanceof Error ? err.message : ''
+        const already = code.includes('email-already-in-use') || msg.includes('email-already-in-use')
+        if (!already) throw err
+
+        // Auth masih ada (mis. profil dihapus admin) — coba login + tulis ulang profil pending
+        let cred
+        try {
+          cred = await signInWithEmailAndPassword(auth, emailNorm, password)
+        } catch {
+          throw new Error(
+            'Email ini sudah pernah dipakai. Jika admin menghapus akun Anda, gunakan password lama yang sama, atau minta admin membuat ulang lewat Kelola Akun / menghapus user di Firebase Authentication.',
+          )
+        }
+        const snap = await getDoc(doc(db, 'users', cred.user.uid))
+        if (snap.exists()) {
+          await signOut(auth)
+          throw new Error(
+            'Email ini sudah terdaftar dan masih aktif di sistem. Masuk lewat halaman login, atau hubungi admin.',
+          )
+        }
+        await setDoc(doc(db, 'users', cred.user.uid), {
+          ...profilBaru,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+      }
       setSukses(true)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Gagal mendaftar'
-      if (msg.includes('email-already-in-use')) {
-        setError('Email ini sudah terdaftar.')
-      } else if (msg.includes('weak-password')) {
+      if (msg.includes('weak-password')) {
         setError('Password terlalu lemah.')
       } else {
         setError(msg)
@@ -170,12 +203,12 @@ export default function Register() {
           Pilih nama resmi, peran, dan kelas yang Anda ampu. Admin akan menyetujui sebelum akun aktif.
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-5">
+        <form onSubmit={handleSubmit} className="mt-5 space-y-5" autoComplete="off">
           {/* Identitas */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="mb-1 block text-[12px] font-medium text-slate-600">Nama guru *</label>
-              <select required value={nama} onChange={(e) => setNama(e.target.value)} className={field}>
+              <select required value={nama} onChange={(e) => setNama(e.target.value)} className={field} autoComplete="off" name="reg-nama">
                 <option value="">— Pilih nama —</option>
                 {GURU_RESMI.map((n) => (
                   <option key={n} value={n}>
@@ -188,11 +221,13 @@ export default function Register() {
               <label className="mb-1 block text-[12px] font-medium text-slate-600">Email *</label>
               <input
                 type="email"
+                name="reg-email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className={field}
                 placeholder="nama@sekolah.sch.id"
+                autoComplete="off"
               />
             </div>
             <div>
@@ -200,11 +235,13 @@ export default function Register() {
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  name="reg-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={field + ' pr-24'}
                   placeholder="Minimal 8 karakter"
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -224,10 +261,10 @@ export default function Register() {
                 value={gelar}
                 onChange={(e) => setGelar(e.target.value)}
                 className={field}
-                placeholder="contoh: S.Pd"
+                placeholder="S.Pd / M.Pd / …"
               />
               <p className="mt-1 text-[11px] text-muted">
-                Muncul di penandatanganan rapor, mis. “Arif Azwar Anas, S.Pd”.
+                Isi gelar saja, misalnya S.Pd, M.Pd, S.Pd.I — tanpa nama lengkap.
               </p>
             </div>
           </div>

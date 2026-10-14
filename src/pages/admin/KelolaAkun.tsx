@@ -798,7 +798,7 @@ export default function KelolaAkun({ profile }: Props) {
                 <input
                   className={inputCls}
                   value={form.gelar ?? ''}
-                  placeholder="contoh: S.Pd"
+                  placeholder="S.Pd / M.Pd / …"
                   onChange={(e) => setF('gelar', e.target.value)}
                 />
               </Field>
