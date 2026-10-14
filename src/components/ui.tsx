@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import Icon, { type IconName } from './Icon'
 
-/** Tone ikon: soft surface + warna ikon (lebih formal daripada lingkaran solid). */
+/** Tone ikon: soft surface + warna ikon. */
 export type Tone = 'green' | 'peach' | 'ink' | 'sky' | 'violet'
 
 const TONE_TILE: Record<Tone, string> = {
@@ -22,11 +22,11 @@ export function IconTile({
   tone?: Tone
   size?: 'md' | 'lg'
 }) {
-  const box = size === 'lg' ? 'h-11 w-11' : 'h-9 w-9'
-  const icon = size === 'lg' ? 'h-5 w-5' : 'h-[18px] w-[18px]'
+  const box = size === 'lg' ? 'h-10 w-10' : 'h-8 w-8'
+  const icon = size === 'lg' ? 'h-[18px] w-[18px]' : 'h-4 w-4'
   return (
     <span
-      className={`flex ${box} shrink-0 items-center justify-center rounded-lg ${TONE_TILE[tone]}`}
+      className={`flex ${box} shrink-0 items-center justify-center rounded-md ${TONE_TILE[tone]}`}
     >
       <Icon name={name} className={icon} />
     </span>
@@ -47,14 +47,14 @@ export function Badge({
   }[tone]
   return (
     <span
-      className={`inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-[11px] font-medium tracking-wide ${cls}`}
+      className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${cls}`}
     >
       {children}
     </span>
   )
 }
 
-/** Banner hijau formal (pengganti banner generik dashboard). */
+/** Banner hanya untuk beranda / login — jangan dipakai di hub modul. */
 export function HeroBanner({
   eyebrow,
   title,
@@ -79,6 +79,31 @@ export function HeroBanner({
       )}
       {children && <div className="mt-3.5 flex flex-wrap gap-2">{children}</div>}
     </section>
+  )
+}
+
+/** Judul halaman hub — ringkas, formal, tanpa banner hijau. */
+export function PageHeader({
+  title,
+  subtitle,
+  actions,
+}: {
+  title: string
+  subtitle?: string
+  actions?: ReactNode
+}) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
+      <div className="min-w-0">
+        <h1 className="text-[18px] font-semibold tracking-tight text-slate-900 sm:text-[20px]">
+          {title}
+        </h1>
+        {subtitle && (
+          <p className="mt-0.5 max-w-2xl text-[13px] text-muted">{subtitle}</p>
+        )}
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </div>
   )
 }
 
@@ -111,14 +136,12 @@ export function StatCard({
 }) {
   return (
     <div className={`card-soft p-4 ${className}`}>
-      <div className="flex items-start justify-between gap-2">
-        <IconTile name={icon} tone={tone} />
-      </div>
+      <IconTile name={icon} tone={tone} />
       <p className="mt-3 text-[12px] font-medium text-muted">{label}</p>
       {loading ? (
         <div className="mt-1.5 h-7 w-16 animate-pulse rounded bg-slate-100" />
       ) : (
-        <p className="mt-0.5 text-[24px] font-semibold leading-tight tracking-tight text-slate-900">
+        <p className="mt-0.5 text-[22px] font-semibold leading-tight tracking-tight text-slate-900">
           {value ?? '—'}
         </p>
       )}
@@ -127,6 +150,7 @@ export function StatCard({
   )
 }
 
+/** Kartu modul lama — masih dipakai di beberapa tempat; prefer HubRow untuk indeks. */
 export function ModuleCard({
   to,
   title,
@@ -140,33 +164,109 @@ export function ModuleCard({
   desc: string
   icon: IconName
   tone?: Tone
-  /** undefined = tidak tampil badge; true = Siap; false = Segera */
   status?: boolean
 }) {
   return (
-    <Link
-      to={to}
-      className="card-soft group flex items-start gap-3.5 p-4 transition"
-    >
+    <Link to={to} className="card-soft group flex items-start gap-3 p-3.5 transition">
       <IconTile name={icon} tone={tone} size="lg" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[14px] font-semibold text-slate-900 group-hover:text-muh-700">
             {title}
           </span>
-          {status !== undefined && (
-            <Badge tone={status ? 'green' : 'neutral'}>{status ? 'Siap' : 'Segera'}</Badge>
-          )}
+          {status === false && <Badge tone="neutral">Segera</Badge>}
         </div>
-        <p className="mt-0.5 text-[13px] leading-snug text-muted">{desc}</p>
+        <p className="mt-0.5 text-[12px] leading-snug text-muted">{desc}</p>
       </div>
     </Link>
   )
 }
 
+/**
+ * Baris indeks hub — padat, formal, cocok untuk daftar alur kerja.
+ * Status false = nonaktif/segera (tidak bisa diklik atau ditandai Segera).
+ */
+export function HubRow({
+  to,
+  title,
+  desc,
+  icon,
+  tone = 'green',
+  ready = true,
+}: {
+  to: string
+  title: string
+  desc: string
+  icon: IconName
+  tone?: Tone
+  ready?: boolean
+}) {
+  const inner = (
+    <>
+      <IconTile name={icon} tone={ready ? tone : 'ink'} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span
+            className={`text-[13.5px] font-semibold ${
+              ready ? 'text-slate-900 group-hover:text-muh-700' : 'text-slate-500'
+            }`}
+          >
+            {title}
+          </span>
+          {!ready && <Badge tone="neutral">Segera</Badge>}
+        </div>
+        <p className="mt-0.5 text-[12px] leading-snug text-muted">{desc}</p>
+      </div>
+      {ready && (
+        <Icon
+          name="arrow"
+          className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-muh-600"
+        />
+      )}
+    </>
+  )
+
+  if (!ready) {
+    return (
+      <div className="flex items-center gap-3 border-b border-border px-3 py-3 last:border-b-0 opacity-70">
+        {inner}
+      </div>
+    )
+  }
+
+  return (
+    <Link
+      to={to}
+      className="group flex items-center gap-3 border-b border-border px-3 py-3 last:border-b-0 transition hover:bg-muh-50/40"
+    >
+      {inner}
+    </Link>
+  )
+}
+
+/** Kelompok baris dalam satu kartu panel. */
+export function HubPanel({
+  title,
+  children,
+}: {
+  title: string
+  children: ReactNode
+}) {
+  return (
+    <section className="card-soft overflow-hidden">
+      <div className="border-b border-border bg-slate-50/80 px-3.5 py-2.5">
+        <h2 className="text-[12px] font-semibold uppercase tracking-wider text-slate-500">
+          {title}
+        </h2>
+      </div>
+      <div>{children}</div>
+    </section>
+  )
+}
+
 export function SectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h2 className="mb-2.5 text-[12px] font-semibold uppercase tracking-wider text-slate-500">
+    <h2 className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-slate-500">
       {children}
     </h2>
   )
