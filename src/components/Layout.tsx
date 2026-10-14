@@ -22,17 +22,15 @@ interface NavItem {
 }
 
 /** Halaman kerja harian yang memakai lebar layar penuh (dua kolom di PC); lainnya tetap berlebar baca. */
+/** Halaman data/tabel — pakai lebar penuh shell (bukan kolom sempit). */
 const HALAMAN_LEBAR = [
-  '/tahsin/input-setoran',
-  '/tahsin/riwayat',
-  '/tahsin/target',
-  '/tahsin/menulis',
-  '/admin/siswa',
-  '/admin/users',
-  '/akademik/laporan-slm',
-  '/akademik/nilai-sts',
-  '/akademik/nilai-slm',
+  '/akademik',
+  '/admin',
+  '/tahsin',
 ]
+
+/** Halaman form ringkas — kolom terbaca, tidak melebar sia-sia. */
+const HALAMAN_SEMPIT = ['/profil']
 
 function sectionTitle(pathname: string): string {
   if (pathname.startsWith('/tahsin')) return 'Tahsin & Tahfizh'
@@ -106,7 +104,7 @@ export default function Layout({ profile }: LayoutProps) {
     .toUpperCase()
 
   return (
-    <div className="flex min-h-full bg-surface-2 md:p-3 print:bg-white print:p-0">
+    <div className="flex min-h-full bg-surface-2 md:p-2 print:bg-white print:p-0">
       <div className="app-shell flex min-h-full w-full bg-white md:min-h-[calc(100vh-1.5rem)] md:overflow-clip md:border md:border-border print:rounded-none print:border-0 print:shadow-none">
         {/* Sidebar desktop */}
         <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 flex-col border-r border-border bg-white px-3.5 py-4 md:flex md:h-[calc(100vh-1.5rem)] print:hidden">
@@ -210,8 +208,12 @@ export default function Layout({ profile }: LayoutProps) {
 
           <main className="flex-1 p-4 pb-24 sm:p-5 md:pb-5 print:p-0">
             <div
-              className={`mx-auto ${
-                HALAMAN_LEBAR.some((p) => pathname.startsWith(p)) ? 'max-w-[1500px]' : 'max-w-5xl'
+              className={`mx-auto w-full ${
+                HALAMAN_SEMPIT.some((p) => pathname.startsWith(p))
+                  ? 'max-w-xl'
+                  : HALAMAN_LEBAR.some((p) => pathname.startsWith(p))
+                    ? 'max-w-[1600px]'
+                    : 'max-w-6xl'
               }`}
             >
               <Outlet />
