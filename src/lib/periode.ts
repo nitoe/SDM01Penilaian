@@ -53,6 +53,37 @@ function urutkan(list: PeriodeAkademik[]): PeriodeAkademik[] {
  * Sort di klien — tidak butuh composite index Firestore.
  * Ini menghindari error "Gagal memuat daftar periode" saat indeks belum di-deploy.
  */
+
+/**
+ * Sinkronkan config/akademik agar kode legacy (yang masih baca semesterAktif/tahunAjaran)
+ * selalu cocok dengan periode default.
+ * Hanya field konteks periode yang diubah — identitas sekolah tidak disentuh.
+ */
+async function sinkronConfigDariPeriode(p: {
+  tahunAjaran: string
+  semester: Semester
+  kotaRapor?: string
+  tglRaporKelas1sampai6Sem1?: string
+  tglRaporKelas1sampai5Sem2?: string
+  tglRaporKelas6Sem2?: string
+}): Promise<void> {
+  const data: Record<string, unknown> = {
+    tahunAjaran: p.tahunAjaran.trim(),
+    semesterAktif: p.semester,
+    updatedAt: serverTimestamp(),
+  }
+  if (p.kotaRapor?.trim()) data.kotaRapor = p.kotaRapor.trim()
+  // Field legacy tanggal rapor (masih dibaca beberapa path lama)
+  if (p.semester === '1' && p.tglRaporKelas1sampai6Sem1?.trim()) {
+    data.tglRapor = p.tglRaporKelas1sampai6Sem1.trim()
+  }
+  if (p.semester === '2') {
+    if (p.tglRaporKelas1sampai5Sem2?.trim()) data.tglRapor1sampai5 = p.tglRaporKelas1sampai5Sem2.trim()
+    if (p.tglRaporKelas6Sem2?.trim()) data.tglRapor = p.tglRaporKelas6Sem2.trim()
+  }
+  await setDoc(doc(db, 'config', 'akademik'), data, { merge: true })
+}
+
 export async function listSemuaPeriode(): Promise<PeriodeAkademik[]> {
   const snap = await getDocs(collection(db, KOLEKSI))
   const list = snap.docs.map((d) => kePeriode(d.id, d.data() as Record<string, unknown>))
@@ -104,7 +135,7 @@ export async function simpanPeriode(input: SimpanPeriodeInput): Promise<string> 
   }
   await setDoc(ref, data, { merge: true })
 
-  // Jika ini dijadikan default, matikan default yang lain
+  // Jika ini dijadikan default, matikan default yang lain + sinkron config
   if (input.isDefault) {
     const semua = await listSemuaPeriode()
     const batch = writeBatch(db)
@@ -119,6 +150,14 @@ export async function simpanPeriode(input: SimpanPeriodeInput): Promise<string> 
       }
     }
     if (n) await batch.commit()
+    await sinkronConfigDariPeriode({
+      tahunAjaran: input.tahunAjaran,
+      semester: input.semester,
+      kotaRapor: input.kotaRapor,
+      tglRaporKelas1sampai6Sem1: input.tglRaporKelas1sampai6Sem1,
+      tglRaporKelas1sampai5Sem2: input.tglRaporKelas1sampai5Sem2,
+      tglRaporKelas6Sem2: input.tglRaporKelas6Sem2,
+    })
   }
   return id
 }
@@ -129,6 +168,9 @@ export async function toggleAktifPeriode(id: string, aktif: boolean): Promise<vo
 
 export async function setDefaultPeriode(id: string): Promise<void> {
   const semua = await listSemuaPeriode()
+  const target = semua.find((p) => p.id === id)
+  if (!target) throw new Error(`Periode ${id} tidak ditemukan.`)
+
   const batch = writeBatch(db)
   for (const p of semua) {
     batch.update(doc(db, KOLEKSI, p.id), {
@@ -139,8 +181,28 @@ export async function setDefaultPeriode(id: string): Promise<void> {
     })
   }
   await batch.commit()
+
+  // Sinkron config/akademik → kode legacy tetap konsisten
+  await sinkronConfigDariPeriode({
+    tahunAjaran: target.tahunAjaran,
+    semester: target.semester,
+    kotaRapor: target.kotaRapor,
+    tglRaporKelas1sampai6Sem1: target.tglRaporKelas1sampai6Sem1,
+    tglRaporKelas1sampai5Sem2: target.tglRaporKelas1sampai5Sem2,
+    tglRaporKelas6Sem2: target.tglRaporKelas6Sem2,
+  })
 }
 
 export async function hapusPeriode(id: string): Promise<void> {
+  const target = await getPeriode(id)
   await deleteDoc(doc(db, KOLEKSI, id))
+
+  // Jika yang dihapus adalah default, pilih pengganti (aktif terbaru) lalu sinkron config
+  if (target?.isDefault) {
+    const sisa = await listSemuaPeriode()
+    const pengganti = sisa.find((p) => p.aktif) ?? sisa[0]
+    if (pengganti) {
+      await setDefaultPeriode(pengganti.id)
+    }
+  }
 }

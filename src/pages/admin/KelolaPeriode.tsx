@@ -148,7 +148,7 @@ export default function KelolaPeriode({ profile }: { profile: AppUser }) {
     setGalat(null)
     try {
       await setDefaultPeriode(id)
-      setPesan('Periode ini dijadikan default. Akan otomatis dipilih saat login (dan diaktifkan).')
+      setPesan('Periode dijadikan default dan diaktifkan. Config sistem (tahun ajaran & semester) ikut diselaraskan.')
       await muat()
     } catch (err) {
       setGalat('Gagal menetapkan default.')
@@ -208,8 +208,8 @@ export default function KelolaPeriode({ profile }: { profile: AppUser }) {
                   {defaultPeriode.aktif ? ' · Aktif' : ' · Nonaktif'}
                 </p>
                 <p className="mt-2 text-[11.5px] leading-snug text-muh-800/80">
-                  Otomatis dipilih saat login. Bisa diganti lewat tombol &quot;Jadikan default&quot;
-                  di daftar bawah.
+                  Otomatis dipilih saat login. Menetapkan default juga menyelaraskan config
+                  sistem (tahun ajaran & semester) untuk kompatibilitas data lama.
                 </p>
               </>
             ) : (
@@ -564,7 +564,8 @@ export default function KelolaPeriode({ profile }: { profile: AppUser }) {
           </li>
           <li>
             Ganti default kapan saja lewat tombol <strong>Jadikan default</strong> — periode itu
-            otomatis diaktifkan juga.
+            otomatis diaktifkan, dan <code className="text-[11px]">config/akademik</code> ikut
+            diselaraskan (tahun ajaran + semester).
           </li>
         </ol>
       </div>
