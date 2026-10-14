@@ -10,7 +10,6 @@ import {
 import type { PeriodeAkademik, Semester } from '../../types/periode'
 import { labelPeriode } from '../../types/periode'
 import type { AppUser } from '../../types/user'
-import Icon from '../../components/Icon'
 
 const field =
   'w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-[13.5px] outline-none transition focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15'
