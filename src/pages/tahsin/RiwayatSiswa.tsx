@@ -35,6 +35,7 @@ import {
   type TargetHafalan,
 } from '../../lib/target'
 import { surahByNo } from '../../lib/quranSurah'
+import { PageHeader } from '../../components/ui'
 
 interface Props {
   profile: AppUser
@@ -381,22 +382,18 @@ export default function RiwayatSiswa({ profile }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <Link to="/tahsin" className="text-[11px] font-medium text-muh-700 hover:underline">
+      <div className="flex flex-wrap items-end justify-between gap-2 border-b border-border pb-4">
+        <div className="min-w-0">
+          <Link to="/tahsin" className="mb-2 inline-flex items-center gap-1 text-[12px] font-medium text-muh-700 hover:underline">
             ← Tahsin-Tahfizh
           </Link>
-          <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">
+          <h1 className="text-[18px] font-semibold tracking-tight text-slate-900 sm:text-[20px]">
             Riwayat Siswa
           </h1>
-          {periodeAk.ready ? (
-            <p className="text-[12px] text-muted">Periode: <strong className="text-slate-700">{periodeAk.label}</strong> · hanya setoran semester ini</p>
-          ) : (
-            <p className="text-[12px] text-amber-700">Pilih periode di header agar riwayat terfilter per semester.</p>
-          )}
-          <p className="text-[12px] text-muted">
-            Progres membaca, hafalan, dan menulis per siswa
+          <p className="mt-0.5 text-[13px] leading-snug text-muted">
+            {periodeAk.ready
+              ? `Progres membaca, hafalan, dan menulis · Periode ${periodeAk.label}`
+              : 'Pilih periode di header agar riwayat terfilter per semester.'}
           </p>
         </div>
         {selected && !picking && (

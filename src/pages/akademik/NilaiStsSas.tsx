@@ -30,7 +30,7 @@ import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import type { SiswaTahsin } from '../../types/tahsin'
-import { Badge, HeroBanner } from '../../components/ui'
+import { Badge, PageHeader } from '../../components/ui'
 import { BackLink, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, useToast } from './shared'
 
 /** Kotak nilai di sel tabel — cukup besar untuk disentuh */
@@ -202,7 +202,8 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-5">
         <BackLink to="/akademik">Akademik & Rapor</BackLink>
-        <HeroBanner
+        <PageHeader
+          back={{ to: '/akademik', label: 'Akademik & Rapor' }}
           eyebrow="Akademik"
           title="Nilai Ujian Tengah & Akhir"
           subtitle="Pilih jenis ujian, lalu mata pelajaran dan kelas."
@@ -689,7 +690,7 @@ function Detail(props: {
     <div className={`space-y-4 ${panelMateri ? '' : 'pb-24'}`}>
       <BackLink to={`/akademik/nilai-sts?jenis=${jenis}`}>Pilih mata pelajaran</BackLink>
 
-      <HeroBanner
+      <PageHeader
         eyebrow={config ? `Semester ${config.semesterAktif} · ${config.tahunAjaran}` : 'Akademik'}
         title={`${labelPendek(jenis)} — ${mapel} · Kelas ${kelas}`}
         subtitle={

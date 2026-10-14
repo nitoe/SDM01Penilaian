@@ -12,7 +12,7 @@ import {
   muatDataRaporSts,
   type DataRaporSts,
 } from '../../lib/raporSts'
-import { HeroBanner } from '../../components/ui'
+import { PageHeader } from '../../components/ui'
 import { BackLink, Notice, Spinner, btnGhost, btnPrimary, inputCls } from './shared'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 
@@ -163,7 +163,8 @@ export default function Rapor({ profile }: { profile: AppUser }) {
     <div className="space-y-5 pb-16">
       <div className="print:hidden">
         <BackLink to="/akademik">Akademik & Rapor</BackLink>
-        <HeroBanner
+        <PageHeader
+          back={{ to: '/akademik', label: 'Akademik & Rapor' }}
           eyebrow="Akademik"
           title="Rapor STS"
           subtitle={periodeAk.ready ? `Periode ${periodeAk.label} · Pratinjau & cetak rapor STS untuk kelas yang Anda walikan.` : "Pratinjau dan cetak Laporan Hasil Belajar STS. Pilih periode di header atau login ulang."}

@@ -29,7 +29,7 @@ import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import type { SiswaTahsin } from '../../types/tahsin'
-import { Badge, HeroBanner } from '../../components/ui'
+import { Badge, PageHeader } from '../../components/ui'
 import { BackLink, LEVEL_WARNA, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, useToast } from './shared'
 
 type NilaiKelas = Record<string, Record<string, NilaiTpDoc>>
@@ -217,7 +217,8 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-5">
         <BackLink to="/akademik">Akademik & Rapor</BackLink>
-        <HeroBanner
+        <PageHeader
+          back={{ to: '/akademik', label: 'Akademik & Rapor' }}
           eyebrow="Akademik"
           title="Input Nilai Harian (SLM)"
           subtitle={periodeAk.ready ? `Periode: ${periodeAk.label}. Status di kartu = kelengkapan nilai periode ini.` : "Pilih periode dulu (login ulang atau header). Status di kartu = kelengkapan nilai periode aktif."}
@@ -663,7 +664,7 @@ function Detail({
   return (
     <div className={`space-y-4 ${panelMateri ? '' : 'pb-24'}`}>
       <BackLink to="/akademik/nilai-slm">Pilih mata pelajaran</BackLink>
-      <HeroBanner
+      <PageHeader
         eyebrow={config ? `Semester ${config.semesterAktif} · ${config.tahunAjaran}` : `Kelas ${kelas}`}
         title={`Nilai Harian (SLM) — ${mapel} · ${kelas}`}
         subtitle="Satu tabel untuk semua materi. Panel kanan mengatur kolom yang ditampilkan. Simpan kapan saja."

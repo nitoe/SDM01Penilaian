@@ -18,7 +18,7 @@ import { getSiswaList } from '../../lib/tahsinData'
 import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import type { SiswaTahsin } from '../../types/tahsin'
-import { HeroBanner } from '../../components/ui'
+import { PageHeader } from '../../components/ui'
 import { BackLink, LEVEL_WARNA, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary } from './shared'
 
 type NilaiKelas = Record<string, Record<string, NilaiTpDoc>>
@@ -125,7 +125,8 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-5">
         <BackLink to="/akademik">Akademik & Rapor</BackLink>
-        <HeroBanner
+        <PageHeader
+          back={{ to: '/akademik', label: 'Akademik & Rapor' }}
           eyebrow="Akademik"
           title="Laporan SLM"
           subtitle="Rekap nilai sumatif lingkup materi per kelas. Belum termasuk STS dan SAS."

@@ -3,6 +3,7 @@ import { doc, updateDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import type { AppUser } from '../types/user'
 import { namaDenganGelar } from '../types/user'
+import { PageHeader } from '../components/ui'
 
 interface Props {
   profile: AppUser
@@ -37,7 +38,7 @@ export default function ProfilSaya({ profile }: Props) {
 
   return (
     <div className="mx-auto max-w-md space-y-4 p-4">
-      <h1 className="text-lg font-semibold">Profil Saya</h1>
+      <PageHeader title="Profil Saya" subtitle="Perbarui nama dan data kontak Anda." />
       <p className="text-[12px] text-muted">
         Nama lengkap dengan gelar yang akan muncul di rapor: <strong>{namaDenganGelar({ nama, gelar })}</strong>
       </p>

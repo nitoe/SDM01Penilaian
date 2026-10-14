@@ -6,6 +6,7 @@ import { getTargetHafalan, saveTargetHafalan } from '../../lib/tahsinData'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import { SURAH_LIST } from '../../lib/quranSurah'
 import {
+import { PageHeader } from '../../components/ui'
   SURAH_JUZ_29,
   SURAH_JUZ_30,
   bangunTarget,
@@ -123,15 +124,15 @@ export default function TargetHafalan({ profile }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <div className="flex items-baseline gap-3">
-          <Link to="/tahsin" className="text-[12px] font-medium text-muh-700 hover:underline">
-            ← Tahsin-Tahfizh
-          </Link>
-          <h1 className="text-[18px] font-semibold tracking-tight text-slate-900">Target Hafalan</h1>
-        </div>
-        <p className="hidden text-[12px] text-muted md:block">{periodeAk.ready ? `Target per kelas · ${periodeAk.label}` : "Pilih periode dulu — target terikat tahun ajaran & semester"}</p>
-      </div>
+      <PageHeader
+        back={{ to: '/tahsin', label: 'Tahsin-Tahfizh' }}
+        title="Target Hafalan"
+        subtitle={
+          periodeAk.ready
+            ? `Target per kelas · ${periodeAk.label}`
+            : 'Pilih periode dulu — target terikat tahun ajaran & semester'
+        }
+      />
 
       {toast && (
         <div

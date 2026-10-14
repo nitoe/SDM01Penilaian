@@ -4,6 +4,7 @@ import type { AppUser } from '../../types/user'
 import type { JenjangTahsin, SiswaTahsin } from '../../types/tahsin'
 import { SEMUA_KELAS } from '../../types/tahsin'
 import {
+import { PageHeader } from '../../components/ui'
   CSV_HEADERS,
   bacaExcel,
   downloadText,
@@ -70,7 +71,7 @@ function Field({
 }
 
 const inputCls =
-  'w-full rounded-xl border border-border bg-white px-3 py-2 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15'
+  'w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15'
 
 export default function DataSiswa({ profile }: Props) {
   const [mode, setMode] = useState<Mode>('list')
@@ -262,23 +263,16 @@ export default function DataSiswa({ profile }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <Link to="/admin" className="text-[11px] font-medium text-muh-700 hover:underline">
-            ← Administrasi
-          </Link>
-          <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">
-            Data Siswa
-          </h1>
-          <p className="text-[12px] text-muted">
-            Data dasar + biodata · ID dokumen = NIPD · {list.length} siswa di filter saat ini
-          </p>
-        </div>
+      <PageHeader
+        back={{ to: '/admin', label: 'Administrasi' }}
+        title="Data Siswa"
+        subtitle={`Data dasar + biodata · ID dokumen = NIPD · ${list.length} siswa di filter saat ini`}
+        actions={
         <div className="flex flex-wrap gap-1.5">
           <button
             type="button"
             onClick={() => setMode('list')}
-            className={`rounded-xl px-3 py-1.5 text-[12px] font-medium ${
+            className={`rounded-lg px-3 py-1.5 text-[12px] font-medium ${
               mode === 'list' ? 'bg-muh-600 text-white' : 'border border-border bg-white text-slate-600'
             }`}
           >
@@ -287,7 +281,7 @@ export default function DataSiswa({ profile }: Props) {
           <button
             type="button"
             onClick={openCreate}
-            className={`rounded-xl px-3 py-1.5 text-[12px] font-medium ${
+            className={`rounded-lg px-3 py-1.5 text-[12px] font-medium ${
               mode === 'form' && !editingId
                 ? 'bg-muh-600 text-white'
                 : 'border border-border bg-white text-slate-600'
@@ -298,7 +292,7 @@ export default function DataSiswa({ profile }: Props) {
           <button
             type="button"
             onClick={() => setMode('import')}
-            className={`rounded-xl px-3 py-1.5 text-[12px] font-medium ${
+            className={`rounded-lg px-3 py-1.5 text-[12px] font-medium ${
               mode === 'import'
                 ? 'bg-muh-600 text-white'
                 : 'border border-border bg-white text-slate-600'
@@ -309,16 +303,17 @@ export default function DataSiswa({ profile }: Props) {
           <button
             type="button"
             onClick={handleExport}
-            className="rounded-xl border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
+            className="rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
           >
             Ekspor CSV
           </button>
         </div>
-      </div>
+        }
+      />
 
       {toast && (
         <div
-          className={`rounded-xl px-3 py-2 text-[12px] font-medium ${
+          className={`rounded-lg px-3 py-2 text-[12px] font-medium ${
             toast.error
               ? 'border border-red-200 bg-red-50 text-red-700'
               : 'border border-muh-200 bg-muh-50 text-muh-800'
@@ -363,10 +358,10 @@ export default function DataSiswa({ profile }: Props) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Cari nama, NIPD, NISN, HP, nama ortu…"
-              className="mt-3 w-full rounded-xl border border-border bg-slate-50/80 px-3 py-2 text-[13px] outline-none focus:border-muh-500 focus:bg-white focus:ring-2 focus:ring-muh-500/15"
+              className="mt-3 w-full rounded-lg border border-border bg-slate-50/80 px-3 py-2 text-[13px] outline-none focus:border-muh-500 focus:bg-white focus:ring-2 focus:ring-muh-500/15"
             />
 
-            <div className="mt-3 max-h-[28rem] overflow-auto rounded-xl border border-border">
+            <div className="mt-3 max-h-[28rem] overflow-auto rounded-lg border border-border">
               {loading ? (
                 <p className="p-6 text-center text-[12px] text-muted">Memuat…</p>
               ) : filtered.length === 0 ? (
@@ -477,7 +472,7 @@ export default function DataSiswa({ profile }: Props) {
                 <button
                   type="button"
                   onClick={() => openEdit(selected)}
-                  className="w-full rounded-xl bg-muh-600 py-2 text-[12px] font-semibold text-white hover:bg-muh-700"
+                  className="w-full rounded-lg bg-muh-600 py-2 text-[12px] font-semibold text-white hover:bg-muh-700"
                 >
                   Edit data
                 </button>
@@ -699,14 +694,14 @@ export default function DataSiswa({ profile }: Props) {
               <button
                 type="submit"
                 disabled={busy}
-                className="rounded-xl bg-muh-600 px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
+                className="rounded-lg bg-muh-600 px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
               >
                 {busy ? 'Menyimpan…' : 'Simpan'}
               </button>
               <button
                 type="button"
                 onClick={() => setMode('list')}
-                className="rounded-xl border border-border px-4 py-2.5 text-[13px] font-medium text-slate-600"
+                className="rounded-lg border border-border px-4 py-2.5 text-[13px] font-medium text-slate-600"
               >
                 Batal
               </button>
@@ -733,7 +728,7 @@ export default function DataSiswa({ profile }: Props) {
               Ekspor "Daftar Peserta Didik". File dibaca di browser ini dan tidak diunggah ke mana pun; yang
               tersimpan hanya data siswa di Firestore. Jangan simpan file ini di repo.
             </p>
-            <label className="mt-3 inline-flex cursor-pointer items-center rounded-xl bg-muh-600 px-3.5 py-2 text-[12px] font-semibold text-white hover:bg-muh-700">
+            <label className="mt-3 inline-flex cursor-pointer items-center rounded-lg bg-muh-600 px-3.5 py-2 text-[12px] font-semibold text-white hover:bg-muh-700">
               Pilih file…
               <input
                 type="file"
@@ -760,14 +755,14 @@ export default function DataSiswa({ profile }: Props) {
               }}
               rows={8}
               placeholder={`nipd,nisn,nama,kelas,jk,...`}
-              className="mt-2 w-full rounded-xl border border-border bg-slate-50/50 px-3 py-2 font-mono text-[11px] outline-none focus:border-muh-500 focus:bg-white"
+              className="mt-2 w-full rounded-lg border border-border bg-slate-50/50 px-3 py-2 font-mono text-[11px] outline-none focus:border-muh-500 focus:bg-white"
             />
             <div className="mt-2 flex flex-wrap gap-2">
               <button
                 type="button"
                 disabled={busy || !importText.trim()}
                 onClick={handlePreview}
-                className="rounded-xl border border-border bg-white px-3 py-1.5 text-[12px] font-medium disabled:opacity-50"
+                className="rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium disabled:opacity-50"
               >
                 Pratinjau
               </button>
@@ -780,7 +775,7 @@ export default function DataSiswa({ profile }: Props) {
                       '\n000000001,0000000001,Contoh Siswa,1A,L,Depok,2019-01-01,Islam,,,,,,,,,,,,,,',
                   )
                 }
-                className="rounded-xl border border-border px-3 py-1.5 text-[12px] font-medium text-slate-600"
+                className="rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-slate-600"
               >
                 Unduh template
               </button>
@@ -830,7 +825,7 @@ export default function DataSiswa({ profile }: Props) {
                 </div>
               )}
 
-              <div className="max-h-56 overflow-auto rounded-xl border border-border">
+              <div className="max-h-56 overflow-auto rounded-lg border border-border">
                 <table className="w-full text-left text-[11px]">
                   <thead className="sticky top-0 bg-slate-50 text-slate-500">
                     <tr>
@@ -868,7 +863,7 @@ export default function DataSiswa({ profile }: Props) {
                   type="button"
                   disabled={busy || preview.baru + preview.update === 0}
                   onClick={() => void handleImport()}
-                  className="rounded-xl bg-muh-600 px-4 py-2 text-[12.5px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
+                  className="rounded-lg bg-muh-600 px-4 py-2 text-[12.5px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
                 >
                   {busy
                     ? `Menyimpan… ${progres ?? ''}`
@@ -878,7 +873,7 @@ export default function DataSiswa({ profile }: Props) {
                   type="button"
                   disabled={busy}
                   onClick={() => setPreview(null)}
-                  className="rounded-xl border border-border px-3 py-2 text-[12px] font-medium text-slate-600"
+                  className="rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-slate-600"
                 >
                   Batal
                 </button>

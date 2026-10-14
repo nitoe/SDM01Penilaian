@@ -4,9 +4,10 @@ import { getConfigAkademik, simpanProfilSekolah } from '../../lib/akademik'
 import type { Semester } from '../../types/akademik'
 import type { AppUser } from '../../types/user'
 import Icon from '../../components/Icon'
+import { PageHeader } from '../../components/ui'
 
 const field =
-  'w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-[13.5px] outline-none transition focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15'
+  'w-full rounded-lg border border-border bg-white px-3.5 py-2.5 text-[13.5px] outline-none transition focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15'
 
 function Section({
   icon,
@@ -22,11 +23,11 @@ function Section({
   return (
     <section className="card-soft overflow-hidden">
       <div className="flex items-start gap-3 border-b border-border bg-slate-50/80 px-4 py-3.5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muh-600 text-white">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muh-50 text-muh-700 ring-1 ring-muh-100">
           <Icon name={icon} />
         </span>
         <div className="min-w-0">
-          <h2 className="text-[14.5px] font-semibold text-slate-900">{title}</h2>
+          <h2 className="text-[14px] font-semibold text-slate-900">{title}</h2>
           {desc && <p className="mt-0.5 text-[12px] leading-snug text-muted">{desc}</p>}
         </div>
       </div>
@@ -132,23 +133,23 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 pb-24">
-      <div>
-        <Link to="/admin" className="text-[11px] font-medium text-muh-700 hover:underline">
-          ← Administrasi
-        </Link>
-        <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">Data Sekolah</h1>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-muted">
-          Identitas yang muncul di kop rapor dan dokumen resmi. Tahun ajaran, semester, dan tanggal
-          rapor dikelola di{' '}
-          <Link to="/admin/periode" className="font-medium text-muh-700 underline">
-            Periode Akademik
-          </Link>
-          .
-        </p>
-      </div>
+      <PageHeader
+        back={{ to: '/admin', label: 'Administrasi' }}
+        title="Data Sekolah"
+        subtitle={
+          <>
+            Identitas yang muncul di kop rapor dan dokumen resmi. Tahun ajaran, semester, dan tanggal
+            rapor dikelola di{' '}
+            <Link to="/admin/periode" className="font-medium text-muh-700 underline">
+              Periode Akademik
+            </Link>
+            .
+          </>
+        }
+      />
 
       {/* Banner: konteks periode ada di menu lain */}
-      <div className="rounded-xl border border-muh-200 bg-muh-50/80 px-4 py-3 text-[12.5px] text-muh-900">
+      <div className="rounded-lg border border-muh-200 bg-muh-50/80 px-4 py-3 text-[12.5px] text-muh-900">
         <p className="font-semibold">Tahun ajaran & semester</p>
         <p className="mt-1 leading-snug text-muh-800/90">
           Saat ini di sistem: <strong>{legacyTahun}</strong> · Semester{' '}
@@ -241,12 +242,12 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
           </Section>
 
           {pesan && (
-            <div className="rounded-xl border border-muh-200 bg-muh-50 px-3.5 py-2.5 text-[12.5px] text-muh-900">
+            <div className="rounded-lg border border-muh-200 bg-muh-50 px-3.5 py-2.5 text-[12.5px] text-muh-900">
               {pesan}
             </div>
           )}
           {galat && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-800">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-800">
               {galat}
             </div>
           )}
@@ -259,7 +260,7 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full rounded-xl bg-muh-600 px-5 py-2.5 text-[13.5px] font-semibold text-white shadow-sm hover:bg-muh-700 disabled:opacity-60 sm:w-auto"
+                className="w-full rounded-lg bg-muh-600 px-5 py-2.5 text-[13.5px] font-semibold text-white shadow-sm hover:bg-muh-700 disabled:opacity-60 sm:w-auto"
               >
                 {busy ? 'Menyimpan…' : 'Simpan data sekolah'}
               </button>

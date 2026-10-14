@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import {
+import { PageHeader } from '../../components/ui'
   hapusPeriode,
   listSemuaPeriode,
   setDefaultPeriode,
@@ -177,19 +178,11 @@ export default function KelolaPeriode({ profile }: { profile: AppUser }) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 pb-16">
-      {/* Header */}
-      <div>
-        <Link to="/admin" className="text-[11px] font-medium text-muh-700 hover:underline">
-          ← Administrasi
-        </Link>
-        <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">
-          Kelola Periode Akademik
-        </h1>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-muted">
-          Setiap periode = satu tahun ajaran + satu semester. Guru memilih periode saat login
-          sehingga sistem hanya memakai data konteks tersebut.
-        </p>
-      </div>
+      <PageHeader
+        back={{ to: '/admin', label: 'Administrasi' }}
+        title="Kelola Periode Akademik"
+        subtitle="Setiap periode = satu tahun ajaran + satu semester. Guru memilih periode saat login sehingga sistem hanya memakai data konteks tersebut."
+      />
 
       {/* Status ringkasan — bagian paling informatif */}
       {!loading && (

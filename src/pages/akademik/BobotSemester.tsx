@@ -11,7 +11,7 @@ import {
 } from '../../lib/akademik'
 import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
-import { HeroBanner } from '../../components/ui'
+import { PageHeader } from '../../components/ui'
 import { BackLink, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, inputCls, useToast } from './shared'
 
 /** State UI per TP: alokasi bisa 0, 1, atau 2 semester sekaligus. */
@@ -101,7 +101,8 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-5">
         <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
-        <HeroBanner
+        <PageHeader
+          back={{ to: '/akademik', label: 'Akademik & Rapor' }}
           eyebrow="Akademik"
           title="Bobot Semester TP"
           subtitle="Pilih mata pelajaran dan kelas. Satu TP boleh dipakai di semester 1, semester 2, atau keduanya."
@@ -262,7 +263,7 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
   return (
     <div className="space-y-5">
       <BackLink to="/akademik/bobot-semester">Pilih mata pelajaran</BackLink>
-      <HeroBanner
+      <PageHeader
         eyebrow={`Kelas ${kelas}`}
         title={`Bobot Semester — ${mapel}`}
         subtitle={

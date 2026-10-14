@@ -30,7 +30,7 @@ import {
 } from '../../lib/tpImport'
 import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
-import { HeroBanner, Badge } from '../../components/ui'
+import { PageHeader, Badge } from '../../components/ui'
 import SeniBudayaPanel from '../../components/SeniBudayaPanel'
 import { DISIPLIN_SENI } from '../../lib/seniKelas'
 import {
@@ -315,7 +315,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-5">
         <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
-        <HeroBanner
+        <PageHeader
+          back={{ to: '/akademik', label: 'Akademik & Rapor' }}
           eyebrow="Akademik"
           title="Setup TP & KKTP"
           subtitle="Pilih mata pelajaran dan kelas. TP milik dapur mapel×kelas: guru kelas dan guru bidang studi yang mengampu mapel yang sama di kelas itu melihat data yang sama (siapa pun yang menginput). Kelas paralel (5A ≠ 5B) tetap terpisah."
@@ -596,7 +597,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   return (
     <div className="space-y-5">
       <BackLink to="/akademik/setup-tp">Pilih mata pelajaran</BackLink>
-      <HeroBanner
+      <PageHeader
         eyebrow={`Kelas ${kelas} · Fase ${faseDariTingkatan(tingkatan)}`}
         title={`TP & KKTP — ${mapel}`}
         subtitle={

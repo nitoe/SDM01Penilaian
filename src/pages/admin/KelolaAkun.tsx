@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { Badge } from '../../components/ui'
+import { Badge, PageHeader } from '../../components/ui'
 import {
   ringkasTugas,
   roleDariTugas,
@@ -48,7 +48,7 @@ const SARINGAN: { id: Saringan; label: string }[] = [
 ]
 
 const inputCls =
-  'w-full rounded-xl border border-border bg-white px-3 py-2 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15'
+  'w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15'
 
 const formKosong = (): InputAkunGuru & { password: string } => ({
   email: '',
@@ -138,7 +138,7 @@ function EditorPenugasan({
         Hanya mapel yang diampu guru ini. Setiap baris adalah satu kelas dan satu mapel.
       </p>
       {rows.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border px-3 py-3 text-[12px] text-muted">
+        <p className="rounded-lg border border-dashed border-border px-3 py-3 text-[12px] text-muted">
           Belum ada penugasan. Guru tetap bisa masuk, tetapi belum bisa mengisi nilai.
         </p>
       ) : (
@@ -172,7 +172,7 @@ function EditorPenugasan({
               <button
                 type="button"
                 onClick={() => onChange(rows.filter((_, idx) => idx !== i))}
-                className="rounded-xl border border-border px-2.5 text-[11px] font-medium text-slate-500 hover:bg-slate-50"
+                className="rounded-lg border border-border px-2.5 text-[11px] font-medium text-slate-500 hover:bg-slate-50"
               >
                 Hapus
               </button>
@@ -392,21 +392,16 @@ export default function KelolaAkun({ profile }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <Link to="/admin" className="text-[11px] font-medium text-muh-700 hover:underline">
-            ← Administrasi
-          </Link>
-          <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">Kelola Akun Guru</h1>
-          <p className="text-[12px] text-muted">
-            Buat login guru, atur kelas dan mapel. Akun orang tua ada di menu terpisah. {list.length} akun staf.
-          </p>
-        </div>
+      <PageHeader
+        back={{ to: '/admin', label: 'Administrasi' }}
+        title="Kelola Akun Guru"
+        subtitle={`Buat login guru, atur kelas dan mapel. Akun orang tua ada di menu terpisah. ${list.length} akun staf.`}
+        actions={
         <div className="flex flex-wrap gap-1.5">
           <button
             type="button"
             onClick={() => setMode('list')}
-            className={`rounded-xl px-3 py-1.5 text-[12px] font-medium ${
+            className={`rounded-lg px-3 py-1.5 text-[12px] font-medium ${
               mode === 'list' ? 'bg-muh-600 text-white' : 'border border-border bg-white text-slate-600'
             }`}
           >
@@ -415,7 +410,7 @@ export default function KelolaAkun({ profile }: Props) {
           <button
             type="button"
             onClick={openCreate}
-            className={`rounded-xl px-3 py-1.5 text-[12px] font-medium ${
+            className={`rounded-lg px-3 py-1.5 text-[12px] font-medium ${
               mode === 'form' && !editing ? 'bg-muh-600 text-white' : 'border border-border bg-white text-slate-600'
             }`}
           >
@@ -444,16 +439,17 @@ export default function KelolaAkun({ profile }: Props) {
               URL.revokeObjectURL(url)
               showToast('Data akun diekspor.')
             }}
-            className="rounded-xl border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
+            className="rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
           >
             Ekspor JSON
           </button>
         </div>
-      </div>
+        }
+      />
 
       {toast && (
         <div
-          className={`rounded-xl px-3 py-2 text-[12px] font-medium ${
+          className={`rounded-lg px-3 py-2 text-[12px] font-medium ${
             toast.error ? 'border border-red-200 bg-red-50 text-red-700' : 'border border-muh-200 bg-muh-50 text-muh-800'
           }`}
         >
@@ -475,14 +471,14 @@ export default function KelolaAkun({ profile }: Props) {
                 () => showToast('Password disalin.'),
                 () => showToast('Salin manual: clipboard ditolak browser.', true),
               )}
-              className="rounded-xl bg-muh-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-muh-700"
+              className="rounded-lg bg-muh-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-muh-700"
             >
               Salin password
             </button>
             <button
               type="button"
               onClick={() => setKataSandiBaru(null)}
-              className="rounded-xl border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600"
+              className="rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600"
             >
               Sudah saya catat
             </button>
@@ -512,9 +508,9 @@ export default function KelolaAkun({ profile }: Props) {
               value={cari}
               onChange={(e) => setCari(e.target.value)}
               placeholder="Cari nama atau email…"
-              className="mt-3 w-full rounded-xl border border-border bg-slate-50/80 px-3 py-2 text-[13px] outline-none focus:border-muh-500 focus:bg-white focus:ring-2 focus:ring-muh-500/15"
+              className="mt-3 w-full rounded-lg border border-border bg-slate-50/80 px-3 py-2 text-[13px] outline-none focus:border-muh-500 focus:bg-white focus:ring-2 focus:ring-muh-500/15"
             />
-            <div className="mt-3 max-h-[32rem] overflow-auto rounded-xl border border-border">
+            <div className="mt-3 max-h-[32rem] overflow-auto rounded-lg border border-border">
               {loading ? (
                 <p className="p-6 text-center text-[12px] text-muted">Memuat…</p>
               ) : tampil.length === 0 ? (
@@ -594,7 +590,7 @@ export default function KelolaAkun({ profile }: Props) {
                   </ul>
                 )}
                 {dipilih.status === 'pending' && (
-                  <div className="rounded-xl border border-peach-200 bg-peach-50 p-2.5">
+                  <div className="rounded-lg border border-peach-200 bg-peach-50 p-2.5">
                     <p className="text-[11px] font-medium text-peach-800">Menunggu persetujuan</p>
                     <div className="mt-2 flex flex-col gap-1.5">
                       <button
@@ -619,7 +615,7 @@ export default function KelolaAkun({ profile }: Props) {
                 <button
                   type="button"
                   onClick={() => openEdit(dipilih)}
-                  className="w-full rounded-xl bg-muh-600 py-2 text-[12px] font-semibold text-white hover:bg-muh-700"
+                  className="w-full rounded-lg bg-muh-600 py-2 text-[12px] font-semibold text-white hover:bg-muh-700"
                 >
                   Ubah akun
                 </button>
@@ -627,7 +623,7 @@ export default function KelolaAkun({ profile }: Props) {
                   type="button"
                   disabled={busy}
                   onClick={() => void handleReset(dipilih)}
-                  className="w-full rounded-xl border border-border bg-white py-2 text-[12px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  className="w-full rounded-lg border border-border bg-white py-2 text-[12px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                 >
                   Kirim tautan password
                 </button>
@@ -635,7 +631,7 @@ export default function KelolaAkun({ profile }: Props) {
                   <p className="text-[11px] text-muted">Ini akun Anda. Peran dan status tidak dapat diubah dari sini.</p>
                 ) : dipilih.aktif !== false ? (
                   konfirmasi === dipilih.uid ? (
-                    <div className="rounded-xl border border-red-200 bg-red-50 p-2.5">
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-2.5">
                       <p className="text-[11px] text-red-800">
                         {dipilih.nama} tidak bisa masuk lagi. Data nilai yang sudah ada tidak dihapus.
                       </p>
@@ -661,7 +657,7 @@ export default function KelolaAkun({ profile }: Props) {
                     <button
                       type="button"
                       onClick={() => setKonfirmasi(dipilih.uid)}
-                      className="w-full rounded-xl border border-red-200 py-2 text-[12px] font-medium text-red-700 hover:bg-red-50"
+                      className="w-full rounded-lg border border-red-200 py-2 text-[12px] font-medium text-red-700 hover:bg-red-50"
                     >
                       Nonaktifkan
                     </button>
@@ -671,7 +667,7 @@ export default function KelolaAkun({ profile }: Props) {
                     type="button"
                     disabled={busy}
                     onClick={() => void terapkanAktif(dipilih, true)}
-                    className="w-full rounded-xl border border-border bg-white py-2 text-[12px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                    className="w-full rounded-lg border border-border bg-white py-2 text-[12px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                   >
                     Aktifkan kembali
                   </button>
@@ -688,12 +684,12 @@ export default function KelolaAkun({ profile }: Props) {
             {editing ? (editing.status === 'pending' ? 'Setujui akun guru' : 'Ubah akun') : 'Tambah akun guru'}
           </h2>
           {editing?.status === 'pending' && (
-            <p className="mt-2 rounded-xl border border-peach-200 bg-peach-50 px-3 py-2 text-[12px] text-peach-800">
+            <p className="mt-2 rounded-lg border border-peach-200 bg-peach-50 px-3 py-2 text-[12px] text-peach-800">
               Menyimpan akan menyetujui akun ini. Atur peran, kelas, dan penugasan mapel sebelum menyimpan.
             </p>
           )}
           {editing?.roleRusak && (
-            <p className="mt-2 rounded-xl border border-peach-200 bg-peach-50 px-3 py-2 text-[12px] text-slate-800">
+            <p className="mt-2 rounded-lg border border-peach-200 bg-peach-50 px-3 py-2 text-[12px] text-slate-800">
               Role tersimpan ({editing.roleRusak}) tidak dikenal. Pilih peran yang benar sebelum menyimpan.
             </p>
           )}
@@ -735,7 +731,7 @@ export default function KelolaAkun({ profile }: Props) {
                   type="button"
                   disabled={terkunci}
                   onClick={() => setSebagaiAdmin((v) => !v)}
-                  className={`mb-2 w-full rounded-xl border px-3 py-2 text-left text-[12px] disabled:opacity-60 ${
+                  className={`mb-2 w-full rounded-lg border px-3 py-2 text-left text-[12px] disabled:opacity-60 ${
                     sebagaiAdmin ? 'border-muh-500 bg-muh-50' : 'border-border bg-white'
                   }`}
                 >
@@ -752,7 +748,7 @@ export default function KelolaAkun({ profile }: Props) {
                           type="button"
                           disabled={terkunci}
                           onClick={() => setTugas((prev) => ({ ...prev, [o.key]: !prev[o.key] }))}
-                          className={`rounded-xl border px-3 py-2 text-left text-[12px] disabled:opacity-60 ${
+                          className={`rounded-lg border px-3 py-2 text-left text-[12px] disabled:opacity-60 ${
                             aktif ? 'border-muh-500 bg-muh-50 text-muh-900' : 'border-border bg-white text-slate-700'
                           }`}
                         >
@@ -778,7 +774,7 @@ export default function KelolaAkun({ profile }: Props) {
                     <button
                       type="button"
                       onClick={() => setF('password', buatPasswordAcak())}
-                      className="shrink-0 rounded-xl border border-border px-3 text-[11px] font-medium text-slate-600 hover:bg-slate-50"
+                      className="shrink-0 rounded-lg border border-border px-3 text-[11px] font-medium text-slate-600 hover:bg-slate-50"
                     >
                       Acak
                     </button>
@@ -792,12 +788,12 @@ export default function KelolaAkun({ profile }: Props) {
               </p>
             )}
             {sebagaiAdmin && (
-              <p className="rounded-xl bg-slate-50 px-3 py-2 text-[12px] text-muted">
+              <p className="rounded-lg bg-slate-50 px-3 py-2 text-[12px] text-muted">
                 Administrator membuka semua modul. Kelas dan mapel tidak perlu diisi.
               </p>
             )}
             {butuhTahsin && butuhKelas && (
-              <p className="rounded-xl bg-muh-50 px-3 py-2 text-[12px] text-muh-900">
+              <p className="rounded-lg bg-muh-50 px-3 py-2 text-[12px] text-muh-900">
                 Kombinasi: guru Tahsin-Tahfizh yang juga menjadi guru kelas. Isi kedua bagian di bawah.
               </p>
             )}
@@ -838,14 +834,14 @@ export default function KelolaAkun({ profile }: Props) {
               <button
                 type="submit"
                 disabled={busy}
-                className="rounded-xl bg-muh-600 px-4 py-2 text-[12px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
+                className="rounded-lg bg-muh-600 px-4 py-2 text-[12px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
               >
                 {busy ? 'Menyimpan…' : 'Simpan'}
               </button>
               <button
                 type="button"
                 onClick={() => setMode('list')}
-                className="rounded-xl border border-border bg-white px-4 py-2 text-[12px] font-medium text-slate-600"
+                className="rounded-lg border border-border bg-white px-4 py-2 text-[12px] font-medium text-slate-600"
               >
                 Batal
               </button>

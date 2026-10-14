@@ -29,6 +29,7 @@ import {
 } from '../../lib/bacaTandai'
 import { BacaTandai, KartuKataIqro } from '../../components/BacaTandai'
 import PanelSiswa from '../../components/PanelSiswa'
+import { PageHeader } from '../../components/ui'
 
 interface Props {
   profile: AppUser
@@ -306,21 +307,15 @@ export default function InputSetoran({ profile }: Props) {
 
   return (
     <div className="space-y-3">
-      {/* Judul */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <div className="flex items-baseline gap-3">
-          <Link to="/tahsin" className="text-[12px] font-medium text-muh-700 hover:underline">
-            ← Tahsin-Tahfizh
-          </Link>
-          <h1 className="text-[18px] font-semibold tracking-tight text-slate-900">Input Setoran</h1>
-          {periodeAk.ready ? (
-            <p className="text-[12px] text-muted">Periode: <strong className="text-slate-700">{periodeAk.label}</strong></p>
-          ) : (
-            <p className="text-[12px] text-amber-700">Pilih periode di header atau login ulang agar setoran tersimpan ke semester yang benar.</p>
-          )}
-        </div>
-        <p className="hidden text-[12px] text-muted md:block">Catat setoran bacaan dan hafalan siswa</p>
-      </div>
+      <PageHeader
+        back={{ to: '/tahsin', label: 'Tahsin-Tahfizh' }}
+        title="Input Setoran"
+        subtitle={
+          periodeAk.ready
+            ? `Catat setoran bacaan dan hafalan · Periode ${periodeAk.label}`
+            : 'Pilih periode di header atau login ulang agar setoran tersimpan ke semester yang benar.'
+        }
+      />
 
       {toast && (
         <div

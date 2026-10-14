@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { adaMapelTersimpan, getMapelList, hapusMapel, simpanMapel, unggahMapelBawaan } from '../../lib/akademik'
 import type { Mapel } from '../../types/akademik'
 import type { AppUser } from '../../types/user'
+import { PageHeader } from '../../components/ui'
 
 const TINGKATAN = ['1', '2', '3', '4', '5', '6']
 
@@ -122,16 +123,11 @@ export default function SetupMapel({ profile }: Props) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <Link to="/admin" className="text-[11px] font-medium text-muh-700 hover:underline">
-          ← Administrasi
-        </Link>
-        <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">Mata Pelajaran</h1>
-        <p className="text-[12px] text-muted">
-          Dipakai untuk tugas guru bidang studi dan Setup TP. Nama persis ini yang tersimpan di TP — IPAS dan PJOK,
-          bukan nama panjang. Tahsin dan Tahfizh tidak masuk daftar ini.
-        </p>
-      </div>
+      <PageHeader
+        back={{ to: '/admin', label: 'Administrasi' }}
+        title="Mata Pelajaran"
+        subtitle="Dipakai untuk tugas guru bidang studi dan Setup TP. Nama persis ini yang tersimpan di TP — IPAS dan PJOK, bukan nama panjang. Tahsin dan Tahfizh tidak masuk daftar ini."
+      />
 
       {!tersimpan && !loading && (
         <div className="rounded-xl border border-peach-200 bg-peach-50 px-3 py-3 text-[12px] text-peach-900">
