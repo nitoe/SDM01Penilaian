@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { adaMapelTersimpan, getMapelList, hapusMapel, simpanMapel, unggahMapelBawaan } from '../../lib/akademik'
 import type { Mapel } from '../../types/akademik'
 import type { AppUser } from '../../types/user'

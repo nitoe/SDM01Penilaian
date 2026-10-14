@@ -35,7 +35,6 @@ import {
   type TargetHafalan,
 } from '../../lib/target'
 import { surahByNo } from '../../lib/quranSurah'
-import { PageHeader } from '../../components/ui'
 
 interface Props {
   profile: AppUser

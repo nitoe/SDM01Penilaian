@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import { SEMUA_KELAS } from '../../types/tahsin'
 import { getTargetHafalan, saveTargetHafalan } from '../../lib/tahsinData'

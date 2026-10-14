@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import type {
   JenisKata,
