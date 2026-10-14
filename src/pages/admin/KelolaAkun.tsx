@@ -388,7 +388,7 @@ export default function KelolaAkun({ profile }: Props) {
       setDipilih(null)
       setKonfirmasiHapus(null)
       setKetikHapus('')
-      showToast(`${akun.nama} dihapus dari daftar staf. Login app ditolak; hapus user Auth di Firebase Console bila perlu.`)
+      showToast(`${akun.nama} dihapus permanen (Auth + profil). Email ini bisa didaftarkan lagi.`)
     } catch (e) {
       console.error(e)
       showToast(pesanGalatAuth(e), true)
@@ -798,7 +798,7 @@ export default function KelolaAkun({ profile }: Props) {
                 <input
                   className={inputCls}
                   value={form.gelar ?? ''}
-                  placeholder="S.Pd / M.Pd / …"
+                  placeholder="contoh: S.Pd"
                   onChange={(e) => setF('gelar', e.target.value)}
                 />
               </Field>

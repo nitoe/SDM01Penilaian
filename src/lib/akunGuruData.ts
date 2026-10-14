@@ -9,7 +9,8 @@ import {
 } from 'firebase/auth'
 import { collection, deleteDoc, doc, getDocs, setDoc, type DocumentData } from 'firebase/firestore'
 import { adalahRole, susunDokumenAkun, type InputAkunGuru } from './akunGuru'
-import { auth, db, firebaseConfig } from './firebase'
+import { auth, db, firebaseConfig, app } from './firebase'
+import { getFunctions, httpsCallable } from 'firebase/functions'
 import type { AppUser, UserRole } from '../types/user'
 
 /** Nama app sekunder. Auth-nya in-memory supaya sesi admin di app utama tidak terganti. */
@@ -141,10 +142,51 @@ export async function kirimResetPassword(email: string): Promise<void> {
 }
 
 /**
- * Hapus profil staf di Firestore (`users/{uid}`).
- * Tidak menghapus user Firebase Auth (perlu Admin SDK / Console).
- * Setelah profil dihapus, login ditolak di app (lihat auth + App).
+ * Hapus permanen akun staf: Firebase Auth + profil Firestore.
+ * Memanggil Cloud Function `hapusAkunPermanen` (Admin SDK di server).
+ * Fallback: jika Function belum di-deploy, hapus profil Firestore saja
+ * dan lempar error yang menjelaskan sisa user Auth.
  */
 export async function hapusAkunStaf(uid: string): Promise<void> {
-  await deleteDoc(doc(db, 'users', uid))
+  const functions = getFunctions(app, 'asia-southeast2')
+  const panggil = httpsCallable<{ uid: string }, {
+    ok: boolean
+    authDihapus?: boolean
+    profilDihapus?: boolean
+    authPesan?: string
+  }>(functions, 'hapusAkunPermanen')
+
+  try {
+    const res = await panggil({ uid })
+    if (!res.data?.ok) {
+      throw new Error('Penghapusan tidak dikonfirmasi server.')
+    }
+    return
+  } catch (err: unknown) {
+    const code =
+      typeof err === 'object' && err && 'code' in err ? String((err as { code: string }).code) : ''
+    const msg = err instanceof Error ? err.message : String(err)
+
+    // Function belum ada / belum deploy
+    const belumDeploy =
+      code.includes('not-found') ||
+      code.includes('functions/not-found') ||
+      msg.includes('NOT_FOUND') ||
+      msg.includes('not-found')
+
+    if (belumDeploy) {
+      // Fallback sementara: hapus profil saja
+      await deleteDoc(doc(db, 'users', uid))
+      throw new Error(
+        'Profil staf dihapus, tetapi Cloud Function belum di-deploy. User Auth masih ada — hapus manual di Firebase Console → Authentication, atau jalankan: firebase deploy --only functions',
+      )
+    }
+
+    // permission / unauthenticated dari function
+    if (code.includes('permission-denied') || code.includes('unauthenticated')) {
+      throw new Error(msg || 'Tidak diizinkan menghapus akun.')
+    }
+
+    throw err instanceof Error ? err : new Error(msg)
+  }
 }

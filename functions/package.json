@@ -1,0 +1,17 @@
+{
+  "name": "sdm01kks-functions",
+  "description": "Cloud Functions — hapus akun Auth + profil staf",
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.3.0"
+  }
+}
