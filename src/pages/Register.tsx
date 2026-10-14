@@ -84,12 +84,14 @@ export default function Register() {
 
     setLoading(true)
     const emailNorm = email.trim().toLowerCase()
-    const profilBaru = {
+    const gelarBersih = gelar.trim()
+
+    // Jangan kirim field undefined — Firestore menolak "Unsupported field value: undefined"
+    const profilBaru: Record<string, unknown> = {
       email: emailNorm,
       nama: nama.trim(),
-      gelar: gelar.trim() || undefined,
       role,
-      status: 'pending' as const,
+      status: 'pending',
       aktif: true,
       kelasAmpu: butuhTahsin ? kelasAmpu : [],
       waliKelas: butuhKelas ? waliKelas : [],
@@ -99,33 +101,75 @@ export default function Register() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
+    if (gelarBersih) profilBaru.gelar = gelarBersih
+
+    function kodeFirebase(err: unknown): string {
+      if (typeof err === 'object' && err && 'code' in err) return String((err as { code: string }).code)
+      return ''
+    }
+    function pesanFirebase(err: unknown): string {
+      const code = kodeFirebase(err)
+      const msg = err instanceof Error ? err.message : String(err ?? 'Gagal mendaftar')
+      if (code === 'auth/email-already-in-use' || msg.includes('email-already-in-use')) {
+        return 'Email ini sudah terdaftar di Firebase Auth.'
+      }
+      if (code === 'auth/weak-password' || msg.includes('weak-password')) {
+        return 'Password terlalu lemah (minimal 6 karakter, disarankan 8+).'
+      }
+      if (code === 'auth/invalid-email') return 'Format email tidak valid.'
+      if (code === 'auth/operation-not-allowed') {
+        return 'Pendaftaran email/password belum diaktifkan di Firebase Console.'
+      }
+      if (code === 'auth/network-request-failed') {
+        return 'Jaringan gagal. Periksa koneksi internet lalu coba lagi.'
+      }
+      if (code === 'auth/too-many-requests') {
+        return 'Terlalu banyak percobaan. Tunggu beberapa menit.'
+      }
+      if (code === 'permission-denied' || msg.includes('permission-denied') || msg.includes('Missing or insufficient permissions')) {
+        return 'Profil gagal disimpan (izin Firestore). Pastikan rules users create untuk guru pending sudah di-deploy.'
+      }
+      if (msg.includes('undefined') || msg.includes('Unsupported field value')) {
+        return 'Data profil tidak valid. Coba kosongkan gelar atau isi singkat (S.Pd).'
+      }
+      return msg
+    }
+
     try {
+      let uid: string | null = null
       try {
         const cred = await createUserWithEmailAndPassword(auth, emailNorm, password)
-        await setDoc(doc(db, 'users', cred.user.uid), profilBaru)
+        uid = cred.user.uid
+        await setDoc(doc(db, 'users', uid), profilBaru)
       } catch (err: unknown) {
-        const code = typeof err === 'object' && err && 'code' in err ? String((err as { code: string }).code) : ''
-        const msg = err instanceof Error ? err.message : ''
-        const already = code.includes('email-already-in-use') || msg.includes('email-already-in-use')
-        if (!already) throw err
+        const code = kodeFirebase(err)
+        const already =
+          code === 'auth/email-already-in-use' ||
+          (err instanceof Error && err.message.includes('email-already-in-use'))
 
-        // Auth masih ada (mis. profil dihapus admin) — coba login + tulis ulang profil pending
+        if (!already) {
+          // createUser sukses tapi setDoc gagal → Auth yatim; tetap lempar pesan jelas
+          throw err
+        }
+
+        // Auth sudah ada (mis. profil dihapus admin) — login + tulis ulang profil pending
         let cred
         try {
           cred = await signInWithEmailAndPassword(auth, emailNorm, password)
-        } catch {
+        } catch (e2) {
           throw new Error(
-            'Email ini sudah pernah dipakai. Jika admin menghapus akun Anda, gunakan password lama yang sama, atau minta admin membuat ulang lewat Kelola Akun / menghapus user di Firebase Authentication.',
+            'Email ini sudah pernah dipakai. Gunakan password lama yang sama, atau minta admin menghapus user di Firebase Authentication lalu daftar lagi.',
           )
         }
-        const snap = await getDoc(doc(db, 'users', cred.user.uid))
+        uid = cred.user.uid
+        const snap = await getDoc(doc(db, 'users', uid))
         if (snap.exists()) {
           await signOut(auth)
           throw new Error(
-            'Email ini sudah terdaftar dan masih aktif di sistem. Masuk lewat halaman login, atau hubungi admin.',
+            'Email ini sudah terdaftar dan profilnya masih ada. Masuk lewat halaman login, atau hubungi admin.',
           )
         }
-        await setDoc(doc(db, 'users', cred.user.uid), {
+        await setDoc(doc(db, 'users', uid), {
           ...profilBaru,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -133,12 +177,8 @@ export default function Register() {
       }
       setSukses(true)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Gagal mendaftar'
-      if (msg.includes('weak-password')) {
-        setError('Password terlalu lemah.')
-      } else {
-        setError(msg)
-      }
+      console.error('Pendaftaran gagal:', err)
+      setError(pesanFirebase(err))
     } finally {
       setLoading(false)
     }
