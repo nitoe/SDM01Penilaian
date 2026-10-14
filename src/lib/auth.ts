@@ -20,6 +20,16 @@ export async function loginWithEmail(email: string, password: string) {
   }
   const cred = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password)
   const profile = await fetchUserProfile(cred.user.uid)
+  if (!profile) {
+    await signOut(auth)
+    throw new Error(
+      'Akun login ada di Firebase, tetapi profil staf sudah dihapus. Hubungi administrator bila ini keliru.',
+    )
+  }
+  if (profile.aktif === false) {
+    await signOut(auth)
+    throw new Error('Akun ini dinonaktifkan. Hubungi administrator.')
+  }
   return { user: cred.user, profile }
 }
 

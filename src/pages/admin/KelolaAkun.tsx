@@ -11,6 +11,7 @@ import {
 } from '../../lib/akunGuru'
 import {
   buatAkunGuru,
+  hapusAkunStaf,
   kirimResetPassword,
   listAkunStaf,
   pesanGalatAuth,
@@ -210,6 +211,9 @@ export default function KelolaAkun({ profile }: Props) {
   const [dipilih, setDipilih] = useState<AkunStaf | null>(null)
   const [kataSandiBaru, setKataSandiBaru] = useState<{ nama: string; email: string; password: string } | null>(null)
   const [konfirmasi, setKonfirmasi] = useState<string | null>(null)
+  /** UID yang diminta konfirmasi hapus permanen. */
+  const [konfirmasiHapus, setKonfirmasiHapus] = useState<string | null>(null)
+  const [ketikHapus, setKetikHapus] = useState('')
   const [sebagaiAdmin, setSebagaiAdmin] = useState(false)
   const [tugas, setTugas] = useState<TugasGuru>({ tahsin: true, guruKelas: false, bidangStudi: false })
 
@@ -366,6 +370,33 @@ export default function KelolaAkun({ profile }: Props) {
       setBusy(false)
     }
   }
+
+  async function hapusPermanen(akun: AkunStaf) {
+    if (akun.uid === profile.uid) {
+      showToast('Anda tidak dapat menghapus akun sendiri.', true)
+      return
+    }
+    const kunci = (akun.email || akun.nama || '').trim().toLowerCase()
+    if (ketikHapus.trim().toLowerCase() !== kunci) {
+      showToast('Ketik email akun (persis) untuk konfirmasi penghapusan.', true)
+      return
+    }
+    setBusy(true)
+    try {
+      await hapusAkunStaf(akun.uid)
+      setList((prev) => prev.filter((u) => u.uid !== akun.uid))
+      setDipilih(null)
+      setKonfirmasiHapus(null)
+      setKetikHapus('')
+      showToast(`${akun.nama} dihapus dari daftar staf. Login app ditolak; hapus user Auth di Firebase Console bila perlu.`)
+    } catch (e) {
+      console.error(e)
+      showToast(pesanGalatAuth(e), true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
 
   async function terapkanStatus(akun: AkunStaf, status: 'approved' | 'rejected') {
     if (akun.uid === profile.uid) return
@@ -565,7 +596,7 @@ export default function KelolaAkun({ profile }: Props) {
 
           <aside className="card-soft h-fit p-4">
             {!dipilih ? (
-              <p className="text-[12px] text-muted">Pilih akun untuk melihat tugas, mengirim tautan password, atau menonaktifkan.</p>
+              <p className="text-[12px] text-muted">Pilih akun untuk mengubah tugas, reset password, menonaktifkan, atau menghapus permanen.</p>
             ) : (
               <div className="space-y-3 text-[12px]">
                 <div>
@@ -629,48 +660,108 @@ export default function KelolaAkun({ profile }: Props) {
                 </button>
                 {dipilih.uid === profile.uid ? (
                   <p className="text-[11px] text-muted">Ini akun Anda. Peran dan status tidak dapat diubah dari sini.</p>
-                ) : dipilih.aktif !== false ? (
-                  konfirmasi === dipilih.uid ? (
-                    <div className="rounded-lg border border-red-200 bg-red-50 p-2.5">
-                      <p className="text-[11px] text-red-800">
-                        {dipilih.nama} tidak bisa masuk lagi. Data nilai yang sudah ada tidak dihapus.
-                      </p>
-                      <div className="mt-2 flex gap-2">
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => void terapkanAktif(dipilih, false)}
-                          className="rounded-lg bg-red-700 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-60"
-                        >
-                          Ya, nonaktifkan
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setKonfirmasi(null)}
-                          className="rounded-lg px-2.5 py-1 text-[11px] font-medium text-slate-600"
-                        >
-                          Batal
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setKonfirmasi(dipilih.uid)}
-                      className="w-full rounded-lg border border-red-200 py-2 text-[12px] font-medium text-red-700 hover:bg-red-50"
-                    >
-                      Nonaktifkan
-                    </button>
-                  )
                 ) : (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void terapkanAktif(dipilih, true)}
-                    className="w-full rounded-lg border border-border bg-white py-2 text-[12px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                  >
-                    Aktifkan kembali
-                  </button>
+                  <>
+                    {dipilih.aktif !== false ? (
+                      konfirmasi === dipilih.uid ? (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+                          <p className="text-[11px] text-amber-900">
+                            {dipilih.nama} tidak bisa masuk. Profil dan penugasan tetap ada; bisa diaktifkan lagi.
+                          </p>
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => void terapkanAktif(dipilih, false)}
+                              className="rounded-lg bg-amber-700 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-60"
+                            >
+                              Ya, nonaktifkan
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setKonfirmasi(null)}
+                              className="rounded-lg px-2.5 py-1 text-[11px] font-medium text-slate-600"
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setKonfirmasi(dipilih.uid)
+                            setKonfirmasiHapus(null)
+                            setKetikHapus('')
+                          }}
+                          className="w-full rounded-lg border border-amber-200 py-2 text-[12px] font-medium text-amber-800 hover:bg-amber-50"
+                        >
+                          Nonaktifkan
+                        </button>
+                      )
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void terapkanAktif(dipilih, true)}
+                        className="w-full rounded-lg border border-border bg-white py-2 text-[12px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                      >
+                        Aktifkan kembali
+                      </button>
+                    )}
+
+                    {konfirmasiHapus === dipilih.uid ? (
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-2.5">
+                        <p className="text-[11px] leading-relaxed text-red-900">
+                          Hapus permanen profil <strong>{dipilih.nama}</strong> dari sistem. Data nilai siswa
+                          tidak dihapus, tetapi akun hilang dari daftar staf dan tidak bisa login.
+                        </p>
+                        <label className="mt-2 block text-[11px] font-medium text-red-800">
+                          Ketik email akun untuk konfirmasi
+                          <input
+                            type="text"
+                            value={ketikHapus}
+                            onChange={(e) => setKetikHapus(e.target.value)}
+                            placeholder={dipilih.email}
+                            className="mt-1 w-full rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-800 outline-none focus:border-red-400"
+                            autoComplete="off"
+                          />
+                        </label>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void hapusPermanen(dipilih)}
+                            className="rounded-lg bg-red-700 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-60"
+                          >
+                            Ya, hapus permanen
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setKonfirmasiHapus(null)
+                              setKetikHapus('')
+                            }}
+                            className="rounded-lg px-2.5 py-1 text-[11px] font-medium text-slate-600"
+                          >
+                            Batal
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setKonfirmasiHapus(dipilih.uid)
+                          setKonfirmasi(null)
+                          setKetikHapus('')
+                        }}
+                        className="w-full rounded-lg border border-red-300 py-2 text-[12px] font-medium text-red-700 hover:bg-red-50"
+                      >
+                        Hapus permanen
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             )}

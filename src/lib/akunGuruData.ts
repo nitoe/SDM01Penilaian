@@ -7,7 +7,7 @@ import {
   setPersistence,
   signOut,
 } from 'firebase/auth'
-import { collection, doc, getDocs, setDoc, type DocumentData } from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDocs, setDoc, type DocumentData } from 'firebase/firestore'
 import { adalahRole, susunDokumenAkun, type InputAkunGuru } from './akunGuru'
 import { auth, db, firebaseConfig } from './firebase'
 import type { AppUser, UserRole } from '../types/user'
@@ -138,4 +138,13 @@ export async function setStatusAkun(uid: string, status: 'pending' | 'approved' 
 
 export async function kirimResetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email.trim().toLowerCase())
+}
+
+/**
+ * Hapus profil staf di Firestore (`users/{uid}`).
+ * Tidak menghapus user Firebase Auth (perlu Admin SDK / Console).
+ * Setelah profil dihapus, login ditolak di app (lihat auth + App).
+ */
+export async function hapusAkunStaf(uid: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', uid))
 }

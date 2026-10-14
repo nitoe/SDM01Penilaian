@@ -61,6 +61,15 @@ export default function App() {
         setLoading(false)
         return
       }
+      // Profil dihapus dari Kelola Akun — Auth mungkin masih ada
+      if (u && !p) {
+        simpanNoticeLogin('Profil akun tidak ditemukan atau sudah dihapus. Hubungi administrator.')
+        void logout()
+        setUser(null)
+        setProfile(null)
+        setLoading(false)
+        return
+      }
       setUser(u)
       setProfile(p)
       setLoading(false)
