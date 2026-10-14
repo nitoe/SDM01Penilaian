@@ -4,7 +4,6 @@ import type { AppUser } from '../../types/user'
 import type { ConfigAkademik, Mapel, NilaiTpDoc, TujuanPembelajaran } from '../../types/akademik'
 import {
   bobotTpDiSemester,
-  getConfigAkademik,
   getMapelList,
   getNilaiTPKelas,
   getTPList,
@@ -14,6 +13,7 @@ import {
   tingkatanDariKelas,
   tpMasukSemester,
 } from '../../lib/akademik'
+import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import { getSiswaList } from '../../lib/tahsinData'
 import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
@@ -55,7 +55,10 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
   )
   const berhak = pilihan.some((p) => p.mapel === mapel && p.kelas === kelas)
 
-  const [config, setConfig] = useState<ConfigAkademik | null>(null)
+  const periodeAk = usePeriodeAkademik()
+  const config: ConfigAkademik | null = periodeAk.ready
+    ? { semesterAktif: periodeAk.semester, tahunAjaran: periodeAk.tahunAjaran }
+    : null
   const [tpList, setTpList] = useState<TujuanPembelajaran[] | null>(null)
   const [siswa, setSiswa] = useState<SiswaTahsin[] | null>(null)
   const [nilai, setNilai] = useState<NilaiKelas | null>(null)
@@ -77,28 +80,26 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
 
   useEffect(() => {
     if (!mapel || !kelas || !berhak || (!tulis && !admin)) return
+    if (!periodeAk.ready) return
     let batal = false
-    setConfig(null)
     setTpList(null)
     setSiswa(null)
     setNilai(null)
     setGalat('')
     void (async () => {
       try {
-        const [c, t, s] = await Promise.all([
-          getConfigAkademik(),
+        const [t, s] = await Promise.all([
           getTPList(mapel, kelas),
           getSiswaList(kelas, { role: profile.role, kelasAmpu: [] }),
         ])
         const n = await getNilaiTPKelas({
           mapel,
           kelas,
-          semester: c.semesterAktif,
-          tahunAjaran: c.tahunAjaran,
+          semester: periodeAk.semester,
+          tahunAjaran: periodeAk.tahunAjaran,
         })
         if (batal) return
-        setConfig(c)
-        setTpList(t.filter((tp) => tpMasukSemester(tp, c.semesterAktif)))
+        setTpList(t.filter((tp) => tpMasukSemester(tp, periodeAk.semester)))
         setSiswa(s)
         setNilai(n)
       } catch (e) {
@@ -109,7 +110,7 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [mapel, kelas, tingkatan, berhak, tulis, admin, profile.role])
+  }, [mapel, kelas, tingkatan, berhak, tulis, admin, profile.role, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran])
 
   if (!tulis && !admin) {
     return (

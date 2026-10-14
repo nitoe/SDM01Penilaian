@@ -14,6 +14,7 @@ import {
 } from '../../lib/raporSts'
 import { HeroBanner } from '../../components/ui'
 import { BackLink, Notice, Spinner, btnGhost, btnPrimary, inputCls } from './shared'
+import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 
 /**
  * Rapor STS — khusus wali kelas.
@@ -22,6 +23,7 @@ import { BackLink, Notice, Spinner, btnGhost, btnPrimary, inputCls } from './sha
  */
 export default function Rapor({ profile }: { profile: AppUser }) {
   const admin = isAdminRole(profile.role)
+  const periodeAk = usePeriodeAkademik()
   const { wali } = kelasSaya(profile)
   const kelasWali = useMemo(() => (admin ? [] : wali), [admin, wali])
 
@@ -32,6 +34,15 @@ export default function Rapor({ profile }: { profile: AppUser }) {
   const [loadingSiswa, setLoadingSiswa] = useState(false)
   const [loadingRapor, setLoadingRapor] = useState(false)
   const [galat, setGalat] = useState('')
+
+  /** Tanggal rapor dari metadata periode (kelas 6 sem 2 beda). */
+  function tanggalDariPeriode(): string | undefined {
+    const p = periodeAk.periode
+    if (!p) return undefined
+    if (p.semester === '1') return p.tglRaporKelas1sampai6Sem1
+    const isKelas6 = /^6/i.test(kelas)
+    return isKelas6 ? p.tglRaporKelas6Sem2 : p.tglRaporKelas1sampai5Sem2
+  }
 
   useEffect(() => {
     if (!kelas && kelasWali.length) setKelas(kelasWali[0])
@@ -82,10 +93,19 @@ export default function Rapor({ profile }: { profile: AppUser }) {
     let batal = false
     setLoadingRapor(true)
     setGalat('')
+    if (!periodeAk.ready) {
+      setGalat('Periode akademik belum dipilih. Login ulang atau pilih periode di header.')
+      setLoadingRapor(false)
+      return
+    }
     void muatDataRaporSts({
       siswa: { id: siswa.id, nama: siswa.nama, nisn: siswa.nisn, nipd: siswa.nipd },
       kelas,
       waliNama: namaDenganGelar(profile),
+      semester: periodeAk.semester,
+      tahunAjaran: periodeAk.tahunAjaran,
+      kotaRapor: periodeAk.periode?.kotaRapor,
+      tanggalRapor: tanggalDariPeriode(),
     })
       .then((d) => {
         if (!batal) setData(d)
@@ -100,7 +120,7 @@ export default function Rapor({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [kelas, siswaId, siswaList, profile])
+  }, [kelas, siswaId, siswaList, profile, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran, periodeAk.periode])
 
   if (admin) {
     return (
@@ -108,6 +128,18 @@ export default function Rapor({ profile }: { profile: AppUser }) {
         <BackLink to="/akademik">Akademik & Rapor</BackLink>
         <Notice tone="warn">
           Rapor STS dibuka oleh wali kelas. Akun administrator tidak menjadi wali kelas.
+        </Notice>
+      </div>
+    )
+  }
+
+  if (!periodeAk.loading && !periodeAk.ready) {
+    return (
+      <div className="space-y-4">
+        <BackLink to="/akademik">Akademik & Rapor</BackLink>
+        <Notice tone="warn">
+          Belum ada periode akademik yang dipilih. Minta admin membuat periode di Administrasi →
+          Periode Akademik, lalu login ulang atau pilih periode di header.
         </Notice>
       </div>
     )
@@ -134,7 +166,7 @@ export default function Rapor({ profile }: { profile: AppUser }) {
         <HeroBanner
           eyebrow="Akademik"
           title="Rapor STS"
-          subtitle="Pratinjau dan cetak Laporan Hasil Belajar Sumatif Tengah Semester. Hanya kelas yang Anda walikan."
+          subtitle={periodeAk.ready ? `Periode ${periodeAk.label} · Pratinjau & cetak rapor STS untuk kelas yang Anda walikan.` : "Pratinjau dan cetak Laporan Hasil Belajar STS. Pilih periode di header atau login ulang."}
         />
       </div>
 

@@ -162,32 +162,48 @@ export async function getRaporSTSSiswa(ctx: {
   return hasil
 }
 
-/** Muat semua data yang dibutuhkan halaman pratinjau/cetak. */
+/**
+ * Muat semua data yang dibutuhkan halaman pratinjau/cetak.
+ * Semester + tahun ajaran sebaiknya dari periode aktif (login).
+ * Identitas sekolah tetap dari config/akademik.
+ * Tanggal rapor: pakai override dari periode jika ada, else hari ini.
+ */
 export async function muatDataRaporSts(ctx: {
   siswa: { id: string; nama: string; nisn?: string; nipd?: string }
   kelas: string
   waliNama: string
+  /** Dari PeriodeContext — wajib agar nilai sesuai periode login */
+  semester?: Semester
+  tahunAjaran?: string
+  kotaRapor?: string
+  /** Teks tanggal rapor siap cetak, mis. "20 Desember 2026" */
+  tanggalRapor?: string
 }): Promise<DataRaporSts> {
   const config = await getConfigAkademik()
+  const semester: Semester = ctx.semester ?? config.semesterAktif
+  const tahunAjaran = (ctx.tahunAjaran ?? config.tahunAjaran).trim()
   const daftarNilai = await getRaporSTSSiswa({
     siswaId: ctx.siswa.id,
     kelas: ctx.kelas,
-    semester: config.semesterAktif,
-    tahunAjaran: config.tahunAjaran,
+    semester,
+    tahunAjaran,
   })
-  const semLabel = config.semesterAktif === '2' ? 'Genap' : 'Ganjil'
+  const semLabel = semester === '2' ? 'Genap' : 'Ganjil'
+  const kota =
+    (ctx.kotaRapor ?? config.kotaRapor)?.trim() || 'Depok'
+  const tanggal = ctx.tanggalRapor?.trim() || tanggalIndonesia()
   return {
     config,
     siswa: ctx.siswa,
     kelas: ctx.kelas,
     fase: faseDariKelas(ctx.kelas),
-    semester: config.semesterAktif,
+    semester,
     semLabel,
-    tahunAjaran: config.tahunAjaran,
+    tahunAjaran,
     daftarNilai,
     waliNama: ctx.waliNama,
-    kota: config.kotaRapor?.trim() || 'Depok',
-    tanggal: tanggalIndonesia(),
+    kota,
+    tanggal,
   }
 }
 

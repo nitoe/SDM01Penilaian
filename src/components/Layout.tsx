@@ -4,9 +4,9 @@ import { ringkasKelas } from '../lib/kelasSaya'
 import { canAkademik, canTahsin, isAdminRole } from '../lib/roles'
 import type { AppUser } from '../types/user'
 import { ROLE_LABEL } from '../types/user'
-import Icon, { type IconName } from './Icon'
 import { usePeriode } from '../context/PeriodeContext'
 import { labelPeriode } from '../types/periode'
+import Icon, { type IconName } from './Icon'
 
 interface LayoutProps {
   profile: AppUser
@@ -21,6 +21,7 @@ interface NavItem {
   show: boolean
 }
 
+/** Halaman kerja harian yang memakai lebar layar penuh (dua kolom di PC); lainnya tetap berlebar baca. */
 const HALAMAN_LEBAR = ['/tahsin/input-setoran', '/tahsin/riwayat', '/tahsin/target', '/tahsin/menulis', '/admin/siswa', '/admin/users', '/akademik/laporan-slm', '/akademik/nilai-sts', '/akademik/nilai-slm']
 
 function sectionTitle(pathname: string): string {
@@ -97,6 +98,7 @@ export default function Layout({ profile }: LayoutProps) {
   return (
     <div className="flex min-h-full bg-surface-2 md:p-3 print:bg-white print:p-0">
       <div className="flex min-h-full w-full bg-white md:overflow-clip md:min-h-[calc(100vh-1.5rem)] md:rounded-[28px] md:border md:border-border md:shadow-[0_8px_30px_rgba(15,23,42,0.06)] print:rounded-none print:border-0 print:shadow-none">
+        {/* Sidebar desktop */}
         <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-border bg-white px-4 py-5 md:flex md:h-[calc(100vh-1.5rem)] print:hidden">
           <Link to="/" className="flex items-center gap-3 px-1 no-underline">
             <img src="/favicon-32.png" alt="" className="h-9 w-9 rounded-xl" />
@@ -139,6 +141,7 @@ export default function Layout({ profile }: LayoutProps) {
           </button>
         </aside>
 
+        {/* Kolom utama */}
         <div className="flex min-w-0 flex-1 flex-col bg-surface-2/60">
           <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-white/90 px-4 py-3 backdrop-blur sm:px-6 md:py-4 print:hidden">
             <div className="min-w-0">
@@ -199,6 +202,7 @@ export default function Layout({ profile }: LayoutProps) {
         </div>
       </div>
 
+      {/* Navigasi bawah (mobile) */}
       <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur md:hidden print:hidden">
         {visible.map((i) => (
           <NavLink key={i.to} to={i.to} end={i.end} className={tabLink}>

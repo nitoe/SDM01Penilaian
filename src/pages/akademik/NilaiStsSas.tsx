@@ -5,7 +5,6 @@ import type { ConfigAkademik, JenisAsesmen, NilaiAsesmenDoc, NilaiTpDoc, TujuanP
 import type { Mapel } from '../../types/akademik'
 import {
   getCakupanTP,
-  getConfigAkademik,
   getMapelList,
   getNilaiAsesmenKelas,
   getNilaiTPKelas,
@@ -29,6 +28,7 @@ import { useUnsavedGuard } from '../../lib/useUnsavedGuard'
 import { getSiswaList } from '../../lib/tahsinData'
 import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
+import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import type { SiswaTahsin } from '../../types/tahsin'
 import { Badge, HeroBanner } from '../../components/ui'
 import { BackLink, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, useToast } from './shared'
@@ -70,7 +70,10 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
   )
   const berhak = pilihan.some((p) => p.mapel === mapel && p.kelas === kelas)
 
-  const [config, setConfig] = useState<ConfigAkademik | null>(null)
+  const periodeAk = usePeriodeAkademik()
+  const config: ConfigAkademik | null = periodeAk.ready
+    ? { semesterAktif: periodeAk.semester, tahunAjaran: periodeAk.tahunAjaran }
+    : null
   const [tp, setTp] = useState<TujuanPembelajaran[] | null>(null)
   const [siswa, setSiswa] = useState<SiswaTahsin[] | null>(null)
   const [cakupanId, setCakupanId] = useState<string | undefined>()
@@ -98,7 +101,8 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
 
   const muat = useCallback(async () => {
     setSiap(false)
-    const c = await getConfigAkademik()
+    if (!periodeAk.ready) return
+    const c = { semesterAktif: periodeAk.semester, tahunAjaran: periodeAk.tahunAjaran }
     const [daftarTp, anak, cakupan, angka] = await Promise.all([
       getTPList(mapel, kelas),
       getSiswaList(kelas, { role: profile.role, kelasAmpu: [] }),
@@ -106,8 +110,7 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
       getNilaiAsesmenKelas({ jenis, mapel, kelas, semester: c.semesterAktif, tahunAjaran: c.tahunAjaran }),
     ])
     const tampil = daftarTp.filter((t) => tpMasukSemester(t, c.semesterAktif))
-    setConfig(c)
-    setTp(tampil)
+        setTp(tampil)
     setSiswa(anak.sort((a, b) => a.nama.localeCompare(b.nama, 'id')))
     setCakupanId(cakupan?.id)
     // Default: semua TP semester dicentang jika belum pernah diatur
@@ -129,7 +132,7 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
       setSts({})
     }
     setSiap(true)
-  }, [jenis, mapel, kelas, profile.role])
+  }, [jenis, mapel, kelas, profile.role, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran])
 
   useEffect(() => {
     if (!mapel || !kelas || !berhak || (!tulis && !admin)) return
@@ -147,8 +150,9 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
     if (mapel || kelas || !tulis || pilihan.length === 0) return
     let batal = false
     setHubStatus(null)
-    void getConfigAkademik()
-      .then(async (c) => {
+    if (!periodeAk.ready) return
+    void (async () => {
+      try {
         const baris = await Promise.all(
           pilihan.map(async (p) => {
             const kunci = `${p.mapel}|${p.kelas}`
@@ -156,8 +160,8 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
               const cakupan = await getCakupanTP({
                 mapel: p.mapel,
                 kelas: p.kelas,
-                semester: c.semesterAktif,
-                tahunAjaran: c.tahunAjaran,
+                semester: periodeAk.semester,
+                tahunAjaran: periodeAk.tahunAjaran,
                 jenis,
               })
               return [kunci, cakupan?.tpIds.length ?? 0] as const
@@ -168,14 +172,14 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
           }),
         )
         if (!batal) setHubStatus(Object.fromEntries(baris))
-      })
-      .catch(() => {
+      } catch {
         if (!batal) setHubStatus({})
-      })
+      }
+    })()
     return () => {
       batal = true
     }
-  }, [mapel, kelas, tulis, pilihan, jenis])
+  }, [mapel, kelas, tulis, pilihan, jenis, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran])
 
   function gantiJenis(next: JenisAsesmen) {
     const q = new URLSearchParams(params)
@@ -686,7 +690,7 @@ function Detail(props: {
       <BackLink to={`/akademik/nilai-sts?jenis=${jenis}`}>Pilih mata pelajaran</BackLink>
 
       <HeroBanner
-        eyebrow={config ? `Semester ${config.semesterAktif} · ${config.tahunAjaran}` : 'Akademik'}
+        eyebrow={periodeAk.ready ? periodeAk.label : (config ? `Semester ${config.semesterAktif} · ${config.tahunAjaran}` : 'Akademik')}
         title={`${labelPendek(jenis)} — ${mapel} · Kelas ${kelas}`}
         subtitle={
           jenis === 'sts'

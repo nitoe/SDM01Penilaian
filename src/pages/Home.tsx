@@ -17,6 +17,7 @@ import type { AppUser } from '../types/user'
 import { ROLE_LABEL } from '../types/user'
 import { Chip, HeroBanner, ModuleCard, SectionTitle, StatCard, Badge } from '../components/ui'
 import Icon from '../components/Icon'
+import { usePeriodeAkademik } from '../lib/usePeriodeAkademik'
 
 interface HomeProps {
   profile: AppUser
@@ -136,6 +137,7 @@ function ProgressCard({
 }
 
 export default function Home({ profile }: HomeProps) {
+  const periodeAk = usePeriodeAkademik()
   const staff = isStaff(profile.role)
   const admin = isAdminRole(profile.role)
   const adaAkademik = canAkademik(profile.role)
@@ -257,19 +259,27 @@ export default function Home({ profile }: HomeProps) {
             <SectionTitle>Ringkasan</SectionTitle>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <StatCard
-                label="Tahun ajaran"
-                value={config ? config.tahunAjaran : null}
+                label="Periode aktif"
+                value={
+                  periodeAk.ready
+                    ? periodeAk.tahunAjaran
+                    : config
+                      ? config.tahunAjaran
+                      : null
+                }
                 hint={
-                  config
-                    ? `Semester ${config.semesterAktif === '2' ? '2 (genap)' : '1 (ganjil)'}`
-                    : configState === 'loading'
-                      ? undefined
-                      : 'Belum diatur'
+                  periodeAk.ready
+                    ? periodeAk.label
+                    : config
+                      ? `Semester ${config.semesterAktif === '2' ? '2 (genap)' : '1 (ganjil)'}`
+                      : periodeAk.loading || configState === 'loading'
+                        ? undefined
+                        : 'Belum dipilih — buat di Periode Akademik'
                 }
                 icon="calendar"
                 tone="peach"
                 className="col-span-2 sm:col-span-1"
-                loading={configState === 'loading'}
+                loading={periodeAk.loading || configState === 'loading'}
               />
               <StatCard
                 label="Siswa terdaftar"

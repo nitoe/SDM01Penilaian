@@ -20,7 +20,6 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [resetMsg, setResetMsg] = useState<string | null>(null)
 
-  // Setelah auth sukses, pilih periode
   const [step, setStep] = useState<'login' | 'periode'>('login')
   const [periodeList, setPeriodeList] = useState<PeriodeAkademik[]>([])
   const [selectedPeriode, setSelectedPeriode] = useState('')
@@ -64,16 +63,23 @@ export default function Login() {
         return
       }
 
-      // Muat periode yang boleh dipilih
       const admin = profile.role === 'admin'
       setIsAdminUser(admin)
-      const list = admin ? await listSemuaPeriode() : await listPeriodeAktif()
+      let list: PeriodeAkademik[] = []
+      try {
+        list = admin ? await listSemuaPeriode() : await listPeriodeAktif()
+      } catch (err) {
+        console.error(err)
+        list = []
+      }
       setPeriodeList(list)
+
       if (list.length === 0) {
-        setError('Belum ada periode akademik yang tersedia. Hubungi admin.')
-        await logout()
+        localStorage.removeItem(STORAGE_KEY)
+        navigate('/', { replace: true })
         return
       }
+
       const saved = localStorage.getItem(STORAGE_KEY)
       const valid = list.find((p) => p.id === saved)
       const def = valid ?? list.find((p) => p.isDefault) ?? list[0]
@@ -197,7 +203,10 @@ export default function Login() {
                     </div>
                   </div>
                   {error && (
-                    <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] font-medium text-red-700">
+                    <div
+                      role="alert"
+                      className="rounded-2xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] font-medium text-red-700"
+                    >
                       {error}
                     </div>
                   )}
@@ -234,7 +243,10 @@ export default function Login() {
                 </div>
 
                 <p className="mt-6 text-center text-[12px] text-muted">
-                  Belum punya akun? <Link to="/register" className="font-medium text-muh-700">Daftar sebagai guru</Link>
+                  Belum punya akun?{' '}
+                  <Link to="/register" className="font-medium text-muh-700">
+                    Daftar sebagai guru
+                  </Link>
                 </p>
               </>
             ) : (
@@ -270,6 +282,7 @@ export default function Login() {
                         <div className="text-[12px] text-muted">
                           {p.tahunAjaran} · Semester {p.semester}
                           {!p.aktif && ' · Nonaktif'}
+                          {p.isDefault && ' · Default'}
                         </div>
                       </div>
                     </label>

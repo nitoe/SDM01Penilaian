@@ -37,7 +37,7 @@ const items: { to: string; title: string; desc: string; ready: boolean; icon: Ic
   {
     to: '/admin/tahun-ajaran',
     title: 'Data Sekolah',
-    desc: 'Identitas, NPSN, kepala sekolah',
+    desc: 'Identitas, NPSN, dan kepala sekolah',
     ready: true,
     icon: 'book',
     tone: 'peach',

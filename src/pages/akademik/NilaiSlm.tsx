@@ -4,7 +4,6 @@ import type { AppUser } from '../../types/user'
 import type { ConfigAkademik, Mapel, NilaiTpDoc, TujuanPembelajaran } from '../../types/akademik'
 import {
   bobotTpDiSemester,
-  getConfigAkademik,
   getMapelList,
   getNilaiTPKelas,
   getTPList,
@@ -28,6 +27,7 @@ import { useUnsavedGuard } from '../../lib/useUnsavedGuard'
 import { getSiswaList } from '../../lib/tahsinData'
 import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
+import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import type { SiswaTahsin } from '../../types/tahsin'
 import { Badge, HeroBanner } from '../../components/ui'
 import { BackLink, LEVEL_WARNA, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, useToast } from './shared'
@@ -86,7 +86,12 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
   const berhak = pilihan.some((p) => p.mapel === mapel && p.kelas === kelas)
   const guru = tulis || admin
 
-  const [config, setConfig] = useState<ConfigAkademik | null>(null)
+  // Semester + tahun ajaran dari periode yang dipilih saat login (bukan config global)
+  const periodeAk = usePeriodeAkademik()
+  const config: ConfigAkademik | null = periodeAk.ready
+    ? { semesterAktif: periodeAk.semester, tahunAjaran: periodeAk.tahunAjaran }
+    : null
+
   const [tpList, setTpList] = useState<TujuanPembelajaran[] | null>(null)
   const [siswa, setSiswa] = useState<SiswaTahsin[] | null>(null)
   const [nilai, setNilai] = useState<NilaiKelas | null>(null)
@@ -109,22 +114,21 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
   }, [])
 
   const muatDetail = useCallback(async () => {
-    const [c, t, s] = await Promise.all([
-      getConfigAkademik(),
+    if (!periodeAk.ready) return
+    const [t, s] = await Promise.all([
       getTPList(mapel, kelas),
       getSiswaList(kelas, { role: profile.role, kelasAmpu: [] }),
     ])
     const n = await getNilaiTPKelas({
       mapel,
       kelas,
-      semester: c.semesterAktif,
-      tahunAjaran: c.tahunAjaran,
+      semester: periodeAk.semester,
+      tahunAjaran: periodeAk.tahunAjaran,
     })
-    setConfig(c)
     setTpList(t)
     setSiswa(s.sort((a, b) => a.nama.localeCompare(b.nama, 'id')))
     setNilai(n)
-  }, [mapel, kelas, profile.role])
+  }, [mapel, kelas, profile.role, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran])
 
   useEffect(() => {
     if (mapel || kelas || !tulis || pilihan.length === 0) return
@@ -132,7 +136,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
     setStatus(null)
     void (async () => {
       try {
-        const cfg = await getConfigAkademik()
+        if (!periodeAk.ready) return
         const baris = await Promise.all(
           pilihan.map(async (p) => {
             const kunci = `${p.mapel}|${p.kelas}`
@@ -141,13 +145,13 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
                 getTPList(p.mapel, p.kelas),
                 getSiswaList(p.kelas, { role: profile.role, kelasAmpu: [] }),
               ])
-              const tampil = daftar.filter((t) => tpMasukSemester(t, cfg.semesterAktif))
+              const tampil = daftar.filter((t) => tpMasukSemester(t, periodeAk.semester))
               if (!tampil.length) return [kunci, { jenis: 'tanpa-tp', siswa: anak.length } as StatusKartu] as const
               const n = await getNilaiTPKelas({
                 mapel: p.mapel,
                 kelas: p.kelas,
-                semester: cfg.semesterAktif,
-                tahunAjaran: cfg.tahunAjaran,
+                semester: periodeAk.semester,
+                tahunAjaran: periodeAk.tahunAjaran,
               })
               const lengkap = tampil.filter(
                 (t) => anak.length > 0 && anak.every((s) => n[t.id]?.[s.id]?.slm != null),
@@ -168,12 +172,11 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [mapel, kelas, tulis, pilihan, profile.role, show])
+  }, [mapel, kelas, tulis, pilihan, profile.role, show, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran])
 
   useEffect(() => {
     if (!mapel || !kelas || !berhak || !guru) return
     let batal = false
-    setConfig(null)
     setTpList(null)
     setSiswa(null)
     setNilai(null)
@@ -190,16 +193,16 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
   }, [mapel, kelas, berhak, guru, muatDetail, show])
 
   const segarkanNilai = useCallback(async () => {
-    if (!config?.tahunAjaran) return
+    if (!periodeAk.ready) return
     setNilai(
       await getNilaiTPKelas({
         mapel,
         kelas,
-        semester: config.semesterAktif,
-        tahunAjaran: config.tahunAjaran,
+        semester: periodeAk.semester,
+        tahunAjaran: periodeAk.tahunAjaran,
       }),
     )
-  }, [config, mapel, kelas])
+  }, [periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran, mapel, kelas])
 
   if (!tulis && !admin) {
     return (
@@ -217,7 +220,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
         <HeroBanner
           eyebrow="Akademik"
           title="Input Nilai Harian (SLM)"
-          subtitle="Pilih mata pelajaran dan kelas. Status di kartu adalah kelengkapan nilai semester berjalan."
+          subtitle={periodeAk.ready ? `Periode: ${periodeAk.label}. Status di kartu = kelengkapan nilai periode ini.` : "Pilih periode dulu (login ulang atau header). Status di kartu = kelengkapan nilai periode aktif."}
         />
         {mapelMaster === null ? (
           <Spinner />
