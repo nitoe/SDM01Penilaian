@@ -4,6 +4,8 @@ import {
   doc,
   getDoc,
   getDocs,
+  query,
+  where,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -90,10 +92,15 @@ export async function listSemuaPeriode(): Promise<PeriodeAkademik[]> {
   return urutkan(list)
 }
 
-/** Hanya yang aktif (untuk guru). */
+/**
+ * Periode aktif saja.
+ * Query where aktif==true agar bisa dibaca di halaman login (sebelum auth)
+ * sesuai rules: read diizinkan bila resource.data.aktif == true.
+ */
 export async function listPeriodeAktif(): Promise<PeriodeAkademik[]> {
-  const semua = await listSemuaPeriode()
-  return semua.filter((p) => p.aktif)
+  const snap = await getDocs(query(collection(db, KOLEKSI), where('aktif', '==', true)))
+  const list = snap.docs.map((d) => kePeriode(d.id, d.data() as Record<string, unknown>))
+  return urutkan(list)
 }
 
 export async function getPeriode(id: string): Promise<PeriodeAkademik | null> {

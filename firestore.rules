@@ -283,8 +283,10 @@ service cloud.firestore {
 
     // ---- Periode akademik (tahun ajaran + semester) -------------------------
     // Admin mengelola, guru membaca (untuk memilih konteks saat login).
+    // Baca periode aktif boleh tanpa login (untuk pilihan di form login).
+    // Guru/admin tetap bisa baca semua (termasuk nonaktif) via isGuru().
     match /periode_akademik/{id} {
-      allow read: if isGuru();
+      allow read: if isGuru() || resource.data.aktif == true;
       allow write: if isAdmin();
     }
 
