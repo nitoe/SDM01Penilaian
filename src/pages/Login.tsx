@@ -5,6 +5,11 @@ import { loginWithEmail, logout } from '../lib/auth'
 import { sendPasswordResetEmail } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import { isFirebaseConfigured } from '../lib/firebase'
+import { listPeriodeAktif, listSemuaPeriode } from '../lib/periode'
+import type { PeriodeAkademik } from '../types/periode'
+import { labelPeriode } from '../types/periode'
+
+const STORAGE_KEY = 'sdm01.periodeId'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -14,6 +19,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [resetMsg, setResetMsg] = useState<string | null>(null)
+
+  // Setelah auth sukses, pilih periode
+  const [step, setStep] = useState<'login' | 'periode'>('login')
+  const [periodeList, setPeriodeList] = useState<PeriodeAkademik[]>([])
+  const [selectedPeriode, setSelectedPeriode] = useState('')
+  const [isAdminUser, setIsAdminUser] = useState(false)
 
   useEffect(() => {
     const notice = ambilNoticeLogin()
@@ -52,7 +63,27 @@ export default function Login() {
         setError('Akun ini dinonaktifkan. Hubungi administrator.')
         return
       }
-      navigate('/', { replace: true })
+
+      // Muat periode yang boleh dipilih
+      const admin = profile.role === 'admin'
+      setIsAdminUser(admin)
+      const list = admin ? await listSemuaPeriode() : await listPeriodeAktif()
+      setPeriodeList(list)
+      if (list.length === 0) {
+        setError('Belum ada periode akademik yang tersedia. Hubungi admin.')
+        await logout()
+        return
+      }
+      const saved = localStorage.getItem(STORAGE_KEY)
+      const valid = list.find((p) => p.id === saved)
+      const def = valid ?? list.find((p) => p.isDefault) ?? list[0]
+      setSelectedPeriode(def.id)
+      if (list.length === 1) {
+        localStorage.setItem(STORAGE_KEY, def.id)
+        navigate('/', { replace: true })
+        return
+      }
+      setStep('periode')
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : 'Gagal masuk. Periksa email dan password.'
@@ -74,13 +105,18 @@ export default function Login() {
     }
   }
 
+  function lanjutPeriode() {
+    if (!selectedPeriode) return
+    localStorage.setItem(STORAGE_KEY, selectedPeriode)
+    navigate('/', { replace: true })
+  }
+
   const field =
     'w-full rounded-2xl border border-border bg-slate-50/80 px-3.5 py-2.5 text-[14px] outline-none transition focus:border-muh-500 focus:bg-white focus:ring-2 focus:ring-muh-500/15'
 
   return (
     <div className="flex min-h-full items-stretch bg-surface-2 md:p-3">
       <div className="mx-auto flex w-full max-w-5xl overflow-hidden bg-white md:rounded-[28px] md:border md:border-border md:shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
-        {/* Panel merek (desktop) */}
         <div className="hero-banner hidden w-[44%] flex-col justify-between p-8 text-white lg:flex">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white">
@@ -101,7 +137,6 @@ export default function Login() {
           <p className="text-[12px] text-muh-100/70">Khusus guru dan orang tua terdaftar</p>
         </div>
 
-        {/* Formulir */}
         <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-10">
           <div className="w-full max-w-[380px]">
             <div className="mb-7 lg:hidden">
@@ -116,89 +151,149 @@ export default function Login() {
               </div>
             )}
 
-            <h2 className="text-[22px] font-semibold tracking-tight text-slate-900">Masuk</h2>
-            <p className="mt-1 text-[13px] text-muted">Gunakan akun yang didaftarkan admin.</p>
+            {step === 'login' ? (
+              <>
+                <h2 className="text-[22px] font-semibold tracking-tight text-slate-900">Masuk</h2>
+                <p className="mt-1 text-[13px] text-muted">Gunakan akun yang didaftarkan admin.</p>
 
-            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-              <div>
-                <label htmlFor="email" className="mb-1.5 block text-[12px] font-medium text-slate-600">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={field}
-                  placeholder="nama@sekolah.sch.id"
-                />
-              </div>
-              <div>
-                <label htmlFor="password" className="mb-1.5 block text-[12px] font-medium text-slate-600">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={field + ' pr-20'}
-                    placeholder="••••••••"
-                  />
+                <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                  <div>
+                    <label htmlFor="email" className="mb-1.5 block text-[12px] font-medium text-slate-600">
+                      Email
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className={field}
+                      placeholder="nama@sekolah.sch.id"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="password" className="mb-1.5 block text-[12px] font-medium text-slate-600">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className={field + ' pr-20'}
+                        placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-muh-700"
+                      >
+                        {showPassword ? 'Sembunyikan' : 'Tampilkan'}
+                      </button>
+                    </div>
+                  </div>
+                  {error && (
+                    <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] font-medium text-red-700">
+                      {error}
+                    </div>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex w-full items-center justify-center rounded-2xl bg-muh-600 px-3 py-3 text-[14px] font-semibold text-white shadow-sm transition hover:bg-muh-700 disabled:opacity-60"
+                  >
+                    {loading ? 'Memproses…' : 'Masuk'}
+                  </button>
+                </form>
+
+                <div className="mt-4 text-center">
                   <button
                     type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-muh-700"
+                    onClick={async () => {
+                      if (!email.trim()) {
+                        setError('Isi email terlebih dahulu untuk mengatur ulang password.')
+                        return
+                      }
+                      try {
+                        await sendPasswordResetEmail(auth, email.trim().toLowerCase())
+                        setResetMsg('Tautan atur ulang password telah dikirim ke email Anda.')
+                        setError(null)
+                      } catch {
+                        setError('Gagal mengirim tautan. Periksa email.')
+                      }
+                    }}
+                    className="text-[12px] font-medium text-muh-700 hover:underline"
                   >
-                    {showPassword ? 'Sembunyikan' : 'Tampilkan'}
+                    Lupa password?
                   </button>
+                  {resetMsg && <p className="mt-2 text-[12px] text-muh-800">{resetMsg}</p>}
                 </div>
-              </div>
-              {error && (
-                <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] font-medium text-red-700">
-                  {error}
+
+                <p className="mt-6 text-center text-[12px] text-muted">
+                  Belum punya akun? <Link to="/register" className="font-medium text-muh-700">Daftar sebagai guru</Link>
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-[22px] font-semibold tracking-tight text-slate-900">
+                  Pilih Periode
+                </h2>
+                <p className="mt-1 text-[13px] text-muted">
+                  {isAdminUser
+                    ? 'Anda melihat semua periode (termasuk yang nonaktif).'
+                    : 'Pilih tahun ajaran dan semester yang akan digunakan.'}
+                </p>
+                <div className="mt-6 space-y-3">
+                  {periodeList.map((p) => (
+                    <label
+                      key={p.id}
+                      className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-3 transition ${
+                        selectedPeriode === p.id
+                          ? 'border-muh-600 bg-muh-50'
+                          : 'border-border hover:border-slate-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="periode"
+                        value={p.id}
+                        checked={selectedPeriode === p.id}
+                        onChange={() => setSelectedPeriode(p.id)}
+                        className="accent-muh-600"
+                      />
+                      <div>
+                        <div className="text-[14px] font-medium text-slate-900">{labelPeriode(p)}</div>
+                        <div className="text-[12px] text-muted">
+                          {p.tahunAjaran} · Semester {p.semester}
+                          {!p.aktif && ' · Nonaktif'}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
                 </div>
-              )}
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex w-full items-center justify-center rounded-2xl bg-muh-600 px-3 py-3 text-[14px] font-semibold text-white shadow-sm transition hover:bg-muh-700 disabled:opacity-60"
-              >
-                {loading ? 'Memproses…' : 'Masuk'}
-              </button>
-            </form>
-
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!email.trim()) {
-                    setError('Isi email terlebih dahulu untuk mengatur ulang password.')
-                    return
-                  }
-                  try {
-                    await sendPasswordResetEmail(auth, email.trim().toLowerCase())
-                    setResetMsg('Tautan atur ulang password telah dikirim ke email Anda.')
-                    setError(null)
-                  } catch {
-                    setError('Gagal mengirim tautan. Periksa email.')
-                  }
-                }}
-                className="text-[12px] font-medium text-muh-700 hover:underline"
-              >
-                Lupa password?
-              </button>
-              {resetMsg && <p className="mt-2 text-[12px] text-muh-800">{resetMsg}</p>}
-            </div>
-
-            <p className="mt-6 text-center text-[12px] text-muted">
-              Belum punya akun? <Link to="/register" className="font-medium text-muh-700">Daftar sebagai guru</Link>
-            </p>
+                <button
+                  type="button"
+                  onClick={lanjutPeriode}
+                  className="mt-6 flex w-full items-center justify-center rounded-2xl bg-muh-600 px-3 py-3 text-[14px] font-semibold text-white shadow-sm transition hover:bg-muh-700"
+                >
+                  Lanjutkan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void logout()
+                    setStep('login')
+                  }}
+                  className="mt-3 w-full text-center text-[12px] font-medium text-muted hover:underline"
+                >
+                  Batal, keluar
+                </button>
+              </>
+            )}
 
             <p className="mt-4 text-center text-[12px] text-muted lg:text-left">
               SD Muhammadiyah 01 Kukusan · Internal

@@ -27,12 +27,20 @@ const items: { to: string; title: string; desc: string; ready: boolean; icon: Ic
     tone: 'violet',
   },
   {
-    to: '/admin/tahun-ajaran',
-    title: 'Data Sekolah',
-    desc: 'Identitas, NPSN, kepala sekolah, tahun ajaran, dan semester',
+    to: '/admin/periode',
+    title: 'Periode Akademik',
+    desc: 'Tahun ajaran & semester, aktifkan/nonaktifkan, tanggal rapor',
     ready: true,
     icon: 'calendar',
     tone: 'sky',
+  },
+  {
+    to: '/admin/tahun-ajaran',
+    title: 'Data Sekolah',
+    desc: 'Identitas, NPSN, kepala sekolah',
+    ready: true,
+    icon: 'book',
+    tone: 'peach',
   },
   {
     to: '/admin/ortu',
@@ -50,7 +58,7 @@ export default function AdminHub() {
       <HeroBanner
         eyebrow="Modul"
         title="Pengaturan sistem dan master data"
-        subtitle="Kelola data siswa dan akun pengguna."
+        subtitle="Kelola data siswa, akun, dan periode akademik."
       />
       <div className="grid gap-3 sm:grid-cols-2">
         {items.map((i) => (
