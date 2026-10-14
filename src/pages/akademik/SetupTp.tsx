@@ -106,6 +106,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const [cakupan, setCakupan] = useState<{ kunci: string; status: 'boleh' | 'di luar' } | null>(null)
   const [filterMapel, setFilterMapel] = useState('')
   const [filterStatus, setFilterStatus] = useState<'semua' | 'ada' | 'belum'>('semua')
+  /** Tab tingkatan (1–6) di layar pilih mapel×kelas. */
+  const [tabTingkat, setTabTingkat] = useState<string>('')
   const [panelImpor, setPanelImpor] = useState(false)
   const [pratinjauImpor, setPratinjauImpor] = useState<TpImportHasil | null>(null)
   const [modeImpor, setModeImpor] = useState<ModeImporTp>('tambah')
@@ -312,14 +314,42 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
 
   // ---- Pemilih mapel × kelas --------------------------------------
   if (!mapel || !kelas) {
+    // Kelompokkan pilihan per tingkatan (1–6) untuk tab
+    const tingkatList = Array.from(
+      new Set(pilihan.map((p) => tingkatanDariKelas(p.kelas)).filter(Boolean)),
+    ).sort((a, b) => Number(a) - Number(b))
+    const tingkatAktif = tabTingkat && tingkatList.includes(tabTingkat) ? tabTingkat : tingkatList[0] || ''
+    const pilihanTingkat = pilihan.filter((p) => tingkatanDariKelas(p.kelas) === tingkatAktif)
+    const paralelList = Array.from(new Set(pilihanTingkat.map((p) => p.kelas))).sort((a, b) =>
+      a.localeCompare(b, 'id'),
+    )
+    const mapelDiTingkat = Array.from(new Set(pilihanTingkat.map((p) => p.mapel))).sort((a, b) =>
+      a.localeCompare(b, 'id'),
+    )
+
+    function lolosFilter(p: { mapel: string; kelas: string }) {
+      const q = filterMapel.trim().toLowerCase()
+      if (q && !p.mapel.toLowerCase().includes(q)) return false
+      if (filterStatus === 'semua' || jumlahTp === null) return true
+      const n = jumlahTp[`${p.mapel}|${p.kelas}`]
+      if (typeof n !== 'number') return true
+      if (filterStatus === 'ada') return n > 0
+      return n === 0
+    }
+
     return (
       <div className="space-y-5">
-        <BackLink to="/akademik">Akademik &amp; Rapor</BackLink>
         <PageHeader
           back={{ to: '/akademik', label: 'Akademik & Rapor' }}
-          eyebrow="Akademik"
           title="Setup TP & KKTP"
-          subtitle="Pilih mata pelajaran dan kelas. TP milik dapur mapel×kelas: guru kelas dan guru bidang studi yang mengampu mapel yang sama di kelas itu melihat data yang sama (siapa pun yang menginput). Kelas paralel (5A ≠ 5B) tetap terpisah."
+          subtitle="Pilih kelas lalu mata pelajaran. TP terikat mapel×kelas — kelas paralel (1A ≠ 1B) tetap terpisah."
+          actions={
+            tulis ? (
+              <button type="button" className={btnGhost} onClick={() => setPanelImpor((v) => !v)}>
+                {panelImpor ? 'Tutup impor' : 'Impor / Ekspor'}
+              </button>
+            ) : undefined
+          }
         />
         {mapelMaster === null ? (
           <Spinner />
@@ -329,54 +359,15 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
           </Notice>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="search"
-                value={filterMapel}
-                onChange={(e) => setFilterMapel(e.target.value)}
-                placeholder="Cari mapel…"
-                className="min-w-[10rem] flex-1 rounded-xl border border-border bg-white px-3.5 py-2 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15 sm:max-w-xs sm:flex-none"
-              />
-              <div className="inline-flex flex-wrap items-center gap-1.5">
-                {(
-                  [
-                    ['semua', 'Semua'],
-                    ['ada', 'Sudah ada TP'],
-                    ['belum', 'Belum ada TP'],
-                  ] as const
-                ).map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setFilterStatus(id)}
-                    className={`rounded-full px-3 py-1 text-[11.5px] font-semibold whitespace-nowrap ${
-                      filterStatus === id ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              {tulis && (
-                <button type="button" className={`${btnGhost} ml-auto whitespace-nowrap`} onClick={() => setPanelImpor((v) => !v)}>
-                  {panelImpor ? 'Tutup panel' : 'Impor / Ekspor'}
-                </button>
-              )}
-            </div>
-
             {panelImpor && tulis && (
               <section className="card-soft space-y-3 p-4">
                 <h2 className="text-[14px] font-semibold text-slate-900">Impor &amp; ekspor Tujuan Pembelajaran</h2>
                 <p className="text-[12.5px] leading-relaxed text-muted">
-                  Guru dapat mengisi TP di Excel lalu mengimpornya ke sini. Format JSON kurikulum tetap
-                  didukung. Unduh template kosong, isi di Excel/Google Sheets, lalu unggah kembali.
+                  Unduh template Excel, isi di spreadsheet, lalu unggah kembali. Format JSON kurikulum tetap
+                  didukung.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className={btnGhost}
-                    onClick={() => void unduhTemplateExcel()}
-                  >
+                  <button type="button" className={btnGhost} onClick={() => void unduhTemplateExcel()}>
                     Unduh template Excel
                   </button>
                 </div>
@@ -412,10 +403,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                   </label>
                 </div>
                 {pratinjauImpor && (
-                  <div className="space-y-2 rounded-xl border border-border bg-slate-50/80 p-3 text-[12.5px]">
-                    <p className="font-semibold text-slate-800">
-                      Pratinjau: {pratinjauImpor.items.length} TP
-                    </p>
+                  <div className="space-y-2 rounded-lg border border-border bg-slate-50/80 p-3 text-[12.5px]">
+                    <p className="font-semibold text-slate-800">Pratinjau: {pratinjauImpor.items.length} TP</p>
                     <ul className="max-h-36 space-y-0.5 overflow-y-auto text-slate-600">
                       {Object.entries(pratinjauImpor.ringkasan)
                         .sort(([a], [b]) => a.localeCompare(b, 'id'))
@@ -449,47 +438,140 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                 )}
               </section>
             )}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {pilihan
-                .filter((p) => {
-                  const q = filterMapel.trim().toLowerCase()
-                  if (q && !p.mapel.toLowerCase().includes(q)) return false
-                  if (filterStatus === 'semua' || jumlahTp === null) return true
-                  const n = jumlahTp[`${p.mapel}|${p.kelas}`]
-                  if (typeof n !== 'number') return true
-                  if (filterStatus === 'ada') return n > 0
-                  return n === 0
-                })
-                .map((p) => {
-                  const kunci = `${p.mapel}|${p.kelas}`
-                  const n = jumlahTp?.[kunci]
-                  return (
-                    <Link
-                      key={kunci}
-                      to={`/akademik/setup-tp?mapel=${encodeURIComponent(p.mapel)}&kelas=${encodeURIComponent(p.kelas)}`}
-                      className="card-soft block p-4 no-underline transition hover:border-muh-300"
+
+            {/* Tab tingkatan */}
+            <div className="flex flex-wrap gap-1 border-b border-border pb-0">
+              {tingkatList.map((tg) => {
+                const aktif = tg === tingkatAktif
+                const count = pilihan.filter((p) => tingkatanDariKelas(p.kelas) === tg).length
+                return (
+                  <button
+                    key={tg}
+                    type="button"
+                    onClick={() => setTabTingkat(tg)}
+                    className={`-mb-px rounded-t-lg px-3.5 py-2 text-[13px] font-semibold transition ${
+                      aktif
+                        ? 'border border-b-white border-border bg-white text-muh-800'
+                        : 'border border-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    Kelas {tg}
+                    <span className={`ml-1.5 text-[11px] font-medium ${aktif ? 'text-muh-600' : 'text-slate-400'}`}>
+                      {count}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="space-y-4 rounded-b-lg rounded-tr-lg border border-border bg-white p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="search"
+                  value={filterMapel}
+                  onChange={(e) => setFilterMapel(e.target.value)}
+                  placeholder="Cari mapel…"
+                  className="min-w-[10rem] flex-1 rounded-lg border border-border bg-white px-3 py-1.5 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15 sm:max-w-xs sm:flex-none"
+                />
+                <div className="inline-flex flex-wrap items-center gap-1">
+                  {(
+                    [
+                      ['semua', 'Semua'],
+                      ['ada', 'Sudah ada TP'],
+                      ['belum', 'Belum ada TP'],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setFilterStatus(id)}
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap ${
+                        filterStatus === id ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600'
+                      }`}
                     >
-                      <p className="text-[14px] font-semibold text-slate-900">{p.mapel}</p>
-                      <p className="mt-0.5 text-[12px] text-muted">
-                        Kelas {p.kelas} · Fase {faseDariTingkatan(tingkatanDariKelas(p.kelas))}
-                        {jumlahTp === null
-                          ? ' · Memuat status…'
-                          : n === 'gagal'
-                            ? ' · Gagal memuat status'
-                            : ''}
-                      </p>
-                      {typeof n === 'number' && (
-                        <p className="mt-2">
-                          {n > 0 ? (
-                            <Badge tone="green">{n} TP</Badge>
-                          ) : (
-                            <Badge tone="peach">Belum ada TP</Badge>
-                          )}
-                        </p>
-                      )}
-                    </Link>
-                  )
-                })}
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="ml-auto text-[12px] text-muted">
+                  Fase {faseDariTingkatan(tingkatAktif)} · {paralelList.join(', ')}
+                </p>
+              </div>
+
+              {/* Matriks mapel × paralel — lebih rapi untuk admin */}
+              {mapelDiTingkat.length === 0 ? (
+                <p className="py-6 text-center text-[13px] text-muted">Tidak ada penugasan di kelas {tingkatAktif}.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[480px] border-collapse text-left text-[13px]">
+                    <thead>
+                      <tr className="border-b border-border text-[11px] uppercase tracking-wide text-slate-500">
+                        <th className="px-2 py-2 font-semibold">Mata pelajaran</th>
+                        {paralelList.map((kl) => (
+                          <th key={kl} className="px-2 py-2 text-center font-semibold">
+                            {kl}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mapelDiTingkat
+                        .filter((m) => {
+                          const q = filterMapel.trim().toLowerCase()
+                          if (q && !m.toLowerCase().includes(q)) return false
+                          if (filterStatus === 'semua' || jumlahTp === null) return true
+                          return paralelList.some((kl) => {
+                            const p = { mapel: m, kelas: kl }
+                            return pilihanTingkat.some((x) => x.mapel === m && x.kelas === kl) && lolosFilter(p)
+                          })
+                        })
+                        .map((m) => (
+                          <tr key={m} className="border-b border-border/70 hover:bg-slate-50/80">
+                            <td className="px-2 py-2.5 font-medium text-slate-900">{m}</td>
+                            {paralelList.map((kl) => {
+                              const ada = pilihanTingkat.some((x) => x.mapel === m && x.kelas === kl)
+                              if (!ada) {
+                                return (
+                                  <td key={kl} className="px-2 py-2.5 text-center text-slate-300">
+                                    —
+                                  </td>
+                                )
+                              }
+                              const kunci = `${m}|${kl}`
+                              const n = jumlahTp?.[kunci]
+                              const lolos = lolosFilter({ mapel: m, kelas: kl })
+                              if (!lolos) {
+                                return (
+                                  <td key={kl} className="px-2 py-2.5 text-center text-slate-300">
+                                    ·
+                                  </td>
+                                )
+                              }
+                              return (
+                                <td key={kl} className="px-2 py-2.5 text-center">
+                                  <Link
+                                    to={`/akademik/setup-tp?mapel=${encodeURIComponent(m)}&kelas=${encodeURIComponent(kl)}`}
+                                    className="inline-flex min-w-[4.5rem] items-center justify-center rounded-lg border border-border bg-white px-2 py-1.5 text-[12px] font-semibold no-underline transition hover:border-muh-400 hover:bg-muh-50 hover:text-muh-800"
+                                  >
+                                    {jumlahTp === null ? (
+                                      <span className="text-muted">…</span>
+                                    ) : n === 'gagal' ? (
+                                      <span className="text-red-600">!</span>
+                                    ) : typeof n === 'number' && n > 0 ? (
+                                      <span className="text-muh-700">{n} TP</span>
+                                    ) : (
+                                      <span className="text-amber-700">Belum</span>
+                                    )}
+                                  </Link>
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -596,8 +678,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
 
   return (
     <div className="space-y-5">
-      <BackLink to="/akademik/setup-tp">Pilih mata pelajaran</BackLink>
       <PageHeader
+          back={{ to: '/akademik/setup-tp', label: 'Pilih mata pelajaran' }}
         eyebrow={`Kelas ${kelas} · Fase ${faseDariTingkatan(tingkatan)}`}
         title={`TP & KKTP — ${mapel}`}
         subtitle={
