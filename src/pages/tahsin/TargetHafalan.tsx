@@ -27,6 +27,8 @@ const ringkasTarget = (t: Target | null | undefined): string => {
 /** Target hafalan per kelas: Iqro (jilid + halaman) untuk kelas 1–2, daftar surah untuk kelas 3–6. Format data sama dengan v2. */
 export default function TargetHafalan({ profile }: Props) {
   const periodeAk = usePeriodeAkademik()
+  /** Administrator hanya memantau; target disusun guru Tahsin-Tahfizh (ANTIREGRESI §17). */
+  const modeLihat = profile.role === 'admin'
   const kelasOptions = useMemo(() => {
     if (profile.role === 'admin') return [...SEMUA_KELAS]
     return profile.kelasAmpu?.length ? profile.kelasAmpu : [...SEMUA_KELAS]
@@ -127,9 +129,11 @@ export default function TargetHafalan({ profile }: Props) {
         back={{ to: '/tahsin', label: 'Tahsin-Tahfizh' }}
         title="Target Hafalan"
         subtitle={
-          periodeAk.ready
-            ? `Target per kelas · ${periodeAk.label}`
-            : 'Pilih periode dulu — target terikat tahun ajaran & semester'
+          modeLihat
+            ? 'Mode lihat. Target disusun oleh guru Tahsin-Tahfizh; administrator hanya membaca.'
+            : periodeAk.ready
+              ? `Target per kelas · ${periodeAk.label}`
+              : 'Pilih periode dulu — target terikat tahun ajaran & semester'
         }
       />
 
@@ -177,7 +181,7 @@ export default function TargetHafalan({ profile }: Props) {
 
         {/* Formulir target */}
         <div className="min-w-0 space-y-3">
-          <section className="card-soft p-4">
+          <fieldset disabled={modeLihat} className="card-soft min-w-0 p-4">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h2 className="text-[15px] font-semibold text-slate-900">
@@ -291,8 +295,9 @@ export default function TargetHafalan({ profile }: Props) {
                 </ul>
               </>
             )}
-          </section>
+          </fieldset>
 
+          {!modeLihat && (
           <div className="sticky bottom-[4.25rem] z-20 md:bottom-3">
             <div className="card-soft flex items-center justify-between gap-3 p-3 shadow-lg">
               <p className="hidden text-[12px] text-muted sm:block">
@@ -308,6 +313,7 @@ export default function TargetHafalan({ profile }: Props) {
               </button>
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

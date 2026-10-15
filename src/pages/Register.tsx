@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { sendPasswordResetEmail } from 'firebase/auth'
-import { auth } from '../lib/firebase'
-import { daftarMandiriGuru, kodeGalat } from '../lib/akunGuruData'
+import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { doc, setDoc } from 'firebase/firestore'
+import { auth, db } from '../lib/firebase'
 import { GURU_RESMI, adalahNamaResmi } from '../lib/dataGuruResmi'
 import { getMapelList } from '../lib/akademik'
 import { MAPEL_BAWAAN } from '../lib/mapelBawaan'
@@ -17,8 +17,16 @@ function toggleItem(list: string[], item: string): string[] {
 
 const TUGAS_OPSI: { key: keyof TugasGuru; label: string; desk: string }[] = [
   { key: 'tahsin', label: 'Guru Tahsin-Tahfizh', desk: 'Mencatat setoran di kelas yang dipilih.' },
-  { key: 'guruKelas', label: 'Guru Kelas', desk: 'Wali kelas. Mengakses semua mapel di kelas itu, tanpa menu Tahsin.' },
-  { key: 'bidangStudi', label: 'Guru Bidang Studi', desk: 'Hanya mapel yang ditugaskan, termasuk di kelas lain.' },
+  {
+    key: 'guruKelas',
+    label: 'Guru Kelas',
+    desk: 'Wali kelas. Mengakses semua mapel di kelas itu, tanpa menu Tahsin.',
+  },
+  {
+    key: 'bidangStudi',
+    label: 'Guru Bidang Studi',
+    desk: 'Hanya mapel yang ditugaskan, termasuk di kelas lain.',
+  },
 ]
 
 export default function Register() {
@@ -27,7 +35,11 @@ export default function Register() {
   const [password, setPassword] = useState('')
   const [gelar, setGelar] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [tugas, setTugas] = useState<TugasGuru>({ tahsin: false, guruKelas: true, bidangStudi: false })
+  const [tugas, setTugas] = useState<TugasGuru>({
+    tahsin: false,
+    guruKelas: true,
+    bidangStudi: false,
+  })
   const [kelasAmpu, setKelasAmpu] = useState<string[]>([])
   const [waliKelas, setWaliKelas] = useState<string[]>([])
   const [penugasan, setPenugasan] = useState<{ kelas: string; mapel: string }[]>([])
@@ -35,9 +47,6 @@ export default function Register() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [sukses, setSukses] = useState(false)
-  /** Email sudah punya login lama di Auth dan passwordnya tidak cocok: tawarkan atur ulang password. */
-  const [bisaReset, setBisaReset] = useState(false)
-  const [infoReset, setInfoReset] = useState<string | null>(null)
 
   useEffect(() => {
     getMapelList()
@@ -49,25 +58,9 @@ export default function Register() {
   const butuhKelas = tugas.guruKelas
   const butuhMapel = tugas.bidangStudi
 
-  async function kirimReset() {
-    const emailNorm = email.trim().toLowerCase()
-    setInfoReset(null)
-    try {
-      await sendPasswordResetEmail(auth, emailNorm)
-      setInfoReset(
-        `Tautan atur ulang password dikirim ke ${emailNorm}. Setelah password baru dibuat, kembali ke halaman ini dan daftar lagi dengan password baru tersebut.`,
-      )
-    } catch (err) {
-      console.error('[daftar] kirim reset gagal:', err)
-      setInfoReset('Tautan atur ulang password gagal dikirim. Coba lagi, atau hubungi admin.')
-    }
-  }
-
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    setBisaReset(false)
-    setInfoReset(null)
     if (!adalahNamaResmi(nama)) {
       setError('Pilih nama guru dari daftar yang tersedia.')
       return
@@ -98,80 +91,41 @@ export default function Register() {
     const role = roleDariTugas(tugas)
 
     setLoading(true)
-    const emailNorm = email.trim().toLowerCase()
-    const gelarBersih = gelar.trim()
-
-    // Jangan kirim field undefined — Firestore menolak "Unsupported field value: undefined"
-    const profilBaru: Record<string, unknown> = {
-      email: emailNorm,
-      nama: nama.trim(),
-      role,
-      status: 'pending',
-      aktif: true,
-      kelasAmpu: butuhTahsin ? kelasAmpu : [],
-      waliKelas: butuhKelas ? waliKelas : [],
-      penugasan: penugasanBersih,
-      penugasanKelas: turunan.penugasanKelas,
-      penugasanKelasMapel: turunan.penugasanKelasMapel,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    if (gelarBersih) profilBaru.gelar = gelarBersih
-
-    function pesanFirebase(err: unknown): string {
-      const code = kodeGalat(err)
-      const msg = err instanceof Error ? err.message : String(err ?? 'Gagal mendaftar')
-      // Log detail untuk admin/debug
-      console.error('[daftar]', { code, msg, err })
-      if (code === 'sdm/profil-sudah-ada' || code === 'sdm/timeout') return msg
-      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
-        setBisaReset(true)
-        return (
-          'Email ini sudah punya login di Firebase (mis. akunnya pernah dibuat atau dihapus admin), ' +
-          'tetapi password yang Anda ketik berbeda dengan password lamanya. ' +
-          'Kirim tautan atur ulang password ke email ini, buat password baru lewat tautan itu, ' +
-          'lalu daftar lagi memakai password baru tersebut.'
-        )
-      }
-      if (code === 'auth/email-already-in-use') {
-        return 'Email ini sudah terdaftar di Firebase Authentication. Hubungi admin untuk menghapus email ini di Firebase Console → Authentication → Users.'
-      }
-      if (code === 'auth/weak-password' || msg.includes('weak-password')) {
-        return 'Password terlalu lemah (minimal 6 karakter, disarankan 8+).'
-      }
-      if (code === 'auth/invalid-email') return 'Format email tidak valid.'
-      if (code === 'auth/operation-not-allowed') {
-        return 'Pendaftaran email/password belum diaktifkan di Firebase Console (Authentication → Sign-in method).'
-      }
-      if (code === 'auth/network-request-failed') {
-        return 'Jaringan gagal (kadang error QUIC). Coba refresh, ganti Wi-Fi/browser, atau nonaktifkan VPN.'
-      }
-      if (code === 'auth/too-many-requests') {
-        return 'Terlalu banyak percobaan. Tunggu beberapa menit.'
-      }
-      if (code === 'permission-denied' || msg.includes('permission-denied') || msg.includes('Missing or insufficient permissions')) {
-        return 'Login sudah terbuat tetapi profil gagal disimpan (izin Firestore). Pastikan firestore.rules untuk create users guru pending sudah di-deploy, lalu coba daftar lagi dengan password yang sama.'
-      }
-      if (msg.includes('undefined') || msg.includes('Unsupported field value')) {
-        return 'Data profil tidak valid. Kosongkan gelar atau isi singkat saja (mis. S.Pd).'
-      }
-      return code ? `${msg} (${code})` : msg
-    }
-
     try {
-      // Berjalan di app Firebase sekunder: sesi `auth` utama tidak disentuh (ANTIREGRESI §15.1).
-      await daftarMandiriGuru(emailNorm, password, profilBaru)
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        email.trim().toLowerCase(),
+        password,
+      )
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        email: email.trim().toLowerCase(),
+        nama: nama.trim(),
+        gelar: gelar.trim() || undefined,
+        role,
+        status: 'pending',
+        aktif: true,
+        kelasAmpu: butuhTahsin ? kelasAmpu : [],
+        waliKelas: butuhKelas ? waliKelas : [],
+        penugasan: penugasanBersih,
+        penugasanKelas: turunan.penugasanKelas,
+        penugasanKelasMapel: turunan.penugasanKelasMapel,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
       setSukses(true)
     } catch (err: unknown) {
-      console.error('Pendaftaran gagal:', err)
-      setError(pesanFirebase(err))
+      const msg = err instanceof Error ? err.message : 'Gagal mendaftar'
+      if (msg.includes('email-already-in-use')) {
+        setError('Email ini sudah terdaftar.')
+      } else if (msg.includes('weak-password')) {
+        setError('Password terlalu lemah.')
+      } else {
+        setError(msg)
+      }
     } finally {
       setLoading(false)
     }
   }
-
-  const field =
-    'w-full rounded-xl border border-border bg-white px-3 py-2 text-[13px] outline-none transition focus:border-muh-500 focus:bg-white focus:ring-2 focus:ring-muh-500/15'
 
   function ChipKelas({
     value,
@@ -181,7 +135,7 @@ export default function Register() {
     onChange: (next: string[]) => void
   }) {
     return (
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1.5">
         {SEMUA_KELAS.map((k) => {
           const aktif = value.includes(k)
           return (
@@ -189,9 +143,7 @@ export default function Register() {
               key={k}
               type="button"
               onClick={() => onChange(toggleItem(value, k))}
-              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                aktif ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600'
-              }`}
+              className={`auth-chip ${aktif ? 'auth-chip--on' : ''}`}
             >
               {k}
             </button>
@@ -203,17 +155,19 @@ export default function Register() {
 
   if (sukses) {
     return (
-      <div className="flex min-h-full items-center justify-center bg-surface-2 p-4">
-        <div className="w-full max-w-md rounded-2xl border border-border bg-white p-6 text-center">
-          <h2 className="text-lg font-semibold text-slate-900">Pendaftaran berhasil</h2>
-          <p className="mt-2 text-[13px] text-muted">
+      <div className="auth-shell auth-shell--center">
+        <div className="auth-success-card">
+          <div className="auth-success-icon" aria-hidden>
+            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="auth-display auth-display--sm text-[#0d253d]">Pendaftaran berhasil</h2>
+          <p className="mt-3 text-[14.5px] font-light leading-relaxed text-[#64748d]">
             Data peran dan kelas Anda sudah tercatat. Admin akan meninjau dan menyetujui akun ini.
             Setelah disetujui, Anda dapat masuk.
           </p>
-          <Link
-            to="/login"
-            className="mt-4 inline-block rounded-xl bg-muh-600 px-4 py-2 text-sm font-semibold text-white"
-          >
+          <Link to="/login" className="auth-btn-primary mt-7 inline-flex w-auto px-7">
             Ke halaman masuk
           </Link>
         </div>
@@ -222,232 +176,262 @@ export default function Register() {
   }
 
   return (
-    <div className="flex min-h-full items-start justify-center bg-surface-2 px-3 py-6 sm:px-4">
-      <div className="w-full max-w-2xl rounded-2xl border border-border bg-white p-5 sm:p-6">
-        <h2 className="text-lg font-semibold text-slate-900">Daftar Akun Guru</h2>
-        <p className="mt-1 text-[12px] text-muted">
-          Pilih nama resmi, peran, dan kelas yang Anda ampu. Admin akan menyetujui sebelum akun aktif.
-        </p>
+    <div className="auth-shell auth-shell--center auth-shell--scroll">
+      <div className="auth-register-card">
+        <div className="stripe-mesh-thin h-1.5 w-full" />
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-5" autoComplete="off">
-          {/* Identitas */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-[12px] font-medium text-slate-600">Nama guru *</label>
-              <select required value={nama} onChange={(e) => setNama(e.target.value)} className={field} autoComplete="off" name="reg-nama">
-                <option value="">— Pilih nama —</option>
-                {GURU_RESMI.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <div className="p-6 sm:p-8">
+          <div className="mb-6 flex items-center gap-3">
+            <span className="auth-logo-tile auth-logo-tile--light">
+              <img src="/favicon-32.png" alt="" className="h-6 w-6" />
+            </span>
             <div>
-              <label className="mb-1 block text-[12px] font-medium text-slate-600">Email *</label>
-              <input
-                type="email"
-                name="reg-email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={field}
-                placeholder="nama@sekolah.sch.id"
-                autoComplete="off"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-[12px] font-medium text-slate-600">Password *</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="reg-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={field + ' pr-24'}
-                  placeholder="Minimal 8 karakter"
-                  autoComplete="new-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-muh-700"
-                >
-                  {showPassword ? 'Sembunyikan' : 'Tampilkan'}
-                </button>
-              </div>
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-[12px] font-medium text-slate-600">
-                Gelar pendidikan terakhir <span className="text-muted">(opsional)</span>
-              </label>
-              <input
-                type="text"
-                value={gelar}
-                onChange={(e) => setGelar(e.target.value)}
-                className={field}
-                placeholder="S.Pd / M.Pd / …"
-              />
-              <p className="mt-1 text-[11px] text-muted">
-                Isi gelar saja, misalnya S.Pd, M.Pd, S.Pd.I — tanpa nama lengkap.
-              </p>
+              <p className="text-[14px] font-medium text-[#0d253d]">SDM 01 Kukusan</p>
+              <p className="text-[12px] font-light text-[#64748d]">Daftar akun guru</p>
             </div>
           </div>
 
-          <div>
-            <span className="mb-2 block text-[12px] font-medium text-slate-600">Tugas *</span>
-            <p className="mb-2 text-[11px] text-muted">
-              Bisa dipilih bersamaan. Misalnya guru Tahsin-Tahfizh yang juga menjadi guru kelas, atau yang juga mengajar bidang studi.
+          <header className="mb-7">
+            <h2 className="auth-display auth-display--sm text-[#0d253d]">Daftar Akun Guru</h2>
+            <p className="mt-2 text-[14px] font-light leading-relaxed text-[#64748d]">
+              Pilih nama resmi, peran, dan kelas yang Anda ampu. Admin akan menyetujui sebelum akun
+              aktif.
             </p>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {TUGAS_OPSI.map((o) => {
-                const aktif = tugas[o.key]
-                return (
-                  <button
-                    key={o.key}
-                    type="button"
-                    onClick={() => setTugas((prev) => ({ ...prev, [o.key]: !prev[o.key] }))}
-                    className={`rounded-xl border px-3 py-2.5 text-left text-[12px] ${
-                      aktif
-                        ? 'border-muh-500 bg-muh-50 text-muh-900'
-                        : 'border-border bg-white text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="font-semibold">{aktif ? '✓ ' : ''}{o.label}</div>
-                    <div className="mt-0.5 text-[11px] text-muted">{o.desk}</div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          </header>
 
-          {butuhTahsin && (
-            <div>
-              <span className="mb-1 block text-[12px] font-medium text-slate-600">Kelas Tahsin-Tahfizh *</span>
-              <p className="mb-2 text-[11px] text-muted">Pilih kelas tempat Anda mencatat setoran.</p>
-              <ChipKelas value={kelasAmpu} onChange={setKelasAmpu} />
-            </div>
-          )}
-
-          {butuhKelas && (
-            <div>
-              <span className="mb-1 block text-[12px] font-medium text-slate-600">Guru kelas *</span>
-              <p className="mb-2 text-[11px] text-muted">
-                Kelas yang Anda walikan. Semua mata pelajaran di tingkat itu ikut terbuka, termasuk yang diampu guru bidang studi.
-              </p>
-              <ChipKelas value={waliKelas} onChange={setWaliKelas} />
-            </div>
-          )}
-
-          {butuhMapel && (
-            <div>
-              <div className="mb-1.5 flex items-center justify-between gap-2">
-                <span className="text-[12px] font-medium text-slate-600">Penugasan mapel *</span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPenugasan((prev) => [...prev, { kelas: '1A', mapel: mapelList[0]?.nama ?? '' }])
-                  }
-                  className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-200"
+          <form onSubmit={(e) => void handleSubmit(e)} className="space-y-6" noValidate>
+            <section className="grid gap-4 sm:grid-cols-2">
+              <div className="auth-field sm:col-span-2">
+                <label htmlFor="nama">Nama guru *</label>
+                <select
+                  id="nama"
+                  required
+                  value={nama}
+                  onChange={(e) => setNama(e.target.value)}
                 >
-                  + Tambah
-                </button>
-              </div>
-              <p className="mb-2 text-[11px] text-muted">
-                Hanya mapel yang Anda ampu. Setiap baris: satu kelas dan satu mapel.
-              </p>
-              {penugasan.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border px-3 py-3 text-[12px] text-muted">
-                  Belum ada penugasan mapel.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {penugasan.map((row, i) => (
-                    <div key={i} className="grid grid-cols-[88px_1fr_auto] gap-2">
-                      <select
-                        className={field}
-                        value={row.kelas}
-                        onChange={(e) =>
-                          setPenugasan((prev) =>
-                            prev.map((r, idx) => (idx === i ? { ...r, kelas: e.target.value } : r)),
-                          )
-                        }
-                      >
-                        {SEMUA_KELAS.map((k) => (
-                          <option key={k} value={k}>
-                            {k}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        className={field}
-                        value={row.mapel}
-                        onChange={(e) =>
-                          setPenugasan((prev) =>
-                            prev.map((r, idx) => (idx === i ? { ...r, mapel: e.target.value } : r)),
-                          )
-                        }
-                      >
-                        <option value="">— Mapel —</option>
-                        {row.mapel && !mapelList.some((m) => m.nama === row.mapel) && (
-                          <option value={row.mapel}>{row.mapel}</option>
-                        )}
-                        {mapelList.map((m) => (
-                          <option key={m.id} value={m.nama}>
-                            {m.nama}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => setPenugasan((prev) => prev.filter((_, idx) => idx !== i))}
-                        className="rounded-xl border border-border px-2.5 text-[11px] font-medium text-slate-500 hover:bg-slate-50"
-                      >
-                        Hapus
-                      </button>
-                    </div>
+                  <option value="">— Pilih nama —</option>
+                  {GURU_RESMI.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
                   ))}
+                </select>
+              </div>
+              <div className="auth-field">
+                <label htmlFor="reg-email">Email *</label>
+                <input
+                  id="reg-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="nama@sekolah.sch.id"
+                />
+              </div>
+              <div className="auth-field">
+                <label htmlFor="reg-password">Password *</label>
+                <div className="auth-input-wrap">
+                  <input
+                    id="reg-password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Minimal 8 karakter"
+                  />
+                  <button
+                    type="button"
+                    className="auth-ghost-btn"
+                    onClick={() => setShowPassword((v) => !v)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? 'Sembunyikan' : 'Tampilkan'}
+                  </button>
                 </div>
+              </div>
+              <div className="auth-field sm:col-span-2">
+                <label htmlFor="gelar">
+                  Gelar pendidikan terakhir{' '}
+                  <span className="font-light text-[#64748d]">(opsional)</span>
+                </label>
+                <input
+                  id="gelar"
+                  type="text"
+                  value={gelar}
+                  onChange={(e) => setGelar(e.target.value)}
+                  placeholder="contoh: S.Pd"
+                />
+                <p className="auth-hint">
+                  Muncul di penandatanganan rapor, mis. “Arif Azwar Anas, S.Pd”.
+                </p>
+              </div>
+            </section>
+
+            <section>
+              <span className="mb-1.5 block text-[13px] font-medium text-[#273951]">Tugas *</span>
+              <p className="mb-3 text-[12.5px] font-light text-[#64748d]">
+                Bisa dipilih bersamaan — misalnya guru Tahsin yang juga menjadi wali kelas.
+              </p>
+              <div className="grid gap-2.5 sm:grid-cols-3">
+                {TUGAS_OPSI.map((o) => {
+                  const aktif = tugas[o.key]
+                  return (
+                    <button
+                      key={o.key}
+                      type="button"
+                      onClick={() => setTugas((prev) => ({ ...prev, [o.key]: !prev[o.key] }))}
+                      className={`auth-task-card ${aktif ? 'auth-task-card--on' : ''}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`auth-check ${aktif ? 'auth-check--on' : ''}`}>
+                          {aktif ? '✓' : ''}
+                        </span>
+                        <span className="text-[13px] font-medium text-[#0d253d]">{o.label}</span>
+                      </div>
+                      <p className="mt-2 text-[11.5px] font-light leading-snug text-[#64748d]">
+                        {o.desk}
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+
+            {butuhTahsin && (
+              <section>
+                <span className="mb-1.5 block text-[13px] font-medium text-[#273951]">
+                  Kelas Tahsin-Tahfizh *
+                </span>
+                <p className="mb-2.5 text-[12.5px] font-light text-[#64748d]">
+                  Pilih kelas tempat Anda mencatat setoran.
+                </p>
+                <ChipKelas value={kelasAmpu} onChange={setKelasAmpu} />
+              </section>
+            )}
+
+            {butuhKelas && (
+              <section>
+                <span className="mb-1.5 block text-[13px] font-medium text-[#273951]">
+                  Guru kelas *
+                </span>
+                <p className="mb-2.5 text-[12.5px] font-light text-[#64748d]">
+                  Kelas yang Anda walikan. Semua mata pelajaran di tingkat itu ikut terbuka.
+                </p>
+                <ChipKelas value={waliKelas} onChange={setWaliKelas} />
+              </section>
+            )}
+
+            {butuhMapel && (
+              <section>
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <span className="text-[13px] font-medium text-[#273951]">Penugasan mapel *</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPenugasan((prev) => [
+                        ...prev,
+                        { kelas: '1A', mapel: mapelList[0]?.nama ?? '' },
+                      ])
+                    }
+                    className="auth-chip"
+                  >
+                    + Tambah
+                  </button>
+                </div>
+                <p className="mb-2.5 text-[12.5px] font-light text-[#64748d]">
+                  Setiap baris: satu kelas dan satu mapel.
+                </p>
+                {penugasan.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-[#e3e8ee] px-3.5 py-4 text-[13px] font-light text-[#64748d]">
+                    Belum ada penugasan mapel.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {penugasan.map((row, i) => (
+                      <div key={i} className="grid grid-cols-[88px_1fr_auto] gap-2">
+                        <div className="auth-field">
+                          <select
+                            value={row.kelas}
+                            onChange={(e) =>
+                              setPenugasan((prev) =>
+                                prev.map((r, idx) =>
+                                  idx === i ? { ...r, kelas: e.target.value } : r,
+                                ),
+                              )
+                            }
+                            aria-label="Kelas"
+                          >
+                            {SEMUA_KELAS.map((k) => (
+                              <option key={k} value={k}>
+                                {k}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="auth-field">
+                          <select
+                            value={row.mapel}
+                            onChange={(e) =>
+                              setPenugasan((prev) =>
+                                prev.map((r, idx) =>
+                                  idx === i ? { ...r, mapel: e.target.value } : r,
+                                ),
+                              )
+                            }
+                            aria-label="Mapel"
+                          >
+                            <option value="">— Mapel —</option>
+                            {row.mapel && !mapelList.some((m) => m.nama === row.mapel) && (
+                              <option value={row.mapel}>{row.mapel}</option>
+                            )}
+                            {mapelList.map((m) => (
+                              <option key={m.id} value={m.nama}>
+                                {m.nama}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setPenugasan((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="rounded-md border border-[#e3e8ee] px-2.5 text-[12px] font-medium text-[#64748d] transition hover:bg-[#f6f9fc]"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {error && (
+              <div role="alert" className="auth-alert auth-alert--error">
+                {error}
+              </div>
+            )}
+
+            <button type="submit" className="auth-btn-primary" disabled={loading}>
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="auth-spinner" aria-hidden />
+                  Memproses…
+                </span>
+              ) : (
+                'Daftar'
               )}
-            </div>
-          )}
+            </button>
+          </form>
 
-          {error && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] font-medium text-red-700">
-              {error}
-              {bisaReset && (
-                <button
-                  type="button"
-                  onClick={() => void kirimReset()}
-                  className="mt-2 block rounded-lg bg-red-700 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-red-800"
-                >
-                  Kirim tautan atur ulang password
-                </button>
-              )}
-            </div>
-          )}
-          {infoReset && (
-            <div className="rounded-2xl border border-muh-200 bg-muh-50 px-3.5 py-2.5 text-[12px] font-medium text-muh-800">
-              {infoReset}
-            </div>
-          )}
+          <div className="auth-divider" />
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex w-full items-center justify-center rounded-2xl bg-muh-600 px-3 py-3 text-[14px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
-          >
-            {loading ? 'Mendaftar…' : 'Daftar'}
-          </button>
-        </form>
-
-        <p className="mt-4 text-center text-[12px] text-muted">
-          Sudah punya akun?{' '}
-          <Link to="/login" className="font-medium text-muh-700">
-            Masuk
-          </Link>
-        </p>
+          <p className="text-center text-[13.5px] font-light text-[#64748d]">
+            Sudah punya akun?{' '}
+            <Link to="/login" className="auth-link">
+              Masuk
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   )

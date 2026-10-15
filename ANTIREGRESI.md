@@ -197,3 +197,17 @@
 16.5 Fallback `functions/not-found` di `hapusAkunStaf` hanya untuk masa sebelum fungsi di-deploy. Jangan memperluasnya ke galat lain: menghapus profil diam-diam saat fungsi gagal di tengah jalan meninggalkan user Auth yatim.
 
 16.6 `functions/node_modules` tidak di-commit (sudah tercakup `.gitignore`). `functions/package-lock.json` di-commit.
+
+## §17. Administrator sebagai pemantau (per 15 Okt 2026)
+
+17.1 **Admin tidak menulis TP, bobot, nilai, setoran, maupun target hafalan.** Itu tanggung jawab guru kelas, guru bidang studi, dan guru Tahsin-Tahfizh. Admin mengelola master data (siswa, akun, mapel, periode, data sekolah) dan memantau. Melengkapi §7.5 dan §13.1.
+
+17.2 Di `firestore.rules`, `bolehKelas()` (tulis Tahsin) tidak memuat `admin`. Baca Tahsin untuk admin lewat `lihatKelas()`. `delete` pada `nilai_tp`, `asesmen_cakupan`, `nilai_sts`, `nilai_sas` adalah `if false`; `delete` pada `setoran`/`menulis_log` hanya pembuatnya. `seni_kelas` ditulis lewat `waliKelasSendiri()`. Jangan menambahkan `isAdmin()` kembali ke jalur tulis ini. Uji: `node --experimental-strip-types scripts/cek-peran-admin.mjs`.
+
+17.3 Rute `/tahsin/input-setoran` hanya untuk `isGuruTahsinRole`. `TargetHafalan` memakai `modeLihat` untuk admin (`<fieldset disabled>` dan tanpa tombol simpan). Menu Input Setoran tidak tampil untuk admin.
+
+17.4 Nama menu untuk admin berbeda dari guru dan hanya berlaku untuk admin: Pantauan Akademik, Tujuan Pembelajaran, Bobot Tujuan Pembelajaran, Daftar Nilai Harian, Daftar Nilai STS & SAS, Rekap Nilai Harian, Pantauan Tahsin & Tahfizh. Nama untuk guru tidak diubah. Gunakan `teksPeran()` atau cabang `admin`/`tulis`, jangan menyalin teks admin ke tampilan guru.
+
+17.5 Commit tidak mengubah rules produksi. Setelah menarik perubahan ini jalankan `npm run deploy:rules` lalu `npm run deploy`, dan uji dengan akun admin: tidak ada tombol simpan, dan penulisan lewat Console peramban ditolak.
+
+17.6 Pemantauan admin (Tahap 2 ke atas) hanya membaca. Query nilai wajib menyertakan `mapel` dan `kelas` (§7.3); hitungan memakai `getCountFromServer`.

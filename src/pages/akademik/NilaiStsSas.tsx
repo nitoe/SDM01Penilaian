@@ -203,8 +203,8 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-5">
         <PageHeader
-          back={{ to: '/akademik', label: 'Akademik & Rapor' }}
-          title="Nilai Ujian Tengah & Akhir"
+          back={{ to: '/akademik', label: admin ? 'Pantauan Akademik' : 'Akademik & Rapor' }}
+          title={admin ? 'Daftar Nilai STS & SAS' : 'Nilai Ujian Tengah & Akhir'}
           subtitle="Pilih jenis ujian, lalu mapel × kelas."
         />
         <div className="grid grid-cols-2 gap-2 sm:max-w-md">
@@ -684,9 +684,11 @@ function Detail(props: {
 
       <PageHeader
         eyebrow={config ? `Semester ${config.semesterAktif} · ${config.tahunAjaran}` : 'Akademik'}
-        title={`${labelPendek(jenis)} — ${mapel} · Kelas ${kelas}`}
+        title={tulis ? `${labelPendek(jenis)} — ${mapel} · Kelas ${kelas}` : `Daftar Nilai ${labelPendek(jenis)} — ${mapel} · Kelas ${kelas}`}
         subtitle={
-          jenis === 'sts'
+          !tulis
+            ? 'Mode lihat. Nilai diinput oleh guru kelas dan guru bidang studi; administrator hanya membaca.'
+            : jenis === 'sts'
             ? 'Satu tabel untuk semua materi. Centang materi di panel kanan, isi nilai, lalu simpan.'
             : 'Satu tabel untuk semua materi SAS. Panel kanan untuk memilih materi ujian.'
         }

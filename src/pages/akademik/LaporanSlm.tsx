@@ -126,8 +126,8 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-5">
         <PageHeader
-          back={{ to: '/akademik', label: 'Akademik & Rapor' }}
-          title="Laporan SLM"
+          back={{ to: '/akademik', label: admin ? 'Pantauan Akademik' : 'Akademik & Rapor' }}
+          title={admin ? 'Rekap Nilai Harian' : 'Laporan SLM'}
           subtitle="Rekap nilai sumatif lingkup materi per kelas. Belum termasuk STS dan SAS."
         />
         <MapelKelasPicker

@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom
 import type { User } from 'firebase/auth'
 import { subscribeAuth, logout } from './lib/auth'
 import { simpanNoticeLogin } from './lib/akunGuru'
-import { canAkademik, canTahsin, isAdminRole } from './lib/roles'
+import { canAkademik, canTahsin, isAdminRole, isGuruTahsinRole } from './lib/roles'
 import type { AppUser } from './types/user'
 import { PeriodeProvider } from './context/PeriodeContext'
 import Layout from './components/Layout'
@@ -31,8 +31,8 @@ import LaporanSlm from './pages/akademik/LaporanSlm'
 import Rapor from './pages/akademik/Rapor'
 
 /** Menjaga rute per role di sisi UI. Penegakan sebenarnya tetap di firestore.rules. */
-function RoleGate({ allow }: { allow: boolean }) {
-  return allow ? <Outlet /> : <Navigate to="/" replace />
+function RoleGate({ allow, to = '/' }: { allow: boolean; to?: string }) {
+  return allow ? <Outlet /> : <Navigate to={to} replace />
 }
 
 function LoadingScreen() {
@@ -109,11 +109,17 @@ export default function App() {
           <Route path="/profil" element={profile ? <ProfilSaya profile={profile} /> : null} />
 
           <Route element={<RoleGate allow={profile ? canTahsin(profile.role) : false} />}>
-            <Route path="/tahsin" element={<TahsinHub />} />
+            <Route path="/tahsin" element={<TahsinHub admin={profile ? isAdminRole(profile.role) : false} />} />
             <Route
-              path="/tahsin/input-setoran"
-              element={profile ? <InputSetoran profile={profile} /> : null}
-            />
+              element={
+                <RoleGate allow={profile ? isGuruTahsinRole(profile.role) : false} to="/tahsin" />
+              }
+            >
+              <Route
+                path="/tahsin/input-setoran"
+                element={profile ? <InputSetoran profile={profile} /> : null}
+              />
+            </Route>
             <Route
               path="/tahsin/riwayat"
               element={profile ? <RiwayatSiswa profile={profile} /> : null}
@@ -126,7 +132,7 @@ export default function App() {
           </Route>
 
           <Route element={<RoleGate allow={profile ? canAkademik(profile.role) : false} />}>
-            <Route path="/akademik" element={<AkademikHub />} />
+            <Route path="/akademik" element={<AkademikHub admin={profile ? isAdminRole(profile.role) : false} />} />
             <Route path="/akademik/setup-tp" element={profile ? <SetupTp profile={profile} /> : null} />
             <Route
               path="/akademik/bobot-semester"

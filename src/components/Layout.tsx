@@ -32,9 +32,9 @@ const HALAMAN_LEBAR = [
 /** Halaman form ringkas — kolom terbaca, tidak melebar sia-sia. */
 const HALAMAN_SEMPIT = ['/profil']
 
-function sectionTitle(pathname: string): string {
-  if (pathname.startsWith('/tahsin')) return 'Tahsin & Tahfizh'
-  if (pathname.startsWith('/akademik')) return 'Akademik & Rapor'
+function sectionTitle(pathname: string, admin: boolean): string {
+  if (pathname.startsWith('/tahsin')) return admin ? 'Pantauan Tahsin & Tahfizh' : 'Tahsin & Tahfizh'
+  if (pathname.startsWith('/akademik')) return admin ? 'Pantauan Akademik' : 'Akademik & Rapor'
   if (pathname.startsWith('/admin')) return 'Administrasi'
   return 'Beranda'
 }
@@ -74,14 +74,14 @@ export default function Layout({ profile }: LayoutProps) {
     { to: '/', label: 'Beranda', short: 'Beranda', icon: 'home', end: true, show: true },
     {
       to: '/akademik',
-      label: 'Akademik & Rapor',
-      short: 'Akademik',
+      label: isAdminRole(profile.role) ? 'Pantauan Akademik' : 'Akademik & Rapor',
+      short: isAdminRole(profile.role) ? 'Pantauan' : 'Akademik',
       icon: 'clipboard',
       show: canAkademik(profile.role),
     },
     {
       to: '/tahsin',
-      label: 'Tahsin-Tahfizh',
+      label: isAdminRole(profile.role) ? 'Pantauan Tahsin' : 'Tahsin-Tahfizh',
       short: 'Tahsin',
       icon: 'quran',
       show: canTahsin(profile.role),
@@ -157,7 +157,7 @@ export default function Layout({ profile }: LayoutProps) {
           <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-white/95 px-4 py-2.5 backdrop-blur sm:px-5 md:py-3 print:hidden">
             <div className="min-w-0">
               <h2 className="truncate text-[17px] font-semibold tracking-tight text-slate-900 sm:text-[18px]">
-                {sectionTitle(pathname)}
+                {sectionTitle(pathname, isAdminRole(profile.role))}
               </h2>
               <p className="text-[12px] text-muted">{TANGGAL.format(new Date())}</p>
             </div>

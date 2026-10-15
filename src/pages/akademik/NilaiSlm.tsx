@@ -218,8 +218,8 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-5">
         <PageHeader
-          back={{ to: '/akademik', label: 'Akademik & Rapor' }}
-          title="Input Nilai Harian (SLM)"
+          back={{ to: '/akademik', label: admin ? 'Pantauan Akademik' : 'Akademik & Rapor' }}
+          title={admin ? 'Daftar Nilai Harian' : 'Input Nilai Harian (SLM)'}
           subtitle={
             periodeAk.ready
               ? `Periode ${periodeAk.label} · Status di sel = kelengkapan nilai periode ini.`
@@ -646,8 +646,12 @@ function Detail({
       <BackLink to="/akademik/nilai-slm">Pilih mata pelajaran</BackLink>
       <PageHeader
         eyebrow={config ? `Semester ${config.semesterAktif} · ${config.tahunAjaran}` : `Kelas ${kelas}`}
-        title={`Nilai Harian (SLM) — ${mapel} · ${kelas}`}
-        subtitle="Satu tabel untuk semua materi. Panel kanan mengatur kolom yang ditampilkan. Simpan kapan saja."
+        title={tulis ? `Nilai Harian (SLM) — ${mapel} · ${kelas}` : `Daftar Nilai Harian — ${mapel} · ${kelas}`}
+        subtitle={
+          tulis
+            ? 'Satu tabel untuk semua materi. Panel kanan mengatur kolom yang ditampilkan. Simpan kapan saja.'
+            : 'Mode lihat. Nilai diinput oleh guru kelas dan guru bidang studi; administrator hanya membaca.'
+        }
       />
 
       {gagalMuat ? (

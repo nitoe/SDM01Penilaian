@@ -272,3 +272,11 @@
 - `src/pages/admin/KelolaAkun.tsx`: label kembali "Hapus permanen" dengan teks konfirmasi yang sesuai. Kartu petunjuk Console hanya muncul bila fungsi belum aktif (fallback).
 - `firebase.json`: blok `functions`; CSP `connect-src` ditambah `https://*.cloudfunctions.net`. `package.json`: skrip `deploy:functions` (versi tetap 0.1.0).
 - Urutan deploy: `npm run deploy:functions` DULU, baru `npm run deploy` (hosting). `firestore.rules` tidak berubah.
+
+## Belum dirilis — Admin sebagai pemantau (Tahap 1 dari 3)
+
+- Peran: admin tidak lagi menulis apa pun yang menjadi tugas guru. Halaman Akademik sudah mode lihat sejak sebelumnya; yang ditutup sekarang adalah jalur Tahsin-Tahfizh (Input Setoran, Target Hafalan, hapus catatan guru) dan jalur rules (`delete` nilai, `seni_kelas`).
+- `firestore.rules`: `bolehKelas()` tanpa admin, `lihatKelas()` baru untuk baca, `waliKelasSendiri()` baru, `delete` nilai `if false`, `delete` setoran/menulis_log hanya pembuat. **Belum di-deploy.**
+- `src/lib/roles.ts`: `isGuruTahsinRole`, `teksPeran`. `src/App.tsx`: `RoleGate` menerima tujuan alih; input setoran dijaga.
+- Nama menu khusus admin: Pantauan Akademik, Tujuan Pembelajaran, Bobot Tujuan Pembelajaran, Daftar Nilai Harian, Daftar Nilai STS & SAS, Rekap Nilai Harian, Pantauan Tahsin & Tahfizh. `AkademikHub` dan `TahsinHub` punya varian admin (Input Setoran dan Rapor tidak ditampilkan untuk admin).
+- `scripts/cek-peran-admin.mjs` (baru). `ANTIREGRESI.md` §17. `docs/PROGRES_ADMIN.md` (baru): rencana dan status Tahap 1–3.

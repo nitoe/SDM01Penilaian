@@ -69,12 +69,17 @@ service cloud.firestore {
       return isApprovedParent() && siswaId in myProfile().anakIds;
     }
 
-    // Admin, atau guru Tahsin-Tahfizh yang kelasnya ada di kelasAmpu.
+    // TULIS Tahsin-Tahfizh: hanya guru Tahsin-Tahfizh yang kelasnya ada di kelasAmpu.
+    // Admin sengaja TIDAK termasuk: administrator hanya memantau (ANTIREGRESI §17).
     function bolehKelas(kelas) {
-      return akunAktif() && (
-        myRole() == 'admin' ||
-        (myRole() in ['guru', 'guru_tahsin_tahfizh'] && kelas in myProfile().kelasAmpu)
-      );
+      return akunAktif()
+        && myRole() in ['guru', 'guru_tahsin_tahfizh']
+        && kelas in myProfile().kelasAmpu;
+    }
+
+    // BACA Tahsin-Tahfizh: admin (pantauan) atau guru pemilik kelas.
+    function lihatKelas(kelas) {
+      return isAdmin() || bolehKelas(kelas);
     }
 
 
@@ -109,6 +114,14 @@ service cloud.firestore {
         myRole() == 'admin' ||
         (myRole() in ['guru_akademik', 'guru'] && kelas in myProfile().waliKelas)
       );
+    }
+
+    // Wali kelas sungguhan (tanpa admin). Untuk data yang ditulis guru, bukan master data.
+    function waliKelasSendiri(kelas) {
+      return akunAktif()
+        && myRole() in ['guru_akademik', 'guru']
+        && daftarAda('waliKelas')
+        && kelas in myProfile().waliKelas;
     }
 
     // ---- users/{uid} -----------------------------------------------------
@@ -172,7 +185,7 @@ service cloud.firestore {
     // Sesuai v2 antiregresi §5: hanya PEMBUATNYA yang boleh mengubah (dan hanya field sederhana: jenis, status
     // hafalan, catatan; materi dan Baca & Tandai terkunci), pembuatnya atau admin boleh menghapus.
     match /setoran/{id} {
-      allow get, list: if bolehKelas(resource.data.kelas)
+      allow get, list: if lihatKelas(resource.data.kelas)
                        || anakSaya(resource.data.siswaId);
       allow create: if bolehKelas(request.resource.data.kelas)
                     && request.resource.data.createdBy == request.auth.uid;
@@ -180,12 +193,13 @@ service cloud.firestore {
                     && resource.data.createdBy == request.auth.uid
                     && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['jenis', 'statusHafalan', 'catatan']);
+      // Admin tidak menghapus catatan guru (ANTIREGRESI §17).
       allow delete: if akunAktif()
-                    && (resource.data.createdBy == request.auth.uid || isAdmin());
+                    && resource.data.createdBy == request.auth.uid;
     }
 
     match /menulis_log/{id} {
-      allow get, list: if bolehKelas(resource.data.kelas)
+      allow get, list: if lihatKelas(resource.data.kelas)
                        || anakSaya(resource.data.siswaId);
       allow create: if bolehKelas(request.resource.data.kelas)
                     && request.resource.data.createdBy == request.auth.uid;
@@ -193,8 +207,9 @@ service cloud.firestore {
                     && resource.data.createdBy == request.auth.uid
                     && !request.resource.data.diff(resource.data).affectedKeys()
                          .hasAny(['siswaId', 'kelas', 'createdBy', 'createdAt']);
+      // Admin tidak menghapus catatan guru (ANTIREGRESI §17).
       allow delete: if akunAktif()
-                    && (resource.data.createdBy == request.auth.uid || isAdmin());
+                    && resource.data.createdBy == request.auth.uid;
     }
 
     // ID dokumen = kode kelas (mis. '3A').
@@ -205,7 +220,7 @@ service cloud.firestore {
       allow create: if bolehKelas(request.resource.data.kelas)
                     && request.resource.data.keys().hasAll(['kelas', 'tahunAjaran', 'semester']);
       allow update: if bolehKelas(resource.data.kelas);
-      allow delete: if isAdmin() || bolehKelas(resource.data.kelas);
+      allow delete: if bolehKelas(resource.data.kelas);
     }
 
     match /kktp_tahsin_tahfizh/{jenjang} {
@@ -242,7 +257,7 @@ service cloud.firestore {
                      && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
       allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
                      && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
-      allow delete: if isAdmin();
+      allow delete: if false; // admin hanya membaca (ANTIREGRESI §17)
     }
 
     // Cakupan TP STS/SAS, lalu nilainya. Admin membaca, guru kelas atau bidang studi menulis.
@@ -255,7 +270,7 @@ service cloud.firestore {
       allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
                      && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas)
                      && request.resource.data.jenis == resource.data.jenis;
-      allow delete: if isAdmin();
+      allow delete: if false; // admin hanya membaca (ANTIREGRESI §17)
     }
 
     match /nilai_sts/{id} {
@@ -265,7 +280,7 @@ service cloud.firestore {
                      && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
       allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
                      && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
-      allow delete: if isAdmin();
+      allow delete: if false; // admin hanya membaca (ANTIREGRESI §17)
     }
 
     match /nilai_sas/{id} {
@@ -275,14 +290,14 @@ service cloud.firestore {
                      && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
       allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
                      && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
-      allow delete: if isAdmin();
+      allow delete: if false; // admin hanya membaca (ANTIREGRESI §17)
     }
 
     // Pilihan disiplin Seni Budaya per kelas — hanya wali kelas yang menulis.
     // ID dokumen = kode kelas (mis. "5A").
     match /seni_kelas/{kelas} {
       allow read: if isGuru();
-      allow write: if bolehWaliKelas(kelas);
+      allow write: if waliKelasSendiri(kelas);
     }
 
 

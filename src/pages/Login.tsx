@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ambilNoticeLogin } from '../lib/akunGuru'
 import { loginWithEmail, logout } from '../lib/auth'
 import { sendPasswordResetEmail } from 'firebase/auth'
-import { auth } from '../lib/firebase'
-import { isFirebaseConfigured } from '../lib/firebase'
+import { auth, isFirebaseConfigured } from '../lib/firebase'
 import { listPeriodeAktif } from '../lib/periode'
 import type { PeriodeAkademik } from '../types/periode'
 import { labelPeriode } from '../types/periode'
@@ -30,7 +29,6 @@ export default function Login() {
     if (notice) setError(notice)
   }, [])
 
-  // Muat periode aktif di form login (tanpa auth) agar user memilih tahun + semester
   useEffect(() => {
     let batal = false
     setPeriodeLoading(true)
@@ -78,7 +76,6 @@ export default function Login() {
     )
   }, [periodeList, tahunPilih, semesterPilih])
 
-  // Jika tahun diganti dan semester tidak tersedia, reset semester
   useEffect(() => {
     if (!tahunPilih) return
     if (semesterPilih && !daftarSemester.includes(semesterPilih)) {
@@ -154,214 +151,232 @@ export default function Login() {
     }
   }
 
-  const field =
-    'w-full rounded-lg border border-border bg-slate-50/80 px-3.5 py-2.5 text-[14px] outline-none transition focus:border-muh-500 focus:bg-white focus:ring-2 focus:ring-muh-500/15'
+  const submitDisabled =
+    loading || periodeLoading || (periodeList.length > 0 && !periodeTerpilih)
 
   return (
-    <div className="flex min-h-full items-stretch bg-surface-2 md:p-3">
-      <div className="mx-auto flex w-full max-w-5xl overflow-hidden bg-white md:rounded-2xl md:border md:border-border md:shadow-[0_4px_24px_rgba(15,23,42,0.06)]">
-        <div className="hero-banner hidden w-[44%] flex-col justify-between p-8 text-white lg:flex">
+    <div className="auth-shell">
+      {/* ── Left brand panel ───────────────────────────────────────── */}
+      <aside className="auth-brand hidden lg:flex">
+        <div className="auth-brand-glow" aria-hidden />
+        <div className="relative z-10 flex h-full flex-col justify-between p-10 xl:p-12">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white">
+            <span className="auth-logo-tile">
               <img src="/favicon-32.png" alt="" className="h-7 w-7" />
             </span>
-            <span className="text-[15px] font-semibold">SDM 01 Kukusan</span>
+            <div>
+              <p className="text-[15px] font-medium tracking-tight text-white">SDM 01 Kukusan</p>
+              <p className="text-[12px] font-light text-white/70">Sistem Penilaian</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-[28px] font-semibold leading-tight tracking-tight">
-              Sistem Penilaian
-              <br />
-              SD Muhammadiyah 01 Kukusan
-            </h1>
-            <p className="mt-3 max-w-xs text-[13px] text-muh-100/85">
-              Catat penilaian, pantau perkembangan siswa, dan siapkan rapor dalam satu tempat.
-              Pilih tahun ajaran dan semester saat masuk.
-            </p>
-          </div>
-          <p className="text-[12px] text-muh-100/70">Khusus guru dan orang tua terdaftar</p>
-        </div>
 
-        <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-10">
-          <div className="w-full max-w-[380px]">
-            <div className="mb-7 lg:hidden">
-              <img src="/favicon-32.png" alt="" className="mb-3 h-11 w-11 rounded-lg" />
-              <p className="text-[15px] font-semibold text-slate-900">SDM 01 Kukusan</p>
-              <p className="text-[12px] text-muted">Sistem Penilaian</p>
+          <div className="max-w-[360px]">
+            <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-white/55">
+              Portal internal
+            </p>
+            <h1 className="auth-display text-white">
+              Satu tempat untuk
+              <br />
+              penilaian &amp; rapor
+            </h1>
+            <p className="mt-5 text-[15px] font-light leading-relaxed text-white/78">
+              Catat nilai harian, pantau progres siswa, dan siapkan rapor semester — dengan
+              periode akademik yang jelas.
+            </p>
+
+            <ul className="mt-8 space-y-3">
+              {[
+                'Nilai SLM, STS, dan SAS per mapel',
+                'Setoran Tahsin & target hafalan',
+                'Rapor siap cetak untuk wali kelas',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2.5 text-[13.5px] font-light text-white/85">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/15 text-[11px] text-white">
+                    ✓
+                  </span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <p className="text-[12px] font-light text-white/50">
+            Khusus guru &amp; orang tua terdaftar · SD Muhammadiyah 01 Kukusan
+          </p>
+        </div>
+      </aside>
+
+      {/* ── Right form panel ───────────────────────────────────────── */}
+      <main className="auth-form-panel">
+        <div className="auth-form-card">
+          {/* Mobile brand */}
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <span className="auth-logo-tile auth-logo-tile--light">
+              <img src="/favicon-32.png" alt="" className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="text-[14px] font-medium text-[#0d253d]">SDM 01 Kukusan</p>
+              <p className="text-[12px] font-light text-[#64748d]">Sistem Penilaian</p>
+            </div>
+          </div>
+
+          {!isFirebaseConfigured && (
+            <div className="auth-alert auth-alert--warn mb-5">
+              Firebase belum dikonfigurasi. Isi file <code className="font-mono text-[12px]">.env</code>.
+            </div>
+          )}
+
+          <header className="mb-7">
+            <h2 className="auth-display auth-display--sm text-[#0d253d]">Masuk</h2>
+            <p className="mt-2 text-[14px] font-light leading-relaxed text-[#64748d]">
+              Pilih tahun ajaran &amp; semester, lalu masuk dengan akun terdaftar.
+            </p>
+          </header>
+
+          <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4" noValidate>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="auth-field">
+                <label htmlFor="tahun">Tahun ajaran</label>
+                <select
+                  id="tahun"
+                  value={tahunPilih}
+                  disabled={periodeLoading || daftarTahun.length === 0}
+                  onChange={(e) => setTahunPilih(e.target.value)}
+                  required={periodeList.length > 0}
+                >
+                  {periodeLoading && <option value="">Memuat…</option>}
+                  {!periodeLoading && daftarTahun.length === 0 && (
+                    <option value="">Belum ada</option>
+                  )}
+                  {daftarTahun.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="auth-field">
+                <label htmlFor="semester">Semester</label>
+                <select
+                  id="semester"
+                  value={semesterPilih}
+                  disabled={periodeLoading || daftarSemester.length === 0}
+                  onChange={(e) => setSemesterPilih(e.target.value as '1' | '2' | '')}
+                  required={periodeList.length > 0}
+                >
+                  {daftarSemester.length === 0 && <option value="">—</option>}
+                  {daftarSemester.includes('1') && <option value="1">1 · Ganjil</option>}
+                  {daftarSemester.includes('2') && <option value="2">2 · Genap</option>}
+                </select>
+              </div>
             </div>
 
-            {!isFirebaseConfigured && (
-              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12px] font-medium text-amber-800">
-                Firebase belum dikonfigurasi. Isi file <code className="font-mono">.env</code>.
+            {!periodeLoading && periodeList.length === 0 && (
+              <div className="auth-alert auth-alert--warn">
+                Belum ada periode akademik aktif. Minta admin membuatnya di{' '}
+                <strong>Administrasi → Periode Akademik</strong>, lalu muat ulang halaman ini.
               </div>
             )}
 
-            <h2 className="text-[22px] font-semibold tracking-tight text-slate-900">Masuk</h2>
-            <p className="mt-1 text-[13px] text-muted">
-              Pilih tahun ajaran & semester, lalu masuk dengan akun terdaftar.
-            </p>
+            {periodeTerpilih && (
+              <p className="rounded-lg bg-[#f6f9fc] px-3 py-2 text-[12.5px] font-light text-[#64748d]">
+                Periode aktif:{' '}
+                <span className="font-medium text-[#0d253d]">{labelPeriode(periodeTerpilih)}</span>
+                {periodeTerpilih.isDefault ? (
+                  <span className="ml-1.5 rounded-full bg-[#eef2ff] px-2 py-0.5 text-[11px] font-medium text-[#4434d4]">
+                    default
+                  </span>
+                ) : null}
+              </p>
+            )}
 
-            <form onSubmit={(e) => void handleSubmit(e)} className="mt-6 space-y-4">
-              {/* Periode: tahun + semester */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label
-                    htmlFor="tahun"
-                    className="mb-1.5 block text-[12px] font-medium text-slate-600"
-                  >
-                    Tahun ajaran
-                  </label>
-                  <select
-                    id="tahun"
-                    className={field}
-                    value={tahunPilih}
-                    disabled={periodeLoading || daftarTahun.length === 0}
-                    onChange={(e) => setTahunPilih(e.target.value)}
-                    required={periodeList.length > 0}
-                  >
-                    {periodeLoading && <option value="">Memuat…</option>}
-                    {!periodeLoading && daftarTahun.length === 0 && (
-                      <option value="">Belum ada periode</option>
-                    )}
-                    {daftarTahun.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label
-                    htmlFor="semester"
-                    className="mb-1.5 block text-[12px] font-medium text-slate-600"
-                  >
-                    Semester
-                  </label>
-                  <select
-                    id="semester"
-                    className={field}
-                    value={semesterPilih}
-                    disabled={periodeLoading || daftarSemester.length === 0}
-                    onChange={(e) => setSemesterPilih(e.target.value as '1' | '2' | '')}
-                    required={periodeList.length > 0}
-                  >
-                    {daftarSemester.length === 0 && <option value="">—</option>}
-                    {daftarSemester.includes('1') && <option value="1">1 (Ganjil)</option>}
-                    {daftarSemester.includes('2') && <option value="2">2 (Genap)</option>}
-                  </select>
-                </div>
-              </div>
-
-              {!periodeLoading && periodeList.length === 0 && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12px] text-amber-900">
-                  Belum ada periode akademik aktif. Minta admin membuatnya di{' '}
-                  <strong>Administrasi → Periode Akademik</strong>, lalu muat ulang halaman ini.
-                </div>
-              )}
-
-              {periodeTerpilih && (
-                <p className="text-[12px] text-muted">
-                  Periode: <strong className="text-slate-700">{labelPeriode(periodeTerpilih)}</strong>
-                  {periodeTerpilih.isDefault ? ' · default sekolah' : ''}
-                </p>
-              )}
-
-              <div>
-                <label htmlFor="email" className="mb-1.5 block text-[12px] font-medium text-slate-600">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={field}
-                  placeholder="nama@sekolah.sch.id"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="password"
-                  className="mb-1.5 block text-[12px] font-medium text-slate-600"
-                >
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={field + ' pr-20'}
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-muh-700"
-                  >
-                    {showPassword ? 'Sembunyikan' : 'Tampilkan'}
-                  </button>
-                </div>
-              </div>
-
-              {error && (
-                <div
-                  role="alert"
-                  className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] font-medium text-red-700"
-                >
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading || periodeLoading || (periodeList.length > 0 && !periodeTerpilih)}
-                className="flex w-full items-center justify-center rounded-lg bg-muh-600 px-3 py-3 text-[14px] font-semibold text-white shadow-sm transition hover:bg-muh-700 disabled:opacity-60"
-              >
-                {loading ? 'Memproses…' : 'Masuk'}
-              </button>
-            </form>
-
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!email.trim()) {
-                    setError('Isi email terlebih dahulu untuk mengatur ulang password.')
-                    return
-                  }
-                  try {
-                    await sendPasswordResetEmail(auth, email.trim().toLowerCase())
-                    setResetMsg('Tautan atur ulang password telah dikirim ke email Anda.')
-                    setError(null)
-                  } catch {
-                    setError('Gagal mengirim tautan. Periksa email.')
-                  }
-                }}
-                className="text-[12px] font-medium text-muh-700 hover:underline"
-              >
-                Lupa password?
-              </button>
-              {resetMsg && <p className="mt-2 text-[12px] text-muh-800">{resetMsg}</p>}
+            <div className="auth-field">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="nama@sekolah.sch.id"
+              />
             </div>
 
-            <p className="mt-6 text-center text-[12px] text-muted">
-              Belum punya akun?{' '}
-              <Link to="/register" className="font-medium text-muh-700">
-                Daftar sebagai guru
-              </Link>
-            </p>
+            <div className="auth-field">
+              <label htmlFor="password">Password</label>
+              <div className="auth-input-wrap">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  className="auth-ghost-btn"
+                  onClick={() => setShowPassword((v) => !v)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? 'Sembunyikan' : 'Tampilkan'}
+                </button>
+              </div>
+            </div>
 
-            <p className="mt-4 text-center text-[12px] text-muted lg:text-left">
-              SD Muhammadiyah 01 Kukusan · Internal
-            </p>
+            {error && (
+              <div role="alert" className="auth-alert auth-alert--error">
+                {error}
+              </div>
+            )}
+
+            <button type="submit" className="auth-btn-primary" disabled={submitDisabled}>
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="auth-spinner" aria-hidden />
+                  Memproses…
+                </span>
+              ) : (
+                'Masuk'
+              )}
+            </button>
+          </form>
+
+          <div className="mt-5 flex flex-col items-center gap-3">
+            <button
+              type="button"
+              className="auth-link"
+              onClick={async () => {
+                if (!email.trim()) {
+                  setError('Isi email terlebih dahulu untuk mengatur ulang password.')
+                  return
+                }
+                try {
+                  await sendPasswordResetEmail(auth, email.trim().toLowerCase())
+                  setResetMsg('Tautan atur ulang password telah dikirim ke email Anda.')
+                  setError(null)
+                } catch {
+                  setError('Gagal mengirim tautan. Periksa email.')
+                }
+              }}
+            >
+              Lupa password?
+            </button>
+            {resetMsg && <p className="text-[13px] font-medium text-[#4434d4]">{resetMsg}</p>}
           </div>
+
+          <div className="auth-divider" />
+
+          <p className="text-center text-[13.5px] font-light text-[#64748d]">
+            Belum punya akun?{' '}
+            <Link to="/register" className="auth-link">
+              Daftar sebagai guru
+            </Link>
+          </p>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

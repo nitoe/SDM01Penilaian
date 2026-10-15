@@ -113,7 +113,80 @@ function PanelItems({ items }: { items: Item[] }) {
   )
 }
 
-export default function AkademikHub() {
+/** Hub untuk administrator: hanya melihat. Nama menu mengikuti fungsi pemantauan, bukan pengisian. */
+const adminTujuan: Item[] = [
+  {
+    to: '/akademik/setup-tp',
+    title: 'Tujuan Pembelajaran',
+    desc: 'Lihat TP dan KKTP yang disusun guru, per kelas dan mapel',
+    icon: 'target',
+    tone: 'green',
+    ready: true,
+  },
+  {
+    to: '/akademik/bobot-semester',
+    title: 'Bobot Tujuan Pembelajaran',
+    desc: 'Lihat pembagian TP ke semester dan bobotnya',
+    icon: 'calendar',
+    tone: 'green',
+    ready: true,
+  },
+]
+
+const adminNilai: Item[] = [
+  {
+    to: '/akademik/nilai-slm',
+    title: 'Daftar Nilai Harian',
+    desc: 'Lihat nilai sumatif lingkup materi yang diinput guru',
+    icon: 'clipboard',
+    tone: 'green',
+    ready: true,
+  },
+  {
+    to: '/akademik/nilai-sts',
+    title: 'Daftar Nilai STS & SAS',
+    desc: 'Lihat nilai tengah dan akhir semester per kelas',
+    icon: 'clipboard',
+    tone: 'green',
+    ready: true,
+  },
+]
+
+const adminLaporan: Item[] = [
+  {
+    to: '/akademik/laporan-slm',
+    title: 'Rekap Nilai Harian',
+    desc: 'Rekap nilai per kelas dan mapel, siap dicetak',
+    icon: 'printer',
+    tone: 'green',
+    ready: true,
+  },
+]
+
+function AdminAkademikHub() {
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        title="Pantauan Akademik"
+        subtitle="Mode lihat. TP, bobot, dan nilai disusun serta diinput oleh guru kelas dan guru bidang studi; administrator tidak mengubahnya."
+      />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <HubPanel title="Tujuan pembelajaran">
+          <PanelItems items={adminTujuan} />
+        </HubPanel>
+        <HubPanel title="Daftar nilai">
+          <PanelItems items={adminNilai} />
+        </HubPanel>
+        <HubPanel title="Rekap">
+          <PanelItems items={adminLaporan} />
+        </HubPanel>
+      </div>
+    </div>
+  )
+}
+
+export default function AkademikHub({ admin = false }: { admin?: boolean }) {
+  if (admin) return <AdminAkademikHub />
   return (
     <div className="space-y-5">
       <PageHeader

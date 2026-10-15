@@ -67,12 +67,18 @@ function PanelItems({ items }: { items: Item[] }) {
   )
 }
 
-export default function TahsinHub() {
+export default function TahsinHub({ admin = false }: { admin?: boolean }) {
+  const harianTampil = admin ? harian.filter((i) => i.to !== '/tahsin/input-setoran') : harian
+  const targetTampil = admin ? targetLaporan.filter((i) => i.ready) : targetLaporan
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Tahsin & Tahfizh"
-        subtitle="Catat setoran pertemuan dan pantau perkembangan bacaan siswa."
+        title={admin ? 'Pantauan Tahsin & Tahfizh' : 'Tahsin & Tahfizh'}
+        subtitle={
+          admin
+            ? 'Mode lihat. Setoran dan target hafalan dicatat oleh guru Tahsin-Tahfizh; administrator tidak mengubahnya.'
+            : 'Catat setoran pertemuan dan pantau perkembangan bacaan siswa.'
+        }
       />
 
       <div className="rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12px] leading-snug text-amber-900">
@@ -81,11 +87,11 @@ export default function TahsinHub() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <HubPanel title="Kerja harian">
-          <PanelItems items={harian} />
+        <HubPanel title={admin ? 'Riwayat' : 'Kerja harian'}>
+          <PanelItems items={harianTampil} />
         </HubPanel>
-        <HubPanel title="Target & laporan">
-          <PanelItems items={targetLaporan} />
+        <HubPanel title={admin ? 'Target' : 'Target & laporan'}>
+          <PanelItems items={targetTampil} />
         </HubPanel>
       </div>
     </div>

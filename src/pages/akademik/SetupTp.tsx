@@ -340,8 +340,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-5">
         <PageHeader
-          back={{ to: '/akademik', label: 'Akademik & Rapor' }}
-          title="Setup TP & KKTP"
+          back={{ to: '/akademik', label: admin ? 'Pantauan Akademik' : 'Akademik & Rapor' }}
+          title={admin ? 'Tujuan Pembelajaran' : 'Setup TP & KKTP'}
           subtitle="Pilih kelas lalu mata pelajaran. TP terikat mapel×kelas — kelas paralel (1A ≠ 1B) tetap terpisah."
           actions={
             tulis ? (
@@ -681,13 +681,13 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
       <PageHeader
           back={{ to: '/akademik/setup-tp', label: 'Pilih mata pelajaran' }}
         eyebrow={`Kelas ${kelas} · Fase ${faseDariTingkatan(tingkatan)}`}
-        title={`TP & KKTP — ${mapel}`}
+        title={tulis ? `TP & KKTP — ${mapel}` : `Tujuan Pembelajaran — ${mapel}`}
         subtitle={
           isSeniBudaya
             ? 'Seni Budaya punya tab khusus: atur disiplin aktif per semester, lalu susun TP per cabang seni (rupa, musik, tari, teater).'
             : tulis
               ? 'TP & KKTP dipakai bersama di kelas ini untuk mapel ini — guru kelas dan guru bidang studi yang mengampu melihat data yang sama. Semester & bobot diatur di menu Bobot Semester.'
-              : 'Mode lihat. Administrator dapat membaca TP yang disusun guru, tetapi tidak mengubahnya.'
+              : 'Mode lihat. TP dan KKTP disusun oleh guru kelas dan guru bidang studi; administrator hanya membaca.'
         }
       />
 

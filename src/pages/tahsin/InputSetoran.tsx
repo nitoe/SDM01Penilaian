@@ -48,7 +48,6 @@ export default function InputSetoran({ profile }: Props) {
   )
 
   const kelasOptions = useMemo(() => {
-    if (profile.role === 'admin') return [...SEMUA_KELAS]
     return profile.kelasAmpu?.length ? profile.kelasAmpu : [...SEMUA_KELAS]
   }, [profile])
 

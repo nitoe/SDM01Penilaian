@@ -248,7 +248,7 @@ export default function RiwayatSiswa({ profile }: Props) {
 
   function renderSetoranCard(r: SetoranRecord) {
     const milikSendiri = Boolean(r.createdBy) && r.createdBy === profile.uid
-    const bolehHapus = milikSendiri || profile.role === 'admin'
+    const bolehHapus = milikSendiri // admin hanya memantau (ANTIREGRESI §17)
     const ringkas = r.detailAyat?.length
       ? ringkasDetailAyat(r.detailAyat)
       : r.detailBacaanIqro

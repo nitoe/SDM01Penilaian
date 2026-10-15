@@ -102,8 +102,8 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     return (
       <div className="space-y-5">
         <PageHeader
-          back={{ to: '/akademik', label: 'Akademik & Rapor' }}
-          title="Bobot Semester TP"
+          back={{ to: '/akademik', label: admin ? 'Pantauan Akademik' : 'Akademik & Rapor' }}
+          title={admin ? 'Bobot Tujuan Pembelajaran' : 'Bobot Semester TP'}
           subtitle="Pilih mapel × kelas. Satu TP boleh dipakai di semester 1, 2, atau keduanya."
         />
         <MapelKelasPicker
@@ -251,11 +251,11 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
       <BackLink to="/akademik/bobot-semester">Pilih mata pelajaran</BackLink>
       <PageHeader
         eyebrow={`Kelas ${kelas}`}
-        title={`Bobot Semester — ${mapel}`}
+        title={tulis ? `Bobot Semester — ${mapel}` : `Bobot Tujuan Pembelajaran — ${mapel}`}
         subtitle={
           tulis
             ? 'Isi angka di kolom Semester 1 dan/atau Semester 2. Total tiap semester sebaiknya 100%.'
-            : 'Mode lihat saja. Hanya guru mapel yang dapat mengubah bobot.'
+            : 'Mode lihat. Bobot diatur oleh guru kelas dan guru bidang studi; administrator hanya membaca.'
         }
       />
 
