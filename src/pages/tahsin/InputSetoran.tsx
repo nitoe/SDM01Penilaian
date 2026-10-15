@@ -411,7 +411,7 @@ export default function InputSetoran({ profile }: Props) {
                     {terakhir.statusHafalan && (
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
-                          terakhir.statusHafalan === 'lulus' ? 'bg-muh-50 text-muh-700' : 'bg-amber-50 text-amber-800'
+                          terakhir.statusHafalan === 'lulus' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'
                         }`}
                       >
                         {STATUS_LABEL[terakhir.statusHafalan]}

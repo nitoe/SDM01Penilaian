@@ -2,15 +2,19 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import Icon, { type IconName } from './Icon'
 
-/** Tone ikon: soft surface + warna ikon. */
+/**
+ * Tone ikon. Nama dipertahankan agar halaman lama tidak berubah, tetapi tampilannya disatukan:
+ * semua tone biru/hijau/sky/violet memakai biru merek, `peach` = perhatian (ambar), `ink` = netral.
+ * Warna hanya boleh membawa arti (ANTIREGRESI §19).
+ */
 export type Tone = 'green' | 'peach' | 'ink' | 'sky' | 'violet'
 
 const TONE_TILE: Record<Tone, string> = {
-  green: 'bg-muh-50 text-muh-700 ring-1 ring-muh-100',
-  peach: 'bg-gold-50 text-gold-500 ring-1 ring-gold-100',
-  ink: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200/80',
-  sky: 'bg-sky-50 text-sky-700 ring-1 ring-sky-100',
-  violet: 'bg-violet-50 text-violet-700 ring-1 ring-violet-100',
+  green: 'bg-muh-50 text-muh-700',
+  peach: 'bg-peach-50 text-peach-500',
+  ink: 'bg-slate-100 text-slate-600',
+  sky: 'bg-muh-50 text-muh-700',
+  violet: 'bg-muh-50 text-muh-700',
 }
 
 export function IconTile({
@@ -38,12 +42,14 @@ export function Badge({
   tone = 'neutral',
 }: {
   children: ReactNode
-  tone?: 'neutral' | 'green' | 'peach'
+  tone?: 'neutral' | 'green' | 'peach' | 'ok' | 'brand'
 }) {
   const cls = {
     neutral: 'bg-slate-100 text-slate-600',
-    green: 'bg-muh-50 text-muh-700',
-    peach: 'bg-gold-50 text-gold-500',
+    green: 'bg-emerald-50 text-emerald-700', // sukses / lengkap / aktif (sama dengan `ok`)
+    peach: 'bg-peach-50 text-peach-500',
+    ok: 'bg-emerald-50 text-emerald-700',
+    brand: 'bg-muh-50 text-muh-700',
   }[tone]
   return (
     <span
@@ -166,7 +172,7 @@ export function StatCard({
       {loading ? (
         <div className="mt-1.5 h-7 w-16 animate-pulse rounded bg-slate-100" />
       ) : (
-        <p className="mt-0.5 text-[22px] font-semibold leading-tight tracking-tight text-slate-900">
+        <p className="tabular mt-0.5 text-[22px] font-semibold leading-tight tracking-tight text-slate-900">
           {value ?? '—'}
         </p>
       )}
@@ -294,5 +300,99 @@ export function SectionTitle({ children }: { children: ReactNode }) {
     <h2 className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-slate-500">
       {children}
     </h2>
+  )
+}
+
+/**
+ * Deretan angka ringkas dalam satu kartu (2–4 item). Menggantikan beberapa StatCard berwarna:
+ * angka dibaca sekilas, tanpa ikon dekoratif.
+ */
+export function StatStrip({
+  items,
+}: {
+  items: { label: string; value: number | string | null; hint?: string; loading?: boolean }[]
+}) {
+  const cols = { 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3', 4: 'sm:grid-cols-4' }[
+    Math.min(4, Math.max(2, items.length)) as 2 | 3 | 4
+  ]
+  return (
+    <div
+      className={`grid grid-cols-2 gap-px overflow-clip rounded-[var(--radius-card)] border border-border bg-border ${cols}`}
+    >
+      {items.map((it, i) => (
+        <div
+          key={it.label}
+          className={`bg-white px-4 py-3.5 ${
+            i === 0 && items.length % 2 === 1 ? 'col-span-2 sm:col-span-1' : ''
+          }`}
+        >
+          <p className="text-[12px] font-medium text-muted">{it.label}</p>
+          {it.loading ? (
+            <div className="mt-1.5 h-7 w-16 animate-pulse rounded bg-slate-100" />
+          ) : (
+            <p className="tabular mt-0.5 text-[22px] font-semibold leading-tight tracking-tight text-slate-900">
+              {it.value ?? '—'}
+            </p>
+          )}
+          {it.hint && <p className="mt-0.5 text-[12px] leading-snug text-muted">{it.hint}</p>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Keadaan satu langkah alur kerja: selesai, perlu perhatian, siap dikerjakan, atau belum bisa. */
+export type FlowState = 'done' | 'attention' | 'ready' | 'idle'
+
+/**
+ * Baris langkah alur kerja bernomor. Dipakai di beranda guru agar urutan kerja jelas
+ * (Setup TP → Bobot → Nilai → ...), bukan deretan kartu modul yang setara.
+ */
+export function FlowRow({
+  step,
+  to,
+  title,
+  desc,
+  state = 'ready',
+  stateLabel,
+}: {
+  step: number
+  to: string
+  title: string
+  desc?: string
+  state?: FlowState
+  stateLabel?: string
+}) {
+  const bullet = {
+    done: 'bg-emerald-700 text-white',
+    attention: 'bg-peach-400 text-peach-900',
+    ready: 'bg-muh-600 text-white',
+    idle: 'bg-slate-100 text-slate-500',
+  }[state]
+  const badgeTone = { done: 'ok', attention: 'peach', ready: 'brand', idle: 'neutral' }[state] as
+    | 'ok'
+    | 'peach'
+    | 'brand'
+    | 'neutral'
+  return (
+    <Link
+      to={to}
+      className="group flex items-center gap-3 border-b border-border px-3.5 py-3 transition last:border-b-0 hover:bg-slate-50"
+    >
+      <span
+        className={`tabular flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold ${bullet}`}
+      >
+        {state === 'done' ? <Icon name="check" className="h-3.5 w-3.5" /> : step}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[13.5px] font-semibold text-slate-900 group-hover:text-muh-700">{title}</p>
+        {desc && <p className="mt-0.5 text-[12px] leading-snug text-muted">{desc}</p>}
+      </div>
+      {stateLabel && <Badge tone={badgeTone}>{stateLabel}</Badge>}
+      <Icon
+        name="arrow"
+        className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-muh-600"
+      />
+    </Link>
   )
 }

@@ -228,30 +228,23 @@
 
 18.7 Uji: `node --experimental-strip-types scripts/cek-monitoring-admin.mjs` (harus mencetak SEMUA UJI LULUS) setiap kali mengubah `monitoringAdminRumus.ts`.
 
-## §19. Notifikasi dan laporan guru (Tahap 3)
 
-19.1 Satu koleksi `notifikasi` untuk laporan tugas, laporan kendala, dan mutasi siswa masuk/keluar (dibedakan field `jenis`). Jenis baru: tambahkan ke `JenisNotifikasi`, `JENIS_LABEL`, daftar `jenis in [...]` di rules, dan uji di `scripts/cek-notifikasi.mjs`. Jangan membuat koleksi terpisah per jenis.
+## §19. Identitas visual (per 15 Okt 2026)
 
-19.2 Rules: guru dan admin boleh `create` dengan `dariUid == uid`, `status == 'baru'`, `createdAt == request.time`, dan kunci dibatasi `hasOnly`. Hanya admin yang `update`, dan hanya `status`, `catatanAdmin`, `updatedAt`. `delete` selalu ditolak. Baca: admin semua, pengirim hanya miliknya. Jika menambah field dokumen, ubah `hasOnly` di rules, `susunDokumen()`, dan `dariDok()` bersamaan.
+19.1 **Warna merek adalah biru lambang sekolah, `#313083`** (`muh-600`). Nama token `muh-*` sengaja dipertahankan karena dipakai di seluruh halaman; hanya nilainya yang berpindah dari hijau ke biru (skala 50–950 di `src/index.css`). Jangan mengembalikan hijau sebagai warna merek dan jangan menambah warna merek lain (indigo, magenta, ruby, gradient mesh).
 
-19.3 Batas panjang (judul 120, isi 2000) ada di `types/notifikasi.ts` dan rules; keduanya harus sama. Validasi klien (`validasiLaporan`) mencerminkan rules, bukan menggantikannya.
+19.2 **Warna hanya boleh membawa arti.** Hijau (`emerald`) = sukses, lulus, lengkap, aktif (`Badge tone="green"` atau `"ok"`, status Lulus, progres selesai). Ambar (`peach-*`/`gold-*`) = perlu perhatian atau perlu diulang. Merah = gagal atau galat. Biru = merek, pilihan aktif, tombol utama (`Badge tone="brand"`). Jangan menampilkan "Lulus" dengan biru, dan jangan memberi warna dekoratif per kartu. Tone `sky` dan `violet` di `ui.tsx` hanya dipertahankan agar halaman lama tetap terbuild dan kini tampil biru. Melengkapi §5.1.
 
-19.4 Kotak masuk admin membaca 200 laporan terbaru (`orderBy createdAt desc`) dan menyaring di klien. Laporan guru memakai indeks `dariUid + createdAt` di `firestore.indexes.json`; deploy indeks sebelum halaman Laporan ke Admin dipakai guru (`npm run deploy:indexes` bila skripnya ada, atau `firebase deploy --only firestore:indexes`).
+19.3 Melengkapi §5.3: `.hero-banner` kini biru tua rata (`muh-700`) tanpa gradient dan tanpa peach. Teks putih hanya boleh di atas area biru tua (`.hero-banner`, sidebar `bg-muh-800`, panel `.auth-brand`). Jangan memindahkan teks putih ke area terang.
 
-19.5 Lonceng di header hanya menghitung (`getCountFromServer`, status `baru`) untuk admin dan disegarkan saat pindah halaman. Tidak ada listener real-time; kegagalan hitung diabaikan agar header tidak terganggu.
+19.4 **Inter dihosting sendiri** di `public/fonts/inter-latin-wght-normal.woff2` (SIL OFL 1.1; `Inter-LICENSE-OFL.txt` harus tetap menyertainya). `index.html` tidak boleh memuat Google Fonts atau CDN apa pun (§5.2). Bobot teks minimal 400: jangan memakai `font-light`/300 (tidak terbaca baik di isian dan tabel). Angka di tabel dan isian nilai memakai `tabular-nums` (sudah diatur global untuk `td`, `th`, `input[type=number]`).
 
-19.6 Mutasi siswa pada tahap ini hanya MELAPORKAN ke admin. Admin tetap mengubah data siswa sendiri di Data Siswa. Jangan menambahkan jalur otomatis dari laporan ke `siswa` tanpa keputusan baru (menyentuh §5 dan §14).
+19.5 `DESIGN.md` lama (analisis situs pemasaran Stripe: gradient mesh, kartu harga, huruf 300) sudah diganti. Aplikasi ini alat kerja guru, bukan situs pemasaran. Jangan menulis ulang `DESIGN.md` dari rujukan situs pemasaran; acuan desain adalah `DESIGN.md` yang berlaku.
 
-19.7 Beranda admin tidak lagi menampilkan grafik jumlah siswa per kelas (diputuskan 15 Okt 2026). Gantinya: grafik Kelengkapan per kelas (TP/Bobot/Nilai) dari data pantauan, dan dropdown guru. Beranda guru tetap memakai `KelasBars` bila punya kelas.
+19.6 Layout: tanpa bingkai melayang (padding dan border yang mengelilingi seluruh aplikasi). Sidebar biru tua dengan lambang sekolah. Pembungkus Layout tetap tanpa `overflow-hidden` (§11.4).
 
-## §20. Laporan cetak untuk admin dan wali kelas (per 15 Okt 2026)
+19.7 **Struktur beranda guru**: ringkasan angka (`StatStrip`) → alur penilaian bernomor (`FlowRow`, status hanya dari progres TP, tanpa query nilai, §8.3) → diagram siswa per kelas. Kartu "Akses cepat" dan "Modul" di beranda dihapus karena menduplikasi sidebar, navigasi bawah, dan hub; jangan dikembalikan. Admin tetap melihat `AdminDashboard` di atas diagram.
 
-20.1 Admin tetap mencetak, tetapi tidak menulis. Halaman cetak (`LaporanStsSas`, `LaporanTahsin`) hanya membaca; `scripts/cek-laporan-cetak.mjs` gagal bila berkas pemuat/halaman memuat operasi tulis (`setDoc`, `addDoc`, `updateDoc`, `deleteDoc`, `writeBatch`, `save*`).
+19.8 **Aset logo bernama baru** (`logo-sdm.png`, `favicon-sdm-32.png`, `apple-touch-icon-sdm.png`) karena `firebase.json` memberi cache `immutable` satu tahun untuk png dan woff2: menimpa berkas dengan nama sama membuat pengunjung lama tetap melihat gambar lama. Jika logo berubah, beri nama baru. Lambang tidak diubah warna atau bentuknya; satu-satunya pengecualian adalah watermark putih berkeburaman 6% di panel `.auth-brand`.
 
-20.2 **Rekap STS/SAS per kelas** (`/akademik/laporan-sts-sas`, `?jenis=sts|sas&kelas=`): admin boleh semua kelas, guru akademik hanya kelas yang diwalikan (`profile.waliKelas`). Rumusnya di `lib/asesmenRumus.ts`: STS = rata tertimbang nilai STS pada TP cakupan STS (bobot `bobotUntukSts`, sama dengan Rapor STS; `raporSts.ts` mengimpor fungsi yang sama, jangan menggandakannya); SAS = per TP `hitungNilaiAkhirTP(slm, sas bila TP di cakupan SAS, tp, sts)` lalu rata tertimbang `bobotTpDiSemester` (sama dengan "Akhir" di halaman Nilai STS & SAS). Mengubah rumus nilai berarti mengubah ketiga tempat itu bersamaan dan memperbarui uji.
-
-20.3 Pemuat `muatRekapAsesmenKelas` selalu query per mapel dengan `mapel` + `kelas` (§7.3), semua mapel berlaku di tingkatan itu menjadi kolom (Seni Budaya berlabel disiplin semester itu), mapel tanpa nilai tampil "–". Tidak ada nilai yang ditebak atau diisi otomatis.
-
-20.4 **Laporan Tahsin-Tahfizh** (`/tahsin/laporan?kelas=`): admin semua kelas, guru Tahsin hanya `kelasAmpu`. Satu query `setoran` per kelas + `tahunAjaran` + `semester` (`getSetoranKelasPeriode`), dikelompokkan di klien; jangan mengganti dengan query per siswa. Setoran lama tanpa field periode tidak ikut. Capaian memakai `target.ts` (`posisiIqro`, `hitungProgresSurah`); siswa tanpa target tampil "–", bukan "Belum".
-
-20.5 Cetak memakai `window.print()` dengan `@page A4 landscape`; bagian layar (kontrol, header, navigasi) memakai `print:hidden`. Tanda tangan: kepala sekolah dari `config.namaKepsek`, wali kelas/guru Tahsin dicari lewat `lib/penandatangan.ts`.
+19.9 Setelah mengubah token atau `Layout`, periksa tampilan: halaman masuk, beranda guru (progres campuran, lengkap, kosong), beranda Tahsin, hub Akademik dan Administrasi, di lebar 1440px dan 390px. Kontras teks kecil minimal 4,5:1.

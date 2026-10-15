@@ -290,7 +290,7 @@ export function BacaTandai({ surah, mulai, akhir, tanda, onChange }: BacaTandaiP
           <div className="ml-auto flex flex-wrap gap-1.5" aria-live="polite">
             <Chip cls="bg-[#fdf3d8] text-[#8a6a0c]" n={stat.tajwid} label="Tajwid" />
             <Chip cls="bg-red-50 text-red-700" n={stat.makhroj} label="Makhroj" />
-            <Chip cls="bg-muh-50 text-muh-700" n={stat.lulus} label="Lulus" />
+            <Chip cls="bg-emerald-50 text-emerald-700" n={stat.lulus} label="Lulus" />
             <Chip cls="bg-amber-50 text-amber-800" n={stat.gagal} label="Perlu diulang" />
           </div>
         </div>
@@ -335,7 +335,7 @@ export function BacaTandai({ surah, mulai, akhir, tanda, onChange }: BacaTandaiP
                 diputar ? 'ring-2 ring-muh-400' : ''
               } ${
                 t.status === 'lulus'
-                  ? 'border-muh-300 bg-muh-50/60'
+                  ? 'border-emerald-300 bg-emerald-50/60'
                   : t.status === 'gagal'
                     ? 'border-red-300 bg-red-50/60'
                     : 'border-border bg-white'
@@ -366,8 +366,8 @@ export function BacaTandai({ surah, mulai, akhir, tanda, onChange }: BacaTandaiP
                     onClick={() => ubah(n, (x) => setStatusAyat(x, 'lulus'))}
                     className={`flex h-9 w-9 items-center justify-center rounded-full border text-[16px] font-bold transition ${
                       t.status === 'lulus'
-                        ? 'border-muh-600 bg-muh-600 text-white'
-                        : 'border-border bg-white text-slate-400 hover:text-muh-700'
+                        ? 'border-emerald-600 bg-emerald-600 text-white'
+                        : 'border-border bg-white text-slate-400 hover:text-emerald-700'
                     }`}
                   >
                     ✓

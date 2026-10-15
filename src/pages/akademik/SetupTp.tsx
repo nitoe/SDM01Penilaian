@@ -1040,7 +1040,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13.5px] font-semibold leading-snug text-slate-900">{tp.namaTp}</span>
                     <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                      <Badge tone="green">{tp.tipe}</Badge>
+                      <Badge tone="brand">{tp.tipe}</Badge>
                       {tp.disiplinSeni && <Badge tone="peach">{tp.disiplinSeni}</Badge>}
                       <Badge>
                         SLM {tp.bobotSlm ?? 60}% · SAS {tp.bobotSas ?? 40}%

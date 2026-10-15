@@ -288,17 +288,17 @@
 - `src/pages/Home.tsx`: admin menampilkan dashboard di atas diagram siswa per kelas; kartu modul memakai nama pantauan.
 - `scripts/cek-monitoring-admin.mjs` (baru). `ANTIREGRESI.md` §18. Tidak ada perubahan rules atau indeks pada tahap ini.
 
-## Belum dirilis — Notifikasi dan penyempurnaan dashboard admin (Tahap 3 dari 3)
+## Belum dirilis (basis: package.json 0.1.0) — Identitas visual biru sekolah dan perombakan beranda
 
-- Notifikasi: koleksi `notifikasi` (laporan tugas, laporan kendala, mutasi siswa), `src/lib/notifikasi.ts`, `src/lib/notifikasiRumus.ts`, `src/types/notifikasi.ts`, halaman `/notifikasi` (admin: kotak masuk bertab dengan status baru/diproses/selesai dan catatan; guru: formulir lapor dan riwayat), lonceng dengan jumlah laporan baru di header untuk staf.
-- `firestore.rules`: koleksi `notifikasi`. `firestore.indexes.json`: indeks `notifikasi (dariUid, createdAt desc)`. **Belum di-deploy.**
-- Dashboard admin: kolom cari nama diganti dropdown guru (berlaku di semua tab dan Ringkasan per guru); grafik jumlah siswa per kelas dihapus dari beranda admin dan diganti grafik Kelengkapan per kelas; Ringkasan menampilkan laporan guru yang belum ditangani.
-- `scripts/cek-notifikasi.mjs` (baru), `scripts/cek-monitoring-admin.mjs` ditambah uji per kelas. `docs/DATA_MODEL.md`, `ANTIREGRESI.md` §19.
+Perbaikan tampilan; tidak ada perubahan logika data, `firestore.rules`, indeks, maupun rumus.
 
-## Belum dirilis — Cetak laporan untuk admin (Tahap 4)
-
-- `/akademik/laporan-sts-sas` (baru): cetak rekap STS atau SAS satu kelas, semua mapel, rata-rata per siswa dan per mapel, tanda tangan kepala sekolah dan wali kelas. Admin semua kelas; wali kelas kelasnya.
-- `/tahsin/laporan` (baru, sebelumnya "segera hadir"): cetak laporan Tahsin-Tahfizh satu kelas — setoran per jenis, lulus/diulang, capaian terhadap target, setoran terakhir.
-- `src/lib/asesmenRumus.ts`, `rekapAsesmen.ts`, `tahsinLaporanRumus.ts`, `laporanTahsin.ts`, `penandatangan.ts` (baru); `tahsinData.getSetoranKelasPeriode`. `raporSts.ts` kini memakai `bobotUntukSts` dari `asesmenRumus.ts` (perilaku sama).
-- Menu admin: "Cetak Rekap STS & SAS" di Pantauan Akademik; "Cetak Laporan" aktif di Pantauan Tahsin. Tombol di Rekap Nilai Harian untuk admin berbunyi "Lihat daftar nilai".
-- `scripts/cek-laporan-cetak.mjs` (baru). `ANTIREGRESI.md` §20. Tidak ada perubahan rules/indeks.
+- `src/index.css`: palet merek dipindah dari hijau ke biru lambang sekolah (`#313083`) lewat token `muh-*` yang sama, sehingga semua halaman ikut berubah tanpa disunting. `peach-*`/`gold-*` disatukan menjadi satu skala ambar (perhatian). Radius kartu 20px → 12px, `.card-soft` datar bergaris tipis. Gaya Stripe (gradient mesh, indigo/magenta/ruby, huruf 300, tombol pil) dihapus; kelas `auth-*` dipertahankan namanya dan digayakan ulang. `.hero-banner` menjadi biru tua rata. Angka tabel memakai `tabular-nums`.
+- Inter kini dihosting sendiri: `public/fonts/inter-latin-wght-normal.woff2` dan `Inter-LICENSE-OFL.txt` (baru). `index.html`: tautan Google Fonts dihapus (sebelumnya melanggar §5.2 dan akan diblokir saat CSP dijadikan enforce), `theme-color` menjadi `#313083`, ikon memakai aset baru.
+- Aset baru: `public/logo-sdm.png`, `public/favicon-sdm-32.png`, `public/apple-touch-icon-sdm.png`; `public/favicon.svg` memuat lambang sekolah. `favicon-32.png` dan `apple-touch-icon.png` lama tidak lagi dipakai (boleh dihapus).
+- `src/components/Layout.tsx`: bingkai panel melayang dihapus; sidebar biru tua dengan lambang sekolah dan blok profil polos (menggantikan kartu banner "Masuk sebagai"); di layar kecil header memuat lambang.
+- `src/components/ui.tsx`: `IconTile` disatukan (hijau/sky/violet → biru merek, `peach` → ambar, `ink` → netral). `Badge`: `green` kini berarti sukses (zamrud), tone baru `brand` (biru) dan `ok`. Komponen baru `StatStrip` dan `FlowRow`.
+- `src/pages/Home.tsx`: beranda guru disusun ulang menjadi sapaan ringkas → `StatStrip` → "Alur penilaian" bernomor dengan status dari progres TP → diagram siswa per kelas. Banner, "Akses cepat", dan "Modul" dihapus (menduplikasi navigasi). Hook dan pemuatan data tidak diubah; tidak ada query ke koleksi nilai (§8.3). Diagram: kelas saya biru tua, lainnya biru muda.
+- `src/pages/Login.tsx`, `src/pages/Register.tsx`: warna Stripe yang tertulis langsung (`#0d253d`, `#64748d`, `#4434d4`, dst.) dan `font-light` diganti token; panel kiri login memakai lambang sekolah dan teks singkat tanpa slogan pemasaran. Logika tidak diubah.
+- Makna status dipertahankan: Lulus di `BacaTandai.tsx`, `InputSetoran.tsx`, `RiwayatSiswa.tsx` (termasuk bilah progres selesai) tetap hijau; `SetupTp.tsx` memakai `Badge tone="brand"` untuk label tipe.
+- `DESIGN.md`: diganti seluruhnya (sebelumnya analisis gaya Stripe yang tidak cocok untuk aplikasi kerja). `ANTIREGRESI.md` §19.
+- Diperiksa: `npm run build`, `npx oxlint` (0 galat; 4 peringatan lama di berkas yang tidak disentuh), `scripts/cek-baca-tandai.mts`, `scripts/cek-rumus-akademik.mjs`; tampilan dirender di 1440px dan 390px dengan data tiruan. Belum diuji dengan data Firestore sungguhan.

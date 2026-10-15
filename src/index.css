@@ -1,87 +1,99 @@
 @import "tailwindcss";
 
+/* Inter dihosting sendiri (CSP: font-src 'self'; ANTIREGRESI §5.2 dan §19). Subset Latin cukup untuk bahasa Indonesia. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @theme {
-  --color-muh-50: #eef8f2;
-  --color-muh-100: #d5eddf;
-  --color-muh-200: #a9d9bd;
-  --color-muh-300: #6fbf94;
-  --color-muh-400: #3d9a6e;
-  --color-muh-500: #1f8a58;
-  --color-muh-600: #006b3f;
-  --color-muh-700: #005734;
-  --color-muh-800: #004328;
-  --color-muh-900: #002e1c;
-  --color-muh-950: #001a10;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
 
-  --color-gold-50: #fbf7eb;
-  --color-gold-100: #f3e8c4;
-  --color-gold-200: #e6d08a;
-  --color-gold-300: #d4b44e;
-  --color-gold-400: #c49a2a;
-  --color-gold-500: #a8821e;
+  /* Warna merek: biru logo sekolah (#313083). Nama token `muh-*` dipertahankan karena dipakai di
+     seluruh halaman; hanya nilainya yang berpindah dari hijau ke biru (ANTIREGRESI §19). */
+  --color-muh-50: #eff0fa;
+  --color-muh-100: #dfe1f4;
+  --color-muh-200: #bfc3e8;
+  --color-muh-300: #959ad6;
+  --color-muh-400: #6a70bd;
+  --color-muh-500: #4a4fa3;
+  --color-muh-600: #313083;
+  --color-muh-700: #282768;
+  --color-muh-800: #1f1f50;
+  --color-muh-900: #171739;
+  --color-muh-950: #0e0e24;
 
-  --color-peach-50: #fff4ec;
-  --color-peach-100: #ffe4d0;
-  --color-peach-200: #fdc9a2;
-  --color-peach-300: #f9ab76;
-  --color-peach-400: #f08e50;
-  --color-peach-500: #d9722f;
+  /* Satu-satunya warna peringatan/perhatian (ambar). Nama `peach-*` dan `gold-*` dipertahankan
+     agar halaman lama tidak perlu diubah; keduanya kini memakai skala ambar yang sama. */
+  --color-peach-50: #fffbeb;
+  --color-peach-100: #fef3c7;
+  --color-peach-200: #fde68a;
+  --color-peach-300: #fcd34d;
+  --color-peach-400: #f59e0b;
+  --color-peach-500: #b45309;
+  --color-peach-600: #92400e;
+  --color-peach-700: #78350f;
+  --color-peach-800: #5f2a0c;
+  --color-peach-900: #451a03;
+
+  --color-gold-50: #fffbeb;
+  --color-gold-100: #fef3c7;
+  --color-gold-200: #fde68a;
+  --color-gold-300: #fcd34d;
+  --color-gold-400: #f59e0b;
+  --color-gold-500: #b45309;
 
   --color-surface: #ffffff;
-  --color-surface-2: #f4f5f3;
-  --color-border: #e9ece9;
-  --color-muted: #6b7280;
+  --color-surface-2: #f4f5f9;
+  --color-border: #e2e4ee;
+  --color-muted: #5b6275;
 
-  --radius-card: 1.25rem;
+  --radius-card: 0.75rem;
 }
 
 html, body, #root { height: 100%; }
 
 body {
   margin: 0;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.5;
   background: var(--color-surface-2);
-  color: #1e293b;
+  color: #1a1d33;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
+
+/* Angka rata untuk tabel dan isian nilai: kolom tidak bergoyang saat angka berganti. */
+td, th, input[type='number'], .tabular { font-variant-numeric: tabular-nums; }
 
 :focus-visible {
   outline: 2px solid var(--color-muh-600);
   outline-offset: 1px;
 }
 
+/* Permukaan standar aplikasi: datar, bergaris tipis. Kedalaman cukup dari garis, bukan bayangan. */
 .card-soft {
   background: #fff;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03), 0 6px 18px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 2px rgba(23, 23, 57, 0.04);
 }
 
-/* Banner hijau sekolah dengan pendar peach di pojok kanan atas. Teks putih tetap di area hijau (kontras AA). */
+/* Banner biru tua rata. Teks putih hanya di atas area ini (ANTIREGRESI §5.3 dan §19). */
 .hero-banner {
-  background:
-    radial-gradient(420px 220px at 100% 0%, rgba(240, 142, 80, 0.55), transparent 70%),
-    linear-gradient(135deg, var(--color-muh-600) 0%, var(--color-muh-800) 100%);
+  background: var(--color-muh-700);
 }
 
-/* ── Auth pages (Stripe DESIGN.md tokens) ─────────────────────────────── */
-.stripe-mesh-thin {
-  background: linear-gradient(
-    90deg,
-    #f5e9d4 0%,
-    #f96bee 22%,
-    #533afd 50%,
-    #ea2261 78%,
-    #9b6829 100%
-  );
-}
-
+/* ── Halaman masuk dan daftar ─────────────────────────────────────────── */
 .auth-shell {
   display: flex;
   min-height: 100%;
-  background: #f6f9fc;
+  background: var(--color-surface-2);
 }
 .auth-shell--center {
   align-items: center;
@@ -94,27 +106,26 @@ body {
   padding-bottom: 2.5rem;
 }
 
-/* Brand / left panel */
+/* Panel kiri: biru tua rata, dengan lambang sekolah sebagai watermark samar. */
 .auth-brand {
   position: relative;
-  width: 46%;
+  width: 44%;
   min-width: 360px;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse 90% 70% at 15% 25%, rgba(249, 107, 238, 0.5), transparent 55%),
-    radial-gradient(ellipse 80% 55% at 85% 15%, rgba(83, 58, 253, 0.75), transparent 50%),
-    radial-gradient(ellipse 70% 50% at 70% 85%, rgba(234, 34, 97, 0.4), transparent 55%),
-    radial-gradient(ellipse 55% 40% at 5% 75%, rgba(245, 233, 212, 0.35), transparent 50%),
-    linear-gradient(165deg, #1c1e54 0%, #0d253d 48%, #1a1c4a 100%);
+  background: var(--color-muh-800);
 }
-.auth-brand-glow {
-  pointer-events: none;
+.auth-brand::after {
+  content: '';
   position: absolute;
-  inset: -20% -10% auto auto;
-  height: 60%;
-  width: 70%;
-  background: radial-gradient(circle, rgba(102, 94, 253, 0.35), transparent 70%);
-  filter: blur(40px);
+  right: -90px;
+  bottom: -70px;
+  width: 520px;
+  height: 455px;
+  background: #fff;
+  opacity: 0.06;
+  -webkit-mask: url('/logo-sdm.png') center / contain no-repeat;
+  mask: url('/logo-sdm.png') center / contain no-repeat;
+  pointer-events: none;
 }
 
 .auth-logo-tile {
@@ -123,33 +134,29 @@ body {
   width: 2.75rem;
   align-items: center;
   justify-content: center;
-  border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  border-radius: 0.625rem;
+  background: #fff;
 }
 .auth-logo-tile--light {
-  height: 2.35rem;
-  width: 2.35rem;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(13, 37, 61, 0.08);
-  border: 1px solid #e3e8ee;
+  height: 2.5rem;
+  width: 2.5rem;
+  border: 1px solid var(--color-border);
 }
 
 .auth-display {
-  font-size: 2.35rem;
-  font-weight: 300;
-  line-height: 1.08;
-  letter-spacing: -0.035em;
-  font-feature-settings: "ss01";
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 .auth-display--sm {
-  font-size: 1.65rem;
-  letter-spacing: -0.028em;
+  font-size: 1.5rem;
+  letter-spacing: -0.015em;
 }
 
-/* Form side */
 .auth-form-panel {
   flex: 1;
+  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -157,30 +164,26 @@ body {
 }
 .auth-form-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 400px;
 }
 .auth-register-card {
   width: 100%;
   max-width: 42rem;
   overflow: hidden;
-  border-radius: 1rem;
-  border: 1px solid #e3e8ee;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
   background: #fff;
-  box-shadow:
-    0 1px 2px rgba(13, 37, 61, 0.04),
-    0 12px 32px rgba(13, 37, 61, 0.06);
+  box-shadow: 0 1px 2px rgba(23, 23, 57, 0.04);
 }
 .auth-success-card {
   width: 100%;
   max-width: 26rem;
-  border-radius: 1rem;
-  border: 1px solid #e3e8ee;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
   background: #fff;
   padding: 2.25rem 1.75rem;
   text-align: center;
-  box-shadow:
-    0 1px 2px rgba(13, 37, 61, 0.04),
-    0 12px 32px rgba(13, 37, 61, 0.06);
+  box-shadow: 0 1px 2px rgba(23, 23, 57, 0.04);
 }
 .auth-success-icon {
   margin: 0 auto 1.25rem;
@@ -190,47 +193,46 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  background: #eef2ff;
-  color: #533afd;
+  background: var(--color-muh-50);
+  color: var(--color-muh-600);
 }
 
-/* Fields */
 .auth-field label {
   display: block;
   margin-bottom: 0.4rem;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #273951;
+  color: #2b2f4a;
 }
 .auth-field input,
 .auth-field select {
   width: 100%;
   border-radius: 0.5rem;
-  border: 1px solid #e3e8ee;
+  border: 1px solid #cdd1e0;
   background: #fff;
-  padding: 0.65rem 0.85rem;
+  padding: 0.6rem 0.8rem;
   font-size: 0.9375rem;
-  font-weight: 300;
-  color: #0d253d;
+  font-weight: 400;
+  color: #1a1d33;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .auth-field input::placeholder {
-  color: rgba(100, 116, 141, 0.65);
+  color: #8d93a8;
 }
 .auth-field input:hover,
 .auth-field select:hover {
-  border-color: #c5d0dc;
+  border-color: #aeb4c9;
 }
 .auth-field input:focus,
 .auth-field select:focus {
-  border-color: #533afd;
-  box-shadow: 0 0 0 3px rgba(83, 58, 253, 0.18);
+  border-color: var(--color-muh-600);
+  box-shadow: 0 0 0 3px rgba(49, 48, 131, 0.16);
 }
 .auth-field input:disabled,
 .auth-field select:disabled {
-  background: #f6f9fc;
-  color: #64748d;
+  background: var(--color-surface-2);
+  color: var(--color-muted);
   cursor: not-allowed;
 }
 .auth-input-wrap {
@@ -246,69 +248,60 @@ body {
   transform: translateY(-50%);
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #533afd;
+  color: var(--color-muh-700);
   background: none;
   border: none;
   cursor: pointer;
-  transition: color 0.15s;
 }
 .auth-ghost-btn:hover {
-  color: #4434d4;
+  color: var(--color-muh-900);
 }
 .auth-hint {
   margin-top: 0.35rem;
   font-size: 0.75rem;
-  font-weight: 300;
-  color: #64748d;
+  color: var(--color-muted);
 }
 
-/* Buttons & links */
 .auth-btn-primary {
   display: flex;
   width: 100%;
   align-items: center;
   justify-content: center;
-  border-radius: 9999px;
+  border-radius: 0.5rem;
   border: none;
-  background: #533afd;
-  padding: 0.8rem 1.25rem;
+  background: var(--color-muh-600);
+  padding: 0.7rem 1.25rem;
   font-size: 0.9375rem;
-  font-weight: 500;
+  font-weight: 600;
   color: #fff;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(83, 58, 253, 0.25);
-  transition: background 0.15s, transform 0.12s, box-shadow 0.15s;
+  transition: background 0.15s;
 }
 .auth-btn-primary:hover:not(:disabled) {
-  background: #4434d4;
-  box-shadow: 0 4px 14px rgba(83, 58, 253, 0.28);
+  background: var(--color-muh-700);
 }
 .auth-btn-primary:active:not(:disabled) {
-  background: #2e2b8c;
-  transform: translateY(1px);
+  background: var(--color-muh-800);
 }
 .auth-btn-primary:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-  box-shadow: none;
 }
 .auth-link {
   font-weight: 500;
-  color: #533afd;
+  color: var(--color-muh-700);
   text-decoration: none;
-  transition: color 0.15s;
 }
 .auth-link:hover {
-  color: #4434d4;
+  color: var(--color-muh-900);
   text-decoration: underline;
 }
 .auth-divider {
   margin: 1.5rem 0;
   height: 1px;
-  background: #e3e8ee;
+  background: var(--color-border);
 }
 
-/* Alerts */
 .auth-alert {
   border-radius: 0.5rem;
   padding: 0.7rem 0.9rem;
@@ -327,44 +320,42 @@ body {
   color: #92400e;
 }
 
-/* Chips & task cards (register) */
 .auth-chip {
   border-radius: 9999px;
-  border: 1px solid #e3e8ee;
-  background: #f6f9fc;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
   padding: 0.3rem 0.75rem;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #273951;
+  color: #2b2f4a;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 .auth-chip:hover {
-  background: #eef2ff;
-  border-color: #c7d2fe;
+  background: var(--color-muh-50);
+  border-color: var(--color-muh-200);
 }
 .auth-chip--on {
   border-color: transparent;
-  background: #533afd;
+  background: var(--color-muh-600);
   color: #fff;
-  box-shadow: 0 1px 3px rgba(83, 58, 253, 0.3);
 }
 .auth-task-card {
-  border-radius: 0.65rem;
-  border: 1px solid #e3e8ee;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
   background: #fff;
   padding: 0.85rem 0.9rem;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, background 0.15s;
 }
 .auth-task-card:hover {
-  background: #f6f9fc;
+  background: var(--color-surface-2);
 }
 .auth-task-card--on {
-  border-color: #533afd;
-  background: #eef2ff;
-  box-shadow: 0 0 0 1px rgba(83, 58, 253, 0.15);
+  border-color: var(--color-muh-600);
+  background: var(--color-muh-50);
+  box-shadow: 0 0 0 1px rgba(49, 48, 131, 0.2);
 }
 .auth-check {
   display: inline-flex;
@@ -373,14 +364,14 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  border: 1.5px solid #c5d0dc;
+  border: 1.5px solid #b7bccf;
   font-size: 0.65rem;
   color: transparent;
   flex-shrink: 0;
 }
 .auth-check--on {
-  border-color: #533afd;
-  background: #533afd;
+  border-color: var(--color-muh-600);
+  background: var(--color-muh-600);
   color: #fff;
 }
 
@@ -399,7 +390,7 @@ body {
 
 @media (max-width: 1023px) {
   .auth-display {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
   }
 }
 

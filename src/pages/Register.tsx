@@ -162,8 +162,8 @@ export default function Register() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="auth-display auth-display--sm text-[#0d253d]">Pendaftaran berhasil</h2>
-          <p className="mt-3 text-[14.5px] font-light leading-relaxed text-[#64748d]">
+          <h2 className="auth-display auth-display--sm text-slate-900">Pendaftaran berhasil</h2>
+          <p className="mt-3 text-[14.5px] font-normal leading-relaxed text-muted">
             Data peran dan kelas Anda sudah tercatat. Admin akan meninjau dan menyetujui akun ini.
             Setelah disetujui, Anda dapat masuk.
           </p>
@@ -183,17 +183,17 @@ export default function Register() {
         <div className="p-6 sm:p-8">
           <div className="mb-6 flex items-center gap-3">
             <span className="auth-logo-tile auth-logo-tile--light">
-              <img src="/favicon-32.png" alt="" className="h-6 w-6" />
+              <img src="/logo-sdm.png" alt="" className="h-7 w-auto" />
             </span>
             <div>
-              <p className="text-[14px] font-medium text-[#0d253d]">SDM 01 Kukusan</p>
-              <p className="text-[12px] font-light text-[#64748d]">Daftar akun guru</p>
+              <p className="text-[14px] font-medium text-slate-900">SDM 01 Kukusan</p>
+              <p className="text-[12px] font-normal text-muted">Daftar akun guru</p>
             </div>
           </div>
 
           <header className="mb-7">
-            <h2 className="auth-display auth-display--sm text-[#0d253d]">Daftar Akun Guru</h2>
-            <p className="mt-2 text-[14px] font-light leading-relaxed text-[#64748d]">
+            <h2 className="auth-display auth-display--sm text-slate-900">Daftar Akun Guru</h2>
+            <p className="mt-2 text-[14px] font-normal leading-relaxed text-muted">
               Pilih nama resmi, peran, dan kelas yang Anda ampu. Admin akan menyetujui sebelum akun
               aktif.
             </p>
@@ -252,7 +252,7 @@ export default function Register() {
               <div className="auth-field sm:col-span-2">
                 <label htmlFor="gelar">
                   Gelar pendidikan terakhir{' '}
-                  <span className="font-light text-[#64748d]">(opsional)</span>
+                  <span className="font-normal text-muted">(opsional)</span>
                 </label>
                 <input
                   id="gelar"
@@ -268,8 +268,8 @@ export default function Register() {
             </section>
 
             <section>
-              <span className="mb-1.5 block text-[13px] font-medium text-[#273951]">Tugas *</span>
-              <p className="mb-3 text-[12.5px] font-light text-[#64748d]">
+              <span className="mb-1.5 block text-[13px] font-medium text-slate-700">Tugas *</span>
+              <p className="mb-3 text-[12.5px] font-normal text-muted">
                 Bisa dipilih bersamaan — misalnya guru Tahsin yang juga menjadi wali kelas.
               </p>
               <div className="grid gap-2.5 sm:grid-cols-3">
@@ -286,9 +286,9 @@ export default function Register() {
                         <span className={`auth-check ${aktif ? 'auth-check--on' : ''}`}>
                           {aktif ? '✓' : ''}
                         </span>
-                        <span className="text-[13px] font-medium text-[#0d253d]">{o.label}</span>
+                        <span className="text-[13px] font-medium text-slate-900">{o.label}</span>
                       </div>
-                      <p className="mt-2 text-[11.5px] font-light leading-snug text-[#64748d]">
+                      <p className="mt-2 text-[11.5px] font-normal leading-snug text-muted">
                         {o.desk}
                       </p>
                     </button>
@@ -299,10 +299,10 @@ export default function Register() {
 
             {butuhTahsin && (
               <section>
-                <span className="mb-1.5 block text-[13px] font-medium text-[#273951]">
+                <span className="mb-1.5 block text-[13px] font-medium text-slate-700">
                   Kelas Tahsin-Tahfizh *
                 </span>
-                <p className="mb-2.5 text-[12.5px] font-light text-[#64748d]">
+                <p className="mb-2.5 text-[12.5px] font-normal text-muted">
                   Pilih kelas tempat Anda mencatat setoran.
                 </p>
                 <ChipKelas value={kelasAmpu} onChange={setKelasAmpu} />
@@ -311,10 +311,10 @@ export default function Register() {
 
             {butuhKelas && (
               <section>
-                <span className="mb-1.5 block text-[13px] font-medium text-[#273951]">
+                <span className="mb-1.5 block text-[13px] font-medium text-slate-700">
                   Guru kelas *
                 </span>
-                <p className="mb-2.5 text-[12.5px] font-light text-[#64748d]">
+                <p className="mb-2.5 text-[12.5px] font-normal text-muted">
                   Kelas yang Anda walikan. Semua mata pelajaran di tingkat itu ikut terbuka.
                 </p>
                 <ChipKelas value={waliKelas} onChange={setWaliKelas} />
@@ -324,7 +324,7 @@ export default function Register() {
             {butuhMapel && (
               <section>
                 <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <span className="text-[13px] font-medium text-[#273951]">Penugasan mapel *</span>
+                  <span className="text-[13px] font-medium text-slate-700">Penugasan mapel *</span>
                   <button
                     type="button"
                     onClick={() =>
@@ -338,11 +338,11 @@ export default function Register() {
                     + Tambah
                   </button>
                 </div>
-                <p className="mb-2.5 text-[12.5px] font-light text-[#64748d]">
+                <p className="mb-2.5 text-[12.5px] font-normal text-muted">
                   Setiap baris: satu kelas dan satu mapel.
                 </p>
                 {penugasan.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-[#e3e8ee] px-3.5 py-4 text-[13px] font-light text-[#64748d]">
+                  <p className="rounded-lg border border-dashed border-border px-3.5 py-4 text-[13px] font-normal text-muted">
                     Belum ada penugasan mapel.
                   </p>
                 ) : (
@@ -394,7 +394,7 @@ export default function Register() {
                         <button
                           type="button"
                           onClick={() => setPenugasan((prev) => prev.filter((_, idx) => idx !== i))}
-                          className="rounded-md border border-[#e3e8ee] px-2.5 text-[12px] font-medium text-[#64748d] transition hover:bg-[#f6f9fc]"
+                          className="rounded-md border border-border px-2.5 text-[12px] font-medium text-muted transition hover:bg-surface-2"
                         >
                           Hapus
                         </button>
@@ -425,7 +425,7 @@ export default function Register() {
 
           <div className="auth-divider" />
 
-          <p className="text-center text-[13.5px] font-light text-[#64748d]">
+          <p className="text-center text-[13.5px] font-normal text-muted">
             Sudah punya akun?{' '}
             <Link to="/login" className="auth-link">
               Masuk

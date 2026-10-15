@@ -156,53 +156,27 @@ export default function Login() {
 
   return (
     <div className="auth-shell">
-      {/* ── Left brand panel ───────────────────────────────────────── */}
+      {/* ── Panel kiri: identitas sekolah ──────────────────────────── */}
       <aside className="auth-brand hidden lg:flex">
-        <div className="auth-brand-glow" aria-hidden />
         <div className="relative z-10 flex h-full flex-col justify-between p-10 xl:p-12">
           <div className="flex items-center gap-3">
             <span className="auth-logo-tile">
-              <img src="/favicon-32.png" alt="" className="h-7 w-7" />
+              <img src="/logo-sdm.png" alt="" className="h-8 w-auto" />
             </span>
             <div>
-              <p className="text-[15px] font-medium tracking-tight text-white">SDM 01 Kukusan</p>
-              <p className="text-[12px] font-light text-white/70">Sistem Penilaian</p>
+              <p className="text-[15px] font-semibold tracking-tight text-white">SDM 01 Kukusan</p>
+              <p className="text-[12px] text-white/70">SD Muhammadiyah 01 Kukusan</p>
             </div>
           </div>
 
-          <div className="max-w-[360px]">
-            <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-white/55">
-              Portal internal
+          <div className="max-w-[380px]">
+            <h1 className="auth-display text-white">Sistem Penilaian</h1>
+            <p className="mt-4 text-[15px] leading-relaxed text-white/80">
+              Nilai harian, setoran Tahsin-Tahfizh, dan rapor semester, dicatat per periode akademik.
             </p>
-            <h1 className="auth-display text-white">
-              Satu tempat untuk
-              <br />
-              penilaian &amp; rapor
-            </h1>
-            <p className="mt-5 text-[15px] font-light leading-relaxed text-white/78">
-              Catat nilai harian, pantau progres siswa, dan siapkan rapor semester — dengan
-              periode akademik yang jelas.
-            </p>
-
-            <ul className="mt-8 space-y-3">
-              {[
-                'Nilai SLM, STS, dan SAS per mapel',
-                'Setoran Tahsin & target hafalan',
-                'Rapor siap cetak untuk wali kelas',
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2.5 text-[13.5px] font-light text-white/85">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/15 text-[11px] text-white">
-                    ✓
-                  </span>
-                  {item}
-                </li>
-              ))}
-            </ul>
           </div>
 
-          <p className="text-[12px] font-light text-white/50">
-            Khusus guru &amp; orang tua terdaftar · SD Muhammadiyah 01 Kukusan
-          </p>
+          <p className="text-[12px] text-white/60">Khusus guru &amp; orang tua terdaftar</p>
         </div>
       </aside>
 
@@ -212,11 +186,11 @@ export default function Login() {
           {/* Mobile brand */}
           <div className="mb-8 flex items-center gap-3 lg:hidden">
             <span className="auth-logo-tile auth-logo-tile--light">
-              <img src="/favicon-32.png" alt="" className="h-6 w-6" />
+              <img src="/logo-sdm.png" alt="" className="h-7 w-auto" />
             </span>
             <div>
-              <p className="text-[14px] font-medium text-[#0d253d]">SDM 01 Kukusan</p>
-              <p className="text-[12px] font-light text-[#64748d]">Sistem Penilaian</p>
+              <p className="text-[14px] font-medium text-slate-900">SDM 01 Kukusan</p>
+              <p className="text-[12px] text-muted">Sistem Penilaian</p>
             </div>
           </div>
 
@@ -227,8 +201,8 @@ export default function Login() {
           )}
 
           <header className="mb-7">
-            <h2 className="auth-display auth-display--sm text-[#0d253d]">Masuk</h2>
-            <p className="mt-2 text-[14px] font-light leading-relaxed text-[#64748d]">
+            <h2 className="auth-display auth-display--sm text-slate-900">Masuk</h2>
+            <p className="mt-2 text-[14px] font-normal leading-relaxed text-muted">
               Pilih tahun ajaran &amp; semester, lalu masuk dengan akun terdaftar.
             </p>
           </header>
@@ -279,11 +253,11 @@ export default function Login() {
             )}
 
             {periodeTerpilih && (
-              <p className="rounded-lg bg-[#f6f9fc] px-3 py-2 text-[12.5px] font-light text-[#64748d]">
+              <p className="rounded-lg bg-surface-2 px-3 py-2 text-[12.5px] text-muted">
                 Periode aktif:{' '}
-                <span className="font-medium text-[#0d253d]">{labelPeriode(periodeTerpilih)}</span>
+                <span className="font-medium text-slate-900">{labelPeriode(periodeTerpilih)}</span>
                 {periodeTerpilih.isDefault ? (
-                  <span className="ml-1.5 rounded-full bg-[#eef2ff] px-2 py-0.5 text-[11px] font-medium text-[#4434d4]">
+                  <span className="ml-1.5 rounded-full bg-muh-50 px-2 py-0.5 text-[11px] font-medium text-muh-700">
                     default
                   </span>
                 ) : null}
@@ -364,12 +338,12 @@ export default function Login() {
             >
               Lupa password?
             </button>
-            {resetMsg && <p className="text-[13px] font-medium text-[#4434d4]">{resetMsg}</p>}
+            {resetMsg && <p className="text-[13px] font-medium text-muh-700">{resetMsg}</p>}
           </div>
 
           <div className="auth-divider" />
 
-          <p className="text-center text-[13.5px] font-light text-[#64748d]">
+          <p className="text-center text-[13.5px] font-normal text-muted">
             Belum punya akun?{' '}
             <Link to="/register" className="auth-link">
               Daftar sebagai guru
