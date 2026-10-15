@@ -1,6 +1,6 @@
 // Uji logika pemantauan admin. Jalankan: node --experimental-strip-types scripts/cek-monitoring-admin.mjs
 import {
-  akunDipantau, hitungPasangan, ringkasTp, statusNilai, ringkasPerGuru, ringkasTahsin, hitungSudahBelum,
+  akunDipantau, hitungPasangan, ringkasTp, statusNilai, ringkasPerGuru, ringkasTahsin, hitungSudahBelum, ringkasPerKelas, hasilMetrik,
 } from '../src/lib/monitoringAdminRumus.ts'
 
 let gagal = 0
@@ -52,6 +52,13 @@ cek('wali (TP lengkap) sudah, guru PJOK (tanpa TP) belum', sb.tp.sudah === 1 && 
 const t = ringkasTahsin(guru, { tahsin: 12 })
 cek('tahsin: sudah bila ada setoran', t.length === 1 && t[0].status === 'sudah')
 cek('tahsin: belum bila nol', ringkasTahsin(guru, {})[0].status === 'belum')
+
+const k = ringkasPerKelas(baris, 'tp', ['5A', '5B'])
+cek('per kelas TP: 5A 1 beres + 1 belum, 5B 2 belum', k.length === 2 && k[0].beres === 1 && k[0].belum === 1 && k[1].belum === 2)
+cek('per kelas nilai: pasangan tanpa TP tidak dihitung', ringkasPerKelas(baris, 'nilai', ['5A', '5B']).length === 1)
+cek('per kelas bobot: tidak_100 = sebagian', hasilMetrik('bobot', { tp: { status: 'tidak_100' } }) === 'sebagian')
+cek('per kelas bobot: belum_tp tidak relevan', hasilMetrik('bobot', { tp: { status: 'belum_tp' } }) === null)
+cek('kelas tanpa pasangan relevan disembunyikan', ringkasPerKelas(baris, 'bobot', ['5A', '5B', '6A']).every((r) => r.kelas !== '6A'))
 
 if (gagal) { console.log(`\n${gagal} uji GAGAL`); process.exit(1) }
 console.log('\nSEMUA UJI LULUS')

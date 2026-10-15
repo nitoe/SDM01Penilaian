@@ -287,3 +287,10 @@
 - `src/lib/monitoringAdminRumus.ts` (logika murni) dan `src/lib/monitoringAdmin.ts` (pemuat, hanya baca): tanggung jawab per mapel×kelas, status TP/bobot/nilai, setoran Tahsin per guru.
 - `src/pages/Home.tsx`: admin menampilkan dashboard di atas diagram siswa per kelas; kartu modul memakai nama pantauan.
 - `scripts/cek-monitoring-admin.mjs` (baru). `ANTIREGRESI.md` §18. Tidak ada perubahan rules atau indeks pada tahap ini.
+
+## Belum dirilis — Notifikasi dan penyempurnaan dashboard admin (Tahap 3 dari 3)
+
+- Notifikasi: koleksi `notifikasi` (laporan tugas, laporan kendala, mutasi siswa), `src/lib/notifikasi.ts`, `src/lib/notifikasiRumus.ts`, `src/types/notifikasi.ts`, halaman `/notifikasi` (admin: kotak masuk bertab dengan status baru/diproses/selesai dan catatan; guru: formulir lapor dan riwayat), lonceng dengan jumlah laporan baru di header untuk staf.
+- `firestore.rules`: koleksi `notifikasi`. `firestore.indexes.json`: indeks `notifikasi (dariUid, createdAt desc)`. **Belum di-deploy.**
+- Dashboard admin: kolom cari nama diganti dropdown guru (berlaku di semua tab dan Ringkasan per guru); grafik jumlah siswa per kelas dihapus dari beranda admin dan diganti grafik Kelengkapan per kelas; Ringkasan menampilkan laporan guru yang belum ditangani.
+- `scripts/cek-notifikasi.mjs` (baru), `scripts/cek-monitoring-admin.mjs` ditambah uji per kelas. `docs/DATA_MODEL.md`, `ANTIREGRESI.md` §19.

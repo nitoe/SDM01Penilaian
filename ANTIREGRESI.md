@@ -227,3 +227,19 @@
 18.6 `tp_kktp` dibaca sekali penuh per pemuatan dashboard dan hanya untuk admin. Jika koleksi membesar, ganti dengan hitungan per pasangan; jangan memanggilnya dari beranda guru.
 
 18.7 Uji: `node --experimental-strip-types scripts/cek-monitoring-admin.mjs` (harus mencetak SEMUA UJI LULUS) setiap kali mengubah `monitoringAdminRumus.ts`.
+
+## §19. Notifikasi dan laporan guru (Tahap 3)
+
+19.1 Satu koleksi `notifikasi` untuk laporan tugas, laporan kendala, dan mutasi siswa masuk/keluar (dibedakan field `jenis`). Jenis baru: tambahkan ke `JenisNotifikasi`, `JENIS_LABEL`, daftar `jenis in [...]` di rules, dan uji di `scripts/cek-notifikasi.mjs`. Jangan membuat koleksi terpisah per jenis.
+
+19.2 Rules: guru dan admin boleh `create` dengan `dariUid == uid`, `status == 'baru'`, `createdAt == request.time`, dan kunci dibatasi `hasOnly`. Hanya admin yang `update`, dan hanya `status`, `catatanAdmin`, `updatedAt`. `delete` selalu ditolak. Baca: admin semua, pengirim hanya miliknya. Jika menambah field dokumen, ubah `hasOnly` di rules, `susunDokumen()`, dan `dariDok()` bersamaan.
+
+19.3 Batas panjang (judul 120, isi 2000) ada di `types/notifikasi.ts` dan rules; keduanya harus sama. Validasi klien (`validasiLaporan`) mencerminkan rules, bukan menggantikannya.
+
+19.4 Kotak masuk admin membaca 200 laporan terbaru (`orderBy createdAt desc`) dan menyaring di klien. Laporan guru memakai indeks `dariUid + createdAt` di `firestore.indexes.json`; deploy indeks sebelum halaman Laporan ke Admin dipakai guru (`npm run deploy:indexes` bila skripnya ada, atau `firebase deploy --only firestore:indexes`).
+
+19.5 Lonceng di header hanya menghitung (`getCountFromServer`, status `baru`) untuk admin dan disegarkan saat pindah halaman. Tidak ada listener real-time; kegagalan hitung diabaikan agar header tidak terganggu.
+
+19.6 Mutasi siswa pada tahap ini hanya MELAPORKAN ke admin. Admin tetap mengubah data siswa sendiri di Data Siswa. Jangan menambahkan jalur otomatis dari laporan ke `siswa` tanpa keputusan baru (menyentuh §5 dan §14).
+
+19.7 Beranda admin tidak lagi menampilkan grafik jumlah siswa per kelas (diputuskan 15 Okt 2026). Gantinya: grafik Kelengkapan per kelas (TP/Bobot/Nilai) dari data pantauan, dan dropdown guru. Beranda guru tetap memakai `KelasBars` bila punya kelas.

@@ -21,6 +21,15 @@ Berkas: `src/lib/monitoringAdminRumus.ts` (logika murni, diuji), `src/lib/monito
 Aturan yang dipakai: lihat ANTIREGRESI §18. Belum diuji terhadap data Firestore sungguhan; uji setelah rules Tahap 1 di-deploy.
 Ide lanjutan (belum dikerjakan): tanggal input terakhir per guru, ekspor rekap guru yang belum input, pengingat ke guru (memakai fondasi Tahap 3).
 
-## Tahap 3 — Fondasi notifikasi — BELUM
+## Tahap 3 — Fondasi notifikasi — SELESAI (15 Okt 2026)
 
-Koleksi baru (daftarkan di rules dan `DATA_MODEL.md`): `notifikasi`, `laporan_guru` (jenis: tugas, kendala), `mutasi_siswa` (masuk/keluar). Lonceng di header, kotak masuk admin bertab, formulir lapor untuk guru. Status baca per penerima.
+Koleksi `notifikasi` (satu koleksi, tiga jenis), rules, indeks, lonceng di header, halaman `/notifikasi` (admin: kotak masuk bertab; guru: formulir lapor + riwayat). Tambahan dari permintaan: dropdown guru di dashboard admin, grafik jumlah siswa diganti Kelengkapan per kelas.
+Berkas: `types/notifikasi.ts`, `lib/notifikasiRumus.ts`, `lib/notifikasi.ts`, `pages/Notifikasi.tsx`, `components/Layout.tsx`, `components/Icon.tsx`, `App.tsx`, `pages/AdminDashboard.tsx`, `lib/monitoringAdminRumus.ts`, `lib/monitoringAdmin.ts`, `pages/Home.tsx`, `firestore.rules`, `firestore.indexes.json`, `scripts/cek-notifikasi.mjs`.
+Sisa untuk dijalankan pemilik: deploy rules DAN indeks, lalu uji kirim laporan dengan akun guru dan ubah status dengan akun admin.
+
+## Ide lanjutan (belum dikerjakan)
+
+- Pengingat dari admin ke guru yang belum input (memakai `notifikasi` arah admin → guru, perlu field penerima dan rules baca baru).
+- Laporan mutasi yang langsung membuka form Data Siswa admin dengan data terisi.
+- Tanggal input terakhir per guru; ekspor rekap guru yang belum input ke Excel.
+- Notifikasi real-time dan pemberitahuan di luar aplikasi.

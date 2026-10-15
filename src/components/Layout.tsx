@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { logout } from '../lib/auth'
 import { ringkasKelas } from '../lib/kelasSaya'
-import { canAkademik, canTahsin, isAdminRole } from '../lib/roles'
+import { canAkademik, canTahsin, isAdminRole, isStaff } from '../lib/roles'
+import { hitungBaru } from '../lib/notifikasi'
 import type { AppUser } from '../types/user'
 import { ROLE_LABEL } from '../types/user'
 import { usePeriode } from '../context/PeriodeContext'
@@ -35,6 +37,7 @@ const HALAMAN_SEMPIT = ['/profil']
 function sectionTitle(pathname: string, admin: boolean): string {
   if (pathname.startsWith('/tahsin')) return admin ? 'Pantauan Tahsin & Tahfizh' : 'Tahsin & Tahfizh'
   if (pathname.startsWith('/akademik')) return admin ? 'Pantauan Akademik' : 'Akademik & Rapor'
+  if (pathname.startsWith('/notifikasi')) return admin ? 'Notifikasi' : 'Laporan ke Admin'
   if (pathname.startsWith('/admin')) return 'Administrasi'
   return 'Beranda'
 }
@@ -64,6 +67,19 @@ export default function Layout({ profile }: LayoutProps) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { periode, daftar, setPeriodeId, isAdmin } = usePeriode()
+  const [laporanBaru, setLaporanBaru] = useState(0)
+
+  // Lonceng admin: jumlah laporan baru. Disegarkan tiap pindah halaman; gagal = diam (tidak mengganggu).
+  useEffect(() => {
+    if (!isAdminRole(profile.role)) return
+    let batal = false
+    hitungBaru()
+      .then((n) => !batal && setLaporanBaru(n))
+      .catch(() => undefined)
+    return () => {
+      batal = true
+    }
+  }, [profile.role, pathname])
 
   async function handleLogout() {
     await logout()
@@ -184,6 +200,22 @@ export default function Layout({ profile }: LayoutProps) {
                     </span>
                   )}
                 </div>
+              )}
+              {isStaff(profile.role) && (
+                <Link
+                  to="/notifikasi"
+                  aria-label={
+                    laporanBaru > 0 ? `Notifikasi, ${laporanBaru} laporan baru` : 'Notifikasi dan laporan'
+                  }
+                  className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border text-slate-500 transition hover:bg-slate-50"
+                >
+                  <Icon name="bell" />
+                  {laporanBaru > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-semibold text-white">
+                      {laporanBaru > 99 ? '99+' : laporanBaru}
+                    </span>
+                  )}
+                </Link>
               )}
               <div className="hidden min-w-0 text-right sm:block">
                 <div className="truncate text-[13px] font-medium text-slate-800">

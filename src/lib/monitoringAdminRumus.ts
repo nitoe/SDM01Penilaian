@@ -211,3 +211,46 @@ export function hitungSudahBelum(perGuru: RingkasGuru[]) {
     nilai: { sudah: nilaiSudah, belum: total - nilaiSudah },
   }
 }
+
+export type MetrikKelas = 'tp' | 'bobot' | 'nilai'
+
+export interface RingkasKelas {
+  kelas: string
+  beres: number
+  sebagian: number
+  belum: number
+  /** pasangan yang relevan untuk metrik ini */
+  total: number
+}
+
+/** Hasil satu pasangan untuk satu metrik; null = tidak relevan (mis. nilai untuk mapel tanpa TP semester ini). */
+export function hasilMetrik(m: MetrikKelas, b: BarisPasangan): 'beres' | 'sebagian' | 'belum' | null {
+  if (m === 'tp') return b.tp.statusTp === 'ada_tp' ? 'beres' : 'belum'
+  if (m === 'bobot') {
+    if (b.tp.status === 'belum_tp') return null
+    return b.tp.status === 'ok' ? 'beres' : b.tp.status === 'tidak_100' ? 'sebagian' : 'belum'
+  }
+  if (b.nilai === 'tanpa_tp') return null
+  return b.nilai === 'lengkap' ? 'beres' : b.nilai === 'sebagian' ? 'sebagian' : 'belum'
+}
+
+/** Kelengkapan per kelas untuk grafik beranda admin. Urutan kelas mengikuti `urutan`. */
+export function ringkasPerKelas(
+  baris: BarisPasangan[],
+  metrik: MetrikKelas,
+  urutan: readonly string[] = SEMUA_KELAS,
+): RingkasKelas[] {
+  return urutan
+    .map((kelas) => {
+      const r: RingkasKelas = { kelas, beres: 0, sebagian: 0, belum: 0, total: 0 }
+      for (const b of baris) {
+        if (b.kelas !== kelas) continue
+        const h = hasilMetrik(metrik, b)
+        if (!h) continue
+        r[h]++
+        r.total++
+      }
+      return r
+    })
+    .filter((r) => r.total > 0)
+}

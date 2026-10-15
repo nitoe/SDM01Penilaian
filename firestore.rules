@@ -223,6 +223,32 @@ service cloud.firestore {
       allow delete: if bolehKelas(resource.data.kelas);
     }
 
+    // Notifikasi dan laporan guru ke admin: laporan tugas, laporan kendala, mutasi siswa masuk/keluar.
+    // Guru (dan admin) membuat; admin saja yang mengubah status/catatan; tidak ada hapus (ANTIREGRESI §19).
+    match /notifikasi/{id} {
+      allow read: if isAdmin()
+                  || (akunAktif() && resource.data.dariUid == request.auth.uid);
+      allow create: if isGuru()
+                    && request.resource.data.dariUid == request.auth.uid
+                    && request.resource.data.status == 'baru'
+                    && request.resource.data.jenis in ['laporan_tugas', 'laporan_kendala', 'mutasi_siswa']
+                    && request.resource.data.keys().hasOnly(
+                         ['jenis', 'judul', 'isi', 'kelas', 'mutasi', 'status', 'dariUid', 'dariNama', 'createdAt'])
+                    && request.resource.data.keys().hasAll(
+                         ['jenis', 'judul', 'isi', 'status', 'dariUid', 'dariNama', 'createdAt'])
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 120
+                    && request.resource.data.isi is string
+                    && request.resource.data.isi.size() > 0
+                    && request.resource.data.isi.size() <= 2000;
+      allow update: if isAdmin()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'catatanAdmin', 'updatedAt'])
+                    && request.resource.data.status in ['baru', 'diproses', 'selesai'];
+      allow delete: if false;
+    }
+
     match /kktp_tahsin_tahfizh/{jenjang} {
       allow read: if isGuru();
       allow write: if isAdmin();

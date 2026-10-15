@@ -29,6 +29,7 @@ dalam commit yang sama.
 | `nilai_tp` | auto | `tpId, siswaId, mapel, kelas, tingkatan, semester, tahunAjaran, slm, createdBy` | admin (baca); guru kelas atau penugasan mapel | tulis: guru kelas / penugasan, bukan admin |
 | `asesmen_cakupan` | auto | `mapel, kelas, tingkatan, semester, tahunAjaran, jenis (sts\|sas), tpIds[]` | sama dengan nilai | sama |
 | `nilai_sts`, `nilai_sas` | auto | `tpId, siswaId, mapel, kelas, tingkatan, semester, tahunAjaran, nilai` | sama dengan nilai | sama |
+| `notifikasi` | auto | `jenis ('laporan_tugas'\|'laporan_kendala'\|'mutasi_siswa'), judul, isi, kelas?, mutasi? {arah, namaSiswa, tanggal, keterangan?}, status ('baru'\|'diproses'\|'selesai'), catatanAdmin?, dariUid, dariNama, createdAt, updatedAt?` | admin; pengirim hanya laporannya sendiri | `create` oleh guru/admin (`dariUid == uid`, `status == 'baru'`); `update` hanya admin dan hanya `status, catatanAdmin, updatedAt`; tidak ada hapus |
 
 **Role** (`users.role`): `admin`, `guru`, `guru_tahsin_tahfizh`, `guru_akademik`, `orangtua`.
 Field `users` untuk guru akademik: `penugasan[{kelas,mapel}]`, `waliKelas[]`, dan dua field turunan yang dibaca rules: `penugasanKelas[]`, `penugasanKelasMapel[]` ("4A::Matematika"). Turunan harus selalu sinkron (ANTIREGRESI §7.4).

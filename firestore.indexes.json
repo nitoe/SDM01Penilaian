@@ -75,6 +75,14 @@
         { "fieldPath": "kelas", "order": "ASCENDING" },
         { "fieldPath": "aktif", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "notifikasi",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "dariUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

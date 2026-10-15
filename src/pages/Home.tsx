@@ -463,7 +463,6 @@ export default function Home({ profile }: HomeProps) {
 
           {admin && <AdminDashboard />}
 
-          {stats && admin && <KelasBars data={stats.perKelas} saya={saya.semua} />}
           {stats && !admin && saya.semua.length > 0 && (
             <KelasBars data={stats.perKelas} saya={saya.semua} />
           )}

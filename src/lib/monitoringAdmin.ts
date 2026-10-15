@@ -32,6 +32,8 @@ export interface PantauanAdmin {
   guru: GuruPantau[]
   perGuru: RingkasGuru[]
   tanpaPenanggung: BarisPasangan[]
+  /** Semua pasangan mapel×kelas beserta status (dipakai grafik per kelas) */
+  semuaPasangan: BarisPasangan[]
   tahsin: RingkasTahsinGuru[]
   /** Akun guru yang masih menunggu persetujuan (tidak ikut hitungan) */
   menunggu: number
@@ -145,6 +147,7 @@ export async function muatPantauanAdmin(periode: {
     guru: guruAktif,
     perGuru,
     tanpaPenanggung,
+    semuaPasangan: baris,
     tahsin: ringkasTahsin(guruAktif, setoranPerUid),
     menunggu,
     peringatan,

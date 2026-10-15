@@ -3,7 +3,16 @@ import { Link } from 'react-router-dom'
 import Tabs, { type TabItem } from '../components/Tabs'
 import { Badge, SectionTitle, StatCard } from '../components/ui'
 import { usePeriodeAkademik } from '../lib/usePeriodeAkademik'
-import { hitungSudahBelum, type BarisPasangan, type RingkasGuru } from '../lib/monitoringAdminRumus'
+import {
+  adaAkademik,
+  adaTahsin,
+  hitungSudahBelum,
+  ringkasPerKelas,
+  type BarisPasangan,
+  type MetrikKelas,
+  type RingkasGuru,
+} from '../lib/monitoringAdminRumus'
+import { hitungBaru } from '../lib/notifikasi'
 import { muatPantauanAdmin, type PantauanAdmin } from '../lib/monitoringAdmin'
 import { namaDenganGelar } from '../types/user'
 
@@ -50,22 +59,23 @@ function TabelGuru({
   jenis,
   perGuru,
   tautan,
+  uid,
 }: {
   jenis: 'tp' | 'bobot' | 'nilai'
   perGuru: RingkasGuru[]
   tautan: string
+  /** Guru terpilih di dropdown; kosong = semua guru */
+  uid: string
 }) {
   const [saring, setSaring] = useState<Saring>('belum')
-  const [cari, setCari] = useState('')
   const [buka, setBuka] = useState<string | null>(null)
 
   const tampil = useMemo(
     () =>
       perGuru
-        .filter((r) => (saring === 'semua' ? true : BELUM[jenis](r) > 0))
-        .filter((r) => r.guru.nama.toLowerCase().includes(cari.trim().toLowerCase()))
+        .filter((r) => (uid ? r.guru.uid === uid : saring === 'semua' || BELUM[jenis](r) > 0))
         .sort((a, b) => BELUM[jenis](b) - BELUM[jenis](a) || a.guru.nama.localeCompare(b.guru.nama, 'id')),
-    [perGuru, saring, cari, jenis],
+    [perGuru, saring, uid, jenis],
   )
 
   const chip = (id: Saring, teks: string) => (
@@ -84,33 +94,37 @@ function TabelGuru({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        {chip('belum', 'Perlu perhatian')}
-        {chip('semua', 'Semua guru')}
-        <input
-          value={cari}
-          onChange={(e) => setCari(e.target.value)}
-          placeholder="Cari nama guru"
-          aria-label="Cari nama guru"
-          className="ml-auto w-full rounded-lg border border-border bg-white px-3 py-1.5 text-[13px] outline-none focus:border-muh-500 sm:w-56"
-        />
+        {chip('belum', uid ? 'Yang perlu perhatian' : 'Perlu perhatian')}
+        {chip('semua', uid ? 'Semua mapel×kelas' : 'Semua guru')}
       </div>
 
       {tampil.length === 0 ? (
         <p className="card-soft p-4 text-[13px] text-muted">
-          {saring === 'belum' ? 'Semua guru sudah beres untuk bagian ini.' : 'Tidak ada guru yang cocok.'}
+          {uid
+            ? 'Guru ini tidak punya mapel×kelas yang menjadi tanggung jawab akademik.'
+            : saring === 'belum'
+              ? 'Semua guru sudah beres untuk bagian ini.'
+              : 'Belum ada guru dengan tanggung jawab akademik.'}
         </p>
       ) : (
         <ul className="space-y-2">
           {tampil.map((r) => {
             const n = BELUM[jenis](r)
-            const terbuka = buka === r.guru.uid
+            const terbuka = uid ? true : buka === r.guru.uid
             const daftar = r.pasangan.filter((b) => (saring === 'belum' ? perluPerhatian(jenis, b) : true))
+            if (uid && daftar.length === 0 && saring === 'belum') {
+              return (
+                <li key={r.guru.uid} className="card-soft p-4 text-[13px] text-muted">
+                  Semua mapel×kelas {namaDenganGelar(r.guru)} sudah beres untuk bagian ini.
+                </li>
+              )
+            }
             return (
               <li key={r.guru.uid} className="card-soft">
                 <button
                   type="button"
                   aria-expanded={terbuka}
-                  onClick={() => setBuka(terbuka ? null : r.guru.uid)}
+                  onClick={() => !uid && setBuka(terbuka ? null : r.guru.uid)}
                   className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
                 >
                   <span className="min-w-0">
@@ -154,11 +168,87 @@ function TabelGuru({
   )
 }
 
+const METRIK: { id: MetrikKelas; label: string }[] = [
+  { id: 'nilai', label: 'Nilai' },
+  { id: 'bobot', label: 'Bobot' },
+  { id: 'tp', label: 'TP' },
+]
+
+/** Kelengkapan per kelas: batang bertumpuk beres / sebagian / belum. Menggantikan grafik jumlah siswa. */
+function GrafikKelas({ baris }: { baris: BarisPasangan[] }) {
+  const [metrik, setMetrik] = useState<MetrikKelas>('nilai')
+  const data = useMemo(() => ringkasPerKelas(baris, metrik), [baris, metrik])
+  const ket: Record<MetrikKelas, string> = {
+    tp: 'mapel yang sudah punya TP',
+    bobot: 'mapel dengan bobot TP total 100%',
+    nilai: 'mapel dengan nilai harian lengkap',
+  }
+  return (
+    <section className="card-soft p-4" aria-label="Kelengkapan per kelas">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-[14px] font-semibold text-slate-900">Kelengkapan per kelas</h3>
+        <div role="group" aria-label="Pilih ukuran" className="flex gap-1">
+          {METRIK.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              aria-pressed={metrik === m.id}
+              onClick={() => setMetrik(m.id)}
+              className={`rounded-full px-3 py-1 text-[12px] font-medium ${
+                metrik === m.id ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {data.length === 0 ? (
+        <p className="text-[13px] text-muted">Belum ada data untuk ukuran ini pada semester terpilih.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {data.map((r) => (
+            <li key={r.kelas} className="flex items-center gap-3">
+              <span className="w-8 shrink-0 text-[12px] font-medium text-slate-700">{r.kelas}</span>
+              <div
+                className="flex h-3 flex-1 overflow-hidden rounded-full bg-slate-100"
+                role="img"
+                aria-label={`${r.kelas}: ${r.beres} beres, ${r.sebagian} sebagian, ${r.belum} belum dari ${r.total}`}
+              >
+                <div className="bg-muh-600" style={{ width: `${(r.beres / r.total) * 100}%` }} />
+                <div className="bg-gold-500" style={{ width: `${(r.sebagian / r.total) * 100}%` }} />
+                <div className="bg-slate-300" style={{ width: `${(r.belum / r.total) * 100}%` }} />
+              </div>
+              <span className="w-14 shrink-0 text-right text-[12px] tabular-nums text-slate-600">
+                {r.beres}/{r.total}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">
+        <span>Angka: {ket[metrik]}.</span>
+        <span className="inline-flex items-center gap-1">
+          <i className="h-2 w-2 rounded-full bg-muh-600" /> Beres
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <i className="h-2 w-2 rounded-full bg-gold-500" /> Sebagian / total tidak 100%
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <i className="h-2 w-2 rounded-full bg-slate-300" /> Belum
+        </span>
+      </p>
+    </section>
+  )
+}
+
 export default function AdminDashboard() {
   const periodeAk = usePeriodeAkademik()
   const [tab, setTab] = useState<TabId>('ringkasan')
   const [data, setData] = useState<PantauanAdmin | null>(null)
   const [muat, setMuat] = useState<'loading' | 'ok' | 'error'>('loading')
+  const [uid, setUid] = useState('')
+  const [laporanBaru, setLaporanBaru] = useState<number | null>(null)
 
   const periode = useMemo(
     () => (periodeAk.ready ? { tahunAjaran: periodeAk.tahunAjaran, semester: periodeAk.semester } : null),
@@ -179,6 +269,27 @@ export default function AdminDashboard() {
   useEffect(() => {
     segarkan()
   }, [segarkan])
+
+  useEffect(() => {
+    hitungBaru()
+      .then(setLaporanBaru)
+      .catch(() => setLaporanBaru(null))
+  }, [])
+
+  // Dropdown guru: semua guru yang punya tanggung jawab akademik atau Tahsin-Tahfizh.
+  const opsiGuru = useMemo(() => {
+    if (!data) return []
+    const adaPasangan = new Set(data.perGuru.map((r) => r.guru.uid))
+    return data.guru
+      .filter((g) => adaPasangan.has(g.uid) || adaTahsin(g))
+      .sort((a, b) => a.nama.localeCompare(b.nama, 'id'))
+  }, [data])
+  useEffect(() => {
+    if (uid && data && !opsiGuru.some((g) => g.uid === uid)) setUid('')
+  }, [uid, data, opsiGuru])
+  const guruPilihan = data?.guru.find((g) => g.uid === uid) ?? null
+  const ringkasGuru = data?.perGuru.find((r) => r.guru.uid === uid) ?? null
+  const tahsinGuru = data?.tahsin.find((t) => t.guru.uid === uid) ?? null
 
   const sb = data ? hitungSudahBelum(data.perGuru) : null
   const tahsinBelum = data ? data.tahsin.filter((t) => t.status === 'belum').length : 0
@@ -225,10 +336,79 @@ export default function AdminDashboard() {
         </p>
       )}
 
+      {data && opsiGuru.length > 0 && (
+        <label className="mb-3 flex flex-wrap items-center gap-2 text-[12px] font-medium text-slate-600">
+          Guru
+          <select
+            value={uid}
+            onChange={(e) => setUid(e.target.value)}
+            className="min-w-56 rounded-lg border border-border bg-white px-3 py-1.5 text-[13px] font-normal text-slate-800 outline-none focus:border-muh-500"
+          >
+            <option value="">Semua guru</option>
+            {opsiGuru.map((g) => (
+              <option key={g.uid} value={g.uid}>
+                {namaDenganGelar(g)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <Tabs items={tabs} aktif={tab} onUbah={(id) => setTab(id as TabId)} ariaLabel="Pantauan guru">
         {muat === 'loading' && !data && <div className="card-soft h-32 animate-pulse bg-slate-50" />}
 
-        {data && sb && tab === 'ringkasan' && (
+        {data && sb && tab === 'ringkasan' && guruPilihan && (
+          <div className="space-y-3">
+            {ringkasGuru && (
+<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatCard
+                label="Mapel×kelas diampu"
+                value={String(ringkasGuru?.jumlah ?? 0)}
+                hint={guruPilihan.waliKelas.length ? `Wali kelas ${guruPilihan.waliKelas.join(', ')}` : 'Bukan wali kelas'}
+                icon="users"
+                tone="green"
+              />
+              <StatCard
+                label="Belum ada TP"
+                value={String(ringkasGuru?.tpBelum ?? 0)}
+                hint="mapel×kelas"
+                icon="target"
+                tone={ringkasGuru?.tpBelum ? 'peach' : 'green'}
+              />
+              <StatCard
+                label="Bobot belum beres"
+                value={String((ringkasGuru?.bobotBelum ?? 0) + (ringkasGuru?.bobotTidak100 ?? 0))}
+                hint="belum diatur atau total tidak 100%"
+                icon="calendar"
+                tone={(ringkasGuru?.bobotBelum ?? 0) + (ringkasGuru?.bobotTidak100 ?? 0) ? 'peach' : 'green'}
+              />
+              <StatCard
+                label="Nilai belum lengkap"
+                value={String((ringkasGuru?.nilaiBelum ?? 0) + (ringkasGuru?.nilaiSebagian ?? 0))}
+                hint={`${ringkasGuru?.nilaiLengkap ?? 0} sudah lengkap`}
+                icon="clipboard"
+                tone={(ringkasGuru?.nilaiBelum ?? 0) + (ringkasGuru?.nilaiSebagian ?? 0) ? 'peach' : 'green'}
+              />
+            </div>
+            )}
+            {adaAkademik(guruPilihan) && !ringkasGuru && (
+              <p className="text-[12px] text-muted">Guru ini belum punya wali kelas atau penugasan mapel.</p>
+            )}
+            {tahsinGuru && (
+              <p className="card-soft p-4 text-[13px] text-slate-700">
+                Tahsin-Tahfizh (kelas {tahsinGuru.guru.kelasAmpu.join(', ')}):{' '}
+                {tahsinGuru.status === 'sudah'
+                  ? `${tahsinGuru.setoran} setoran tercatat pada periode ini.`
+                  : 'belum ada setoran tercatat pada periode ini.'}
+              </p>
+            )}
+            <p className="text-[12px] text-muted">
+              Buka tab Tujuan Pembelajaran, Bobot, atau Nilai untuk rincian per mapel×kelas guru ini.
+            </p>
+          </div>
+        )}
+
+        {data && sb && tab === 'ringkasan' && !guruPilihan && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatCard
@@ -260,14 +440,23 @@ export default function AdminDashboard() {
                 tone={tahsinBelum ? 'peach' : 'green'}
               />
             </div>
+            <GrafikKelas baris={data.semuaPasangan} />
             <p className="text-[12px] text-muted">
               Hitungan per guru: satu guru dianggap beres bila semua mapel×kelas yang menjadi tanggung jawabnya
               beres. Mapel bidang studi menjadi tanggung jawab guru penugasan; mapel lain ke wali kelas.
             </p>
 
-            {(data.tanpaPenanggung.length > 0 || data.menunggu > 0) && (
+            {(data.tanpaPenanggung.length > 0 || data.menunggu > 0 || (laporanBaru ?? 0) > 0) && (
               <div className="card-soft space-y-2 p-4">
                 <h3 className="text-[14px] font-semibold text-slate-900">Perlu ditindaklanjuti admin</h3>
+                {(laporanBaru ?? 0) > 0 && (
+                  <p className="text-[13px] text-slate-700">
+                    {laporanBaru} laporan guru belum ditangani.{' '}
+                    <Link to="/notifikasi" className="font-medium text-muh-700 hover:underline">
+                      Buka Notifikasi
+                    </Link>
+                  </p>
+                )}
                 {data.menunggu > 0 && (
                   <p className="text-[13px] text-slate-700">
                     {data.menunggu} akun guru menunggu persetujuan.{' '}
@@ -295,17 +484,20 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {data && tab === 'tp' && <TabelGuru jenis="tp" perGuru={data.perGuru} tautan="/akademik/setup-tp" />}
-        {data && tab === 'bobot' && <TabelGuru jenis="bobot" perGuru={data.perGuru} tautan="/akademik/bobot-semester" />}
-        {data && tab === 'nilai' && <TabelGuru jenis="nilai" perGuru={data.perGuru} tautan="/akademik/nilai-slm" />}
+        {data && tab === 'tp' && <TabelGuru jenis="tp" perGuru={data.perGuru} tautan="/akademik/setup-tp" uid={uid} />}
+        {data && tab === 'bobot' && <TabelGuru jenis="bobot" perGuru={data.perGuru} tautan="/akademik/bobot-semester" uid={uid} />}
+        {data && tab === 'nilai' && <TabelGuru jenis="nilai" perGuru={data.perGuru} tautan="/akademik/nilai-slm" uid={uid} />}
 
         {data && tab === 'tahsin' && (
           <div className="space-y-2">
-            {data.tahsin.length === 0 ? (
-              <p className="card-soft p-4 text-[13px] text-muted">Belum ada guru Tahsin-Tahfizh dengan kelas ampu.</p>
+            {(uid ? data.tahsin.filter((t) => t.guru.uid === uid) : data.tahsin).length === 0 ? (
+              <p className="card-soft p-4 text-[13px] text-muted">
+                {uid ? 'Guru ini tidak memiliki kelas ampu Tahsin-Tahfizh.' : 'Belum ada guru Tahsin-Tahfizh dengan kelas ampu.'}
+              </p>
             ) : (
               <ul className="space-y-2">
                 {[...data.tahsin]
+                  .filter((t) => !uid || t.guru.uid === uid)
                   .sort((a, b) => Number(a.status === 'sudah') - Number(b.status === 'sudah'))
                   .map((t) => (
                     <li key={t.guru.uid} className="card-soft flex items-center justify-between gap-3 px-4 py-3">

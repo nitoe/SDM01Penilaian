@@ -3,13 +3,14 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom
 import type { User } from 'firebase/auth'
 import { subscribeAuth, logout } from './lib/auth'
 import { simpanNoticeLogin } from './lib/akunGuru'
-import { canAkademik, canTahsin, isAdminRole, isGuruTahsinRole } from './lib/roles'
+import { canAkademik, canTahsin, isAdminRole, isGuruTahsinRole, isStaff } from './lib/roles'
 import type { AppUser } from './types/user'
 import { PeriodeProvider } from './context/PeriodeContext'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ProfilSaya from './pages/ProfilSaya'
+import Notifikasi from './pages/Notifikasi'
 import Home from './pages/Home'
 import TahsinHub from './pages/TahsinHub'
 import AkademikHub from './pages/AkademikHub'
@@ -107,6 +108,10 @@ export default function App() {
         >
           <Route path="/" element={profile ? <Home profile={profile} /> : null} />
           <Route path="/profil" element={profile ? <ProfilSaya profile={profile} /> : null} />
+
+          <Route element={<RoleGate allow={profile ? isStaff(profile.role) : false} />}>
+            <Route path="/notifikasi" element={profile ? <Notifikasi profile={profile} /> : null} />
+          </Route>
 
           <Route element={<RoleGate allow={profile ? canTahsin(profile.role) : false} />}>
             <Route path="/tahsin" element={<TahsinHub admin={profile ? isAdminRole(profile.role) : false} />} />
