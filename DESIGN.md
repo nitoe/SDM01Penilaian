@@ -53,6 +53,10 @@ Aplikasi ini dipakai guru setiap hari untuk menginput dan memeriksa nilai. Tampi
 - **Formulir:** isian radius 8px, garis `#cdd1e0`, fokus biru dengan cincin lembut. Label di atas isian.
 - **Halaman masuk:** panel kiri biru tua dengan lambang sekolah sebagai watermark samar; panel kanan putih berisi formulir. Tanpa slogan pemasaran.
 
+# Halaman admin
+
+Halaman admin (Kelola Akun, Kelola Periode, dan seterusnya) memakai token bersama di `src/pages/akademik/shared.tsx`: `inputCls`, `btnPrimary`/`btnGhost`, `btnDanger*`, `Field`, `ChipToggle`, `Segmented`, `Notice`. Pola umum: judul + aksi utama di kepala halaman; daftar di kiri, detail atau formulir di kanan pada layar lebar (di bawahnya pada layar kecil); aksi merusak dipisahkan di bawah label "Tindakan lain" dan selalu lewat konfirmasi inline. Merah hanya untuk hapus permanen dan galat. `.card-soft` mengalahkan utilitas border/shadow/background Tailwind (ANTIREGRESI §20.2).
+
 # Komponen (src/components/ui.tsx)
 
 `PageHeader`, `HubPanel` + `HubRow`, `StatStrip`, `StatCard`, `FlowRow`, `Badge` (`neutral`, `brand`, `green`/`ok`, `peach`), `IconTile`, `SectionTitle`. Halaman baru memakai komponen ini dan ikon dari `Icon.tsx`; jangan membuat gaya kartu atau tombol sendiri (ANTIREGRESI §5.1, §19).

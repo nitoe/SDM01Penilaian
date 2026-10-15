@@ -248,3 +248,20 @@
 19.8 **Aset logo bernama baru** (`logo-sdm.png`, `favicon-sdm-32.png`, `apple-touch-icon-sdm.png`) karena `firebase.json` memberi cache `immutable` satu tahun untuk png dan woff2: menimpa berkas dengan nama sama membuat pengunjung lama tetap melihat gambar lama. Jika logo berubah, beri nama baru. Lambang tidak diubah warna atau bentuknya; satu-satunya pengecualian adalah watermark putih berkeburaman 6% di panel `.auth-brand`.
 
 19.9 Setelah mengubah token atau `Layout`, periksa tampilan: halaman masuk, beranda guru (progres campuran, lengkap, kosong), beranda Tahsin, hub Akademik dan Administrasi, di lebar 1440px dan 390px. Kontras teks kecil minimal 4,5:1.
+
+
+## §20. Halaman admin: Kelola Periode dan Kelola Akun (per 15 Okt 2026)
+
+20.1 **Halaman admin memakai token bersama di `src/pages/akademik/shared.tsx`**: `inputCls`, `btnPrimary`/`btnGhost` (varian `Sm`), `btnDanger`/`btnDangerGhost`/`btnWarn`, `Field`, `ChipToggle`, `Segmented`, `Notice`, `Spinner`, `useToast`. Jangan menulis kelas tombol, isian, atau kotak pesan sendiri di halaman admin. Radius kontrol `rounded-lg`; jangan `rounded-xl`, `shadow-sm` pada tombol, atau cincin pada kartu. (Berkas `shared.tsx` berada di folder `akademik` karena lebih dulu ada di sana; pemindahan ke `components/` ditunda agar impor halaman Akademik tidak ikut berubah.)
+
+20.2 **`.card-soft` ditulis di luar `@layer`, sehingga `border`, `box-shadow`, `background`, dan `border-radius`-nya mengalahkan utilitas Tailwind.** Utilitas seperti `border-l-4`, `ring-2`, `shadow-lg`, `bg-slate-50`, `border-dashed`, atau `print:border-0` yang ditumpuk pada `.card-soft` tidak berlaku. Untuk penanda (mis. strip periode default) pakai elemen tersendiri; untuk keadaan kosong bergaris putus jangan pakai `.card-soft`. Diketahui masih terkena: `LaporanSlm.tsx` (`print:border-0 print:shadow-none` tidak berlaku saat cetak), `TargetHafalan.tsx` dan `InputSetoran.tsx` (`shadow-lg` tidak berlaku), serta kerangka `animate-pulse bg-slate-50` di `TahunAjaran.tsx` dan `AdminDashboard.tsx`. Belum diubah karena memindahkan `.card-soft` ke `@layer components` mengubah tampilan dan cetakan di banyak halaman sekaligus; lakukan sebagai langkah tersendiri dengan pemeriksaan cetak rapor.
+
+20.3 **Arti warna di halaman admin:** merah hanya untuk hapus permanen dan galat; ambar hanya untuk konfirmasi menonaktifkan dan hal yang perlu ditindaklanjuti (chip "Menunggu" berjumlah > 0, "Tanggal rapor belum diisi"); hijau hanya status Aktif. Tombol merah penuh ("Ya, hapus permanen", "Ya, hapus periode") hanya muncul setelah langkah konfirmasi. Hapus permanen akun tetap mewajibkan mengetik email persis. Jangan kembali ke `confirm()` bawaan browser.
+
+20.4 `Notice` bernada `info` kini memakai biru merek (sebelumnya `sky`), dan ada nada `ok` baru. Ini juga mengubah kotak info di halaman Akademik; tidak ada perubahan logika.
+
+20.5 **Kelola Akun:** logika data tidak berubah (simpan, reset password, aktif/nonaktif, hapus permanen, persetujuan). Jumlah di chip saringan dihitung dari `list` dengan aturan yang sama seperti penyaringan tabel; jika aturan penyaringan diubah, ubah `hitung` bersamaan. Pada layar < 1024px panel detail digulir ke tampilan saat akun dipilih (panel berada di bawah tabel). Baris tabel dapat difokus dan dipilih dengan Enter/Spasi.
+
+20.6 **Kelola Periode:** formulir berada di samping daftar pada layar lebar (menempel, tingginya dibatasi dan menggulir sendiri) dan di bawah daftar pada layar kecil; tombol Edit menggulir ke formulir hanya di layar kecil. Penjelasan istilah Aktif/Default hanya ada di satu tempat (panel "Cara kerja singkat"), jangan diulang di ringkasan.
+
+20.7 Skrip `scripts/cek-*` tidak menguji tampilan. Setelah mengubah halaman admin, periksa di 1440px dan 390px: daftar penuh dan kosong, mode edit, dan setiap alur konfirmasi (nonaktifkan, hapus).

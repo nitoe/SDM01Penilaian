@@ -1,6 +1,21 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Badge, PageHeader } from '../../components/ui'
+import {
+  ChipToggle,
+  Field,
+  Notice,
+  Spinner,
+  btnDanger,
+  btnDangerGhost,
+  btnGhost,
+  btnGhostSm,
+  btnPrimary,
+  btnPrimarySm,
+  btnWarn,
+  inputCls,
+  useToast,
+} from '../akademik/shared'
 import {
   ringkasTugas,
   roleDariTugas,
@@ -49,9 +64,6 @@ const SARINGAN: { id: Saringan; label: string }[] = [
   { id: 'nonaktif', label: 'Nonaktif' },
 ]
 
-const inputCls =
-  'w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15'
-
 const formKosong = (): InputAkunGuru & { password: string } => ({
   email: '',
   nama: '',
@@ -63,15 +75,6 @@ const formKosong = (): InputAkunGuru & { password: string } => ({
   aktif: true,
   password: '',
 })
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-[11px] font-medium text-slate-600">{label}</span>
-      {children}
-    </label>
-  )
-}
 
 function PilihKelas({
   label,
@@ -89,24 +92,14 @@ function PilihKelas({
   }
   return (
     <div>
-      <span className="mb-1 block text-[11px] font-medium text-slate-600">{label}</span>
-      {hint && <p className="mb-1.5 text-[11px] text-muted">{hint}</p>}
-      <div className="flex flex-wrap gap-1">
-        {SEMUA_KELAS.map((k) => {
-          const aktif = value.includes(k)
-          return (
-            <button
-              key={k}
-              type="button"
-              onClick={() => toggle(k)}
-              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                aktif ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600'
-              }`}
-            >
-              {k}
-            </button>
-          )
-        })}
+      <span className="mb-1 block text-[12px] font-medium text-slate-700">{label}</span>
+      {hint && <p className="mb-2 text-[11.5px] leading-snug text-muted">{hint}</p>}
+      <div className="flex flex-wrap gap-1.5">
+        {SEMUA_KELAS.map((k) => (
+          <ChipToggle key={k} active={value.includes(k)} onClick={() => toggle(k)}>
+            {k}
+          </ChipToggle>
+        ))}
       </div>
     </div>
   )
@@ -126,17 +119,17 @@ function EditorPenugasan({
   }
   return (
     <div>
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="text-[11px] font-medium text-slate-600">Penugasan mapel</span>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="text-[12px] font-medium text-slate-700">Penugasan mapel</span>
         <button
           type="button"
           onClick={() => onChange([...rows, { kelas: '1A', mapel: mapel[0]?.nama ?? '' }])}
-          className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-200"
+          className={btnGhostSm}
         >
-          + Tambah
+          + Tambah baris
         </button>
       </div>
-      <p className="mb-2 text-[11px] text-muted">
+      <p className="mb-2 text-[11.5px] leading-snug text-muted">
         Hanya mapel yang diampu guru ini. Setiap baris adalah satu kelas dan satu mapel.
       </p>
       {rows.length === 0 ? (
@@ -174,7 +167,8 @@ function EditorPenugasan({
               <button
                 type="button"
                 onClick={() => onChange(rows.filter((_, idx) => idx !== i))}
-                className="rounded-lg border border-border px-2.5 text-[11px] font-medium text-slate-500 hover:bg-slate-50"
+                className={btnGhostSm}
+                aria-label={`Hapus baris ${row.kelas} ${row.mapel}`}
               >
                 Hapus
               </button>
@@ -205,7 +199,7 @@ export default function KelolaAkun({ profile }: Props) {
   const [loading, setLoading] = useState(true)
   const [saringan, setSaringan] = useState<Saringan>('semua')
   const [cari, setCari] = useState('')
-  const [toast, setToast] = useState<{ msg: string; error?: boolean } | null>(null)
+  const { show: showToast, node: toastNode } = useToast()
   const [busy, setBusy] = useState(false)
   const [editing, setEditing] = useState<AkunStaf | null>(null)
   const [form, setForm] = useState(formKosong)
@@ -219,11 +213,6 @@ export default function KelolaAkun({ profile }: Props) {
   const [sisaAuth, setSisaAuth] = useState<{ nama: string; email: string } | null>(null)
   const [sebagaiAdmin, setSebagaiAdmin] = useState(false)
   const [tugas, setTugas] = useState<TugasGuru>({ tahsin: true, guruKelas: false, bidangStudi: false })
-
-  const showToast = (msg: string, error = false) => {
-    setToast({ msg, error })
-    setTimeout(() => setToast(null), 4500)
-  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -241,7 +230,7 @@ export default function KelolaAkun({ profile }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [showToast])
 
   useEffect(() => {
     void load()
@@ -257,6 +246,48 @@ export default function KelolaAkun({ profile }: Props) {
       return `${u.nama} ${u.email} ${labelPeran(u)}`.toLowerCase().includes(q)
     })
   }, [list, saringan, cari])
+
+  const hitung = useMemo<Record<Saringan, number>>(
+    () => ({
+      semua: list.length,
+      pending: list.filter((u) => u.status === 'pending').length,
+      guru_tahsin_tahfizh: list.filter((u) => u.role === 'guru_tahsin_tahfizh').length,
+      guru_akademik: list.filter((u) => u.role === 'guru_akademik').length,
+      admin: list.filter((u) => u.role === 'admin').length,
+      nonaktif: list.filter((u) => u.aktif === false).length,
+    }),
+    [list],
+  )
+
+  /** Di layar kecil panel detail berada di bawah tabel: gulir ke sana saat akun dipilih. */
+  const asideRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (dipilih && window.matchMedia('(max-width: 1023px)').matches) {
+      asideRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [dipilih])
+
+  function ekspor() {
+    const data = list.map((u) => ({
+      email: u.email,
+      nama: u.nama,
+      gelar: u.gelar ?? '',
+      role: u.role,
+      status: u.status ?? 'approved',
+      aktif: u.aktif !== false,
+      kelasAmpu: u.kelasAmpu ?? [],
+      penugasan: u.penugasan ?? [],
+      waliKelas: u.waliKelas ?? [],
+    }))
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `akun-guru-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    showToast('Data akun diekspor.')
+  }
 
   function openCreate() {
     setEditing(null)
@@ -432,86 +463,44 @@ export default function KelolaAkun({ profile }: Props) {
   const butuhMapel = !sebagaiAdmin && tugas.bidangStudi
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 pb-16">
       <PageHeader
         back={{ to: '/admin', label: 'Administrasi' }}
         title="Kelola Akun Guru"
         subtitle={`Buat login guru, atur kelas dan mapel. Akun orang tua ada di menu terpisah. ${list.length} akun staf.`}
         actions={
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => setMode('list')}
-            className={`rounded-lg px-3 py-1.5 text-[12px] font-medium ${
-              mode === 'list' ? 'bg-muh-600 text-white' : 'border border-border bg-white text-slate-600'
-            }`}
-          >
-            Daftar
-          </button>
-          <button
-            type="button"
-            onClick={openCreate}
-            className={`rounded-lg px-3 py-1.5 text-[12px] font-medium ${
-              mode === 'form' && !editing ? 'bg-muh-600 text-white' : 'border border-border bg-white text-slate-600'
-            }`}
-          >
-            Tambah guru
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const data = list.map((u) => ({
-                email: u.email,
-                nama: u.nama,
-                gelar: u.gelar ?? '',
-                role: u.role,
-                status: u.status ?? 'approved',
-                aktif: u.aktif !== false,
-                kelasAmpu: u.kelasAmpu ?? [],
-                penugasan: u.penugasan ?? [],
-                waliKelas: u.waliKelas ?? [],
-              }))
-              const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-              const url = URL.createObjectURL(blob)
-              const a = document.createElement('a')
-              a.href = url
-              a.download = `akun-guru-${new Date().toISOString().slice(0, 10)}.json`
-              a.click()
-              URL.revokeObjectURL(url)
-              showToast('Data akun diekspor.')
-            }}
-            className="rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
-          >
-            Ekspor JSON
-          </button>
-        </div>
+          mode === 'list' ? (
+            <>
+              <button type="button" onClick={ekspor} className={btnGhost}>
+                Ekspor JSON
+              </button>
+              <button type="button" onClick={openCreate} className={btnPrimary}>
+                + Tambah guru
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={() => setMode('list')} className={btnGhost}>
+              ← Kembali ke daftar
+            </button>
+          )
         }
       />
 
-      {toast && (
-        <div
-          className={`rounded-lg px-3 py-2 text-[12px] font-medium ${
-            toast.error ? 'border border-red-200 bg-red-50 text-red-700' : 'border border-muh-200 bg-muh-50 text-muh-800'
-          }`}
-        >
-          {toast.msg}
-        </div>
-      )}
+      {toastNode}
 
       {sisaAuth && mode === 'list' && (
-        <div className="card-soft border-amber-200 bg-amber-50/70 p-4">
-          <p className="text-[13px] font-semibold text-slate-900">Profil {sisaAuth.nama} dihapus, login-nya belum</p>
-          <p className="mt-1 text-[12px] text-slate-700">
-            Cloud Function hapus akun belum aktif, jadi hanya profil staf yang terhapus. User login <strong>{sisaAuth.email || '(tanpa email)'}</strong> masih ada di
-            Firebase Authentication, jadi email itu belum bebas dipakai. Ada dua cara:
+        <Notice tone="warn">
+          <p className="text-[13px] font-semibold">Profil {sisaAuth.nama} dihapus, login-nya belum</p>
+          <p className="mt-1">
+            Cloud Function hapus akun belum aktif, jadi hanya profil staf yang terhapus. User login{' '}
+            <strong>{sisaAuth.email || '(tanpa email)'}</strong> masih ada di Firebase Authentication, jadi
+            email itu belum bebas dipakai. Ada dua cara:
           </p>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-[12px] text-slate-700">
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            <li>Hapus user itu di Firebase Console → Authentication → Users (email bebas sepenuhnya).</li>
             <li>
-              Hapus user itu di Firebase Console → Authentication → Users (email bebas sepenuhnya).
-            </li>
-            <li>
-              Atau biarkan: orangnya tetap bisa mendaftar ulang di halaman Daftar. Bila lupa password lamanya, halaman Daftar
-              menyediakan tombol atur ulang password.
+              Atau biarkan: orangnya tetap bisa mendaftar ulang di halaman Daftar. Bila lupa password
+              lamanya, halaman Daftar menyediakan tombol atur ulang password.
             </li>
           </ul>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -519,7 +508,7 @@ export default function KelolaAkun({ profile }: Props) {
               href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/users`}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg bg-muh-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-muh-700"
+              className={`${btnPrimarySm} inline-block`}
             >
               Buka Firebase Authentication
             </a>
@@ -532,66 +521,61 @@ export default function KelolaAkun({ profile }: Props) {
                     () => showToast('Salin manual: clipboard ditolak browser.', true),
                   )
                 }
-                className="rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-slate-700"
+                className={btnGhostSm}
               >
                 Salin email
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setSisaAuth(null)}
-              className="rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600"
-            >
+            <button type="button" onClick={() => setSisaAuth(null)} className={btnGhostSm}>
               Tutup
             </button>
           </div>
-        </div>
+        </Notice>
       )}
 
       {kataSandiBaru && mode === 'list' && (
-        <div className="card-soft border-peach-200 bg-peach-50/60 p-4">
-          <p className="text-[13px] font-semibold text-slate-900">Password awal untuk {kataSandiBaru.nama}</p>
-          <p className="mt-1 text-[12px] text-muted">
-            {kataSandiBaru.email} — password ini tidak disimpan di aplikasi dan tidak ditampilkan lagi.
+        <Notice tone="warn">
+          <p className="text-[13px] font-semibold">Password awal untuk {kataSandiBaru.nama}</p>
+          <p className="mt-1">
+            {kataSandiBaru.email}. Password ini tidak disimpan di aplikasi dan tidak ditampilkan lagi.
           </p>
-          <p className="mt-2 font-mono text-[15px] font-semibold tracking-wide text-slate-900">{kataSandiBaru.password}</p>
+          <p className="mt-2 inline-block rounded-lg border border-amber-200 bg-white px-3 py-1.5 font-mono text-[15px] font-semibold tracking-wide text-slate-900">
+            {kataSandiBaru.password}
+          </p>
           <div className="mt-3 flex gap-2">
             <button
               type="button"
-              onClick={() => void navigator.clipboard.writeText(kataSandiBaru.password).then(
-                () => showToast('Password disalin.'),
-                () => showToast('Salin manual: clipboard ditolak browser.', true),
-              )}
-              className="rounded-lg bg-muh-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-muh-700"
+              onClick={() =>
+                void navigator.clipboard.writeText(kataSandiBaru.password).then(
+                  () => showToast('Password disalin.'),
+                  () => showToast('Salin manual: clipboard ditolak browser.', true),
+                )
+              }
+              className={btnPrimarySm}
             >
               Salin password
             </button>
-            <button
-              type="button"
-              onClick={() => setKataSandiBaru(null)}
-              className="rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600"
-            >
+            <button type="button" onClick={() => setKataSandiBaru(null)} className={btnGhostSm}>
               Sudah saya catat
             </button>
           </div>
-        </div>
+        </Notice>
       )}
 
       {mode === 'list' && (
-        <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
-          <section className="card-soft p-4">
-            <div className="flex flex-wrap gap-1">
-              {SARINGAN.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setSaringan(s.id)}
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                    saringan === s.id ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600'
-                  }`}
+        <div className="grid items-start gap-5 lg:grid-cols-[1fr_320px]">
+          <section className="card-soft p-4" aria-label="Daftar akun">
+            <div className="flex flex-wrap gap-1.5">
+              {SARINGAN.map((f) => (
+                <ChipToggle
+                  key={f.id}
+                  active={saringan === f.id}
+                  onClick={() => setSaringan(f.id)}
+                  count={hitung[f.id]}
+                  perhatian={f.id === 'pending'}
                 >
-                  {s.label}
-                </button>
+                  {f.label}
+                </ChipToggle>
               ))}
             </div>
             <input
@@ -599,153 +583,183 @@ export default function KelolaAkun({ profile }: Props) {
               value={cari}
               onChange={(e) => setCari(e.target.value)}
               placeholder="Cari nama atau email…"
-              className="mt-3 w-full rounded-lg border border-border bg-slate-50/80 px-3 py-2 text-[13px] outline-none focus:border-muh-500 focus:bg-white focus:ring-2 focus:ring-muh-500/15"
+              aria-label="Cari akun"
+              className={`${inputCls} mt-3`}
             />
-            <div className="mt-3 max-h-[32rem] overflow-auto rounded-lg border border-border">
+            <div className="mt-3 max-h-[34rem] overflow-auto rounded-lg border border-border">
               {loading ? (
-                <p className="p-6 text-center text-[12px] text-muted">Memuat…</p>
+                <Spinner />
               ) : tampil.length === 0 ? (
-                <p className="p-6 text-center text-[12px] text-muted">Belum ada akun pada saringan ini.</p>
+                <p className="p-8 text-center text-[13px] text-muted">Belum ada akun pada saringan ini.</p>
               ) : (
-                <table className="w-full text-left text-[12px]">
-                  <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
+                <table className="w-full text-left text-[13px]">
+                  <thead className="sticky top-0 z-10 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
                     <tr>
-                      <th className="px-3 py-2 font-semibold">Nama</th>
-                      <th className="px-3 py-2 font-semibold">Peran</th>
-                      <th className="hidden px-3 py-2 font-semibold sm:table-cell">Tugas</th>
-                      <th className="px-3 py-2 font-semibold">Status</th>
+                      <th className="px-3 py-2.5 font-semibold">Nama</th>
+                      <th className="px-3 py-2.5 font-semibold">Peran</th>
+                      <th className="hidden px-3 py-2.5 font-semibold sm:table-cell">Tugas</th>
+                      <th className="px-3 py-2.5 font-semibold">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {tampil.map((u) => (
-                      <tr
-                        key={u.uid}
-                        onClick={() => {
-                          setDipilih(u)
-                          setKonfirmasi(null)
-                        }}
-                        className={`cursor-pointer border-t border-border hover:bg-muh-50/40 ${
-                          dipilih?.uid === u.uid ? 'bg-muh-50/60' : ''
-                        }`}
-                      >
-                        <td className="px-3 py-2">
-                          <div className="font-medium text-slate-900">{u.nama}</div>
-                          <div className="text-[11px] text-muted">{u.email || '—'}</div>
-                        </td>
-                        <td className="px-3 py-2">{labelPeran(u)}</td>
-                        <td className="hidden px-3 py-2 text-muted sm:table-cell">{ringkasTugas(u)}</td>
-                        <td className="px-3 py-2">
-                          {u.status === 'pending' ? (
-                            <Badge tone="peach">Menunggu</Badge>
-                          ) : u.status === 'rejected' ? (
-                            <Badge tone="neutral">Ditolak</Badge>
-                          ) : (
-                            <Badge tone={u.aktif === false ? 'neutral' : 'green'}>
-                              {u.aktif === false ? 'Nonaktif' : 'Aktif'}
-                            </Badge>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {tampil.map((u) => {
+                      const terpilih = dipilih?.uid === u.uid
+                      const pilih = () => {
+                        setDipilih(u)
+                        setKonfirmasi(null)
+                      }
+                      return (
+                        <tr
+                          key={u.uid}
+                          tabIndex={0}
+                          aria-selected={terpilih}
+                          onClick={pilih}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              pilih()
+                            }
+                          }}
+                          className={`cursor-pointer border-t border-border transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 ${
+                            terpilih ? 'bg-muh-50 hover:bg-muh-50' : ''
+                          }`}
+                        >
+                          <td
+                            className={`px-3 py-2.5 ${
+                              terpilih ? 'shadow-[inset_3px_0_0_0_var(--color-muh-600)]' : ''
+                            }`}
+                          >
+                            <div className="font-medium text-slate-900">{u.nama}</div>
+                            <div className="text-[12px] text-muted">{u.email || '—'}</div>
+                          </td>
+                          <td className="px-3 py-2.5 text-slate-700">{labelPeran(u)}</td>
+                          <td className="hidden px-3 py-2.5 text-muted sm:table-cell">{ringkasTugas(u)}</td>
+                          <td className="px-3 py-2.5">
+                            {u.status === 'pending' ? (
+                              <Badge tone="peach">Menunggu</Badge>
+                            ) : u.status === 'rejected' ? (
+                              <Badge tone="neutral">Ditolak</Badge>
+                            ) : (
+                              <Badge tone={u.aktif === false ? 'neutral' : 'green'}>
+                                {u.aktif === false ? 'Nonaktif' : 'Aktif'}
+                              </Badge>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               )}
             </div>
-            <p className="mt-2 text-[11px] text-muted">{tampil.length} ditampilkan</p>
+            <p className="mt-2 text-[12px] text-muted">{tampil.length} ditampilkan</p>
           </section>
 
-          <aside className="card-soft h-fit p-4">
+          <aside ref={asideRef} className="card-soft p-4 lg:sticky lg:top-20" aria-label="Detail akun">
             {!dipilih ? (
-              <p className="text-[12px] text-muted">Pilih akun untuk mengubah tugas, reset password, menonaktifkan, atau menghapus permanen.</p>
+              <p className="text-[13px] leading-relaxed text-muted">
+                Pilih akun di daftar untuk mengubah tugas, mengirim tautan password, menonaktifkan, atau
+                menghapus permanen.
+              </p>
             ) : (
-              <div className="space-y-3 text-[12px]">
+              <div className="space-y-4 text-[13px]">
                 <div>
                   <div className="text-[15px] font-semibold text-slate-900">
-                    {dipilih.nama}{dipilih.gelar ? `, ${dipilih.gelar}` : ''}
+                    {dipilih.nama}
+                    {dipilih.gelar ? `, ${dipilih.gelar}` : ''}
                   </div>
-                  <div className="text-[11px] text-muted">{dipilih.email}</div>
-                  <div className="mt-1 flex flex-wrap gap-1">
+                  <div className="text-[12px] text-muted">{dipilih.email}</div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
                     <Badge tone={dipilih.roleRusak ? 'peach' : 'neutral'}>{labelPeran(dipilih)}</Badge>
                     {dipilih.status === 'pending' && <Badge tone="peach">Menunggu</Badge>}
                     {dipilih.status === 'rejected' && <Badge tone="neutral">Ditolak</Badge>}
                   </div>
                 </div>
-                <p className="border-t border-border pt-3 text-slate-700">{ringkasTugas(dipilih)}</p>
-                {dipilih.penugasan && dipilih.penugasan.length > 0 && (
-                  <ul className="space-y-1 text-[11px] text-muted">
-                    {dipilih.penugasan.map((p) => (
-                      <li key={`${p.kelas}-${p.mapel}`}>
-                        {p.kelas} · {p.mapel}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+
+                <div className="border-t border-border pt-3">
+                  <p className="text-slate-700">{ringkasTugas(dipilih)}</p>
+                  {dipilih.penugasan && dipilih.penugasan.length > 0 && (
+                    <ul className="mt-2 space-y-1 text-[12px] text-muted">
+                      {dipilih.penugasan.map((pt) => (
+                        <li key={`${pt.kelas}-${pt.mapel}`}>
+                          {pt.kelas} · {pt.mapel}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
                 {dipilih.status === 'pending' && (
-                  <div className="rounded-lg border border-peach-200 bg-peach-50 p-2.5">
-                    <p className="text-[11px] font-medium text-peach-800">Menunggu persetujuan</p>
+                  <Notice tone="warn">
+                    <p className="font-medium">Menunggu persetujuan</p>
                     <div className="mt-2 flex flex-col gap-1.5">
                       <button
                         type="button"
                         disabled={busy}
                         onClick={() => openEdit(dipilih)}
-                        className="w-full rounded-lg bg-muh-600 py-1.5 text-[11px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
+                        className={`${btnPrimarySm} w-full`}
                       >
-                        Setujui & atur tugas
+                        Setujui &amp; atur tugas
                       </button>
                       <button
                         type="button"
                         disabled={busy}
                         onClick={() => void terapkanStatus(dipilih, 'rejected')}
-                        className="w-full rounded-lg border border-red-200 bg-white py-1.5 text-[11px] font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
+                        className={`${btnDangerGhost} w-full`}
                       >
                         Tolak pendaftaran
                       </button>
                     </div>
-                  </div>
+                  </Notice>
                 )}
-                <button
-                  type="button"
-                  onClick={() => openEdit(dipilih)}
-                  className="w-full rounded-lg bg-muh-600 py-2 text-[12px] font-semibold text-white hover:bg-muh-700"
-                >
-                  Ubah akun
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void handleReset(dipilih)}
-                  className="w-full rounded-lg border border-border bg-white py-2 text-[12px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                >
-                  Kirim tautan password
-                </button>
+
+                <div className="space-y-2">
+                  {dipilih.status !== 'pending' && (
+                    <button type="button" onClick={() => openEdit(dipilih)} className={`${btnPrimary} w-full`}>
+                      Ubah akun
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void handleReset(dipilih)}
+                    className={`${btnGhost} w-full`}
+                  >
+                    Kirim tautan password
+                  </button>
+                </div>
+
                 {dipilih.uid === profile.uid ? (
-                  <p className="text-[11px] text-muted">Ini akun Anda. Peran dan status tidak dapat diubah dari sini.</p>
+                  <p className="text-[12px] text-muted">
+                    Ini akun Anda. Peran dan status tidak dapat diubah dari sini.
+                  </p>
                 ) : (
-                  <>
+                  <div className="space-y-2 border-t border-border pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                      Tindakan lain
+                    </p>
+
                     {dipilih.aktif !== false ? (
                       konfirmasi === dipilih.uid ? (
-                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5">
-                          <p className="text-[11px] text-amber-900">
-                            {dipilih.nama} tidak bisa masuk. Profil dan penugasan tetap ada; bisa diaktifkan lagi.
+                        <Notice tone="warn">
+                          <p>
+                            {dipilih.nama} tidak bisa masuk. Profil dan penugasan tetap ada; bisa diaktifkan
+                            lagi.
                           </p>
-                          <div className="mt-2 flex gap-2">
+                          <div className="mt-2.5 flex gap-2">
                             <button
                               type="button"
                               disabled={busy}
                               onClick={() => void terapkanAktif(dipilih, false)}
-                              className="rounded-lg bg-amber-700 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-60"
+                              className={btnWarn}
                             >
                               Ya, nonaktifkan
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => setKonfirmasi(null)}
-                              className="rounded-lg px-2.5 py-1 text-[11px] font-medium text-slate-600"
-                            >
+                            <button type="button" onClick={() => setKonfirmasi(null)} className={btnGhost}>
                               Batal
                             </button>
                           </div>
-                        </div>
+                        </Notice>
                       ) : (
                         <button
                           type="button"
@@ -754,7 +768,7 @@ export default function KelolaAkun({ profile }: Props) {
                             setKonfirmasiHapus(null)
                             setKetikHapus('')
                           }}
-                          className="w-full rounded-lg border border-amber-200 py-2 text-[12px] font-medium text-amber-800 hover:bg-amber-50"
+                          className={`${btnGhost} w-full`}
                         >
                           Nonaktifkan
                         </button>
@@ -764,36 +778,36 @@ export default function KelolaAkun({ profile }: Props) {
                         type="button"
                         disabled={busy}
                         onClick={() => void terapkanAktif(dipilih, true)}
-                        className="w-full rounded-lg border border-border bg-white py-2 text-[12px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                        className={`${btnGhost} w-full`}
                       >
                         Aktifkan kembali
                       </button>
                     )}
 
                     {konfirmasiHapus === dipilih.uid ? (
-                      <div className="rounded-lg border border-red-200 bg-red-50 p-2.5">
-                        <p className="text-[11px] leading-relaxed text-red-900">
-                          Hapus permanen akun <strong>{dipilih.nama}</strong>: login (Firebase Authentication) dan profil
-                          staf dihapus, dan tidak bisa dibatalkan. Data nilai siswa yang pernah diinput tidak dihapus.
-                          Emailnya bebas dipakai mendaftar lagi.
+                      <Notice tone="error">
+                        <p className="leading-relaxed">
+                          Hapus permanen akun <strong>{dipilih.nama}</strong>: login (Firebase Authentication)
+                          dan profil staf dihapus, dan tidak bisa dibatalkan. Data nilai siswa yang pernah
+                          diinput tidak dihapus. Emailnya bebas dipakai mendaftar lagi.
                         </p>
-                        <label className="mt-2 block text-[11px] font-medium text-red-800">
+                        <label className="mt-2.5 block text-[12px] font-medium">
                           Ketik email akun untuk konfirmasi
                           <input
                             type="text"
                             value={ketikHapus}
                             onChange={(e) => setKetikHapus(e.target.value)}
                             placeholder={dipilih.email}
-                            className="mt-1 w-full rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-800 outline-none focus:border-red-400"
+                            className={`${inputCls} mt-1 border-red-200 focus:border-red-400 focus:ring-red-200`}
                             autoComplete="off"
                           />
                         </label>
-                        <div className="mt-2 flex flex-wrap gap-2">
+                        <div className="mt-2.5 flex flex-wrap gap-2">
                           <button
                             type="button"
                             disabled={busy}
                             onClick={() => void hapusPermanen(dipilih)}
-                            className="rounded-lg bg-red-700 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-60"
+                            className={btnDanger}
                           >
                             Ya, hapus permanen
                           </button>
@@ -803,12 +817,12 @@ export default function KelolaAkun({ profile }: Props) {
                               setKonfirmasiHapus(null)
                               setKetikHapus('')
                             }}
-                            className="rounded-lg px-2.5 py-1 text-[11px] font-medium text-slate-600"
+                            className={btnGhost}
                           >
                             Batal
                           </button>
                         </div>
-                      </div>
+                      </Notice>
                     ) : (
                       <button
                         type="button"
@@ -817,12 +831,12 @@ export default function KelolaAkun({ profile }: Props) {
                           setKonfirmasi(null)
                           setKetikHapus('')
                         }}
-                        className="w-full rounded-lg border border-red-300 py-2 text-[12px] font-medium text-red-700 hover:bg-red-50"
+                        className={`${btnDangerGhost} w-full`}
                       >
                         Hapus permanen
                       </button>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
             )}
@@ -831,23 +845,25 @@ export default function KelolaAkun({ profile }: Props) {
       )}
 
       {mode === 'form' && (
-        <section className="card-soft p-4 sm:p-5">
-          <h2 className="text-[14px] font-semibold text-slate-800">
+        <section className="card-soft max-w-3xl p-4 sm:p-5">
+          <h2 className="text-[15px] font-semibold text-slate-900">
             {editing ? (editing.status === 'pending' ? 'Setujui akun guru' : 'Ubah akun') : 'Tambah akun guru'}
           </h2>
-          {editing?.status === 'pending' && (
-            <p className="mt-2 rounded-lg border border-peach-200 bg-peach-50 px-3 py-2 text-[12px] text-peach-800">
-              Menyimpan akan menyetujui akun ini. Atur peran, kelas, dan penugasan mapel sebelum menyimpan.
-            </p>
-          )}
-          {editing?.roleRusak && (
-            <p className="mt-2 rounded-lg border border-peach-200 bg-peach-50 px-3 py-2 text-[12px] text-slate-800">
-              Role tersimpan ({editing.roleRusak}) tidak dikenal. Pilih peran yang benar sebelum menyimpan.
-            </p>
-          )}
-          <form onSubmit={(e) => void handleSave(e)} className="mt-3 space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Nama *">
+          <div className="mt-3 space-y-2">
+            {editing?.status === 'pending' && (
+              <Notice tone="warn">
+                Menyimpan akan menyetujui akun ini. Atur peran, kelas, dan penugasan mapel sebelum menyimpan.
+              </Notice>
+            )}
+            {editing?.roleRusak && (
+              <Notice tone="warn">
+                Role tersimpan ({editing.roleRusak}) tidak dikenal. Pilih peran yang benar sebelum menyimpan.
+              </Notice>
+            )}
+          </div>
+          <form onSubmit={(e) => void handleSave(e)} className="mt-4 space-y-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Nama" required>
                 <input
                   required
                   className={inputCls}
@@ -863,7 +879,7 @@ export default function KelolaAkun({ profile }: Props) {
                   onChange={(e) => setF('gelar', e.target.value)}
                 />
               </Field>
-              <Field label="Email *">
+              <Field label="Email" required>
                 <input
                   required
                   type="email"
@@ -874,46 +890,8 @@ export default function KelolaAkun({ profile }: Props) {
                   onChange={(e) => setF('email', e.target.value)}
                 />
               </Field>
-              <div className="sm:col-span-2">
-                <span className="mb-1.5 block text-[11px] font-medium text-slate-600">Tugas *</span>
-                <p className="mb-2 text-[11px] text-muted">
-                  Boleh lebih dari satu. Contoh: Tahsin-Tahfizh sekaligus guru kelas, atau Tahsin sekaligus bidang studi.
-                </p>
-                <button
-                  type="button"
-                  disabled={terkunci}
-                  onClick={() => setSebagaiAdmin((v) => !v)}
-                  className={`mb-2 w-full rounded-lg border px-3 py-2 text-left text-[12px] disabled:opacity-60 ${
-                    sebagaiAdmin ? 'border-muh-500 bg-muh-50' : 'border-border bg-white'
-                  }`}
-                >
-                  <div className="font-semibold text-slate-800">Administrator</div>
-                  <div className="mt-0.5 text-[11px] text-muted">Semua modul. Kelas dan mapel tidak perlu diisi.</div>
-                </button>
-                {!sebagaiAdmin && (
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    {TUGAS_OPSI.map((o) => {
-                      const aktif = tugas[o.key]
-                      return (
-                        <button
-                          key={o.key}
-                          type="button"
-                          disabled={terkunci}
-                          onClick={() => setTugas((prev) => ({ ...prev, [o.key]: !prev[o.key] }))}
-                          className={`rounded-lg border px-3 py-2 text-left text-[12px] disabled:opacity-60 ${
-                            aktif ? 'border-muh-500 bg-muh-50 text-muh-900' : 'border-border bg-white text-slate-700'
-                          }`}
-                        >
-                          <div className="font-semibold">{aktif ? '✓ ' : ''}{o.label}</div>
-                          <div className="mt-0.5 text-[11px] text-muted">{o.desk}</div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
               {!editing && (
-                <Field label="Password awal *">
+                <Field label="Password awal" required hint="Minimal 8 karakter.">
                   <div className="flex gap-2">
                     <input
                       required
@@ -926,7 +904,7 @@ export default function KelolaAkun({ profile }: Props) {
                     <button
                       type="button"
                       onClick={() => setF('password', buatPasswordAcak())}
-                      className="shrink-0 rounded-lg border border-border px-3 text-[11px] font-medium text-slate-600 hover:bg-slate-50"
+                      className={`${btnGhost} shrink-0`}
                     >
                       Acak
                     </button>
@@ -935,19 +913,74 @@ export default function KelolaAkun({ profile }: Props) {
               )}
             </div>
             {editing && (
-              <p className="text-[11px] text-muted">
-                Email login tidak diubah di sini. Untuk password, kirim tautan ke email guru dari panel daftar.
+              <p className="text-[12px] text-muted">
+                Email login tidak diubah di sini. Untuk password, kirim tautan ke email guru dari panel
+                daftar.
               </p>
             )}
-            {sebagaiAdmin && (
-              <p className="rounded-lg bg-slate-50 px-3 py-2 text-[12px] text-muted">
-                Administrator membuka semua modul. Kelas dan mapel tidak perlu diisi.
+
+            <div>
+              <span className="mb-1 block text-[12px] font-medium text-slate-700">
+                Tugas <span className="text-peach-500">*</span>
+              </span>
+              <p className="mb-2.5 text-[11.5px] leading-snug text-muted">
+                Boleh lebih dari satu. Contoh: Tahsin-Tahfizh sekaligus guru kelas, atau Tahsin sekaligus
+                bidang studi.
               </p>
+              <button
+                type="button"
+                disabled={terkunci}
+                aria-pressed={sebagaiAdmin}
+                onClick={() => setSebagaiAdmin((v) => !v)}
+                className={`mb-2 w-full rounded-lg border px-3.5 py-2.5 text-left transition disabled:opacity-60 ${
+                  sebagaiAdmin
+                    ? 'border-muh-600 bg-muh-50 ring-1 ring-muh-600/20'
+                    : 'border-border bg-white hover:bg-slate-50'
+                }`}
+              >
+                <div className="text-[13px] font-semibold text-slate-900">Administrator</div>
+                <div className="mt-0.5 text-[12px] text-muted">
+                  Semua modul. Kelas dan mapel tidak perlu diisi.
+                </div>
+              </button>
+              {!sebagaiAdmin && (
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {TUGAS_OPSI.map((o) => {
+                    const aktif = tugas[o.key]
+                    return (
+                      <button
+                        key={o.key}
+                        type="button"
+                        disabled={terkunci}
+                        aria-pressed={aktif}
+                        onClick={() => setTugas((prev) => ({ ...prev, [o.key]: !prev[o.key] }))}
+                        className={`rounded-lg border px-3.5 py-2.5 text-left transition disabled:opacity-60 ${
+                          aktif
+                            ? 'border-muh-600 bg-muh-50 ring-1 ring-muh-600/20'
+                            : 'border-border bg-white hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="text-[13px] font-semibold text-slate-900">
+                          {aktif ? '✓ ' : ''}
+                          {o.label}
+                        </div>
+                        <div className="mt-0.5 text-[12px] leading-snug text-muted">{o.desk}</div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {sebagaiAdmin && (
+              <Notice tone="info">
+                Administrator membuka semua modul. Kelas dan mapel tidak perlu diisi.
+              </Notice>
             )}
             {butuhTahsin && butuhKelas && (
-              <p className="rounded-lg bg-muh-50 px-3 py-2 text-[12px] text-muh-900">
+              <Notice tone="info">
                 Kombinasi: guru Tahsin-Tahfizh yang juga menjadi guru kelas. Isi kedua bagian di bawah.
-              </p>
+              </Notice>
             )}
             {butuhTahsin && (
               <PilihKelas
@@ -973,28 +1006,21 @@ export default function KelolaAkun({ profile }: Props) {
               />
             )}
             {editing && editing.uid !== profile.uid && (
-              <label className="flex items-center gap-2 text-[12px] text-slate-700">
+              <label className="flex items-center gap-2 text-[13px] text-slate-700">
                 <input
                   type="checkbox"
                   checked={form.aktif}
                   onChange={(e) => setF('aktif', e.target.checked)}
+                  className="accent-muh-600"
                 />
                 Akun aktif (boleh masuk)
               </label>
             )}
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={busy}
-                className="rounded-lg bg-muh-600 px-4 py-2 text-[12px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
-              >
+            <div className="flex gap-2 border-t border-border pt-4">
+              <button type="submit" disabled={busy} className={btnPrimary}>
                 {busy ? 'Menyimpan…' : 'Simpan'}
               </button>
-              <button
-                type="button"
-                onClick={() => setMode('list')}
-                className="rounded-lg border border-border bg-white px-4 py-2 text-[12px] font-medium text-slate-600"
-              >
+              <button type="button" onClick={() => setMode('list')} className={btnGhost}>
                 Batal
               </button>
             </div>
