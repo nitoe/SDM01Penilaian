@@ -14,11 +14,12 @@ Dokumen kerja bertahap. Setiap tahap berdiri sendiri; tandai selesai di sini lal
 Berkas: `roles.ts`, `App.tsx`, `Layout.tsx`, `AkademikHub.tsx`, `TahsinHub.tsx`, halaman akademik (judul admin), `RiwayatSiswa.tsx`, `TargetHafalan.tsx`, `InputSetoran.tsx`, `firestore.rules`, `scripts/cek-peran-admin.mjs`.
 Sisa untuk dijalankan pemilik: `npm run deploy:rules`, `npm run deploy`, uji dengan akun admin.
 
-## Tahap 2 — Dashboard beranda admin bertab — BELUM
+## Tahap 2 — Dashboard beranda admin bertab — SELESAI (15 Okt 2026)
 
-Isi: tab Ringkasan, Tujuan Pembelajaran, Bobot, Nilai, Tahsin-Tahfizh. Tiap tab: sudah/belum per guru, tautan ke halaman lihat terkait.
-Berkas rencana: `src/lib/monitoringAdmin.ts` (pemuat data + logika murni, diuji), `src/components/Tabs.tsx`, `src/pages/AdminDashboard.tsx`, `Home.tsx` (admin memakai dashboard baru), `scripts/cek-monitoring-admin.mjs`.
-Catatan teknis: `loadSetoranMingguIni` memakai field `tanggal` yang tidak ditulis `saveSetoran`; periksa sebelum dipakai ulang.
+Tab: Ringkasan, Tujuan Pembelajaran, Bobot, Nilai, Tahsin-Tahfizh. Tiap tab menampilkan guru yang sudah dan belum, bisa disaring ("Perlu perhatian" / "Semua guru"), dicari, dibuka per mapel×kelas dengan tautan "Lihat" ke halaman mode lihat. Ringkasan juga menampilkan akun menunggu persetujuan dan mapel×kelas tanpa penanggung jawab.
+Berkas: `src/lib/monitoringAdminRumus.ts` (logika murni, diuji), `src/lib/monitoringAdmin.ts` (pemuat Firestore, hanya baca), `src/components/Tabs.tsx`, `src/pages/AdminDashboard.tsx`, `src/pages/Home.tsx` (admin), `scripts/cek-monitoring-admin.mjs`.
+Aturan yang dipakai: lihat ANTIREGRESI §18. Belum diuji terhadap data Firestore sungguhan; uji setelah rules Tahap 1 di-deploy.
+Ide lanjutan (belum dikerjakan): tanggal input terakhir per guru, ekspor rekap guru yang belum input, pengingat ke guru (memakai fondasi Tahap 3).
 
 ## Tahap 3 — Fondasi notifikasi — BELUM
 

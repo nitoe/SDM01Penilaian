@@ -211,3 +211,19 @@
 17.5 Commit tidak mengubah rules produksi. Setelah menarik perubahan ini jalankan `npm run deploy:rules` lalu `npm run deploy`, dan uji dengan akun admin: tidak ada tombol simpan, dan penulisan lewat Console peramban ditolak.
 
 17.6 Pemantauan admin (Tahap 2 ke atas) hanya membaca. Query nilai wajib menyertakan `mapel` dan `kelas` (§7.3); hitungan memakai `getCountFromServer`.
+
+## §18. Dashboard pemantauan admin
+
+18.1 **Tanggung jawab input per mapel×kelas** ditentukan di `hitungPasangan()`: guru yang punya `penugasan` pada pasangan itu; bila tidak ada, wali kelas; bila tidak ada keduanya, pasangan dilaporkan sebagai "tanpa penanggung jawab". Jangan menghitung guru kelas untuk mapel yang punya guru penugasan (terhitung ganda). Jangan memindahkan logika ini ke halaman.
+
+18.2 Akun yang dihitung hanya yang aktif dan berstatus `approved` atau tanpa status (`akunDipantau()`). Akun pending, ditolak, nonaktif, admin, dan orang tua tidak ikut.
+
+18.3 Status bobot memakai `tpMasukSemester`/`bobotTpDiSemester` (§14). TP tanpa alokasi eksplisit tidak dihitung sebagai teralokasi. Total ideal 100% per semester, toleransi 0,5.
+
+18.4 Status nilai = isian `nilai_tp` pada periode terpilih dibanding (TP semester itu × siswa aktif kelas). Hitungan memakai `getCountFromServer` dengan filter `mapel`, `kelas`, `semester`, `tahunAjaran` (§7.3), semua nama alias mapel dijumlahkan. Jangan mengunduh dokumen nilai untuk dashboard.
+
+18.5 Setoran Tahsin dihitung per guru lewat `createdBy` + `tahunAjaran` + `semester`. Dokumen setoran lama tanpa field periode tidak ikut hitungan. Rules memperbolehkan admin membaca lewat `lihatKelas()` (§17.2).
+
+18.6 `tp_kktp` dibaca sekali penuh per pemuatan dashboard dan hanya untuk admin. Jika koleksi membesar, ganti dengan hitungan per pasangan; jangan memanggilnya dari beranda guru.
+
+18.7 Uji: `node --experimental-strip-types scripts/cek-monitoring-admin.mjs` (harus mencetak SEMUA UJI LULUS) setiap kali mengubah `monitoringAdminRumus.ts`.

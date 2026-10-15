@@ -18,6 +18,7 @@ import { ROLE_LABEL } from '../types/user'
 import { Chip, HeroBanner, ModuleCard, SectionTitle, StatCard, Badge } from '../components/ui'
 import Icon from '../components/Icon'
 import { usePeriodeAkademik } from '../lib/usePeriodeAkademik'
+import AdminDashboard from './AdminDashboard'
 
 interface HomeProps {
   profile: AppUser
@@ -460,6 +461,8 @@ export default function Home({ profile }: HomeProps) {
             </div>
           )}
 
+          {admin && <AdminDashboard />}
+
           {stats && admin && <KelasBars data={stats.perKelas} saya={saya.semua} />}
           {stats && !admin && saya.semua.length > 0 && (
             <KelasBars data={stats.perKelas} saya={saya.semua} />
@@ -471,8 +474,12 @@ export default function Home({ profile }: HomeProps) {
               {adaAkademik && (
                 <ModuleCard
                   to="/akademik"
-                  title="Akademik & Rapor"
-                  desc="TP, nilai mapel, absensi, ekskul, dan rapor"
+                  title={admin ? 'Pantauan Akademik' : 'Akademik & Rapor'}
+                  desc={
+                    admin
+                      ? 'Lihat tujuan pembelajaran, bobot, dan daftar nilai'
+                      : 'TP, nilai mapel, absensi, ekskul, dan rapor'
+                  }
                   icon="clipboard"
                   tone="peach"
                 />
@@ -481,8 +488,12 @@ export default function Home({ profile }: HomeProps) {
                 <div className={sembunyikanTahsinDiHP ? 'hidden sm:block' : ''}>
                   <ModuleCard
                     to="/tahsin"
-                    title="Tahsin & Tahfizh"
-                    desc="Setoran, riwayat, target hafalan, dan laporan kemajuan"
+                    title={admin ? 'Pantauan Tahsin & Tahfizh' : 'Tahsin & Tahfizh'}
+                    desc={
+                      admin
+                        ? 'Lihat riwayat setoran dan target hafalan'
+                        : 'Setoran, riwayat, target hafalan, dan laporan kemajuan'
+                    }
                     icon="quran"
                     tone="green"
                   />

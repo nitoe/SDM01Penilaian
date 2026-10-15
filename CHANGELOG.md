@@ -280,3 +280,10 @@
 - `src/lib/roles.ts`: `isGuruTahsinRole`, `teksPeran`. `src/App.tsx`: `RoleGate` menerima tujuan alih; input setoran dijaga.
 - Nama menu khusus admin: Pantauan Akademik, Tujuan Pembelajaran, Bobot Tujuan Pembelajaran, Daftar Nilai Harian, Daftar Nilai STS & SAS, Rekap Nilai Harian, Pantauan Tahsin & Tahfizh. `AkademikHub` dan `TahsinHub` punya varian admin (Input Setoran dan Rapor tidak ditampilkan untuk admin).
 - `scripts/cek-peran-admin.mjs` (baru). `ANTIREGRESI.md` §17. `docs/PROGRES_ADMIN.md` (baru): rencana dan status Tahap 1–3.
+
+## Belum dirilis — Dashboard beranda admin bertab (Tahap 2 dari 3)
+
+- `src/pages/AdminDashboard.tsx`, `src/components/Tabs.tsx` (baru): tab Ringkasan, Tujuan Pembelajaran, Bobot, Nilai, Tahsin-Tahfizh; guru sudah/belum, saring, cari, rincian per mapel×kelas dengan tautan lihat; tombol Muat ulang; ikut periode terpilih di header.
+- `src/lib/monitoringAdminRumus.ts` (logika murni) dan `src/lib/monitoringAdmin.ts` (pemuat, hanya baca): tanggung jawab per mapel×kelas, status TP/bobot/nilai, setoran Tahsin per guru.
+- `src/pages/Home.tsx`: admin menampilkan dashboard di atas diagram siswa per kelas; kartu modul memakai nama pantauan.
+- `scripts/cek-monitoring-admin.mjs` (baru). `ANTIREGRESI.md` §18. Tidak ada perubahan rules atau indeks pada tahap ini.
