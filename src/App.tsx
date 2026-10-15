@@ -11,6 +11,8 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import ProfilSaya from './pages/ProfilSaya'
 import Notifikasi from './pages/Notifikasi'
+import LaporanStsSas from './pages/akademik/LaporanStsSas'
+import LaporanTahsin from './pages/tahsin/LaporanTahsin'
 import Home from './pages/Home'
 import TahsinHub from './pages/TahsinHub'
 import AkademikHub from './pages/AkademikHub'
@@ -133,6 +135,7 @@ export default function App() {
               path="/tahsin/target"
               element={profile ? <TargetHafalan profile={profile} /> : null}
             />
+            <Route path="/tahsin/laporan" element={profile ? <LaporanTahsin profile={profile} /> : null} />
             <Route path="/tahsin/*" element={<Placeholder />} />
           </Route>
 
@@ -146,6 +149,7 @@ export default function App() {
             <Route path="/akademik/nilai-slm" element={profile ? <NilaiSlm profile={profile} /> : null} />
             <Route path="/akademik/nilai-sts" element={profile ? <NilaiStsSas profile={profile} /> : null} />
             <Route path="/akademik/laporan-slm" element={profile ? <LaporanSlm profile={profile} /> : null} />
+            <Route path="/akademik/laporan-sts-sas" element={profile ? <LaporanStsSas profile={profile} /> : null} />
             <Route path="/akademik/rapor" element={profile ? <Rapor profile={profile} /> : null} />
             <Route path="/akademik/*" element={<Placeholder />} />
           </Route>

@@ -45,7 +45,7 @@ const targetLaporan: Item[] = [
     desc: 'Laporan kemajuan tahsin-tahfizh',
     icon: 'printer',
     tone: 'ink',
-    ready: false,
+    ready: true,
   },
 ]
 

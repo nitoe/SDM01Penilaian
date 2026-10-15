@@ -119,6 +119,23 @@ export async function getRiwayatSetoran(
 }
 
 /**
+ * Semua setoran satu kelas pada satu periode (untuk laporan cetak). Satu query berfilter kelas + periode;
+ * dokumen lama tanpa tahunAjaran/semester tidak ikut (isolasi periode, sama dengan getRiwayatSetoran).
+ */
+export async function getSetoranKelasPeriode(kelas: string, scope: ScopePeriode): Promise<SetoranRecord[]> {
+  const q = query(
+    collection(db, 'setoran'),
+    where('kelas', '==', kelas),
+    where('tahunAjaran', '==', scope.tahunAjaran),
+    where('semester', '==', scope.semester),
+  )
+  const snap = await getDocs(q)
+  return snap.docs
+    .map((d) => recordSetoran(d.id, d.data()))
+    .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
+}
+
+/**
  * Ubah field sederhana satu setoran: jenis, status hafalan, catatan. Materi dan Baca & Tandai SENGAJA tidak
  * bisa diubah (hapus lalu input ulang) agar riwayat konsisten. Rules hanya mengizinkan pembuatnya (v2 §5).
  */

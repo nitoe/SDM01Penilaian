@@ -5,7 +5,6 @@
  * Mapel tanpa nilai tetap muncul dengan "—" agar cetak kosong tetap rapi.
  */
 import {
-  bobotTpDiSemester,
   getCakupanTP,
   getConfigAkademik,
   getMapelList,
@@ -18,7 +17,8 @@ import {
   tpMasukSemester,
 } from './akademik'
 import { getSeniKelas, labelSeniBudaya } from './seniKelas'
-import type { ConfigAkademik, Semester, TujuanPembelajaran } from '../types/akademik'
+import { bobotUntukSts } from './asesmenRumus'
+import type { ConfigAkademik, Semester } from '../types/akademik'
 
 export interface BarisRaporSts {
   mapel: string
@@ -65,12 +65,6 @@ function escapeHtml(str: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-}
-
-function bobotUntukSts(tp: TujuanPembelajaran, semester: string): number {
-  const b = bobotTpDiSemester(tp, semester)
-  if (b != null && b > 0) return b
-  return tp.bobotMapel != null && tp.bobotMapel > 0 ? Number(tp.bobotMapel) : 1
 }
 
 /**

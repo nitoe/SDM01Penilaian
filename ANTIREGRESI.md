@@ -243,3 +243,15 @@
 19.6 Mutasi siswa pada tahap ini hanya MELAPORKAN ke admin. Admin tetap mengubah data siswa sendiri di Data Siswa. Jangan menambahkan jalur otomatis dari laporan ke `siswa` tanpa keputusan baru (menyentuh §5 dan §14).
 
 19.7 Beranda admin tidak lagi menampilkan grafik jumlah siswa per kelas (diputuskan 15 Okt 2026). Gantinya: grafik Kelengkapan per kelas (TP/Bobot/Nilai) dari data pantauan, dan dropdown guru. Beranda guru tetap memakai `KelasBars` bila punya kelas.
+
+## §20. Laporan cetak untuk admin dan wali kelas (per 15 Okt 2026)
+
+20.1 Admin tetap mencetak, tetapi tidak menulis. Halaman cetak (`LaporanStsSas`, `LaporanTahsin`) hanya membaca; `scripts/cek-laporan-cetak.mjs` gagal bila berkas pemuat/halaman memuat operasi tulis (`setDoc`, `addDoc`, `updateDoc`, `deleteDoc`, `writeBatch`, `save*`).
+
+20.2 **Rekap STS/SAS per kelas** (`/akademik/laporan-sts-sas`, `?jenis=sts|sas&kelas=`): admin boleh semua kelas, guru akademik hanya kelas yang diwalikan (`profile.waliKelas`). Rumusnya di `lib/asesmenRumus.ts`: STS = rata tertimbang nilai STS pada TP cakupan STS (bobot `bobotUntukSts`, sama dengan Rapor STS; `raporSts.ts` mengimpor fungsi yang sama, jangan menggandakannya); SAS = per TP `hitungNilaiAkhirTP(slm, sas bila TP di cakupan SAS, tp, sts)` lalu rata tertimbang `bobotTpDiSemester` (sama dengan "Akhir" di halaman Nilai STS & SAS). Mengubah rumus nilai berarti mengubah ketiga tempat itu bersamaan dan memperbarui uji.
+
+20.3 Pemuat `muatRekapAsesmenKelas` selalu query per mapel dengan `mapel` + `kelas` (§7.3), semua mapel berlaku di tingkatan itu menjadi kolom (Seni Budaya berlabel disiplin semester itu), mapel tanpa nilai tampil "–". Tidak ada nilai yang ditebak atau diisi otomatis.
+
+20.4 **Laporan Tahsin-Tahfizh** (`/tahsin/laporan?kelas=`): admin semua kelas, guru Tahsin hanya `kelasAmpu`. Satu query `setoran` per kelas + `tahunAjaran` + `semester` (`getSetoranKelasPeriode`), dikelompokkan di klien; jangan mengganti dengan query per siswa. Setoran lama tanpa field periode tidak ikut. Capaian memakai `target.ts` (`posisiIqro`, `hitungProgresSurah`); siswa tanpa target tampil "–", bukan "Belum".
+
+20.5 Cetak memakai `window.print()` dengan `@page A4 landscape`; bagian layar (kontrol, header, navigasi) memakai `print:hidden`. Tanda tangan: kepala sekolah dari `config.namaKepsek`, wali kelas/guru Tahsin dicari lewat `lib/penandatangan.ts`.

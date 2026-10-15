@@ -27,9 +27,17 @@ Koleksi `notifikasi` (satu koleksi, tiga jenis), rules, indeks, lonceng di heade
 Berkas: `types/notifikasi.ts`, `lib/notifikasiRumus.ts`, `lib/notifikasi.ts`, `pages/Notifikasi.tsx`, `components/Layout.tsx`, `components/Icon.tsx`, `App.tsx`, `pages/AdminDashboard.tsx`, `lib/monitoringAdminRumus.ts`, `lib/monitoringAdmin.ts`, `pages/Home.tsx`, `firestore.rules`, `firestore.indexes.json`, `scripts/cek-notifikasi.mjs`.
 Sisa untuk dijalankan pemilik: deploy rules DAN indeks, lalu uji kirim laporan dengan akun guru dan ubah status dengan akun admin.
 
+## Tahap 4 — Cetak laporan untuk admin — SELESAI (15 Okt 2026)
+
+Rekap STS/SAS per kelas dan laporan Tahsin-Tahfizh per kelas, keduanya hanya membaca (ANTIREGRESI §20).
+Berkas: `lib/asesmenRumus.ts`, `lib/rekapAsesmen.ts`, `lib/tahsinLaporanRumus.ts`, `lib/laporanTahsin.ts`, `lib/penandatangan.ts`, `pages/akademik/LaporanStsSas.tsx`, `pages/tahsin/LaporanTahsin.tsx`, `App.tsx`, `AkademikHub.tsx`, `TahsinHub.tsx`, `tahsinData.ts`, `raporSts.ts`, `scripts/cek-laporan-cetak.mjs`.
+Belum diuji dengan data sungguhan: cetak satu kelas yang nilainya sudah terisi dan bandingkan beberapa angka dengan halaman Nilai STS & SAS.
+
 ## Ide lanjutan (belum dikerjakan)
 
 - Pengingat dari admin ke guru yang belum input (memakai `notifikasi` arah admin → guru, perlu field penerima dan rules baca baru).
 - Laporan mutasi yang langsung membuka form Data Siswa admin dengan data terisi.
 - Tanggal input terakhir per guru; ekspor rekap guru yang belum input ke Excel.
+- Cetak rekap per mapel (per TP) dan cetak laporan Tahsin satu siswa (riwayat lengkap) bila diperlukan.
+- Rapor SAS (per siswa) untuk wali kelas, bila belum dibuat di v2.
 - Notifikasi real-time dan pemberitahuan di luar aplikasi.

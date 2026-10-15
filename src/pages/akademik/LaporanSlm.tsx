@@ -160,7 +160,7 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
         <BackLink to="/akademik/laporan-slm">Pilih mata pelajaran</BackLink>
         <div className="flex gap-2">
           <Link to={inputUrl} className={`${btnGhost} no-underline`}>
-            Input nilai
+            {admin ? 'Lihat daftar nilai' : 'Input nilai'}
           </Link>
           <button type="button" className={btnPrimary} onClick={() => window.print()}>
             Cetak

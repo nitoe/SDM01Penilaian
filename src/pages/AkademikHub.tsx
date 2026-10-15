@@ -154,6 +154,14 @@ const adminNilai: Item[] = [
 
 const adminLaporan: Item[] = [
   {
+    to: '/akademik/laporan-sts-sas',
+    title: 'Cetak Rekap STS & SAS',
+    desc: 'Nilai semua mapel satu kelas dalam satu tabel, siap dicetak',
+    icon: 'printer',
+    tone: 'green',
+    ready: true,
+  },
+  {
     to: '/akademik/laporan-slm',
     title: 'Rekap Nilai Harian',
     desc: 'Rekap nilai per kelas dan mapel, siap dicetak',
@@ -177,7 +185,7 @@ function AdminAkademikHub() {
         <HubPanel title="Daftar nilai">
           <PanelItems items={adminNilai} />
         </HubPanel>
-        <HubPanel title="Rekap">
+        <HubPanel title="Rekap dan cetak">
           <PanelItems items={adminLaporan} />
         </HubPanel>
       </div>

@@ -294,3 +294,11 @@
 - `firestore.rules`: koleksi `notifikasi`. `firestore.indexes.json`: indeks `notifikasi (dariUid, createdAt desc)`. **Belum di-deploy.**
 - Dashboard admin: kolom cari nama diganti dropdown guru (berlaku di semua tab dan Ringkasan per guru); grafik jumlah siswa per kelas dihapus dari beranda admin dan diganti grafik Kelengkapan per kelas; Ringkasan menampilkan laporan guru yang belum ditangani.
 - `scripts/cek-notifikasi.mjs` (baru), `scripts/cek-monitoring-admin.mjs` ditambah uji per kelas. `docs/DATA_MODEL.md`, `ANTIREGRESI.md` §19.
+
+## Belum dirilis — Cetak laporan untuk admin (Tahap 4)
+
+- `/akademik/laporan-sts-sas` (baru): cetak rekap STS atau SAS satu kelas, semua mapel, rata-rata per siswa dan per mapel, tanda tangan kepala sekolah dan wali kelas. Admin semua kelas; wali kelas kelasnya.
+- `/tahsin/laporan` (baru, sebelumnya "segera hadir"): cetak laporan Tahsin-Tahfizh satu kelas — setoran per jenis, lulus/diulang, capaian terhadap target, setoran terakhir.
+- `src/lib/asesmenRumus.ts`, `rekapAsesmen.ts`, `tahsinLaporanRumus.ts`, `laporanTahsin.ts`, `penandatangan.ts` (baru); `tahsinData.getSetoranKelasPeriode`. `raporSts.ts` kini memakai `bobotUntukSts` dari `asesmenRumus.ts` (perilaku sama).
+- Menu admin: "Cetak Rekap STS & SAS" di Pantauan Akademik; "Cetak Laporan" aktif di Pantauan Tahsin. Tombol di Rekap Nilai Harian untuk admin berbunyi "Lihat daftar nilai".
+- `scripts/cek-laporan-cetak.mjs` (baru). `ANTIREGRESI.md` §20. Tidak ada perubahan rules/indeks.
