@@ -197,7 +197,6 @@ export default function Rapor({ profile }: { profile: AppUser }) {
   return (
     <div className="space-y-5 pb-16">
       <div className="print:hidden">
-        <BackLink to="/akademik">{admin ? 'Pantauan Akademik' : 'Akademik & Rapor'}</BackLink>
         <PageHeader
           back={{ to: '/akademik', label: admin ? 'Pantauan Akademik' : 'Akademik & Rapor' }}
           eyebrow="Akademik"

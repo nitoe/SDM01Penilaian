@@ -288,40 +288,25 @@
 - `src/pages/Home.tsx`: admin menampilkan dashboard di atas diagram siswa per kelas; kartu modul memakai nama pantauan.
 - `scripts/cek-monitoring-admin.mjs` (baru). `ANTIREGRESI.md` §18. Tidak ada perubahan rules atau indeks pada tahap ini.
 
-## Belum dirilis (basis: package.json 0.1.0) — Identitas visual biru sekolah dan perombakan beranda
+## Belum dirilis — Notifikasi dan penyempurnaan dashboard admin (Tahap 3 dari 3)
 
-Perbaikan tampilan; tidak ada perubahan logika data, `firestore.rules`, indeks, maupun rumus.
+- Notifikasi: koleksi `notifikasi` (laporan tugas, laporan kendala, mutasi siswa), `src/lib/notifikasi.ts`, `src/lib/notifikasiRumus.ts`, `src/types/notifikasi.ts`, halaman `/notifikasi` (admin: kotak masuk bertab dengan status baru/diproses/selesai dan catatan; guru: formulir lapor dan riwayat), lonceng dengan jumlah laporan baru di header untuk staf.
+- `firestore.rules`: koleksi `notifikasi`. `firestore.indexes.json`: indeks `notifikasi (dariUid, createdAt desc)`. **Belum di-deploy.**
+- Dashboard admin: kolom cari nama diganti dropdown guru (berlaku di semua tab dan Ringkasan per guru); grafik jumlah siswa per kelas dihapus dari beranda admin dan diganti grafik Kelengkapan per kelas; Ringkasan menampilkan laporan guru yang belum ditangani.
+- `scripts/cek-notifikasi.mjs` (baru), `scripts/cek-monitoring-admin.mjs` ditambah uji per kelas. `docs/DATA_MODEL.md`, `ANTIREGRESI.md` §19.
 
-- `src/index.css`: palet merek dipindah dari hijau ke biru lambang sekolah (`#313083`) lewat token `muh-*` yang sama, sehingga semua halaman ikut berubah tanpa disunting. `peach-*`/`gold-*` disatukan menjadi satu skala ambar (perhatian). Radius kartu 20px → 12px, `.card-soft` datar bergaris tipis. Gaya Stripe (gradient mesh, indigo/magenta/ruby, huruf 300, tombol pil) dihapus; kelas `auth-*` dipertahankan namanya dan digayakan ulang. `.hero-banner` menjadi biru tua rata. Angka tabel memakai `tabular-nums`.
-- Inter kini dihosting sendiri: `public/fonts/inter-latin-wght-normal.woff2` dan `Inter-LICENSE-OFL.txt` (baru). `index.html`: tautan Google Fonts dihapus (sebelumnya melanggar §5.2 dan akan diblokir saat CSP dijadikan enforce), `theme-color` menjadi `#313083`, ikon memakai aset baru.
-- Aset baru: `public/logo-sdm.png`, `public/favicon-sdm-32.png`, `public/apple-touch-icon-sdm.png`; `public/favicon.svg` memuat lambang sekolah. `favicon-32.png` dan `apple-touch-icon.png` lama tidak lagi dipakai (boleh dihapus).
-- `src/components/Layout.tsx`: bingkai panel melayang dihapus; sidebar biru tua dengan lambang sekolah dan blok profil polos (menggantikan kartu banner "Masuk sebagai"); di layar kecil header memuat lambang.
-- `src/components/ui.tsx`: `IconTile` disatukan (hijau/sky/violet → biru merek, `peach` → ambar, `ink` → netral). `Badge`: `green` kini berarti sukses (zamrud), tone baru `brand` (biru) dan `ok`. Komponen baru `StatStrip` dan `FlowRow`.
-- `src/pages/Home.tsx`: beranda guru disusun ulang menjadi sapaan ringkas → `StatStrip` → "Alur penilaian" bernomor dengan status dari progres TP → diagram siswa per kelas. Banner, "Akses cepat", dan "Modul" dihapus (menduplikasi navigasi). Hook dan pemuatan data tidak diubah; tidak ada query ke koleksi nilai (§8.3). Diagram: kelas saya biru tua, lainnya biru muda.
-- `src/pages/Login.tsx`, `src/pages/Register.tsx`: warna Stripe yang tertulis langsung (`#0d253d`, `#64748d`, `#4434d4`, dst.) dan `font-light` diganti token; panel kiri login memakai lambang sekolah dan teks singkat tanpa slogan pemasaran. Logika tidak diubah.
-- Makna status dipertahankan: Lulus di `BacaTandai.tsx`, `InputSetoran.tsx`, `RiwayatSiswa.tsx` (termasuk bilah progres selesai) tetap hijau; `SetupTp.tsx` memakai `Badge tone="brand"` untuk label tipe.
-- `DESIGN.md`: diganti seluruhnya (sebelumnya analisis gaya Stripe yang tidak cocok untuk aplikasi kerja). `ANTIREGRESI.md` §19.
-- Diperiksa: `npm run build`, `npx oxlint` (0 galat; 4 peringatan lama di berkas yang tidak disentuh), `scripts/cek-baca-tandai.mts`, `scripts/cek-rumus-akademik.mjs`; tampilan dirender di 1440px dan 390px dengan data tiruan. Belum diuji dengan data Firestore sungguhan.
+## Belum dirilis — Rapor STS dan Laporan Tahsin untuk admin (Tahap 4–5)
 
-## Belum dirilis (basis: package.json 0.1.0) — Kelola Periode dan Kelola Akun disinkronkan dengan halaman lain
+Catatan koreksi: rilis Tahap 4 sempat memuat "Rekap STS & SAS per kelas". Itu salah arah (yang diminta adalah rapor bayangan untuk orang tua) dan sudah dihapus.
 
-Perbaikan tampilan; tidak ada perubahan logika data, `firestore.rules`, indeks, maupun fungsi di `lib/`.
+- **Rapor STS (rapor bayangan)** `/akademik/rapor`: format v1 (A.1 Muatan Wajib, A.2 Muatan Yayasan, Ketidakhadiran, Catatan Wali, Tanggapan Orang Tua, tanda tangan), kalimat capaian pola v1, pratinjau identik dengan cetak (iframe), **dapat dibuka admin untuk semua kelas**, tombol **Cetak seluruh kelas**. Cetak tidak lagi memicu dialog dua kali.
+- **Laporan Tahsin-Tahfizh** `/tahsin/laporan`: laporan per siswa untuk orang tua ala v2 (membaca, menghapal, target, menulis, tanda tangan), satu siswa atau seluruh kelas, rentang tanggal bawaan semester. Menggantikan tabel rekap kelas.
+- Baru: `lib/asesmenRumus.ts` (`hitungStsMapel`, `kalimatCapaian`, `muatanMapel`), `lib/cetakIframe.ts`, `lib/tahsinLaporanRumus.ts`, `lib/tahsinLaporanHtml.ts`, `lib/laporanTahsin.ts`, `lib/penandatangan.ts`, `tahsinData.getSetoranKelasPeriode`, `tahsinData.getMenulisKelas`. Dihapus: halaman rekap STS/SAS dan `rekapAsesmen.ts`.
+- Menu admin: "Cetak Rapor STS" (Pantauan Akademik) dan "Cetak Laporan" (Pantauan Tahsin). `ANTIREGRESI.md` §20–22. Tidak ada perubahan rules/indeks. `scripts/cek-laporan-cetak.mjs` ditulis ulang.
 
-- `src/pages/akademik/shared.tsx`: token bersama ditambah — `btnPrimarySm`, `btnGhostSm`, `btnDanger`, `btnDangerGhost`, `btnDangerGhostSm`, `btnWarn`, serta komponen `Field`, `ChipToggle`, `Segmented`. `Notice` bernada `info` kini biru merek (bukan `sky`) dan ada nada `ok`. `inputCls` kini punya gaya `disabled`. Nama dan perilaku token lama tidak berubah.
-- `src/pages/admin/KelolaPeriode.tsx`: formulir dipindah ke samping daftar (di bawah daftar pada layar kecil); tiga kartu ringkasan diganti `StatStrip`; penjelasan Aktif/Default yang tertulis dua kali dijadikan satu di panel "Cara kerja singkat"; semester memakai kontrol bersegmen; periode default ditandai strip biru dan lencana; konfirmasi hapus kini inline (sebelumnya `confirm()` bawaan browser); `rounded-xl`, `shadow-sm`, dan cincin dihapus. Fungsi simpan, ubah, aktif, default, dan hapus tidak diubah.
-- `src/pages/admin/KelolaAkun.tsx`: tombol, isian, dan kotak pesan memakai token bersama (teks 10–11px dinaikkan ke 12–13px); tombol "Daftar/Tambah guru" yang mencampur pengganti tampilan dengan aksi diganti "+ Tambah guru" dan "Ekspor JSON" (serta "Kembali ke daftar" di mode formulir); chip saringan menampilkan jumlah dan "Menunggu" disorot bila > 0; panel detail memisahkan aksi biasa dari "Tindakan lain" (nonaktifkan, hapus permanen); notifikasi memakai `useToast` bersama (mengambang, seperti halaman Akademik); baris tabel dapat difokus dengan keyboard; di layar < 1024px panel detail digulir ke tampilan saat akun dipilih. Alur konfirmasi (nonaktifkan, hapus permanen dengan mengetik email) dan seluruh logika data tidak diubah.
-- `ANTIREGRESI.md` §20 (termasuk temuan bahwa `.card-soft` mengalahkan utilitas Tailwind dan daftar tempat yang terkena). `DESIGN.md`: bagian Halaman admin.
-- Diperiksa: `npm run build`, `npx oxlint` (0 galat, 4 peringatan lama), tujuh skrip `scripts/cek-*` lolos; tampilan dirender di 1440px dan 390px dengan data tiruan (daftar penuh/kosong, mode edit, konfirmasi hapus, formulir tambah). Belum diuji dengan data Firestore sungguhan.
+## Belum dirilis — Penyesuaian Rapor STS (16 Okt 2026)
 
-## Belum dirilis (basis: package.json 0.1.0) — Data Sekolah, Mata Pelajaran, Data Siswa disinkronkan; Kelola Periode dikelompokkan per tahun
-
-Perbaikan tampilan; tidak ada perubahan logika data, `firestore.rules`, indeks, maupun fungsi di `lib/`.
-
-- `src/pages/admin/TahunAjaran.tsx` (halaman **Data Sekolah**): satu kartu dengan dua kelompok isian (identitas, kepala sekolah) menggantikan dua kartu berikon; banner periode yang besar diganti satu `Notice`; **bilah simpan `fixed bottom-0` dihapus** karena tertutup navigasi bawah di layar kecil (tombol tidak bisa ditekan) dan diganti tombol di bagian bawah kartu. State, pemuatan, validasi, dan `simpanProfilSekolah` tidak diubah.
-- `src/pages/admin/Mapel.tsx` (**Mata Pelajaran**): daftar di kiri dan formulir tambah di kanan (di bawah pada layar kecil); `window.confirm` diganti konfirmasi inline per baris; kotak kelas 1–6 menjadi tombol kotak kecil; subjudul panjang dipecah menjadi subjudul pendek dan petunjuk di bawah isian; `rounded-xl` dihapus. Logika tidak diubah.
-- `src/pages/admin/DataSiswa.tsx` (**Data Siswa**): tombol kepala halaman dirapikan ("+ Tambah siswa", "Impor", "Ekspor CSV", "Kembali ke daftar"); chip kelas memakai `ChipToggle`; baris tabel dapat difokus dengan keyboard; notifikasi memakai `useToast` bersama; formulir dikelompokkan (identitas, alamat, kontak & keluarga) dengan label 12px dan penanda wajib; layar Impor memakai `Notice`, `Badge`, dan token bersama; di layar < 1024px panel detail digulir ke tampilan saat siswa dipilih. Impor, pratinjau, simpan, dan filter server tidak diubah.
-- `src/pages/admin/KelolaPeriode.tsx`: daftar dikelompokkan per tahun ajaran.
-- `src/pages/admin/KelolaAkun.tsx`: label "Tindakan lain" berkontras 2,6:1 diperbaiki memakai `text-muted`.
-- `src/components/ui.tsx`: `eyebrow` pada `PageHeader` berkontras rendah (`text-slate-400`) diganti `text-muted`.
-- `ANTIREGRESI.md` §21.
-- Diperiksa: `npm run build`, `npx oxlint` (0 galat, 4 peringatan lama), tujuh skrip `scripts/cek-*` lolos; tampilan dirender di 1440, 1366, 1280, 1024, dan 390px dengan data tiruan (daftar penuh/kosong, mode edit, konfirmasi, 7 periode dengan label panjang). Bug tombol simpan tertutup dibuktikan pada versi lama dengan menelusuri elemen di titik tengah tombol. Belum diuji dengan data Firestore sungguhan.
+- Rapor STS kini hanya nilai dan capaian: bagian Ketidakhadiran, Catatan Wali, Tanggapan Orang Tua, dan tanda tangan kepala sekolah dihapus; tanda tangan tinggal Orang Tua/Wali dan Wali Kelas. Judul "Sumatif Tengah Semester" tanpa Ganjil/Genap. Kolom identitas kanan digeser ke tepi kanan (alamat sekolah satu baris).
+- Form lengkap v1 dipertahankan untuk Rapor SAS dan kini memuat **B. Kokurikuler** serta C. Ekstrakurikuler, D. Ketidakhadiran + Catatan Wali, Tanggapan, Keputusan, dan tiga tanda tangan (`buildBodyPrintSas`). Belum ada halaman SAS.
+- HTML rapor dipindah ke `src/lib/raporHtml.ts` (murni, diuji); `raporSts.ts` tinggal pemuat data.
+- Perbaikan: tautan kembali ganda di atas halaman Cetak Rapor STS dihapus.

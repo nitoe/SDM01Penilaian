@@ -7,6 +7,7 @@ import {
   posisiMenulis, rataMenulis, rentangSemester, susunLaporanSiswa,
 } from '../src/lib/tahsinLaporanRumus.ts'
 import { bangunHalamanTahsin } from '../src/lib/tahsinLaporanHtml.ts'
+import { buildBodyPrintSts, buildBodyPrintSas, dokumenPratinjauRapor } from '../src/lib/raporHtml.ts'
 
 let gagal = 0
 const cek = (n, ok) => { if (!ok) gagal++; console.log(`${ok ? 'LULUS' : 'GAGAL'}  ${n}`) }
@@ -82,8 +83,34 @@ cek('HTML: teks di-escape', html.includes('SD &lt;Uji&gt;') && html.includes('A 
 cek('HTML: memuat tiga bagian, target, dan tanda tangan', ['1. Membaca', '2. Menghapal', '3. Menulis', 'Target Hafalan', 'Guru Tahsin-Tahfizh,', 'NBM. 123'].every((t) => html.includes(t)))
 cek('HTML: tanpa emoji', !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(html))
 
+// ── HTML rapor ──
+const mk = (mapel, n, b, w, muatan) => ({ mapel, labelMapel: mapel, urutan: 1, muatan, nilaiAkhir: n, capaianTerbaik: b, capaianPerluBimbingan: w })
+const dRapor = (over = {}) => ({ config: { namaSekolah: 'SD Muhammadiyah 01 Kukusan', alamatSekolah: 'Jl. Contoh', namaKepsek: 'Drs. Contoh', nbmKepsek: '123' },
+  siswa: { id: 'a', nama: 'Ahmad', nisn: '999' }, kelas: '5A', fase: 'C', semester: '1', semLabel: 'Ganjil', tahunAjaran: '2026/2027',
+  waliNama: 'Bu Wali', kota: 'Depok', tanggal: '16 Oktober 2026',
+  daftarNilai: [mk('Al-Islam', 88, 'melafalkan QS', 'memahami pesan', 'wajib'), mk('Bahasa Arab', 79, 'kosakata', '', 'yayasan')], ...over })
+const sts2 = buildBodyPrintSts(dRapor())
+cek('STS: judul hanya "Sumatif Tengah Semester" (tanpa Ganjil/Genap)', sts2.includes('>Sumatif Tengah Semester</div>') && !/Sumatif Tengah Semester\s+(Ganjil|Genap)/.test(sts2))
+cek('STS: semester tetap tampil di identitas', sts2.includes('I (Ganjil)') && sts2.includes('2026/2027'))
+cek('STS: tanpa ketidakhadiran, catatan wali, tanggapan orang tua', !/Ketidakhadiran|Catatan Wali|Tanggapan Orang Tua/.test(sts2))
+cek('STS: tanpa tanda tangan kepala sekolah', !sts2.includes('Kepala Sekolah') && !sts2.includes('Drs. Contoh') && !sts2.includes('NBM'))
+cek('STS: tanda tangan orang tua dan wali kelas', sts2.includes('Orang Tua/Wali') && sts2.includes('Wali Kelas,') && sts2.includes('Bu Wali') && sts2.includes('rpr-ttd dua'))
+cek('STS: A.1 dan A.2 serta kalimat capaian v1', sts2.includes('A.1. Muatan Wajib') && sts2.includes('A.2. Muatan Yayasan') && sts2.includes('Mencapai kompetensi dengan sangat baik dalam melafalkan QS.'))
+cek('STS: tanpa kokurikuler/ekskul', !/Kokurikuler|Ekstrakurikuler/.test(sts2))
+cek('STS: identitas kanan memakai kelas penggeser', sts2.includes('rpr-info-kanan'))
+cek('STS Fase A: keterangan baku Muatan Yayasan', buildBodyPrintSts(dRapor({ fase: 'A', kelas: '2A', daftarNilai: [mk('Al-Islam', 80, 'x', '', 'wajib')] })).includes('Belum menjadi fokus tersendiri di Fase A'))
+cek('STS: teks di-escape', buildBodyPrintSts(dRapor({ siswa: { id: 'a', nama: 'A <b> & B' } })).includes('A &lt;b&gt; &amp; B'))
+const sasHtml = buildBodyPrintSas(dRapor({ semester: '2', semLabel: 'Genap', kokurikuler: 'Proyek STEM sampah', ekskul: [{ nama: 'Pramuka', ket: 'Mahir' }], absensi: { sakit: 1, izin: 2, tk: 0 }, catatanWali: 'Pertahankan' }))
+cek('SAS: judul "Sumatif Akhir Semester"', sasHtml.includes('>Sumatif Akhir Semester</div>'))
+cek('SAS: memuat B Kokurikuler, C Ekstrakurikuler, D Ketidakhadiran', ['B. Kokurikuler', 'Proyek STEM sampah', 'C. Ekstrakurikuler', 'Pramuka', 'D. Ketidakhadiran', '1 hari', '2 hari'].every((x) => sasHtml.includes(x)))
+cek('SAS: catatan wali, tanggapan orang tua, keputusan, tiga tanda tangan', ['Catatan Wali', 'Pertahankan', 'Tanggapan Orang Tua/Wali Murid', 'Naik ke Fase', 'Kepala Sekolah,', 'Drs. Contoh', 'NBM. 123'].every((x) => sasHtml.includes(x)))
+cek('SAS semester 1: tanpa keputusan kenaikan', !buildBodyPrintSas(dRapor()).includes('Naik ke Fase'))
+cek('SAS keputusan tinggal: Naik dicoret', buildBodyPrintSas(dRapor({ semester: '2', keputusan: 'Tinggal' })).includes('<s>Naik ke Fase'))
+cek('SAS tanpa data: absensi isian kosong', buildBodyPrintSas(dRapor()).includes('……… hari'))
+cek('pratinjau: banyak siswa dipisah per halaman', (dokumenPratinjauRapor([dRapor(), dRapor()], 'sts').match(/class="rpr-page"/g) || []).length === 2)
+
 // ── struktur: halaman cetak hanya membaca ──
-for (const f of ['src/lib/laporanTahsin.ts', 'src/lib/raporSts.ts', 'src/pages/akademik/Rapor.tsx', 'src/pages/tahsin/LaporanTahsin.tsx']) {
+for (const f of ['src/lib/laporanTahsin.ts', 'src/lib/raporSts.ts', 'src/lib/raporHtml.ts', 'src/pages/akademik/Rapor.tsx', 'src/pages/tahsin/LaporanTahsin.tsx']) {
   const t = readFileSync(new URL('../' + f, import.meta.url), 'utf8')
   cek(`${f}: tidak ada operasi tulis`, !/\b(setDoc|addDoc|updateDoc|deleteDoc|writeBatch|saveSetoran|saveNilai|saveTP)\b/.test(t))
 }
