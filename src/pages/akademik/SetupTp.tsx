@@ -13,7 +13,6 @@ import {
   getTPList,
   importTPBatch,
   mapelBerlakuDiTingkatan,
-  normalisasiAlokasiTp,
   saveTP,
   validasiLevels,
   type ModeImporTp,
@@ -693,8 +692,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
       maks: Number(l.maks),
       deskripsi: l.deskripsi.trim(),
     }))
-    const v = validasiLevels(levels)
-    if (!v.ok) return show(v.pesan, true)
+    const galatLevels = validasiLevels(levels)
+    if (galatLevels) return show(galatLevels, true)
 
     setBusy(true)
     try {
@@ -809,7 +808,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         </div>
       )}
 
-      {isSeniBudaya && tabSeni === 'setup' && <SeniBudayaPanel profile={profile} kelas={kelas} />}
+      {isSeniBudaya && tabSeni === 'setup' && <SeniBudayaPanel kelas={kelas} bolehTulis={tulis} />}
 
       {list === null ? (
         <Spinner />
@@ -838,7 +837,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                       <span className="text-[13px] font-semibold text-slate-900">
                         TP {tp.nomorTp}. {tp.namaTp}
                       </span>
-                      <Badge className="ml-2">{tp.tipe}</Badge>
+                      <span className="ml-2"><Badge tone="brand">{tp.tipe}</Badge></span>
                     </button>
                     {tulis && (
                       <div className="flex gap-1">
