@@ -816,8 +816,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         </button>
       )}
 
-      <div className={`flex flex-col gap-4 ${tulis && panelCp ? 'lg:flex-row lg:items-start' : ''}`}>
-      <div className="min-w-0 flex-1 space-y-5">
+      <div className={tulis && panelCp ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]' : 'space-y-5'}>
+      <div className="min-w-0 space-y-5">
 
       {isSeniBudaya && tabSeni === 'setup' && <SeniBudayaPanel kelas={kelas} bolehTulis={tulis} />}
 
@@ -1098,18 +1098,9 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
 
       </div>
       {tulis && panelCp && (
-        <aside className="w-full shrink-0 lg:sticky lg:top-4 lg:w-[360px] lg:self-start">
-        <section className="card-soft flex max-h-[calc(100vh-2rem)] flex-col gap-3 p-4">
+        <aside className="card-soft sticky top-4 flex max-h-[calc(100vh-1.5rem)] w-full flex-col gap-3 self-start p-4">
           <div className="flex items-start justify-between gap-2">
-            <div>
-              <h2 className="text-[14px] font-semibold text-slate-900">
-                CP resmi — Fase {faseCp}
-              </h2>
-              <p className="mt-0.5 text-[12px] leading-snug text-muted">
-                Pilih elemen di samping form. Teks CP resmi tidak boleh diubah.
-                {isSeniBudaya && !disiplinAktif ? ' Buka tab disiplin dulu.' : ''}
-              </p>
-            </div>
+            <h2 className="text-[14px] font-bold text-slate-900">Capaian Pembelajaran</h2>
             <button
               type="button"
               className="shrink-0 rounded-lg px-2 py-1 text-[12px] font-semibold text-muh-700 hover:bg-muh-50"
@@ -1118,42 +1109,46 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
               Sembunyikan
             </button>
           </div>
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+          <p className="text-[12px] leading-snug text-muted">
+            Pilih CP untuk menyusun TP di sebelah kiri. Teks resmi tidak boleh diubah.
+            {isSeniBudaya && !disiplinAktif ? ' Buka tab disiplin dulu.' : ''}
+          </p>
           {daftarCp.length === 0 ? (
             <p className="text-[12.5px] text-muted">
               {isSeniBudaya && !disiplinAktif
                 ? 'Belum ada elemen yang ditampilkan.'
-                : `Tidak ada CP tersimpan untuk ${mapel} fase ${faseCp}.`}
+                : `Tidak ada CP untuk ${mapel} fase ${faseCp}.`}
             </p>
           ) : (
             <>
-              {akunAi && daftarCp.some((cp) => cpSelesai.has(kunciCp(cp))) && (
-                <div className="mb-2 flex flex-wrap items-center gap-2 text-[12.5px]">
-                  <button type="button" className={btnGhost} onClick={() => setTampilkanCpSelesai((v) => !v)}>
-                    {tampilkanCpSelesai
-                      ? 'Sembunyikan CP selesai'
-                      : `Tampilkan CP selesai (${[...cpSelesai].filter((k) => daftarCp.some((c) => kunciCp(c) === k)).length})`}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[12px] text-muted">
+                  {daftarCpTampil.length}/{daftarCp.length}
+                </span>
+                {akunAi && daftarCp.some((cp) => cpSelesai.has(kunciCp(cp))) && (
+                  <button type="button" className={`${btnGhost} py-1 text-[12px]`} onClick={() => setTampilkanCpSelesai((v) => !v)}>
+                    {tampilkanCpSelesai ? 'Sembunyikan selesai' : 'Tampilkan selesai'}
                   </button>
-                </div>
-              )}
-              <ul className="space-y-3">
+                )}
+              </div>
+              <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
                 {daftarCpTampil.map((cp) => {
                   const selesai = akunAi && cpSelesai.has(kunciCp(cp))
                   return (
                     <li
                       key={`${cp.elemen}-${cp.disiplinSeni || ''}`}
-                      className={`rounded-lg border p-3 ${selesai ? 'border-slate-200 bg-slate-50/60 opacity-80' : 'border-border'}`}
+                      className={`rounded-xl border px-2.5 py-2 ${
+                        selesai ? 'border-slate-200 bg-slate-50' : 'border-slate-200 bg-white'
+                      }`}
                     >
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <p className="text-[13px] font-semibold text-slate-900">
-                          {cp.elemen}
-                          {selesai ? ' · selesai' : ''}
-                        </p>
+                      <div className="flex items-start gap-2">
                         {akunAi && (
-                          <button
-                            type="button"
-                            className="rounded-md border border-border px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-slate-100"
-                            onClick={() => {
+                          <input
+                            type="checkbox"
+                            className="mt-0.5 h-4 w-4 shrink-0 accent-muh-600"
+                            checked={selesai}
+                            title={selesai ? 'Tampilkan lagi' : 'Tandai selesai dan sembunyikan'}
+                            onChange={() => {
                               if (selesai) {
                                 setCpSelesai((s) => {
                                   const n = new Set(s)
@@ -1164,44 +1159,38 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                                 tandaiCpSelesai(cp)
                               }
                             }}
-                          >
-                            {selesai ? 'Tampilkan lagi' : 'Tandai selesai'}
-                          </button>
+                          />
                         )}
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-slate-900">
+                            {cp.elemen}
+                            {selesai ? <span className="font-normal text-muted"> · selesai</span> : null}
+                          </p>
+                          <p className="mt-0.5 text-[11.5px] leading-snug text-slate-600">{cp.teks}</p>
+                        </div>
                       </div>
-                      <p className="mt-1 whitespace-pre-wrap text-[12.5px] leading-relaxed text-slate-700">{cp.teks}</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <button type="button" className={btnGhost} onClick={() => bukaFormDariCp(cp)}>
-                          Pakai CP ini
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <button type="button" className={`${btnGhost} px-2.5 py-1 text-[12px]`} onClick={() => bukaFormDariCp(cp)}>
+                          Pakai
                         </button>
                         {akunAi && (
                           <>
                             <button
                               type="button"
-                              className={btnPrimary}
+                              className="rounded-lg bg-muh-600 px-2.5 py-1 text-[12px] font-semibold text-white hover:bg-muh-700 disabled:opacity-50"
                               disabled={busyAi !== null}
                               onClick={() => void jalankanGenerateTp('gemini', cp)}
                             >
-                              {busyAi === 'tp' ? 'Menyusun…' : 'Generate TP · Gemini'}
+                              {busyAi === 'tp' ? '…' : 'Gemini'}
                             </button>
                             <button
                               type="button"
-                              className="rounded-lg border-2 border-emerald-600 bg-emerald-50 px-3.5 py-2 text-[13px] font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50"
+                              className="rounded-lg border-2 border-emerald-600 bg-emerald-50 px-2.5 py-1 text-[12px] font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
                               disabled={busyAi !== null}
                               onClick={() => void jalankanGenerateTp('openai', cp)}
                             >
-                              Generate TP · OpenAI
+                              OpenAI
                             </button>
-                            {!selesai && (
-                              <button
-                                type="button"
-                                className={btnGhost}
-                                onClick={() => tandaiCpSelesai(cp)}
-                                title="Sembunyikan CP ini agar tidak membuat TP ganda"
-                              >
-                                CP selesai
-                              </button>
-                            )}
                           </>
                         )}
                       </div>
@@ -1210,14 +1199,10 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                 })}
               </ul>
               {akunAi && daftarCpTampil.length === 0 && (
-                <p className="mt-2 text-[12.5px] text-muted">
-                  Semua CP sudah ditandai selesai. Klik "Tampilkan CP selesai" untuk melihat lagi.
-                </p>
+                <p className="text-[12px] text-muted">Semua CP ditandai selesai. Tekan “Tampilkan selesai” untuk melihat lagi.</p>
               )}
             </>
           )}
-          </div>
-        </section>
         </aside>
       )}
 
