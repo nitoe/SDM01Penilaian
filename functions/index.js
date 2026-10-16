@@ -4,6 +4,14 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { logger } from 'firebase-functions'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { periksaPenghapusan } from './aturan.js'
+import {
+  bolehUidAi,
+  mintaModel,
+  normalisasiKktp,
+  normalisasiTp,
+  susunPromptKktp,
+  susunPromptTp,
+} from './generateAi.js'
 
 initializeApp()
 
@@ -57,4 +65,59 @@ export const hapusAkunAuth = onCall({ region: 'asia-southeast2', maxInstances: 3
 
   logger.info('hapusAkunAuth: akun dihapus', { oleh: uidPemanggil, uidTarget, authDihapus })
   return { authDihapus, authSudahTidakAda: !authDihapus }
+})
+
+const opsiAi = {
+  region: 'asia-southeast2',
+  maxInstances: 2,
+  timeoutSeconds: 120,
+  secrets: ['GEMINI_API_KEY', 'OPENAI_API_KEY'],
+}
+
+function kunciProvider(provider) {
+  if (provider === 'openai') return process.env.OPENAI_API_KEY || ''
+  if (provider === 'gemini') return process.env.GEMINI_API_KEY || ''
+  return ''
+}
+
+function pastikanAi(request) {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Masuk dulu.')
+  if (!bolehUidAi(request.auth.uid)) {
+    throw new HttpsError('permission-denied', 'Generate AI hanya untuk satu akun guru yang ditetapkan.')
+  }
+  const provider = request.data?.provider
+  if (provider !== 'gemini' && provider !== 'openai') {
+    throw new HttpsError('invalid-argument', 'Pilih Gemini atau OpenAI.')
+  }
+  return provider
+}
+
+export const generateTpAi = onCall(opsiAi, async (request) => {
+  const provider = pastikanAi(request)
+  const prompt = susunPromptTp(request.data || {})
+  if (!prompt.ok) throw new HttpsError('invalid-argument', prompt.pesan)
+  try {
+    const json = await mintaModel(provider, kunciProvider(provider), prompt.sistem, prompt.user)
+    const tp = normalisasiTp(json)
+    logger.info('generateTpAi', { uid: request.auth.uid, provider, jumlah: tp.length })
+    return { tp }
+  } catch (err) {
+    logger.error('generateTpAi gagal', { pesan: err?.message })
+    throw new HttpsError('internal', err?.message || 'Gagal menyusun TP.')
+  }
+})
+
+export const generateKktpAi = onCall(opsiAi, async (request) => {
+  const provider = pastikanAi(request)
+  const prompt = susunPromptKktp(request.data || {})
+  if (!prompt.ok) throw new HttpsError('invalid-argument', prompt.pesan)
+  try {
+    const json = await mintaModel(provider, kunciProvider(provider), prompt.sistem, prompt.user)
+    const deskripsi = normalisasiKktp(json)
+    logger.info('generateKktpAi', { uid: request.auth.uid, provider })
+    return { deskripsi }
+  } catch (err) {
+    logger.error('generateKktpAi gagal', { pesan: err?.message })
+    throw new HttpsError('internal', err?.message || 'Gagal menyusun KKTP.')
+  }
 })

@@ -316,3 +316,11 @@ Catatan koreksi: rilis Tahap 4 sempat memuat "Rekap STS & SAS per kelas". Itu sa
 - Admin → Periode Akademik: kolom baru **Tanggal penyerahan rapor STS** (per periode, semua kelas). Rapor STS memakai tanggal ini; sebelumnya keliru memakai tanggal rapor akhir semester 1. Kosong = tanggal hari ini, dan daftar periode memberi penanda.
 - Tempat dan tanggal di rapor kini di tengah kolom Wali Kelas (sebelumnya rata kanan halaman sehingga tidak sejajar). Berlaku juga untuk form SAS.
 - `PeriodeAkademik.tglRaporSts`, `SimpanPeriodeInput.tglRaporSts`. Tidak ada perubahan rules/indeks.
+
+## Belum dirilis — Generate TP & KKTP dengan AI (16 Okt 2026)
+
+- Capaian Pembelajaran resmi (Kurikulum Merdeka 2025 + ISMUBA) disimpan utuh di `src/lib/capaianPembelajaran.ts`. Di Setup TP, guru melihat elemen CP sesuai fase kelas (Seni Budaya per disiplin). Teks CP tidak bisa diedit bila diambil dari dokumen ini.
+- Mapel bawaan baru: **Koding dan Kecerdasan Artifisial** (kelas 5–6), terpisah dari Informatika. Muncul setelah admin menekan unggah mapel bawaan di Mata Pelajaran (dokumen yang sudah ada tidak ditimpa).
+- Generate AI hanya untuk UID `v4fQXsqCzYUtHrqcDM0u48sxIfn1`. Dua tombol: Gemini dan OpenAI. TP disusun per elemen CP (jumlah ditentukan model dari kompleksitas CP) dan langsung masuk ke form; TP berikutnya mengisi form setelah yang sekarang disimpan. KKTP (4 deskripsi) diisi ke kotak level TP yang sedang dibuka.
+- Cloud Function `generateTpAi` dan `generateKktpAi` (asia-southeast2). Butuh secret `GEMINI_API_KEY` dan `OPENAI_API_KEY`, lalu `npm run deploy:functions` dan `npm run deploy`.
+

@@ -17,7 +17,8 @@ export const MAPEL_BAWAAN: Mapel[] = [
   { id: 'PJOK', nama: 'PJOK', urutan: 7, tingkatanBerlaku: SEMUA },
   { id: 'Bahasa Inggris', nama: 'Bahasa Inggris', urutan: 8, tingkatanBerlaku: SEMUA },
   { id: 'Informatika', nama: 'Informatika', urutan: 9, tingkatanBerlaku: ['4', '5', '6'] },
-  { id: 'Bahasa Sunda', nama: 'Bahasa Sunda', urutan: 10, tingkatanBerlaku: SEMUA },
-  { id: 'Bahasa Arab', nama: 'Bahasa Arab', urutan: 11, tingkatanBerlaku: ['3', '4', '5', '6'] },
-  { id: 'Kemuhammadiyahan', nama: 'Kemuhammadiyahan', urutan: 12, tingkatanBerlaku: ['3', '4', '5', '6'] },
+  { id: 'Koding dan Kecerdasan Artifisial', nama: 'Koding dan Kecerdasan Artifisial', urutan: 10, tingkatanBerlaku: ['5', '6'] },
+  { id: 'Bahasa Sunda', nama: 'Bahasa Sunda', urutan: 11, tingkatanBerlaku: SEMUA },
+  { id: 'Bahasa Arab', nama: 'Bahasa Arab', urutan: 12, tingkatanBerlaku: ['3', '4', '5', '6'] },
+  { id: 'Kemuhammadiyahan', nama: 'Kemuhammadiyahan', urutan: 13, tingkatanBerlaku: ['3', '4', '5', '6'] },
 ]
