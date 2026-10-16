@@ -39,7 +39,7 @@ rounded:
 Aplikasi ini dipakai guru setiap hari untuk menginput dan memeriksa nilai. Tampilan yang baik di sini berarti: cepat dibaca, urutan kerja jelas, dan tidak ada yang berkedip minta perhatian tanpa alasan.
 
 1. **Satu warna merek.** Biru lambang sekolah (`#313083`) untuk tombol utama, pilihan aktif, tautan, dan sidebar. Tidak ada warna merek kedua.
-2. **Warna membawa arti, bukan hiasan.** Hijau = sukses/lulus/lengkap/aktif. Ambar = perlu perhatian atau perlu diulang. Merah = gagal/galat. Biru = merek dan pilihan. Kartu tidak diberi warna sendiri-sendiri.
+2. **Warna membawa arti, bukan hiasan.** Hijau (`emerald`, bukan biru merek) = sukses/lulus/lengkap/aktif/level tertinggi. Skala 4 level: merah, ambar, sky, hijau. Ambar = perlu perhatian atau perlu diulang. Merah = gagal/galat. Biru = merek dan pilihan. Kartu tidak diberi warna sendiri-sendiri.
 3. **Datar.** Permukaan putih dengan garis tipis (`hairline`) dan bayangan hampir tak terlihat. Tanpa gradient, mesh, glow, atau kaca.
 4. **Isi mengalahkan hiasan.** Layar awal menjawab "apa yang harus saya kerjakan sekarang", bukan mendaftar semua fitur.
 5. **Teks mudah dibaca.** Bobot minimal 400, kontras teks kecil minimal 4,5:1, angka rata di tabel.

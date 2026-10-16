@@ -134,17 +134,19 @@ function kepala(d: DataRaporSts, jenis: JenisRapor): string {
 }
 
 const tandaTangan = (d: DataRaporSts, jenis: JenisRapor): string => {
-  const kolom = (peran: string, nama: string, nbm = '') =>
-    `<div class="rpr-ttd-col"><div>${peran}</div><div class="rpr-ttd-space"></div><div class="rpr-ttd-name">${nama}</div><div class="rpr-ttd-nbm">${nbm}</div></div>`
+  // Tempat dan tanggal berada DI DALAM kolom Wali Kelas (rata tengah, sejajar dengan "Wali Kelas,"),
+  // bukan rata kanan halaman. Kolom lain diberi baris kosong setinggi sama agar jabatan tetap sejajar.
+  const kolom = (peran: string, nama: string, nbm = '', tempat = '') =>
+    `<div class="rpr-ttd-col"><div class="rpr-ttd-tempat">${tempat || '&nbsp;'}</div><div>${peran}</div><div class="rpr-ttd-space"></div><div class="rpr-ttd-name">${nama}</div><div class="rpr-ttd-nbm">${nbm}</div></div>`
+  const tempat = `${escapeHtml(d.kota)}, ${escapeHtml(d.tanggal)}`
   const ortu = kolom('Orang Tua/Wali', '(………………………………)')
-  const wali = kolom('Wali Kelas,', escapeHtml(d.waliNama))
+  const wali = kolom('Wali Kelas,', escapeHtml(d.waliNama), '', tempat)
   const kepsek = kolom(
     'Kepala Sekolah,',
     escapeHtml(d.config.namaKepsek || '—'),
     d.config.nbmKepsek ? `NBM. ${escapeHtml(d.config.nbmKepsek)}` : '',
   )
   return `<div class="rpr-ttd-wrap">
-    <div class="rpr-ttd-tanda">${escapeHtml(d.kota)}, ${escapeHtml(d.tanggal)}</div>
     <div class="rpr-ttd ${jenis === 'sts' ? 'dua' : ''}">${jenis === 'sts' ? ortu + wali : ortu + kepsek + wali}</div>
   </div>`
 }
@@ -261,7 +263,7 @@ tr{page-break-inside:avoid;break-inside:avoid}
 .rpr-keputusan-wrap{margin-top:10pt}
 .rpr-keputusan{border:2pt solid #000;padding:7pt 10pt;display:inline-block;max-width:230pt;line-height:1.7}
 .rpr-ttd-wrap{margin-top:18pt}
-.rpr-ttd-tanda{text-align:right;font-size:10.5pt;margin-bottom:4pt}
+.rpr-ttd-tempat{min-height:14pt;margin-bottom:2pt}
 .rpr-ttd{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8pt;font-size:10.5pt}
 .rpr-ttd.dua{grid-template-columns:1fr 1fr;gap:80pt;padding:0 20pt}
 .rpr-ttd-col{text-align:center}

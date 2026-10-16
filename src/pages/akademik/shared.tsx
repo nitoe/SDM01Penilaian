@@ -1,7 +1,11 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
-export function useToast() {
+/**
+ * Notifikasi singkat mengambang. `posisi` (kelas Tailwind bottom-*) dipakai halaman yang punya bilah simpan
+ * menempel di bawah, agar notifikasi tidak menutup tombol Simpan.
+ */
+export function useToast(posisi = 'bottom-20 md:bottom-6') {
   const [t, setT] = useState<{ msg: string; err: boolean } | null>(null)
   const timer = useRef<number>(0)
   const show = useCallback((msg: string, err = false) => {
@@ -12,7 +16,7 @@ export function useToast() {
   const node = t ? (
     <div
       role={t.err ? 'alert' : 'status'}
-      className={`fixed bottom-20 left-1/2 z-50 max-w-[90vw] -translate-x-1/2 rounded-lg px-4 py-2 text-[12px] font-medium text-white shadow-lg md:bottom-6 ${
+      className={`fixed ${posisi} left-1/2 z-50 max-w-[90vw] -translate-x-1/2 rounded-lg px-4 py-2 text-[12px] font-medium text-white shadow-lg ${
         t.err ? 'bg-red-600' : 'bg-slate-900'
       }`}
     >
@@ -78,7 +82,7 @@ export const LEVEL_WARNA = [
   'bg-red-50 text-red-700',
   'bg-amber-50 text-amber-700',
   'bg-sky-50 text-sky-700',
-  'bg-muh-50 text-muh-700',
+  'bg-emerald-50 text-emerald-700',
 ]
 
 /** Token form/tombol — selaras radius formal di seluruh app (ANTIREGRESI §19, §20). */

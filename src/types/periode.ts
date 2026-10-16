@@ -17,6 +17,8 @@ export interface PeriodeAkademik {
   tglRaporKelas1sampai5Sem2?: string
   /** Tanggal rapor semester 2 kelas 6 */
   tglRaporKelas6Sem2?: string
+  /** Tanggal penyerahan rapor STS (teks bebas, mis. "20 Oktober 2026"). Berlaku untuk semua kelas di semester ini. */
+  tglRaporSts?: string
   kotaRapor?: string
   /** Hanya satu yang true — dipakai sebagai default saat login */
   isDefault?: boolean

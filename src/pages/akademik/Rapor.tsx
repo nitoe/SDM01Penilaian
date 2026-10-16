@@ -43,13 +43,12 @@ export default function Rapor({ profile }: { profile: AppUser }) {
   const [cetakKelas, setCetakKelas] = useState(false)
   const [tinggiPratinjau, setTinggiPratinjau] = useState(900)
 
-  /** Tanggal rapor dari metadata periode (kelas 6 sem 2 beda). */
+  /**
+   * Tanggal penyerahan rapor STS dari pengaturan periode (Admin → Periode Akademik).
+   * Sengaja BUKAN tanggal rapor akhir semester; bila belum diisi, rapor memakai tanggal hari ini.
+   */
   function tanggalDariPeriode(): string | undefined {
-    const p = periodeAk.periode
-    if (!p) return undefined
-    if (p.semester === '1') return p.tglRaporKelas1sampai6Sem1
-    const isKelas6 = /^6/i.test(kelas)
-    return isKelas6 ? p.tglRaporKelas6Sem2 : p.tglRaporKelas1sampai5Sem2
+    return periodeAk.periode?.tglRaporSts?.trim() || undefined
   }
 
   useEffect(() => {

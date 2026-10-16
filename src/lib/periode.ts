@@ -34,6 +34,7 @@ function kePeriode(id: string, data: Record<string, unknown>): PeriodeAkademik {
         : undefined,
     tglRaporKelas6Sem2:
       typeof data.tglRaporKelas6Sem2 === 'string' ? data.tglRaporKelas6Sem2 : undefined,
+    tglRaporSts: typeof data.tglRaporSts === 'string' ? data.tglRaporSts : undefined,
     kotaRapor: typeof data.kotaRapor === 'string' ? data.kotaRapor : undefined,
     isDefault: data.isDefault === true,
     createdAt: data.createdAt,
@@ -116,6 +117,7 @@ export interface SimpanPeriodeInput {
   tglRaporKelas1sampai6Sem1?: string
   tglRaporKelas1sampai5Sem2?: string
   tglRaporKelas6Sem2?: string
+  tglRaporSts?: string
   kotaRapor?: string
   isDefault?: boolean
 }
@@ -133,6 +135,7 @@ export async function simpanPeriode(input: SimpanPeriodeInput): Promise<string> 
     tglRaporKelas1sampai6Sem1: input.tglRaporKelas1sampai6Sem1?.trim() || null,
     tglRaporKelas1sampai5Sem2: input.tglRaporKelas1sampai5Sem2?.trim() || null,
     tglRaporKelas6Sem2: input.tglRaporKelas6Sem2?.trim() || null,
+    tglRaporSts: input.tglRaporSts?.trim() || null,
     kotaRapor: input.kotaRapor?.trim() || null,
     isDefault: input.isDefault === true,
     updatedAt: serverTimestamp(),

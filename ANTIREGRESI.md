@@ -279,3 +279,7 @@
 22.4 Catat Menulis belum ada di situs baru; bagian Menulis tampil dari data `menulis_log` yang ada (migrasi v2) dan berisi "Belum ada catatan" bila kosong.
 
 22.5 Akses: admin semua kelas; guru Tahsin hanya `kelasAmpu`. Baca lewat rules `lihatKelas()` (§17.2).
+
+21.7 **Tanggal rapor STS** diatur admin di Periode Akademik (field `tglRaporSts`, teks bebas, berlaku semua kelas, ada di kedua semester) dan TERPISAH dari tanggal rapor akhir semester (`tglRaporKelas1sampai6Sem1`, dst., milik rapor SAS). Rapor STS tidak boleh memakai tanggal rapor akhir. Bila `tglRaporSts` kosong, rapor memakai tanggal hari ini dan daftar periode menandainya "Tanggal rapor STS belum diisi". Field ini tidak disinkron ke `config/akademik` (kode legacy tidak mengenal STS).
+
+21.8 **Tempat dan tanggal** ("Depok, 16 Oktober 2026") dicetak DI DALAM kolom Wali Kelas, rata tengah sejajar jabatan, bukan rata kanan halaman. Kolom lain memakai baris kosong setinggi sama (`.rpr-ttd-tempat`) agar "Orang Tua/Wali", "Kepala Sekolah", dan "Wali Kelas," tetap sejajar. Diuji di `cek-laporan-cetak.mjs`.

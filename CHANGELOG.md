@@ -310,3 +310,9 @@ Catatan koreksi: rilis Tahap 4 sempat memuat "Rekap STS & SAS per kelas". Itu sa
 - Form lengkap v1 dipertahankan untuk Rapor SAS dan kini memuat **B. Kokurikuler** serta C. Ekstrakurikuler, D. Ketidakhadiran + Catatan Wali, Tanggapan, Keputusan, dan tiga tanda tangan (`buildBodyPrintSas`). Belum ada halaman SAS.
 - HTML rapor dipindah ke `src/lib/raporHtml.ts` (murni, diuji); `raporSts.ts` tinggal pemuat data.
 - Perbaikan: tautan kembali ganda di atas halaman Cetak Rapor STS dihapus.
+
+## Belum dirilis — Tanggal rapor STS dan tanda tangan (16 Okt 2026)
+
+- Admin → Periode Akademik: kolom baru **Tanggal penyerahan rapor STS** (per periode, semua kelas). Rapor STS memakai tanggal ini; sebelumnya keliru memakai tanggal rapor akhir semester 1. Kosong = tanggal hari ini, dan daftar periode memberi penanda.
+- Tempat dan tanggal di rapor kini di tengah kolom Wali Kelas (sebelumnya rata kanan halaman sehingga tidak sejajar). Berlaku juga untuk form SAS.
+- `PeriodeAkademik.tglRaporSts`, `SimpanPeriodeInput.tglRaporSts`. Tidak ada perubahan rules/indeks.

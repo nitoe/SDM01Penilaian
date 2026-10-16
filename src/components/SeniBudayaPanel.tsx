@@ -128,7 +128,7 @@ export default function SeniBudayaPanel({
           </button>
           {pesan && (
             <span
-              className={`text-[12px] ${pesan.startsWith('Gagal') ? 'text-red-700' : 'text-muh-800'}`}
+              className={`text-[12px] ${pesan.startsWith('Gagal') ? 'text-red-700' : 'text-emerald-800'}`}
             >
               {pesan}
             </span>
