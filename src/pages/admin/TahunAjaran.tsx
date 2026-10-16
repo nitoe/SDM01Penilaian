@@ -3,47 +3,8 @@ import { Link, Navigate } from 'react-router-dom'
 import { getConfigAkademik, simpanProfilSekolah } from '../../lib/akademik'
 import type { Semester } from '../../types/akademik'
 import type { AppUser } from '../../types/user'
-import Icon from '../../components/Icon'
 import { PageHeader } from '../../components/ui'
-
-const field =
-  'w-full rounded-lg border border-border bg-white px-3.5 py-2.5 text-[13.5px] outline-none transition focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15'
-
-function Section({
-  icon,
-  title,
-  desc,
-  children,
-}: {
-  icon: 'book' | 'users' | 'calendar' | 'target'
-  title: string
-  desc?: string
-  children: React.ReactNode
-}) {
-  return (
-    <section className="card-soft overflow-hidden">
-      <div className="flex items-start gap-3 border-b border-border bg-slate-50/80 px-4 py-3.5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muh-50 text-muh-700 ring-1 ring-muh-100">
-          <Icon name={icon} />
-        </span>
-        <div className="min-w-0">
-          <h2 className="text-[14px] font-semibold text-slate-900">{title}</h2>
-          {desc && <p className="mt-0.5 text-[12px] leading-snug text-muted">{desc}</p>}
-        </div>
-      </div>
-      <div className="space-y-3.5 p-4">{children}</div>
-    </section>
-  )
-}
-
-function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
-  return (
-    <span className="mb-1.5 block text-[12px] font-medium text-slate-600">
-      {children}
-      {required && <span className="ml-0.5 text-peach-500">*</span>}
-    </span>
-  )
-}
+import { Field, Notice, Spinner, btnPrimary, inputCls } from '../akademik/shared'
 
 /**
  * Data Sekolah — hanya identitas yang dipakai di kop rapor & dokumen.
@@ -132,139 +93,110 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5 pb-24">
+    <div className="space-y-5 pb-16">
       <PageHeader
         back={{ to: '/admin', label: 'Administrasi' }}
         title="Data Sekolah"
-        subtitle={
-          <>
-            Identitas yang muncul di kop rapor dan dokumen resmi. Tahun ajaran, semester, dan tanggal
-            rapor dikelola di{' '}
-            <Link to="/admin/periode" className="font-medium text-muh-700 underline">
-              Periode Akademik
-            </Link>
-            .
-          </>
-        }
+        subtitle="Identitas yang muncul di kop rapor dan dokumen resmi."
       />
 
-      {/* Banner: konteks periode ada di menu lain */}
-      <div className="rounded-lg border border-muh-200 bg-muh-50/80 px-4 py-3 text-[12.5px] text-muh-900">
-        <p className="font-semibold">Tahun ajaran & semester</p>
-        <p className="mt-1 leading-snug text-muh-800/90">
-          Saat ini di sistem: <strong>{legacyTahun}</strong> · Semester{' '}
+      {/* Konteks periode ada di menu lain: cukup satu baris, bukan banner besar */}
+      <div className="max-w-3xl">
+        <Notice tone="info">
+          Periode di sistem saat ini: <strong>{legacyTahun}</strong> · Semester{' '}
           <strong>{legacySemester === '2' ? '2 (genap)' : '1 (ganjil)'}</strong>
           {legacyKota ? (
             <>
               {' '}
-              · Kota rapor: <strong>{legacyKota}</strong>
+              · Kota rapor <strong>{legacyKota}</strong>
             </>
           ) : null}
-          . Ubah lewat menu Periode Akademik (termasuk tanggal rapor kelas 1–6).
-        </p>
-        <Link
-          to="/admin/periode"
-          className="mt-2 inline-flex text-[12px] font-semibold text-muh-700 underline"
-        >
-          Buka Periode Akademik →
-        </Link>
+          . Tahun ajaran, semester, dan tanggal rapor diatur di{' '}
+          <Link to="/admin/periode" className="font-semibold text-muh-700 underline">
+            Periode Akademik
+          </Link>
+          .
+        </Notice>
       </div>
 
       {loading ? (
-        <div className="space-y-3">
-          {[1, 2].map((i) => (
-            <div key={i} className="card-soft h-36 animate-pulse bg-slate-50" />
-          ))}
-        </div>
+        <Spinner />
       ) : (
-        <form onSubmit={(e) => void simpan(e)} className="space-y-4">
-          <Section
-            icon="book"
-            title="Identitas sekolah"
-            desc="Muncul di kop rapor dan dokumen resmi."
-          >
-            <label className="block">
-              <Label required>Nama sekolah</Label>
+        <form onSubmit={(e) => void simpan(e)} className="card-soft max-w-3xl divide-y divide-border overflow-hidden">
+          <section className="space-y-4 p-5">
+            <div>
+              <h2 className="text-[14px] font-semibold text-slate-900">Identitas sekolah</h2>
+              <p className="mt-0.5 text-[12px] text-muted">Muncul di kop rapor dan dokumen resmi.</p>
+            </div>
+            <Field label="Nama sekolah" required>
               <input
-                className={field}
+                className={inputCls}
                 value={namaSekolah}
                 onChange={(e) => setNamaSekolah(e.target.value)}
               />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block">
-                <Label required>NPSN</Label>
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="NPSN" required>
                 <input
-                  className={field}
+                  className={inputCls}
                   value={npsn}
                   onChange={(e) => setNpsn(e.target.value)}
                   inputMode="numeric"
                   placeholder="2022xxxx"
                 />
-              </label>
-              <label className="block">
-                <Label>Telepon atau email</Label>
-                <input className={field} value={telp} onChange={(e) => setTelp(e.target.value)} />
-              </label>
+              </Field>
+              <Field label="Telepon atau email">
+                <input className={inputCls} value={telp} onChange={(e) => setTelp(e.target.value)} />
+              </Field>
             </div>
-            <label className="block">
-              <Label required>Alamat</Label>
+            <Field label="Alamat" required>
               <textarea
-                className={field}
+                className={inputCls}
                 rows={2}
                 value={alamat}
                 onChange={(e) => setAlamat(e.target.value)}
               />
-            </label>
-          </Section>
+            </Field>
+          </section>
 
-          <Section icon="users" title="Kepala sekolah" desc="Penandatangan rapor.">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block">
-                <Label required>Nama lengkap</Label>
+          <section className="space-y-4 p-5">
+            <div>
+              <h2 className="text-[14px] font-semibold text-slate-900">Kepala sekolah</h2>
+              <p className="mt-0.5 text-[12px] text-muted">Penandatangan rapor.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Nama lengkap" required hint="Tulis dengan gelar.">
                 <input
-                  className={field}
+                  className={inputCls}
                   value={kepsek}
                   onChange={(e) => setKepsek(e.target.value)}
-                  placeholder="dengan gelar"
                 />
-              </label>
-              <label className="block">
-                <Label required>NBM</Label>
+              </Field>
+              <Field label="NBM" required>
                 <input
-                  className={field}
+                  className={inputCls}
                   value={nbm}
                   onChange={(e) => setNbm(e.target.value)}
                   inputMode="numeric"
                 />
-              </label>
+              </Field>
             </div>
-          </Section>
+          </section>
 
-          {pesan && (
-            <div className="rounded-lg border border-muh-200 bg-muh-50 px-3.5 py-2.5 text-[12.5px] text-muh-900">
-              {pesan}
-            </div>
-          )}
-          {galat && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-800">
-              {galat}
+          {(pesan || galat) && (
+            <div className="p-4">
+              {pesan && <Notice tone="ok">{pesan}</Notice>}
+              {galat && <Notice tone="error">{galat}</Notice>}
             </div>
           )}
 
-          <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-white/95 px-4 py-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
-            <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
-              <p className="hidden text-[11.5px] text-muted sm:block">
-                Field bertanda <span className="text-peach-500">*</span> wajib diisi
-              </p>
-              <button
-                type="submit"
-                disabled={busy}
-                className="w-full rounded-lg bg-muh-600 px-5 py-2.5 text-[13.5px] font-semibold text-white shadow-sm hover:bg-muh-700 disabled:opacity-60 sm:w-auto"
-              >
-                {busy ? 'Menyimpan…' : 'Simpan data sekolah'}
-              </button>
-            </div>
+          <div className="flex items-center justify-between gap-3 bg-slate-50/70 px-5 py-3.5">
+            <p className="text-[12px] text-muted">
+              Isian bertanda <span className="text-peach-500">*</span> wajib diisi.
+            </p>
+            <button type="submit" disabled={busy} className={btnPrimary}>
+              {busy ? 'Menyimpan…' : 'Simpan data sekolah'}
+            </button>
           </div>
         </form>
       )}

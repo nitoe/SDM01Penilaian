@@ -1,9 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import type { JenjangTahsin, SiswaTahsin } from '../../types/tahsin'
 import { SEMUA_KELAS } from '../../types/tahsin'
-import { PageHeader } from '../../components/ui'
+import { Badge, PageHeader } from '../../components/ui'
+import {
+  ChipToggle,
+  Field,
+  Notice,
+  Spinner,
+  btnGhost,
+  btnPrimary,
+  inputCls,
+  useToast,
+} from '../akademik/shared'
 import {
   CSV_HEADERS,
   bacaExcel,
@@ -55,31 +65,13 @@ const emptyForm: SiswaInput = {
   jenjang: undefined,
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-[11px] font-medium text-slate-600">{label}</span>
-      {children}
-    </label>
-  )
-}
-
-const inputCls =
-  'w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15'
-
 export default function DataSiswa({ profile }: Props) {
   const [mode, setMode] = useState<Mode>('list')
   const [list, setList] = useState<SiswaTahsin[]>([])
   const [loading, setLoading] = useState(true)
   const [kelasFilter, setKelasFilter] = useState('')
   const [search, setSearch] = useState('')
-  const [toast, setToast] = useState<{ msg: string; error?: boolean } | null>(null)
+  const { show: showToast, node: toastNode } = useToast()
   const [busy, setBusy] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<SiswaInput>({ ...emptyForm })
@@ -88,11 +80,6 @@ export default function DataSiswa({ profile }: Props) {
   const [sumberImpor, setSumberImpor] = useState('')
   const [progres, setProgres] = useState<string | null>(null)
   const [selected, setSelected] = useState<SiswaTahsin | null>(null)
-
-  const showToast = (msg: string, error = false) => {
-    setToast({ msg, error })
-    setTimeout(() => setToast(null), 4000)
-  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -105,7 +92,7 @@ export default function DataSiswa({ profile }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [kelasFilter])
+  }, [kelasFilter, showToast])
 
   useEffect(() => {
     void load()
@@ -131,6 +118,14 @@ export default function DataSiswa({ profile }: Props) {
       return blob.includes(q)
     })
   }, [list, search])
+
+  /** Di layar kecil panel detail berada di bawah tabel: gulir ke sana saat siswa dipilih. */
+  const asideRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (selected && window.matchMedia('(max-width: 1023px)').matches) {
+      asideRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [selected])
 
   function openCreate() {
     setEditingId(null)
@@ -262,95 +257,49 @@ export default function DataSiswa({ profile }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 pb-16">
       <PageHeader
         back={{ to: '/admin', label: 'Administrasi' }}
         title="Data Siswa"
-        subtitle={`Data dasar + biodata · ID dokumen = NIPD · ${list.length} siswa di filter saat ini`}
+        subtitle={`Data dasar dan biodata. ID dokumen = NIPD. ${list.length} siswa${
+          kelasFilter ? ` di kelas ${kelasFilter}` : ' di semua kelas'
+        }.`}
         actions={
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => setMode('list')}
-            className={`rounded-lg px-3 py-1.5 text-[12px] font-medium ${
-              mode === 'list' ? 'bg-muh-600 text-white' : 'border border-border bg-white text-slate-600'
-            }`}
-          >
-            Daftar
-          </button>
-          <button
-            type="button"
-            onClick={openCreate}
-            className={`rounded-lg px-3 py-1.5 text-[12px] font-medium ${
-              mode === 'form' && !editingId
-                ? 'bg-muh-600 text-white'
-                : 'border border-border bg-white text-slate-600'
-            }`}
-          >
-            Tambah
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('import')}
-            className={`rounded-lg px-3 py-1.5 text-[12px] font-medium ${
-              mode === 'import'
-                ? 'bg-muh-600 text-white'
-                : 'border border-border bg-white text-slate-600'
-            }`}
-          >
-            Impor
-          </button>
-          <button
-            type="button"
-            onClick={handleExport}
-            className="rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
-          >
-            Ekspor CSV
-          </button>
-        </div>
+          mode === 'list' ? (
+            <>
+              <button type="button" onClick={handleExport} className={btnGhost}>
+                Ekspor CSV
+              </button>
+              <button type="button" onClick={() => setMode('import')} className={btnGhost}>
+                Impor
+              </button>
+              <button type="button" onClick={openCreate} className={btnPrimary}>
+                + Tambah siswa
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={() => setMode('list')} className={btnGhost}>
+              ← Kembali ke daftar
+            </button>
+          )
         }
       />
 
-      {toast && (
-        <div
-          className={`rounded-lg px-3 py-2 text-[12px] font-medium ${
-            toast.error
-              ? 'border border-red-200 bg-red-50 text-red-700'
-              : 'border border-muh-200 bg-muh-50 text-muh-800'
-          }`}
-        >
-          {toast.msg}
-        </div>
-      )}
+      {toastNode}
 
       {/* LIST */}
       {mode === 'list' && (
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-          <section className="card-soft p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex max-w-full flex-wrap gap-1">
-                <button
-                  type="button"
-                  onClick={() => setKelasFilter('')}
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                    !kelasFilter ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  Semua
-                </button>
-                {SEMUA_KELAS.map((k) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setKelasFilter(k)}
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                      kelasFilter === k ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    {k}
-                  </button>
-                ))}
-              </div>
+        <div className="grid items-start gap-5 lg:grid-cols-[1fr_340px]">
+          <section className="card-soft p-4" aria-label="Daftar siswa">
+            <div className="flex flex-wrap gap-1.5">
+              <ChipToggle active={!kelasFilter} onClick={() => setKelasFilter('')}>
+                Semua
+              </ChipToggle>
+              {SEMUA_KELAS.map((k) => (
+                <ChipToggle key={k} active={kelasFilter === k} onClick={() => setKelasFilter(k)}>
+                  {k}
+                </ChipToggle>
+              ))}
             </div>
 
             <input
@@ -358,82 +307,102 @@ export default function DataSiswa({ profile }: Props) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Cari nama, NIPD, NISN, HP, nama ortu…"
-              className="mt-3 w-full rounded-lg border border-border bg-slate-50/80 px-3 py-2 text-[13px] outline-none focus:border-muh-500 focus:bg-white focus:ring-2 focus:ring-muh-500/15"
+              aria-label="Cari siswa"
+              className={`${inputCls} mt-3`}
             />
 
-            <div className="mt-3 max-h-[28rem] overflow-auto rounded-lg border border-border">
+            <div className="mt-3 max-h-[34rem] overflow-auto rounded-lg border border-border">
               {loading ? (
-                <p className="p-6 text-center text-[12px] text-muted">Memuat…</p>
+                <Spinner />
               ) : filtered.length === 0 ? (
-                <div className="p-6 text-center text-[12px] text-muted">
+                <p className="p-8 text-center text-[13px] text-muted">
                   Belum ada data. Gunakan menu Impor (Excel Dapodik) atau Tambah manual.
-                </div>
+                </p>
               ) : (
-                <table className="w-full text-left text-[12px]">
-                  <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
+                <table className="w-full text-left text-[13px]">
+                  <thead className="sticky top-0 z-10 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
                     <tr>
-                      <th className="px-3 py-2 font-semibold">Nama</th>
-                      <th className="px-3 py-2 font-semibold">NIPD</th>
-                      <th className="px-3 py-2 font-semibold">Kelas</th>
-                      <th className="px-3 py-2 font-semibold">JK</th>
-                      <th className="px-3 py-2 font-semibold">Status</th>
+                      <th className="px-3 py-2.5 font-semibold">Nama</th>
+                      <th className="hidden px-3 py-2.5 font-semibold sm:table-cell">NIPD</th>
+                      <th className="px-3 py-2.5 font-semibold">Kelas</th>
+                      <th className="px-3 py-2.5 font-semibold">JK</th>
+                      <th className="px-3 py-2.5 font-semibold">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((s) => (
-                      <tr
-                        key={s.id}
-                        onClick={() => setSelected(s)}
-                        className={`cursor-pointer border-t border-border hover:bg-muh-50/40 ${
-                          selected?.id === s.id ? 'bg-muh-50/60' : ''
-                        }`}
-                      >
-                        <td className="px-3 py-2 font-medium text-slate-900">{s.nama}</td>
-                        <td className="px-3 py-2 font-mono text-[11px] text-muted">
-                          {s.nipd || s.nis || s.id}
-                        </td>
-                        <td className="px-3 py-2">{s.kelas}</td>
-                        <td className="px-3 py-2">{s.jk || '—'}</td>
-                        <td className="px-3 py-2">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              void toggleAktif(s)
-                            }}
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                              s.aktif !== false
-                                ? 'bg-muh-50 text-muh-700'
-                                : 'bg-slate-100 text-slate-500'
+                    {filtered.map((siswa) => {
+                      const terpilih = selected?.id === siswa.id
+                      return (
+                        <tr
+                          key={siswa.id}
+                          tabIndex={0}
+                          aria-selected={terpilih}
+                          onClick={() => setSelected(siswa)}
+                          onKeyDown={(e) => {
+                            if (e.target !== e.currentTarget) return
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              setSelected(siswa)
+                            }
+                          }}
+                          className={`cursor-pointer border-t border-border transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 ${
+                            terpilih ? 'bg-muh-50 hover:bg-muh-50' : ''
+                          }`}
+                        >
+                          <td
+                            className={`px-3 py-2.5 font-medium text-slate-900 ${
+                              terpilih ? 'shadow-[inset_3px_0_0_0_var(--color-muh-600)]' : ''
                             }`}
                           >
-                            {s.aktif !== false ? 'Aktif' : 'Nonaktif'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                            {siswa.nama}
+                          </td>
+                          <td className="tabular hidden px-3 py-2.5 text-muted sm:table-cell">
+                            {siswa.nipd || siswa.nis || siswa.id}
+                          </td>
+                          <td className="px-3 py-2.5">{siswa.kelas}</td>
+                          <td className="px-3 py-2.5">{siswa.jk || '—'}</td>
+                          <td className="px-3 py-2.5">
+                            <button
+                              type="button"
+                              title="Klik untuk mengubah status aktif"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                void toggleAktif(siswa)
+                              }}
+                              className={`rounded px-1.5 py-0.5 text-[11px] font-medium transition hover:ring-1 hover:ring-border ${
+                                siswa.aktif !== false
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : 'bg-slate-100 text-slate-600'
+                              }`}
+                            >
+                              {siswa.aktif !== false ? 'Aktif' : 'Nonaktif'}
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               )}
             </div>
-            <p className="mt-2 text-[11px] text-muted">{filtered.length} ditampilkan</p>
+            <p className="tabular mt-2 text-[12px] text-muted">{filtered.length} ditampilkan</p>
           </section>
 
           {/* Detail panel */}
-          <aside className="card-soft h-fit p-4">
+          <aside ref={asideRef} className="card-soft p-4 lg:sticky lg:top-20" aria-label="Detail siswa">
             {!selected ? (
-              <p className="text-[12px] text-muted">
+              <p className="text-[13px] leading-relaxed text-muted">
                 Pilih baris siswa untuk melihat detail lengkap.
               </p>
             ) : (
-              <div className="space-y-3 text-[12px]">
+              <div className="space-y-4 text-[13px]">
                 <div>
                   <div className="text-[15px] font-semibold text-slate-900">{selected.nama}</div>
-                  <div className="text-[11px] text-muted">
+                  <div className="mt-0.5 text-[12px] text-muted">
                     {selected.kelas} · {selected.jenjang} · NIPD {selected.nipd || selected.id}
                   </div>
                 </div>
-                <dl className="space-y-1.5 border-t border-border pt-3">
+                <dl className="space-y-2 border-t border-border pt-3">
                   {(
                     [
                       ['NISN', selected.nisn],
@@ -463,17 +432,13 @@ export default function DataSiswa({ profile }: Props) {
                   ).map(([k, v]) =>
                     v ? (
                       <div key={k} className="grid grid-cols-[88px_1fr] gap-2">
-                        <dt className="text-slate-400">{k}</dt>
-                        <dd className="font-medium text-slate-800">{v}</dd>
+                        <dt className="text-muted">{k}</dt>
+                        <dd className="break-words font-medium text-slate-800">{v}</dd>
                       </div>
                     ) : null,
                   )}
                 </dl>
-                <button
-                  type="button"
-                  onClick={() => openEdit(selected)}
-                  className="w-full rounded-lg bg-muh-600 py-2 text-[12px] font-semibold text-white hover:bg-muh-700"
-                >
+                <button type="button" onClick={() => openEdit(selected)} className={`${btnPrimary} w-full`}>
                   Edit data
                 </button>
               </div>
@@ -484,13 +449,13 @@ export default function DataSiswa({ profile }: Props) {
 
       {/* FORM */}
       {mode === 'form' && (
-        <section className="card-soft p-4">
-          <h2 className="text-[14px] font-semibold text-slate-800">
+        <section className="card-soft max-w-5xl p-4 sm:p-5">
+          <h2 className="text-[15px] font-semibold text-slate-900">
             {editingId ? 'Edit siswa' : 'Tambah siswa'}
           </h2>
-          <form onSubmit={(e) => void handleSave(e)} className="mt-3 space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <Field label="NIPD *">
+          <form onSubmit={(e) => void handleSave(e)} className="mt-4 space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="NIPD" required>
                 <input
                   required
                   className={inputCls}
@@ -506,7 +471,7 @@ export default function DataSiswa({ profile }: Props) {
                   onChange={(e) => setF('nisn', e.target.value)}
                 />
               </Field>
-              <Field label="Nama *">
+              <Field label="Nama" required>
                 <input
                   required
                   className={inputCls}
@@ -514,7 +479,7 @@ export default function DataSiswa({ profile }: Props) {
                   onChange={(e) => setF('nama', e.target.value)}
                 />
               </Field>
-              <Field label="Kelas *">
+              <Field label="Kelas" required>
                 <select
                   className={inputCls}
                   value={form.kelas || '1A'}
@@ -575,9 +540,9 @@ export default function DataSiswa({ profile }: Props) {
               </Field>
             </div>
 
-            <div>
-              <h3 className="mb-2 text-[12px] font-semibold text-slate-700">Alamat</h3>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="border-t border-border pt-5">
+              <h3 className="mb-3 text-[13px] font-semibold text-slate-900">Alamat</h3>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="sm:col-span-2 lg:col-span-3">
                   <Field label="Alamat">
                     <input
@@ -617,9 +582,9 @@ export default function DataSiswa({ profile }: Props) {
               </div>
             </div>
 
-            <div>
-              <h3 className="mb-2 text-[12px] font-semibold text-slate-700">Kontak & keluarga</h3>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="border-t border-border pt-5">
+              <h3 className="mb-3 text-[13px] font-semibold text-slate-900">Kontak &amp; keluarga</h3>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Field label="HP">
                   <input className={inputCls} value={form.hp || ''} onChange={(e) => setF('hp', e.target.value)} />
                 </Field>
@@ -690,19 +655,11 @@ export default function DataSiswa({ profile }: Props) {
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={busy}
-                className="rounded-lg bg-muh-600 px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
-              >
+            <div className="flex gap-2 border-t border-border pt-4">
+              <button type="submit" disabled={busy} className={btnPrimary}>
                 {busy ? 'Menyimpan…' : 'Simpan'}
               </button>
-              <button
-                type="button"
-                onClick={() => setMode('list')}
-                className="rounded-lg border border-border px-4 py-2.5 text-[13px] font-medium text-slate-600"
-              >
+              <button type="button" onClick={() => setMode('list')} className={btnGhost}>
                 Batal
               </button>
             </div>
@@ -712,23 +669,23 @@ export default function DataSiswa({ profile }: Props) {
 
       {/* IMPORT */}
       {mode === 'import' && (
-        <section className="card-soft space-y-4 p-4">
+        <section className="card-soft max-w-5xl space-y-5 p-4 sm:p-5">
           <div>
-            <h2 className="text-[14px] font-semibold text-slate-800">Impor data siswa</h2>
-            <p className="mt-1 text-[12px] text-muted">
+            <h2 className="text-[15px] font-semibold text-slate-900">Impor data siswa</h2>
+            <p className="mt-1 max-w-3xl text-[12.5px] leading-relaxed text-muted">
               Cocokkan berdasarkan NIPD. Data dasar masuk ke <code>siswa</code>; biodata (alamat, HP, orang
-              tua, dll.) masuk ke <code>identitas_siswa</code> yang hanya dapat dibaca admin dan wali kelas. Status
-              Aktif, Tamat Iqro, dan Jenjang siswa yang sudah ada tidak diubah oleh impor.
+              tua, dll.) masuk ke <code>identitas_siswa</code> yang hanya dapat dibaca admin dan wali kelas.
+              Status Aktif, Tamat Iqro, dan Jenjang siswa yang sudah ada tidak diubah oleh impor.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-dashed border-muh-300 bg-muh-50/40 p-4">
-            <p className="text-[12.5px] font-semibold text-slate-800">File Excel Dapodik (.xlsx)</p>
-            <p className="mt-0.5 text-[11.5px] text-muted">
-              Ekspor "Daftar Peserta Didik". File dibaca di browser ini dan tidak diunggah ke mana pun; yang
-              tersimpan hanya data siswa di Firestore. Jangan simpan file ini di repo.
+          <div className="rounded-lg border border-dashed border-muh-300 bg-muh-50/40 p-4">
+            <p className="text-[13px] font-semibold text-slate-900">File Excel Dapodik (.xlsx)</p>
+            <p className="mt-0.5 text-[12px] leading-relaxed text-muted">
+              Ekspor &quot;Daftar Peserta Didik&quot;. File dibaca di browser ini dan tidak diunggah ke mana
+              pun; yang tersimpan hanya data siswa di Firestore. Jangan simpan file ini di repo.
             </p>
-            <label className="mt-3 inline-flex cursor-pointer items-center rounded-lg bg-muh-600 px-3.5 py-2 text-[12px] font-semibold text-white hover:bg-muh-700">
+            <label className={`${btnPrimary} mt-3 inline-flex cursor-pointer items-center`}>
               Pilih file…
               <input
                 type="file"
@@ -740,11 +697,11 @@ export default function DataSiswa({ profile }: Props) {
             </label>
           </div>
 
-          <details className="rounded-2xl border border-border p-3">
-            <summary className="cursor-pointer text-[12px] font-medium text-slate-700">
+          <details className="rounded-lg border border-border p-3.5">
+            <summary className="cursor-pointer select-none text-[13px] font-medium text-slate-800">
               Atau tempel teks CSV / TSV
             </summary>
-            <p className="mt-2 text-[11.5px] text-muted">
+            <p className="mt-2 text-[12px] text-muted">
               Header didukung: {CSV_HEADERS.slice(0, 8).join(', ')}, … atau kolom Dapodik.
             </p>
             <textarea
@@ -755,14 +712,14 @@ export default function DataSiswa({ profile }: Props) {
               }}
               rows={8}
               placeholder={`nipd,nisn,nama,kelas,jk,...`}
-              className="mt-2 w-full rounded-lg border border-border bg-slate-50/50 px-3 py-2 font-mono text-[11px] outline-none focus:border-muh-500 focus:bg-white"
+              className={`${inputCls} mt-2 bg-slate-50/50 font-mono text-[12px] focus:bg-white`}
             />
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-2.5 flex flex-wrap gap-2">
               <button
                 type="button"
                 disabled={busy || !importText.trim()}
                 onClick={handlePreview}
-                className="rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium disabled:opacity-50"
+                className={btnGhost}
               >
                 Pratinjau
               </button>
@@ -775,7 +732,7 @@ export default function DataSiswa({ profile }: Props) {
                       '\n000000001,0000000001,Contoh Siswa,1A,L,Depok,2019-01-01,Islam,,,,,,,,,,,,,,',
                   )
                 }
-                className="rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-slate-600"
+                className={btnGhost}
               >
                 Unduh template
               </button>
@@ -784,24 +741,20 @@ export default function DataSiswa({ profile }: Props) {
 
           {preview && (
             <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2 text-[12px]">
-                <span className="font-semibold text-slate-800">Pratinjau dari {sumberImpor}:</span>
-                <span className="rounded-full bg-muh-50 px-2.5 py-0.5 font-semibold text-muh-700">
-                  {preview.baru} baru
-                </span>
-                <span className="rounded-full bg-sky-50 px-2.5 py-0.5 font-semibold text-sky-700">
-                  {preview.update} diperbarui
-                </span>
+              <div className="flex flex-wrap items-center gap-2 text-[13px]">
+                <span className="font-semibold text-slate-900">Pratinjau dari {sumberImpor}:</span>
+                <Badge tone="ok">{preview.baru} baru</Badge>
+                <Badge tone="brand">{preview.update} diperbarui</Badge>
                 <span
-                  className={`rounded-full px-2.5 py-0.5 font-semibold ${
-                    preview.error ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-500'
+                  className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                    preview.error ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-600'
                   }`}
                 >
                   {preview.error} bermasalah
                 </span>
               </div>
 
-              <p className="text-[11.5px] text-muted">
+              <p className="text-[12px] text-muted">
                 Per kelas:{' '}
                 {Object.entries(preview.perKelas)
                   .sort(([a], [b]) => a.localeCompare(b, 'id'))
@@ -810,7 +763,7 @@ export default function DataSiswa({ profile }: Props) {
               </p>
 
               {preview.error > 0 && (
-                <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-[11.5px] text-red-800">
+                <Notice tone="error">
                   <p className="font-semibold">Baris ini akan dilewati:</p>
                   <ul className="mt-1 list-disc space-y-0.5 pl-4">
                     {preview.items
@@ -822,17 +775,17 @@ export default function DataSiswa({ profile }: Props) {
                         </li>
                       ))}
                   </ul>
-                </div>
+                </Notice>
               )}
 
-              <div className="max-h-56 overflow-auto rounded-lg border border-border">
-                <table className="w-full text-left text-[11px]">
-                  <thead className="sticky top-0 bg-slate-50 text-slate-500">
+              <div className="max-h-64 overflow-auto rounded-lg border border-border">
+                <table className="w-full text-left text-[12.5px]">
+                  <thead className="sticky top-0 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
                     <tr>
-                      <th className="px-2 py-1.5">NIPD</th>
-                      <th className="px-2 py-1.5">Nama</th>
-                      <th className="px-2 py-1.5">Kelas</th>
-                      <th className="px-2 py-1.5">Status</th>
+                      <th className="px-3 py-2 font-semibold">NIPD</th>
+                      <th className="px-3 py-2 font-semibold">Nama</th>
+                      <th className="px-3 py-2 font-semibold">Kelas</th>
+                      <th className="px-3 py-2 font-semibold">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -841,10 +794,10 @@ export default function DataSiswa({ profile }: Props) {
                       .slice(0, 40)
                       .map((x) => (
                         <tr key={x.baris} className="border-t border-border">
-                          <td className="px-2 py-1 font-mono">{x.s!.id}</td>
-                          <td className="px-2 py-1">{x.s!.nama}</td>
-                          <td className="px-2 py-1">{x.s!.kelas}</td>
-                          <td className="px-2 py-1">
+                          <td className="tabular px-3 py-1.5 text-muted">{x.s!.id}</td>
+                          <td className="px-3 py-1.5">{x.s!.nama}</td>
+                          <td className="px-3 py-1.5">{x.s!.kelas}</td>
+                          <td className="px-3 py-1.5">
                             {x.status === 'error' ? 'Dilewati' : x.status === 'baru' ? 'Baru' : 'Diperbarui'}
                           </td>
                         </tr>
@@ -852,29 +805,22 @@ export default function DataSiswa({ profile }: Props) {
                   </tbody>
                 </table>
                 {preview.items.length > 40 && (
-                  <p className="border-t border-border p-2 text-[11px] text-muted">
+                  <p className="border-t border-border p-2.5 text-[12px] text-muted">
                     … dan {preview.items.length - 40} baris lainnya
                   </p>
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   type="button"
                   disabled={busy || preview.baru + preview.update === 0}
                   onClick={() => void handleImport()}
-                  className="rounded-lg bg-muh-600 px-4 py-2 text-[12.5px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
+                  className={btnPrimary}
                 >
-                  {busy
-                    ? `Menyimpan… ${progres ?? ''}`
-                    : `Simpan ${preview.baru + preview.update} siswa`}
+                  {busy ? `Menyimpan… ${progres ?? ''}` : `Simpan ${preview.baru + preview.update} siswa`}
                 </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => setPreview(null)}
-                  className="rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-slate-600"
-                >
+                <button type="button" disabled={busy} onClick={() => setPreview(null)} className={btnGhost}>
                   Batal
                 </button>
               </div>

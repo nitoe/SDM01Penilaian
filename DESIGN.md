@@ -55,7 +55,7 @@ Aplikasi ini dipakai guru setiap hari untuk menginput dan memeriksa nilai. Tampi
 
 # Halaman admin
 
-Halaman admin (Kelola Akun, Kelola Periode, dan seterusnya) memakai token bersama di `src/pages/akademik/shared.tsx`: `inputCls`, `btnPrimary`/`btnGhost`, `btnDanger*`, `Field`, `ChipToggle`, `Segmented`, `Notice`. Pola umum: judul + aksi utama di kepala halaman; daftar di kiri, detail atau formulir di kanan pada layar lebar (di bawahnya pada layar kecil); aksi merusak dipisahkan di bawah label "Tindakan lain" dan selalu lewat konfirmasi inline. Merah hanya untuk hapus permanen dan galat. `.card-soft` mengalahkan utilitas border/shadow/background Tailwind (ANTIREGRESI §20.2).
+Halaman admin (Kelola Akun, Kelola Periode, dan seterusnya) memakai token bersama di `src/pages/akademik/shared.tsx`: `inputCls`, `btnPrimary`/`btnGhost`, `btnDanger*`, `Field`, `ChipToggle`, `Segmented`, `Notice`. Pola umum: judul + aksi utama di kepala halaman; daftar di kiri, detail atau formulir di kanan pada layar lebar (di bawahnya pada layar kecil); aksi merusak dipisahkan di bawah label "Tindakan lain" dan selalu lewat konfirmasi inline. Merah hanya untuk hapus permanen dan galat. Tombol simpan berada di dalam alur halaman, tidak pernah `fixed bottom-0` (tertutup navigasi bawah, ANTIREGRESI §21.2). Daftar yang tumbuh tiap tahun (mis. periode) dikelompokkan per tahun ajaran. `.card-soft` mengalahkan utilitas border/shadow/background Tailwind (ANTIREGRESI §20.2).
 
 # Komponen (src/components/ui.tsx)
 

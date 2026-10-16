@@ -49,6 +49,12 @@ export default function KelolaPeriode({ profile }: { profile: AppUser }) {
 
   const defaultPeriode = useMemo(() => daftar.find((p) => p.isDefault) ?? null, [daftar])
   const aktifCount = useMemo(() => daftar.filter((p) => p.aktif).length, [daftar])
+  /** Periode dikelompokkan per tahun ajaran agar daftar yang makin panjang tetap mudah dipindai. */
+  const kelompok = useMemo(() => {
+    const peta = new Map<string, PeriodeAkademik[]>()
+    for (const p of daftar) peta.set(p.tahunAjaran, [...(peta.get(p.tahunAjaran) ?? []), p])
+    return [...peta.entries()]
+  }, [daftar])
 
   async function muat() {
     setLoading(true)
@@ -238,93 +244,102 @@ export default function KelolaPeriode({ profile }: { profile: AppUser }) {
               </p>
             </div>
           ) : (
-            <ul className="space-y-2.5">
-              {daftar.map((p) => {
-                const isDef = !!p.isDefault
-                const adaTanggal =
-                  p.tglRaporKelas1sampai6Sem1 || p.tglRaporKelas1sampai5Sem2 || p.tglRaporKelas6Sem2
-                return (
-                  <li key={p.id} className="card-soft relative overflow-hidden p-4">
-                    {/* Penanda periode default: elemen tersendiri, karena .card-soft mengalahkan utilitas border */}
-                    {isDef && <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-muh-600" />}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[14.5px] font-semibold text-slate-900">{labelPeriode(p)}</span>
-                      {isDef && <Badge tone="brand">Default</Badge>}
-                      <Badge tone={p.aktif ? 'ok' : 'neutral'}>{p.aktif ? 'Aktif' : 'Nonaktif'}</Badge>
-                      {editId === p.id && <Badge tone="peach">Sedang diedit</Badge>}
-                    </div>
-                    <p className="mt-1 text-[12px] text-muted">
-                      {p.tahunAjaran} · {labelSemester(p.semester)}
-                      <span className="mx-1.5 text-slate-300">·</span>
-                      <span className="font-mono text-[11px]">{p.id}</span>
-                    </p>
-                    <p className="mt-2 text-[12px] text-slate-600">
-                      {adaTanggal ? (
-                        <>
-                          {p.semester === '1' && p.tglRaporKelas1sampai6Sem1 && (
-                            <span className="mr-3">Rapor 1–6: {p.tglRaporKelas1sampai6Sem1}</span>
-                          )}
-                          {p.semester === '2' && p.tglRaporKelas1sampai5Sem2 && (
-                            <span className="mr-3">Rapor 1–5: {p.tglRaporKelas1sampai5Sem2}</span>
-                          )}
-                          {p.semester === '2' && p.tglRaporKelas6Sem2 && (
-                            <span className="mr-3">Rapor kelas 6: {p.tglRaporKelas6Sem2}</span>
-                          )}
-                          {p.kotaRapor && <span>Kota: {p.kotaRapor}</span>}
-                        </>
-                      ) : (
-                        <span className="text-peach-500">Tanggal rapor belum diisi</span>
-                      )}
-                    </p>
-
-                    {konfirmasiHapus === p.id ? (
-                      <div className="mt-3">
-                        <Notice tone="error">
-                          <p>
-                            Hapus periode <strong>{labelPeriode(p)}</strong>? Data nilai yang sudah tersimpan{' '}
-                            <strong>tidak</strong> ikut terhapus. Periode hanya hilang dari daftar pilihan login.
-                          </p>
-                          <div className="mt-2.5 flex gap-2">
-                            <button
-                              type="button"
-                              className={btnDanger}
-                              onClick={() => void hapus(p.id, labelPeriode(p))}
-                            >
-                              Ya, hapus periode
-                            </button>
-                            <button type="button" className={btnGhost} onClick={() => setKonfirmasiHapus(null)}>
-                              Batal
-                            </button>
+            <div className="space-y-5">
+              {kelompok.map(([tahunKelompok, items]) => (
+                <div key={tahunKelompok}>
+                  <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
+                    Tahun ajaran {tahunKelompok}
+                  </h3>
+                  <ul className="space-y-2.5">
+                    {items.map((p) => {
+                      const isDef = !!p.isDefault
+                      const adaTanggal =
+                        p.tglRaporKelas1sampai6Sem1 || p.tglRaporKelas1sampai5Sem2 || p.tglRaporKelas6Sem2
+                      return (
+                        <li key={p.id} className="card-soft relative overflow-hidden p-4">
+                          {/* Penanda periode default: elemen tersendiri, karena .card-soft mengalahkan utilitas border */}
+                          {isDef && <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-muh-600" />}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[14.5px] font-semibold text-slate-900">{labelPeriode(p)}</span>
+                            {isDef && <Badge tone="brand">Default</Badge>}
+                            <Badge tone={p.aktif ? 'ok' : 'neutral'}>{p.aktif ? 'Aktif' : 'Nonaktif'}</Badge>
+                            {editId === p.id && <Badge tone="peach">Sedang diedit</Badge>}
                           </div>
-                        </Notice>
-                      </div>
-                    ) : (
-                      <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3">
-                        <button type="button" className={btnGhostSm} onClick={() => isiFormDari(p)}>
-                          Edit
-                        </button>
-                        <button type="button" className={btnGhostSm} onClick={() => void toggle(p.id, p.aktif)}>
-                          {p.aktif ? 'Nonaktifkan' : 'Aktifkan'}
-                        </button>
-                        {!isDef && (
-                          <button type="button" className={btnGhostSm} onClick={() => void jadiDefault(p.id)}>
-                            Jadikan default
-                          </button>
-                        )}
-                        <span className="flex-1" />
-                        <button
-                          type="button"
-                          className={btnDangerGhostSm}
-                          onClick={() => setKonfirmasiHapus(p.id)}
-                        >
-                          Hapus
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
+                          <p className="mt-1 text-[12px] text-muted">
+                            {p.tahunAjaran} · {labelSemester(p.semester)}
+                            <span className="mx-1.5 text-slate-300">·</span>
+                            <span className="font-mono text-[11px]">{p.id}</span>
+                          </p>
+                          <p className="mt-2 text-[12px] text-slate-600">
+                            {adaTanggal ? (
+                              <>
+                                {p.semester === '1' && p.tglRaporKelas1sampai6Sem1 && (
+                                  <span className="mr-3">Rapor 1–6: {p.tglRaporKelas1sampai6Sem1}</span>
+                                )}
+                                {p.semester === '2' && p.tglRaporKelas1sampai5Sem2 && (
+                                  <span className="mr-3">Rapor 1–5: {p.tglRaporKelas1sampai5Sem2}</span>
+                                )}
+                                {p.semester === '2' && p.tglRaporKelas6Sem2 && (
+                                  <span className="mr-3">Rapor kelas 6: {p.tglRaporKelas6Sem2}</span>
+                                )}
+                                {p.kotaRapor && <span>Kota: {p.kotaRapor}</span>}
+                              </>
+                            ) : (
+                              <span className="text-peach-500">Tanggal rapor belum diisi</span>
+                            )}
+                          </p>
+
+                          {konfirmasiHapus === p.id ? (
+                            <div className="mt-3">
+                              <Notice tone="error">
+                                <p>
+                                  Hapus periode <strong>{labelPeriode(p)}</strong>? Data nilai yang sudah tersimpan{' '}
+                                  <strong>tidak</strong> ikut terhapus. Periode hanya hilang dari daftar pilihan login.
+                                </p>
+                                <div className="mt-2.5 flex gap-2">
+                                  <button
+                                    type="button"
+                                    className={btnDanger}
+                                    onClick={() => void hapus(p.id, labelPeriode(p))}
+                                  >
+                                    Ya, hapus periode
+                                  </button>
+                                  <button type="button" className={btnGhost} onClick={() => setKonfirmasiHapus(null)}>
+                                    Batal
+                                  </button>
+                                </div>
+                              </Notice>
+                            </div>
+                          ) : (
+                            <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3">
+                              <button type="button" className={btnGhostSm} onClick={() => isiFormDari(p)}>
+                                Edit
+                              </button>
+                              <button type="button" className={btnGhostSm} onClick={() => void toggle(p.id, p.aktif)}>
+                                {p.aktif ? 'Nonaktifkan' : 'Aktifkan'}
+                              </button>
+                              {!isDef && (
+                                <button type="button" className={btnGhostSm} onClick={() => void jadiDefault(p.id)}>
+                                  Jadikan default
+                                </button>
+                              )}
+                              <span className="flex-1" />
+                              <button
+                                type="button"
+                                className={btnDangerGhostSm}
+                                onClick={() => setKonfirmasiHapus(p.id)}
+                              >
+                                Hapus
+                              </button>
+                            </div>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              ))}
+            </div>
           )}
         </section>
 

@@ -4,6 +4,17 @@ import { adaMapelTersimpan, getMapelList, hapusMapel, simpanMapel, unggahMapelBa
 import type { Mapel } from '../../types/akademik'
 import type { AppUser } from '../../types/user'
 import { PageHeader } from '../../components/ui'
+import {
+  ChipToggle,
+  Field,
+  Notice,
+  Spinner,
+  btnDangerGhostSm,
+  btnGhostSm,
+  btnPrimary,
+  btnPrimarySm,
+  inputCls,
+} from '../akademik/shared'
 
 const TINGKATAN = ['1', '2', '3', '4', '5', '6']
 
@@ -28,6 +39,8 @@ export default function SetupMapel({ profile }: Props) {
   const [namaBaru, setNamaBaru] = useState('')
   const [tingkatBaru, setTingkatBaru] = useState<string[]>([...TINGKATAN])
   const [cari, setCari] = useState('')
+  /** Nama mapel yang diminta konfirmasi hapus (inline, bukan window.confirm). */
+  const [konfirmasiHapus, setKonfirmasiHapus] = useState<string | null>(null)
 
   const muat = useCallback(async () => {
     setLoading(true)
@@ -105,8 +118,8 @@ export default function SetupMapel({ profile }: Props) {
   }
 
   async function hapus(nama: string) {
-    if (!window.confirm(`Hapus mata pelajaran “${nama}”? TP yang sudah memakai nama ini tidak ikut terhapus.`)) return
     setBusy(true)
+    setKonfirmasiHapus(null)
     try {
       await hapusMapel(nama)
       await muat()
@@ -118,144 +131,184 @@ export default function SetupMapel({ profile }: Props) {
     }
   }
 
-  const field =
-    'w-full rounded-xl border border-border bg-white px-3 py-2 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15'
+  const tampil = list.filter((m) => !cari.trim() || m.nama.toLowerCase().includes(cari.trim().toLowerCase()))
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 pb-16">
       <PageHeader
         back={{ to: '/admin', label: 'Administrasi' }}
         title="Mata Pelajaran"
-        subtitle="Dipakai untuk tugas guru bidang studi dan Setup TP. Nama persis ini yang tersimpan di TP — IPAS dan PJOK, bukan nama panjang. Tahsin dan Tahfizh tidak masuk daftar ini."
+        subtitle="Dipakai untuk tugas guru bidang studi dan Setup TP. Tahsin dan Tahfizh tidak masuk daftar ini."
       />
 
       {!tersimpan && !loading && (
-        <div className="rounded-xl border border-peach-200 bg-peach-50 px-3 py-3 text-[12px] text-peach-900">
-          <p>Belum ada mapel tersimpan. Daftar di bawah adalah bawaan sekolah dan sudah bisa dipilih di form guru.</p>
+        <Notice tone="warn">
+          <p>
+            Belum ada mapel tersimpan. Daftar di bawah adalah bawaan sekolah dan sudah bisa dipilih di form
+            guru.
+          </p>
           <button
             type="button"
             disabled={busy}
             onClick={() => void pakaiBawaan()}
-            className="mt-2 rounded-xl bg-muh-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
+            className={`${btnPrimarySm} mt-2.5`}
           >
             Simpan daftar ini ke sistem
           </button>
-        </div>
+        </Notice>
       )}
 
       {tersimpan && !loading && list.some((m) => NAMA_LAMA.has(m.nama)) && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-[12px] leading-relaxed text-amber-950">
-          Masih ada nama lama (IPAS ditulis panjang, PJOK ditulis panjang, atau Tahsin/Tahfizh). Setup TP memakai
-          nama resmi: <strong>IPAS</strong> dan <strong>PJOK</strong>. Tahsin dan Tahfizh bukan mapel TP. Tambahkan
-          nama yang belum ada, lalu hapus nama lama hanya jika belum ada TP yang memakai nama itu.
-        </div>
+        <Notice tone="warn">
+          Masih ada nama lama (IPAS ditulis panjang, PJOK ditulis panjang, atau Tahsin/Tahfizh). Setup TP
+          memakai nama resmi: <strong>IPAS</strong> dan <strong>PJOK</strong>. Tahsin dan Tahfizh bukan mapel
+          TP. Tambahkan nama yang belum ada, lalu hapus nama lama hanya jika belum ada TP yang memakai nama
+          itu.
+        </Notice>
       )}
 
-      {pesan && <p className="rounded-xl border border-border bg-white px-3 py-2 text-[12px] text-slate-700">{pesan}</p>}
+      {/* Pesan hasil aksi: "Gagal…" = galat, selain itu = sukses */}
+      {pesan && <Notice tone={pesan.startsWith('Gagal') ? 'error' : 'ok'}>{pesan}</Notice>}
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <input
-          type="search"
-          value={cari}
-          onChange={(e) => setCari(e.target.value)}
-          placeholder="Cari mata pelajaran…"
-          className="w-full rounded-xl border border-border bg-white px-3.5 py-2 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15 sm:max-w-xs"
-        />
-        <p className="text-[11.5px] text-muted">{list.length} mapel</p>
-      </div>
+      <div className="grid items-start gap-5 lg:grid-cols-[1fr_320px]">
+        <section aria-label="Daftar mata pelajaran">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <input
+              type="search"
+              value={cari}
+              onChange={(e) => setCari(e.target.value)}
+              placeholder="Cari mata pelajaran…"
+              aria-label="Cari mata pelajaran"
+              className={`${inputCls} sm:max-w-xs`}
+            />
+            <p className="tabular text-[12px] text-muted">
+              {cari.trim() ? `${tampil.length} dari ${list.length} mapel` : `${list.length} mapel`}
+            </p>
+          </div>
 
-      <section className="card-soft overflow-hidden">
-        {loading ? (
-          <p className="p-6 text-center text-[12px] text-muted">Memuat…</p>
-        ) : (
-          <table className="w-full text-left text-[12px]">
-            <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-3 py-2 font-semibold">Mapel</th>
-                <th className="px-3 py-2 font-semibold">Tingkatan</th>
-                <th className="px-3 py-2 font-semibold" />
-              </tr>
-            </thead>
-            <tbody>
-              {list
-                .filter((m) => !cari.trim() || m.nama.toLowerCase().includes(cari.trim().toLowerCase()))
-                .map((m) => (
-                <tr key={m.id} className="border-t border-border">
-                  <td className="px-3 py-2 font-medium text-slate-900">{m.nama}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-1">
-                      {TINGKATAN.map((t) => {
-                        const aktif = !m.tingkatanBerlaku?.length || m.tingkatanBerlaku.includes(t)
-                        return (
-                          <button
-                            key={t}
-                            type="button"
-                            disabled={busy || !tersimpan}
-                            onClick={() => void ubahTingkat(m, t)}
-                            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold disabled:opacity-60 ${
-                              aktif ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-500'
-                            }`}
-                          >
-                            {t}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    {tersimpan && (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void hapus(m.nama)}
-                        className="text-[11px] font-medium text-red-700 hover:underline disabled:opacity-60"
-                      >
-                        Hapus
-                      </button>
-                    )}
-                  </td>
-                </tr>
+          <div className="card-soft overflow-hidden">
+            {loading ? (
+              <Spinner />
+            ) : tampil.length === 0 ? (
+              <p className="p-8 text-center text-[13px] text-muted">
+                {cari.trim() ? 'Tidak ada mapel yang cocok.' : 'Belum ada mata pelajaran.'}
+              </p>
+            ) : (
+              <table className="w-full text-left text-[13px]">
+                <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-2.5 font-semibold">Mapel</th>
+                    <th className="px-4 py-2.5 font-semibold">Berlaku di kelas</th>
+                    <th className="w-[1%] px-4 py-2.5" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {tampil.map((m) => {
+                    const minta = konfirmasiHapus === m.nama
+                    return (
+                      <tr key={m.id} className="border-t border-border align-top">
+                        <td className="px-4 py-3">
+                          <div className="font-medium leading-7 text-slate-900">{m.nama}</div>
+                          {minta && (
+                            <p className="mt-1 max-w-[16rem] text-[12px] leading-snug text-muted">
+                              TP yang sudah memakai nama ini tidak ikut terhapus.
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {TINGKATAN.map((t) => {
+                              const aktif = !m.tingkatanBerlaku?.length || m.tingkatanBerlaku.includes(t)
+                              return (
+                                <button
+                                  key={t}
+                                  type="button"
+                                  aria-pressed={aktif}
+                                  aria-label={`Kelas ${t}${aktif ? ' berlaku' : ' tidak berlaku'}`}
+                                  disabled={busy || !tersimpan}
+                                  onClick={() => void ubahTingkat(m, t)}
+                                  className={`tabular h-7 w-7 rounded-md text-[12px] font-semibold transition disabled:opacity-60 ${
+                                    aktif
+                                      ? 'bg-muh-600 text-white'
+                                      : 'bg-white text-slate-400 ring-1 ring-inset ring-border hover:text-slate-600'
+                                  }`}
+                                >
+                                  {t}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right">
+                          {tersimpan &&
+                            (minta ? (
+                              <div className="flex justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => void hapus(m.nama)}
+                                  className={btnDangerGhostSm}
+                                >
+                                  Ya, hapus
+                                </button>
+                                <button type="button" onClick={() => setKonfirmasiHapus(null)} className={btnGhostSm}>
+                                  Batal
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => setKonfirmasiHapus(m.nama)}
+                                className="rounded-md px-2 py-1 text-[12px] font-medium leading-5 text-slate-500 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-60"
+                              >
+                                Hapus
+                              </button>
+                            ))}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </section>
+
+        <form onSubmit={(e) => void tambah(e)} className="card-soft space-y-4 p-4 lg:sticky lg:top-20">
+          <h2 className="text-[14px] font-semibold text-slate-900">Tambah mata pelajaran</h2>
+          <Field
+            label="Nama mapel"
+            hint="Nama ini persis yang tersimpan di TP: tulis IPAS dan PJOK, bukan nama panjang."
+          >
+            <input
+              className={inputCls}
+              value={namaBaru}
+              placeholder="Contoh: Matematika"
+              onChange={(e) => setNamaBaru(e.target.value)}
+            />
+          </Field>
+          <div>
+            <span className="mb-1.5 block text-[12px] font-medium text-slate-700">Berlaku di kelas</span>
+            <div className="flex flex-wrap gap-1.5">
+              {TINGKATAN.map((t) => (
+                <ChipToggle
+                  key={t}
+                  active={tingkatBaru.includes(t)}
+                  onClick={() =>
+                    setTingkatBaru((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t].sort()))
+                  }
+                >
+                  Kelas {t}
+                </ChipToggle>
               ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <form onSubmit={(e) => void tambah(e)} className="card-soft space-y-3 p-4">
-        <h2 className="text-[13px] font-semibold text-slate-800">Tambah mata pelajaran</h2>
-        <input
-          className={field}
-          value={namaBaru}
-          placeholder="Nama mapel"
-          onChange={(e) => setNamaBaru(e.target.value)}
-        />
-        <div className="flex flex-wrap gap-1">
-          {TINGKATAN.map((t) => {
-            const aktif = tingkatBaru.includes(t)
-            return (
-              <button
-                key={t}
-                type="button"
-                onClick={() =>
-                  setTingkatBaru((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t].sort()))
-                }
-                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                  aktif ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600'
-                }`}
-              >
-                Kelas {t}
-              </button>
-            )
-          })}
-        </div>
-        <button
-          type="submit"
-          disabled={busy || namaBaru.trim().length < 2}
-          className="rounded-xl bg-muh-600 px-4 py-2 text-[12px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
-        >
-          Tambah
-        </button>
-      </form>
+            </div>
+          </div>
+          <button type="submit" disabled={busy || namaBaru.trim().length < 2} className={`${btnPrimary} w-full`}>
+            Tambah
+          </button>
+        </form>
+      </div>
     </div>
   )
 }

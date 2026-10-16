@@ -735,7 +735,7 @@ export default function KelolaAkun({ profile }: Props) {
                   </p>
                 ) : (
                   <div className="space-y-2 border-t border-border pt-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
                       Tindakan lain
                     </p>
 
