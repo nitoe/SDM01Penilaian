@@ -34,7 +34,10 @@ Semua kolom "Ada" **belum diuji dengan data Firestore sungguhan** — gunakan da
 | Kokurikuler: DPL, Proyek STEM, 7KAIH, deskripsi | Belum | |
 | Kelengkapan rapor (identitas, pilih siswa) | Belum | Data `identitas_siswa` sudah tersedia dari impor Excel |
 | Cetak rapor STS (rapor bayangan, per siswa dan seluruh kelas; wali kelas dan admin) | Ada | Belum diuji dengan data. Tanpa kokurikuler/ekskul/absensi (modulnya belum ada) |
-| Cetak rapor SAS | Belum | Menunggu Absensi, Kokurikuler, Ekstrakurikuler |
+| Cetak rapor SAS (per siswa dan seluruh kelas; wali kelas dan admin) | Ada | Belum diuji dengan data |
+| Absensi, catatan wali, keputusan kenaikan | Ada | Di Kelengkapan Rapor SAS |
+| Kokurikuler (deskripsi manual) | Sebagian | Penyusun otomatis v2 (DPL, STEM, G7KAIH) belum |
+| Ekstrakurikuler (master + penilaian per siswa) | Ada | Master di Admin |
 | Mutasi siswa | Belum | |
 | Beranda wali kelas (wali-hub) | Belum | |
 

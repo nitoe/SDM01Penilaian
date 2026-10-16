@@ -249,6 +249,73 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ---- Data pelengkap Rapor SAS (ANTIREGRESI §23) ------------------------------
+    // Diisi WALI KELAS kelas itu (admin hanya membaca/mencetak, §17). Tidak ada hapus kecuali ekskul siswa.
+    match /absensi_rapor/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasOnly(
+                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'sakit', 'izin', 'tanpaKeterangan',
+                          'catatanWali', 'keputusan', 'updatedAt'])
+                    && request.resource.data.keputusan in ['Belum diputuskan', 'Naik Kelas', 'Tinggal Kelas']
+                    && request.resource.data.sakit is int && request.resource.data.sakit >= 0 && request.resource.data.sakit <= 366
+                    && request.resource.data.izin is int && request.resource.data.izin >= 0 && request.resource.data.izin <= 366
+                    && request.resource.data.tanpaKeterangan is int && request.resource.data.tanpaKeterangan >= 0
+                    && request.resource.data.tanpaKeterangan <= 366
+                    && request.resource.data.catatanWali is string && request.resource.data.catatanWali.size() <= 1000;
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.siswaId == resource.data.siswaId
+                    && request.resource.data.keys().hasOnly(
+                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'sakit', 'izin', 'tanpaKeterangan',
+                          'catatanWali', 'keputusan', 'updatedAt'])
+                    && request.resource.data.keputusan in ['Belum diputuskan', 'Naik Kelas', 'Tinggal Kelas']
+                    && request.resource.data.sakit is int && request.resource.data.sakit >= 0 && request.resource.data.sakit <= 366
+                    && request.resource.data.izin is int && request.resource.data.izin >= 0 && request.resource.data.izin <= 366
+                    && request.resource.data.tanpaKeterangan is int && request.resource.data.tanpaKeterangan >= 0
+                    && request.resource.data.tanpaKeterangan <= 366
+                    && request.resource.data.catatanWali is string && request.resource.data.catatanWali.size() <= 1000;
+      allow delete: if false;
+    }
+
+    match /kokurikuler_rapor/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasOnly(
+                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'deskripsi', 'updatedAt'])
+                    && request.resource.data.deskripsi is string && request.resource.data.deskripsi.size() <= 2000;
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.siswaId == resource.data.siswaId
+                    && request.resource.data.keys().hasOnly(
+                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'deskripsi', 'updatedAt'])
+                    && request.resource.data.deskripsi is string && request.resource.data.deskripsi.size() <= 2000;
+      allow delete: if false;
+    }
+
+    // Master kegiatan ekstrakurikuler: admin mengelola (master data), semua guru boleh membaca.
+    match /ekstrakurikuler/{id} {
+      allow read: if isGuru();
+      allow write: if isAdmin();
+    }
+
+    match /ekstrakurikuler_siswa/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasOnly(
+                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'ekskulId', 'nama', 'level', 'deskripsi', 'updatedAt'])
+                    && request.resource.data.level in [1, 2, 3, 4]
+                    && request.resource.data.deskripsi is string && request.resource.data.deskripsi.size() <= 500;
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.siswaId == resource.data.siswaId
+                    && request.resource.data.keys().hasOnly(
+                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'ekskulId', 'nama', 'level', 'deskripsi', 'updatedAt'])
+                    && request.resource.data.level in [1, 2, 3, 4]
+                    && request.resource.data.deskripsi is string && request.resource.data.deskripsi.size() <= 500;
+      allow delete: if waliKelasSendiri(resource.data.kelas);
+    }
+
     match /kktp_tahsin_tahfizh/{jenjang} {
       allow read: if isGuru();
       allow write: if isAdmin();

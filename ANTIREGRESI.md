@@ -283,3 +283,23 @@
 21.7 **Tanggal rapor STS** diatur admin di Periode Akademik (field `tglRaporSts`, teks bebas, berlaku semua kelas, ada di kedua semester) dan TERPISAH dari tanggal rapor akhir semester (`tglRaporKelas1sampai6Sem1`, dst., milik rapor SAS). Rapor STS tidak boleh memakai tanggal rapor akhir. Bila `tglRaporSts` kosong, rapor memakai tanggal hari ini dan daftar periode menandainya "Tanggal rapor STS belum diisi". Field ini tidak disinkron ke `config/akademik` (kode legacy tidak mengenal STS).
 
 21.8 **Tempat dan tanggal** ("Depok, 16 Oktober 2026") dicetak DI DALAM kolom Wali Kelas, rata tengah sejajar jabatan, bukan rata kanan halaman. Kolom lain memakai baris kosong setinggi sama (`.rpr-ttd-tempat`) agar "Orang Tua/Wali", "Kepala Sekolah", dan "Wali Kelas," tetap sejajar. Diuji di `cek-laporan-cetak.mjs`.
+
+## §23. Rapor SAS dan data pelengkapnya (per 16 Okt 2026)
+
+23.1 **Rapor SAS** (`/akademik/rapor-sas`, halaman yang sama dengan Rapor STS: `Rapor.tsx` prop `jenis`). Format penuh v1: A.1/A.2 nilai dan capaian, B Kokurikuler, C Ekstrakurikuler (No, Kegiatan, Predikat, Keterangan), D Ketidakhadiran + Catatan Wali, Tanggapan Orang Tua/Wali Murid, kotak Keputusan (hanya semester 2), tanda tangan Orang Tua/Wali, Kepala Sekolah, Wali Kelas dengan tempat/tanggal di atas kolom Wali Kelas. Pembangunnya `buildBodyPrintSas` (`raporHtml.ts`).
+
+23.2 **Nilai akhir SAS** per mapel = `hitungSasMapel()` (`asesmenRumus.ts`): per TP digabung SLM, STS (bila lebih tinggi menggantikan SLM), dan SAS hanya bila TP masuk cakupan SAS; lalu rata tertimbang `bobotTpDiSemester` (bobot 0 tidak dihitung). Sama dengan kolom "Akhir" di Nilai STS & SAS. Capaian: TP berhasil akhir tertinggi ("Mencapai kompetensi dengan sangat baik dalam …") dan terendah ("Perlu peningkatan dalam …", bila beda TP). Catatan: v2 memakai `bobotMapel ?? 1` (model lama); v2 baru memakai bobot semester, jangan disamakan.
+
+23.3 **Dimuat per kelas**, bukan per siswa: `muatDataRaporSasKelas` membaca tiap mapel sekali (TP, cakupan, nilai SLM/STS/SAS kelas) dan satu query per kelas untuk absensi, kokurikuler, ekskul. Pratinjau memilih siswa dari hasil itu; cetak seluruh kelas memakai hasil yang sama.
+
+23.4 **Tanggal rapor SAS**: tanggal rapor akhir di Periode Akademik (semester 1 semua kelas; semester 2 kelas 1–5 dan kelas 6 terpisah). Tanggal STS terpisah (§21.7). Kosong → tanggal hari ini.
+
+23.5 **Penulisan hanya oleh wali kelas** (`waliKelasSendiri`), admin hanya membaca dan mencetak (§17). Halaman `Kelengkapan Rapor SAS` (`/akademik/kelengkapan-rapor`) berisi tiga tab: Ketidakhadiran & Keputusan, Kokurikuler, Ekstrakurikuler; untuk admin semua isian dinonaktifkan. Master kegiatan ekstrakurikuler dikelola admin di `/admin/ekstrakurikuler`.
+
+23.6 **Keputusan kenaikan**: 'Belum diputuskan' (bawaan) mencetak kedua pilihan TANPA coretan agar dicoret tangan; 'Naik Kelas'/'Tinggal Kelas' mencoret pilihan lain. Kelas 6 mengikuti v1 (tetap "Naik ke Fase D | Kelas 7"); belum ada penyesuaian untuk kelulusan.
+
+23.7 Ekskul berpredikat level 4 ("Tidak Ikut") disaring dari rapor (`ekskulUntukRapor`). Siswa tanpa ekskul tercetak keterangan "tidak mengikuti kegiatan ekstrakurikuler semester ini".
+
+23.8 Deskripsi kokurikuler pada tahap ini ditulis MANUAL oleh wali kelas. Penyusun otomatis v2 (Dimensi Profil Lulusan, Proyek STEM, 7 Kebiasaan/G7KAIH, Kelola DPL) belum dimigrasi; bila dibangun, hasilnya mengisi `kokurikuler_rapor.deskripsi`.
+
+23.9 Uji: `node --experimental-strip-types scripts/cek-rapor-sas.mjs`. Deploy rules sebelum halaman Kelengkapan dipakai (koleksi baru ditolak tanpa rules).

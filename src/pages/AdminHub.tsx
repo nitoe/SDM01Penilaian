@@ -48,6 +48,14 @@ const pengaturan: Item[] = [
     ready: true,
   },
   {
+    to: '/admin/ekstrakurikuler',
+    title: 'Ekstrakurikuler',
+    desc: 'Daftar kegiatan untuk rapor SAS',
+    icon: 'users',
+    tone: 'green',
+    ready: true,
+  },
+  {
     to: '/admin/tahun-ajaran',
     title: 'Data Sekolah',
     desc: 'Identitas, NPSN, dan kepala sekolah',

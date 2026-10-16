@@ -34,11 +34,11 @@ export interface DataRaporSts {
   tanggal: string
   /** Hanya dipakai rapor SAS. Bila kosong, bagian tetap tercetak sebagai isian kosong. */
   kokurikuler?: string
-  ekskul?: { nama: string; ket: string }[]
+  ekskul?: { nama: string; predikat?: string; ket: string }[]
   absensi?: { sakit: number; izin: number; tk: number }
   catatanWali?: string
-  /** Hanya semester 2: 'Tinggal' mencoret Naik; selain itu dianggap Naik (pola v1). */
-  keputusan?: 'Naik' | 'Tinggal'
+  /** Hanya semester 2. 'Naik'/'Tinggal' mencoret pilihan lain; null/kosong = belum diputuskan: kedua pilihan dicetak tanpa coretan (dicoret tangan). */
+  keputusan?: 'Naik' | 'Tinggal' | null
 }
 
 export type JenisRapor = 'sts' | 'sas'
@@ -158,19 +158,21 @@ function bagianSas(d: DataRaporSts): string {
     ? d.ekskul
         .map(
           (e, i) =>
-            `<tr><td class="td-no">${i + 1}</td><td style="font-weight:bold">${escapeHtml(e.nama)}</td><td>${escapeHtml(e.ket)}</td></tr>`,
+            `<tr><td class="td-no">${i + 1}</td><td style="font-weight:bold">${escapeHtml(e.nama)}</td><td style="text-align:center">${escapeHtml(e.predikat || '—')}</td><td>${escapeHtml(e.ket) || '<span class="kosong">—</span>'}</td></tr>`,
         )
         .join('')
-    : '<tr><td colspan="3" class="kosong" style="text-align:center">—</td></tr>'
+    : '<tr><td colspan="4" class="kosong" style="text-align:center">Peserta didik tidak mengikuti kegiatan ekstrakurikuler semester ini.</td></tr>'
   const hari = (n: number | undefined) => (n == null ? '……… hari' : `${n} hari`)
   const n = nomorKelas(d.kelas)
-  const naik = d.keputusan !== 'Tinggal'
+  // Pilihan yang tidak terpilih dicoret; belum diputuskan = tidak ada yang dicoret (dicoret tangan).
+  const tandai = (pilih: 'Naik' | 'Tinggal', teks: string) =>
+    d.keputusan == null ? teks : d.keputusan === pilih ? `<strong>${teks}</strong>` : `<s>${teks}</s>`
   const keputusan =
     d.semester === '2'
       ? `<div class="rpr-keputusan-wrap"><div class="rpr-keputusan">
   <p>Berdasarkan pencapaian kompetensi pada semester ke-1 dan ke-2, peserta didik ditetapkan *)</p>
-  <p>${naik ? '<strong>' : '<s>'}Naik ke Fase ${faseDariNomor(n + 1)} | Kelas ${isNaN(n) ? d.kelas : n + 1}${naik ? '</strong>' : '</s>'}</p>
-  <p>${!naik ? '<strong>' : '<s>'}Tinggal di kelas ${isNaN(n) ? d.kelas : n}${!naik ? '</strong>' : '</s>'}</p>
+  <p>${tandai('Naik', `Naik ke Fase ${faseDariNomor(n + 1)} | Kelas ${isNaN(n) ? d.kelas : n + 1}`)}</p>
+  <p>${tandai('Tinggal', `Tinggal di kelas ${isNaN(n) ? d.kelas : n}`)}</p>
   <p><em>*) coret yang tidak perlu</em></p>
 </div></div>`
       : ''
@@ -181,7 +183,7 @@ function bagianSas(d: DataRaporSts): string {
 </div>
 <div class="rpr-section">
   <div class="rpr-section-title">C. Ekstrakurikuler</div>
-  <table><thead><tr><th class="td-no">No.</th><th>Kegiatan Ekstrakurikuler</th><th>Keterangan</th></tr></thead><tbody>${ekskul}</tbody></table>
+  <table><thead><tr><th class="td-no">No.</th><th>Kegiatan Ekstrakurikuler</th><th style="width:56pt">Predikat</th><th>Keterangan</th></tr></thead><tbody>${ekskul}</tbody></table>
 </div>
 <div class="rpr-footer-group">
   <div class="rpr-section rpr-bagian-d">

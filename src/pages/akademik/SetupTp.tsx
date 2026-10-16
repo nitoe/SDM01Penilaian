@@ -33,8 +33,6 @@ import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { PageHeader, Badge } from '../../components/ui'
 import SeniBudayaPanel from '../../components/SeniBudayaPanel'
 import { DISIPLIN_SENI } from '../../lib/seniKelas'
-import { capaianUntuk, type CapaianResmi } from '../../lib/capaianPembelajaran'
-import { bolehGenerateAi, generateKktpAi, generateTpAi, type ProviderAi } from '../../lib/generateAi'
 import {
   BackLink,
   LEVEL_WARNA,
@@ -56,8 +54,6 @@ interface FormState {
   bobotSlm: string
   bobotSas: string
   levels: { min: string; maks: string; deskripsi: string }[]
-  /** Teks CP resmi — tidak boleh diedit. */
-  cpTerkunci?: boolean
 }
 
 function formBaru(nomor: number): FormState {
@@ -119,8 +115,6 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const [refreshHub, setRefreshHub] = useState(0)
   /** Tab khusus Seni Budaya: 'setup' | nama disiplin | 'semua' */
   const [tabSeni, setTabSeni] = useState<string>('setup')
-  const [antrianAi, setAntrianAi] = useState<{ namaTp: string; tipe: TipeTp; bobotSlm: number; bobotSas: number; cp: string; nomor: number }[]>([])
-  const [busyAi, setBusyAi] = useState<'tp' | 'kktp' | null>(null)
   const fileImporRef = useRef<HTMLInputElement>(null)
   const { show, node } = useToast()
 
@@ -652,24 +646,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
           isSeniBudaya && tabSeni !== 'setup' && tabSeni !== 'semua' ? tabSeni : undefined,
       })
       show(form.id ? 'TP diperbarui.' : 'TP ditambahkan.')
-      if (!form.id && antrianAi.length) {
-        const [berikut, ...sisa] = antrianAi
-        setAntrianAi(sisa)
-        setForm({
-          nomorTp: String(berikut.nomor),
-          namaTp: berikut.namaTp,
-          cp: berikut.cp,
-          tipe: berikut.tipe,
-          bobotSlm: String(berikut.bobotSlm),
-          bobotSas: String(berikut.bobotSas),
-          levels: LEVEL_RANGE_DEFAULT.map((l) => ({ min: String(l.min), maks: String(l.maks), deskripsi: '' })),
-          cpTerkunci: true,
-        })
-        show(`TP disimpan. Berikutnya (${berikut.nomor}) sudah diisi ke form — susun KKTP lalu simpan.`)
-      } else {
-        setAntrianAi([])
-        setForm(null)
-      }
+      setForm(null)
       await muat()
     } catch (e) {
       console.error(e)
@@ -698,78 +675,6 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
 
   const setLevel = (i: number, k: 'min' | 'maks' | 'deskripsi', v: string) =>
     setForm((f) => (f ? { ...f, levels: f.levels.map((l, j) => (j === i ? { ...l, [k]: v } : l)) } : f))
-
-  const akunAi = bolehGenerateAi(profile.uid)
-  const faseCp = faseDariTingkatan(tingkatan)
-  const disiplinAktif = isSeniBudaya && tabSeni !== 'setup' && tabSeni !== 'semua' ? tabSeni : undefined
-  const daftarCp =
-    isSeniBudaya && !disiplinAktif ? [] : capaianUntuk(mapel, faseCp, disiplinAktif)
-
-  function bukaFormDariCp(cp: CapaianResmi) {
-    const nomor = Math.max(0, ...(list ?? []).map((t) => t.nomorTp || 0)) + 1
-    setAntrianAi([])
-    setForm({ ...formBaru(nomor), cp: cp.teks, cpTerkunci: true })
-  }
-
-  async function jalankanGenerateTp(provider: ProviderAi, cp: CapaianResmi) {
-    setBusyAi('tp')
-    try {
-      const hasil = await generateTpAi({
-        provider,
-        mapel,
-        kelas,
-        fase: faseCp,
-        elemen: cp.elemen,
-        teksCp: cp.teks,
-        disiplinSeni: cp.disiplinSeni,
-      })
-      const awal = Math.max(0, ...(list ?? []).map((t) => t.nomorTp || 0)) + 1
-      const [pertama, ...sisa] = hasil
-      if (!pertama) throw new Error('AI tidak menghasilkan TP.')
-      setAntrianAi(sisa.map((d, i) => ({ ...d, cp: cp.teks, nomor: awal + 1 + i })))
-      setForm({
-        nomorTp: String(awal),
-        namaTp: pertama.namaTp,
-        cp: cp.teks,
-        tipe: pertama.tipe,
-        bobotSlm: String(pertama.bobotSlm),
-        bobotSas: String(pertama.bobotSas),
-        levels: LEVEL_RANGE_DEFAULT.map((l) => ({ min: String(l.min), maks: String(l.maks), deskripsi: '' })),
-        cpTerkunci: true,
-      })
-      show(
-        `${hasil.length} TP dari elemen “${cp.elemen}” masuk ke form. Isi KKTP (bisa dengan AI), lalu Simpan.` +
-          (sisa.length ? ` ${sisa.length} TP lain menunggu setelah yang ini disimpan.` : ''),
-      )
-    } catch (e) {
-      show(e instanceof Error ? e.message : 'Gagal generate TP.', true)
-    } finally {
-      setBusyAi(null)
-    }
-  }
-
-  async function jalankanGenerateKktp(provider: ProviderAi) {
-    if (!form?.namaTp.trim()) return show('Isi nama TP dulu.', true)
-    setBusyAi('kktp')
-    try {
-      const deskripsi = await generateKktpAi({
-        provider,
-        mapel,
-        kelas,
-        namaTp: form.namaTp.trim(),
-        tipe: form.tipe,
-        teksCp: form.cp,
-      })
-      setForm((f) =>
-        f ? { ...f, levels: f.levels.map((l, i) => ({ ...l, deskripsi: deskripsi[i] || l.deskripsi })) } : f,
-      )
-      show('Empat deskripsi KKTP masuk ke kotak. Periksa lalu Simpan.')
-    } catch (e) {
-      show(e instanceof Error ? e.message : 'Gagal generate KKTP.', true)
-    } finally {
-      setBusyAi(null)
-    }
-  }
 
   return (
     <div className="space-y-5">
@@ -975,59 +880,6 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         </section>
       )}
 
-      {tulis && (
-        <section className="card-soft space-y-3 p-4">
-          <h2 className="text-[14px] font-semibold text-slate-900">
-            Capaian Pembelajaran resmi — Fase {faseCp}
-          </h2>
-          <p className="text-[12.5px] leading-relaxed text-muted">
-            Teks CP dari pemerintah tidak boleh dipotong atau ditambah. Pilih elemen, lalu susun TP dari CP itu.
-            {isSeniBudaya && !disiplinAktif ? ' Untuk Seni Budaya, buka tab disiplin (Rupa, Musik, Tari, atau Teater) dulu.' : ''}
-          </p>
-          {daftarCp.length === 0 ? (
-            <p className="text-[12.5px] text-muted">
-              {isSeniBudaya && !disiplinAktif
-                ? 'Belum ada elemen yang ditampilkan.'
-                : `Tidak ada CP tersimpan untuk ${mapel} fase ${faseCp}.`}
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {daftarCp.map((cp) => (
-                <li key={`${cp.elemen}-${cp.disiplinSeni || ''}`} className="rounded-lg border border-border p-3">
-                  <p className="text-[13px] font-semibold text-slate-900">{cp.elemen}</p>
-                  <p className="mt-1 whitespace-pre-wrap text-[12.5px] leading-relaxed text-slate-700">{cp.teks}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button type="button" className={btnGhost} onClick={() => bukaFormDariCp(cp)}>
-                      Pakai CP ini
-                    </button>
-                    {akunAi && (
-                      <>
-                        <button
-                          type="button"
-                          className={btnPrimary}
-                          disabled={busyAi !== null}
-                          onClick={() => void jalankanGenerateTp('gemini', cp)}
-                        >
-                          {busyAi === 'tp' ? 'Menyusun…' : 'Generate TP · Gemini'}
-                        </button>
-                        <button
-                          type="button"
-                          className={btnGhost}
-                          disabled={busyAi !== null}
-                          onClick={() => void jalankanGenerateTp('openai', cp)}
-                        >
-                          Generate TP · OpenAI
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
-
       {form && (
         <section className="card-soft space-y-4 p-4">
           <h2 className="text-[14px] font-semibold text-slate-900">{form.id ? 'Edit TP' : 'TP baru'}</h2>
@@ -1052,18 +904,14 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
             </label>
           </div>
           <label className="block text-[12px] font-medium text-slate-600">
-            Capaian Pembelajaran
+            Capaian Pembelajaran (opsional)
             <textarea
               className={`${inputCls} mt-1`}
-              rows={4}
-              readOnly={Boolean(form.cpTerkunci)}
+              rows={2}
               value={form.cp}
               onChange={(e) => setForm({ ...form, cp: e.target.value })}
               placeholder="Kalimat CP dari mapel ini untuk fase terkait"
             />
-            {form.cpTerkunci && (
-              <span className="mt-1 block text-[11px] text-muted">Teks CP resmi — tidak diubah.</span>
-            )}
           </label>
 
           <div className="grid gap-3 sm:grid-cols-3">
@@ -1118,31 +966,9 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
           </p>
 
           <div className="space-y-2.5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[12px] font-medium text-slate-600">
-                Empat level KKTP — rentang nilai dan deskripsi capaian
-              </p>
-              {akunAi && (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className={btnGhost}
-                    disabled={busyAi !== null}
-                    onClick={() => void jalankanGenerateKktp('gemini')}
-                  >
-                    {busyAi === 'kktp' ? 'Menyusun…' : 'Generate KKTP · Gemini'}
-                  </button>
-                  <button
-                    type="button"
-                    className={btnGhost}
-                    disabled={busyAi !== null}
-                    onClick={() => void jalankanGenerateKktp('openai')}
-                  >
-                    Generate KKTP · OpenAI
-                  </button>
-                </div>
-              )}
-            </div>
+            <p className="text-[12px] font-medium text-slate-600">
+              Empat level KKTP — rentang nilai dan deskripsi capaian
+            </p>
             {form.levels.map((l, i) => (
               <div key={i} className="rounded-xl border border-border p-3">
                 <div className="flex items-center gap-2">
@@ -1177,9 +1003,9 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
             ))}
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className={btnPrimary} disabled={busy || busyAi !== null} onClick={() => void simpan()}>
-              {busy ? 'Menyimpan…' : antrianAi.length ? `Simpan TP (${antrianAi.length} menunggu)` : 'Simpan TP'}
+          <div className="flex gap-2">
+            <button type="button" className={btnPrimary} disabled={busy} onClick={() => void simpan()}>
+              {busy ? 'Menyimpan…' : 'Simpan TP'}
             </button>
             <button type="button" className={btnGhost} disabled={busy} onClick={() => setForm(null)}>
               Batal

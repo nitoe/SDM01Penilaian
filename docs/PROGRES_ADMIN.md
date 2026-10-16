@@ -34,11 +34,18 @@ Tahap 4 (15 Okt) salah menafsirkan "laporan STS" sebagai rekap nilai; dikoreksi 
 - Laporan Tahsin-Tahfizh per siswa untuk orang tua (format v2). Lihat ANTIREGRESI §22.
 Belum diuji dengan data Firestore sungguhan. Uji: cetak rapor satu kelas yang cakupan dan nilai STS-nya sudah terisi, bandingkan angka dengan halaman Nilai STS & SAS; cetak laporan Tahsin satu kelas yang sudah punya setoran.
 
+## Tahap 6 — Rapor SAS — SELESAI (16 Okt 2026)
+
+Rapor SAS (form penuh v1), data pelengkap yang diisi wali kelas (absensi, catatan wali, keputusan, kokurikuler manual, ekskul), master ekskul oleh admin. ANTIREGRESI §23.
+Belum diuji dengan data sungguhan. Uji: deploy rules; admin isi master ekskul; wali kelas isi Kelengkapan satu kelas; cetak Rapor SAS dan cocokkan nilai dengan halaman Nilai STS & SAS.
+
 ## Ide lanjutan (belum dikerjakan)
 
 - Pengingat dari admin ke guru yang belum input (memakai `notifikasi` arah admin → guru, perlu field penerima dan rules baca baru).
 - Laporan mutasi yang langsung membuka form Data Siswa admin dengan data terisi.
 - Tanggal input terakhir per guru; ekspor rekap guru yang belum input ke Excel.
-- Rapor SAS (rapor akhir, v1/v2: capaian, kokurikuler, ekstrakurikuler, absensi, catatan wali, keputusan). Butuh modul Absensi, Kokurikuler, Ekstrakurikuler lebih dulu.
+- Penyusun otomatis deskripsi kokurikuler seperti v2 (Dimensi Profil Lulusan, Proyek STEM, 7 Kebiasaan/G7KAIH, Kelola DPL); saat ini deskripsi ditulis manual.
+- Rapor SAS untuk kelas 6: teks kelulusan (v1 tetap "Naik ke Fase D | Kelas 7").
+- Pantauan admin untuk kelengkapan rapor (berapa kelas sudah mengisi absensi/kokurikuler) di dashboard admin.
 - Catat Menulis (sumber data bagian 3 laporan Tahsin) dan Absensi (mengisi Ketidakhadiran di rapor STS).
 - Notifikasi real-time dan pemberitahuan di luar aplikasi.

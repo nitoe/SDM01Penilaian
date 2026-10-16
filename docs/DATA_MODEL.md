@@ -87,3 +87,17 @@ Pemetaan nama (tampilan gabungan → `identitas_siswa`): `jk→jenisKelamin`, `a
 Sumber data: ekspor Dapodik "Daftar Peserta Didik" (.xlsx) lewat Admin → Data Siswa → Impor. Lihat `IMPOR_SISWA.md`.
 Nama siswa dan nama orang tua yang tertulis HURUF BESAR SEMUA dirapikan menjadi Title Case saat impor.
 
+
+
+## Data pelengkap Rapor SAS (Tahap 6)
+
+ID dokumen deterministik (upsert tanpa query tambahan): `{siswaId}_{tahun-ajaran}-{semester}`, mis. `abc123_2026-2027-2`.
+
+| Koleksi | Field | Baca | Tulis |
+|---|---|---|---|
+| `absensi_rapor` | `siswaId, kelas, semester, tahunAjaran, sakit, izin, tanpaKeterangan (0–366), catatanWali (≤1000), keputusan ('Belum diputuskan'\|'Naik Kelas'\|'Tinggal Kelas'), updatedAt` | admin, wali kelas | wali kelas saja; tanpa hapus |
+| `kokurikuler_rapor` | `siswaId, kelas, semester, tahunAjaran, deskripsi (≤2000), updatedAt` | admin, wali kelas | wali kelas saja; tanpa hapus |
+| `ekstrakurikuler` | `nama, aktif, updatedAt`; ID = slug nama | semua guru | admin |
+| `ekstrakurikuler_siswa` | `siswaId, kelas, semester, tahunAjaran, ekskulId, nama, level (1 Layak, 2 Cakap, 3 Mahir, 4 Tidak Ikut), deskripsi (≤500), updatedAt`; ID `{siswaId}__{ekskulId}__{periode}` | admin, wali kelas | wali kelas saja (boleh hapus) |
+
+Query selalu memuat `kelas` + `semester` + `tahunAjaran` (kesamaan saja, tanpa indeks gabungan).

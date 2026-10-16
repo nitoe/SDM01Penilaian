@@ -66,6 +66,22 @@ const laporan: Item[] = [
     tone: 'green',
     ready: true,
   },
+  {
+    to: '/akademik/kelengkapan-rapor',
+    title: 'Kelengkapan Rapor SAS',
+    desc: 'Ketidakhadiran, catatan wali, keputusan, kokurikuler, ekstrakurikuler',
+    icon: 'pencil',
+    tone: 'green',
+    ready: true,
+  },
+  {
+    to: '/akademik/rapor-sas',
+    title: 'Rapor SAS',
+    desc: 'Pratinjau dan cetak rapor sumatif akhir semester',
+    icon: 'printer',
+    tone: 'green',
+    ready: true,
+  },
 ]
 
 const segera: Item[] = [
@@ -158,6 +174,22 @@ const adminLaporan: Item[] = [
     title: 'Cetak Rapor STS',
     desc: 'Laporan hasil belajar STS untuk orang tua, per siswa atau satu kelas',
     icon: 'printer',
+    tone: 'green',
+    ready: true,
+  },
+  {
+    to: '/akademik/rapor-sas',
+    title: 'Cetak Rapor SAS',
+    desc: 'Rapor akhir semester lengkap, per siswa atau satu kelas',
+    icon: 'printer',
+    tone: 'green',
+    ready: true,
+  },
+  {
+    to: '/akademik/kelengkapan-rapor',
+    title: 'Kelengkapan Rapor SAS',
+    desc: 'Lihat ketidakhadiran, kokurikuler, dan ekstrakurikuler yang diisi wali kelas',
+    icon: 'clipboard',
     tone: 'green',
     ready: true,
   },

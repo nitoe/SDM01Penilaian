@@ -15,32 +15,63 @@ export function bobotUntukSts(tp: Pick<TpRumus, 'semester' | 'bobotMapel' | 'bob
   return tp.bobotMapel != null && tp.bobotMapel > 0 ? Number(tp.bobotMapel) : 1
 }
 
+type SumberSas = {
+  slm: PerTp<{ slm: number }>
+  sts: PerTp<{ nilai: number }>
+  sas: PerTp<{ nilai: number }>
+  cakupanSas: Set<string>
+}
+
+/** Nilai akhir satu TP: SLM, STS (bila lebih tinggi menggantikan SLM), dan SAS hanya bila TP masuk cakupan SAS. */
+function nilaiAkhirPerTp(tp: TpRumus & Pick<TujuanPembelajaran, 'tipe' | 'levels'>, data: SumberSas, siswaId: string) {
+  const sas = data.cakupanSas.has(tp.id) ? (data.sas[tp.id]?.[siswaId]?.nilai ?? null) : null
+  return hitungNilaiAkhirTP(data.slm[tp.id]?.[siswaId]?.slm, sas, tp, data.sts[tp.id]?.[siswaId]?.nilai ?? null)
+}
+
 /**
- * Nilai SAS (akhir) mapel satu siswa. Per TP: SLM, STS (bila lebih tinggi menggantikan SLM), dan SAS hanya bila
- * TP itu masuk cakupan SAS; lalu dirata-rata menurut bobot TP semester. Sama dengan "Akhir" di halaman Nilai STS & SAS.
+ * Nilai SAS (akhir) mapel + bahan capaian satu siswa. Sama dengan "Akhir" di halaman Nilai STS & SAS:
+ * per TP digabung (SLM, STS, SAS), lalu dirata-rata menurut bobot TP semester (bobot 0 tidak dihitung).
+ * Capaian: deskripsi KKTP TP bernilai akhir tertinggi dan terendah (pola v1/v2), TP terendah hanya bila beda TP.
  */
+export function hitungSasMapel(
+  tpSemester: (TpRumus & Pick<TujuanPembelajaran, 'tipe' | 'levels'>)[],
+  data: SumberSas,
+  siswaId: string,
+  semester: string,
+): HasilStsMapel {
+  const hasil: HasilStsMapel = { nilaiAkhir: null, capaianTerbaik: '', capaianPerluBimbingan: '' }
+  if (!tpSemester.length) return hasil
+  const perTp = tpSemester.map((tp) => ({
+    tp,
+    nilai: nilaiAkhirPerTp(tp, data, siswaId),
+    bobot: bobotTpDiSemester(tp, semester) ?? 0,
+  }))
+  hasil.nilaiAkhir = hitungNilaiAkhirMapel(perTp.map((x) => ({ nilai: x.nilai, bobot: x.bobot })))
+  const terisi = perTp.filter((x) => x.nilai != null && Number.isFinite(x.nilai))
+  if (terisi.length) {
+    const urut = [...terisi].sort((a, b) => Number(b.nilai) - Number(a.nilai))
+    const terbaik = urut[0]
+    const terendah = urut[urut.length - 1]
+    hasil.capaianTerbaik = tentukanLevel(terbaik.nilai, terbaik.tp)?.deskripsi || ''
+    if (terendah.tp.id !== terbaik.tp.id) {
+      hasil.capaianPerluBimbingan = tentukanLevel(terendah.nilai, terendah.tp)?.deskripsi || ''
+    }
+  }
+  return hasil
+}
+
+/** Nilai SAS (akhir) mapel satu siswa saja (tanpa capaian). */
 export function nilaiSasMapel(
   tpSemester: TpRumus[],
-  data: {
-    slm: PerTp<{ slm: number }>
-    sts: PerTp<{ nilai: number }>
-    sas: PerTp<{ nilai: number }>
-    cakupanSas: Set<string>
-  },
+  data: SumberSas,
   siswaId: string,
   semester: string,
 ): number | null {
   return hitungNilaiAkhirMapel(
-    tpSemester.map((tp) => {
-      const sas = data.cakupanSas.has(tp.id) ? (data.sas[tp.id]?.[siswaId]?.nilai ?? null) : null
-      const nilai = hitungNilaiAkhirTP(
-        data.slm[tp.id]?.[siswaId]?.slm,
-        sas,
-        tp,
-        data.sts[tp.id]?.[siswaId]?.nilai ?? null,
-      )
-      return { nilai, bobot: bobotTpDiSemester(tp, semester) ?? 0 }
-    }),
+    tpSemester.map((tp) => ({
+      nilai: nilaiAkhirPerTp(tp as TpRumus & Pick<TujuanPembelajaran, 'tipe' | 'levels'>, data, siswaId),
+      bobot: bobotTpDiSemester(tp, semester) ?? 0,
+    })),
   )
 }
 

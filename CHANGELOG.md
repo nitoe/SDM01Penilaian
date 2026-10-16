@@ -317,10 +317,10 @@ Catatan koreksi: rilis Tahap 4 sempat memuat "Rekap STS & SAS per kelas". Itu sa
 - Tempat dan tanggal di rapor kini di tengah kolom Wali Kelas (sebelumnya rata kanan halaman sehingga tidak sejajar). Berlaku juga untuk form SAS.
 - `PeriodeAkademik.tglRaporSts`, `SimpanPeriodeInput.tglRaporSts`. Tidak ada perubahan rules/indeks.
 
-## Belum dirilis — Generate TP & KKTP dengan AI (16 Okt 2026)
+## Belum dirilis — Rapor SAS (Tahap 6)
 
-- Capaian Pembelajaran resmi (Kurikulum Merdeka 2025 + ISMUBA) disimpan utuh di `src/lib/capaianPembelajaran.ts`. Di Setup TP, guru melihat elemen CP sesuai fase kelas (Seni Budaya per disiplin). Teks CP tidak bisa diedit bila diambil dari dokumen ini.
-- Mapel bawaan baru: **Koding dan Kecerdasan Artifisial** (kelas 5–6), terpisah dari Informatika. Muncul setelah admin menekan unggah mapel bawaan di Mata Pelajaran (dokumen yang sudah ada tidak ditimpa).
-- Generate AI hanya untuk UID `v4fQXsqCzYUtHrqcDM0u48sxIfn1`. Dua tombol: Gemini dan OpenAI. TP disusun per elemen CP (jumlah ditentukan model dari kompleksitas CP) dan langsung masuk ke form; TP berikutnya mengisi form setelah yang sekarang disimpan. KKTP (4 deskripsi) diisi ke kotak level TP yang sedang dibuka.
-- Cloud Function `generateTpAi` dan `generateKktpAi` (asia-southeast2). Butuh secret `GEMINI_API_KEY` dan `OPENAI_API_KEY`, lalu `npm run deploy:functions` dan `npm run deploy`.
-
+- **Rapor SAS** `/akademik/rapor-sas` (wali kelas dan admin): form penuh v1 dengan Kokurikuler, Ekstrakurikuler (kolom Predikat), Ketidakhadiran, Catatan Wali, Tanggapan Orang Tua, Keputusan semester 2, tiga tanda tangan. Pratinjau per siswa dan **Cetak seluruh kelas**. Halaman memakai `Rapor.tsx` bersama Rapor STS.
+- **Kelengkapan Rapor SAS** `/akademik/kelengkapan-rapor` (wali kelas mengisi; admin melihat): tab Ketidakhadiran & Keputusan, Kokurikuler (dengan "terapkan deskripsi umum ke yang kosong"), Ekstrakurikuler.
+- **Admin → Ekstrakurikuler** `/admin/ekstrakurikuler`: master kegiatan.
+- Koleksi baru + rules: `absensi_rapor`, `kokurikuler_rapor`, `ekstrakurikuler`, `ekstrakurikuler_siswa` (tanpa indeks gabungan). **Rules belum di-deploy.**
+- Baru: `lib/raporSas.ts`, `lib/raporData.ts`, `lib/raporDataRumus.ts`, `types/raporData.ts`, `asesmenRumus.hitungSasMapel`, `scripts/cek-rapor-sas.mjs`. Diubah: `raporHtml.ts` (keputusan tiga keadaan, kolom predikat), `raporSts.ts` (`cetakRapor`, `cetakRaporBanyak`), `Rapor.tsx`, hub Akademik dan Admin. `ANTIREGRESI.md` §23, `DATA_MODEL.md`.

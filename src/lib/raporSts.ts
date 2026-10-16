@@ -20,9 +20,9 @@ import { cetakDokumenHtml } from './cetakIframe'
 import { hitungStsMapel, muatanMapel } from './asesmenRumus'
 import type { ConfigAkademik, Mapel, Semester, TujuanPembelajaran } from '../types/akademik'
 
-import { buildBodyPrintSts, cssHalaman, escapeHtml, PRINT_CSS, type BarisRaporSts, type DataRaporSts } from './raporHtml'
+import { buildBodyPrintRapor, cssHalaman, escapeHtml, PRINT_CSS, type BarisRaporSts, type DataRaporSts, type JenisRapor } from './raporHtml'
 export type { BarisRaporSts, DataRaporSts } from './raporHtml'
-export { buildBodyPrintSts, buildBodyPrintSas, dokumenPratinjauSts, dokumenPratinjauRapor } from './raporHtml'
+export { buildBodyPrintSts, buildBodyPrintSas, dokumenPratinjauSts, dokumenPratinjauRapor, type JenisRapor } from './raporHtml'
 
 const NAMA_BULAN = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -103,7 +103,7 @@ export async function getRaporSTSSiswa(ctx: {
   return barisDariSumber(sumber, ctx.siswaId, ctx.semester)
 }
 
-interface KonteksData {
+export interface KonteksData {
   config: ConfigAkademik
   semester: Semester
   tahunAjaran: string
@@ -111,7 +111,7 @@ interface KonteksData {
   tanggal: string
 }
 
-async function konteksData(ctx: {
+export async function konteksData(ctx: {
   semester?: Semester
   tahunAjaran?: string
   kotaRapor?: string
@@ -215,12 +215,15 @@ ${body}
   cetakDokumenHtml(html)
 }
 
-export function cetakRaporSts(d: DataRaporSts): void {
-  cetakHtml(`Rapor STS — ${d.siswa.nama} — Kelas ${d.kelas}`, buildBodyPrintSts(d), d)
+export function cetakRapor(d: DataRaporSts, jenis: JenisRapor): void {
+  cetakHtml(`Rapor ${jenis.toUpperCase()} — ${d.siswa.nama} — Kelas ${d.kelas}`, buildBodyPrintRapor(d, jenis), d)
 }
 
 /** Cetak banyak siswa sekaligus: satu siswa per halaman (atau lebih bila rapornya panjang). */
-export function cetakRaporStsBanyak(daftar: DataRaporSts[]): void {
+export function cetakRaporBanyak(daftar: DataRaporSts[], jenis: JenisRapor): void {
   if (!daftar.length) return
-  cetakHtml(`Rapor STS — Kelas ${daftar[0].kelas}`, daftar.map(buildBodyPrintSts).join('\n'))
+  cetakHtml(`Rapor ${jenis.toUpperCase()} — Kelas ${daftar[0].kelas}`, daftar.map((d) => buildBodyPrintRapor(d, jenis)).join('\n'))
 }
+
+export const cetakRaporSts = (d: DataRaporSts) => cetakRapor(d, 'sts')
+export const cetakRaporStsBanyak = (daftar: DataRaporSts[]) => cetakRaporBanyak(daftar, 'sts')

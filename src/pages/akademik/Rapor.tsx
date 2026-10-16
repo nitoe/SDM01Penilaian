@@ -7,13 +7,15 @@ import { getSiswaList } from '../../lib/tahsinData'
 import { kelasSaya } from '../../lib/kelasSaya'
 import { isAdminRole } from '../../lib/roles'
 import {
-  cetakRaporSts,
-  cetakRaporStsBanyak,
-  dokumenPratinjauSts,
+  cetakRapor,
+  cetakRaporBanyak,
+  dokumenPratinjauRapor,
   muatDataRaporSts,
   muatDataRaporStsKelas,
   type DataRaporSts,
+  type JenisRapor,
 } from '../../lib/raporSts'
+import { muatDataRaporSasKelas } from '../../lib/raporSas'
 import { cariWaliKelas } from '../../lib/penandatangan'
 import { SEMUA_KELAS } from '../../types/tahsin'
 import { PageHeader } from '../../components/ui'
@@ -21,12 +23,15 @@ import { BackLink, Notice, Spinner, btnGhost, btnPrimary, inputCls } from './sha
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 
 /**
- * Rapor STS ("rapor bayangan" untuk orang tua, hanya dari hasil STS).
+ * Rapor STS ("rapor bayangan" untuk orang tua, hanya dari hasil STS) dan Rapor SAS (rapor akhir lengkap:
+ * nilai, kokurikuler, ekstrakurikuler, ketidakhadiran, catatan wali, keputusan) — satu halaman, dua mode.
  * Wali kelas: kelas yang diwalikan. Admin: semua kelas (hanya mencetak, tidak mengubah nilai).
  * Alur: pilih kelas → pilih siswa → pratinjau + cetak PDF, atau cetak seluruh kelas.
  * Pengaturan disiplin Seni Budaya: Setup TP → Seni Budaya → tab Setup.
  */
-export default function Rapor({ profile }: { profile: AppUser }) {
+export default function Rapor({ profile, jenis = 'sts' }: { profile: AppUser; jenis?: JenisRapor }) {
+  const sas = jenis === 'sas'
+  const NAMA = sas ? 'Rapor SAS' : 'Rapor STS'
   const admin = isAdminRole(profile.role)
   const periodeAk = usePeriodeAkademik()
   const { wali } = kelasSaya(profile)
@@ -36,6 +41,8 @@ export default function Rapor({ profile }: { profile: AppUser }) {
   const [siswaList, setSiswaList] = useState<SiswaTahsin[] | null>(null)
   const [siswaId, setSiswaId] = useState('')
   const [data, setData] = useState<DataRaporSts | null>(null)
+  /** Rapor SAS: seluruh siswa satu kelas dimuat sekali; pratinjau tinggal memilih siswa. */
+  const [kelasData, setKelasData] = useState<DataRaporSts[] | null>(null)
   const [loadingSiswa, setLoadingSiswa] = useState(false)
   const [loadingRapor, setLoadingRapor] = useState(false)
   const [galat, setGalat] = useState('')
@@ -44,11 +51,17 @@ export default function Rapor({ profile }: { profile: AppUser }) {
   const [tinggiPratinjau, setTinggiPratinjau] = useState(900)
 
   /**
-   * Tanggal penyerahan rapor STS dari pengaturan periode (Admin → Periode Akademik).
-   * Sengaja BUKAN tanggal rapor akhir semester; bila belum diisi, rapor memakai tanggal hari ini.
+   * STS: tanggal penyerahan rapor STS (Admin → Periode Akademik), BUKAN tanggal rapor akhir semester.
+   * SAS: tanggal rapor akhir (semester 1 semua kelas; semester 2 kelas 1–5 dan kelas 6 berbeda).
+   * Kosong → rapor memakai tanggal hari ini.
    */
   function tanggalDariPeriode(): string | undefined {
-    return periodeAk.periode?.tglRaporSts?.trim() || undefined
+    const p = periodeAk.periode
+    if (!p) return undefined
+    if (!sas) return p.tglRaporSts?.trim() || undefined
+    if (p.semester === '1') return p.tglRaporKelas1sampai6Sem1?.trim() || undefined
+    const isKelas6 = /^6/i.test(kelas)
+    return (isKelas6 ? p.tglRaporKelas6Sem2 : p.tglRaporKelas1sampai5Sem2)?.trim() || undefined
   }
 
   useEffect(() => {
@@ -101,7 +114,43 @@ export default function Rapor({ profile }: { profile: AppUser }) {
     }
   }, [kelas, profile.role])
 
+  // Rapor SAS: muat seluruh kelas sekali (nilai + absensi + kokurikuler + ekskul), bukan per siswa.
   useEffect(() => {
+    if (!sas) return
+    if (!kelas || !periodeAk.ready || !siswaList) {
+      setKelasData(null)
+      return
+    }
+    let batal = false
+    setLoadingRapor(true)
+    setKelasData(null)
+    setGalat('')
+    void muatDataRaporSasKelas({
+      kelas,
+      waliNama,
+      role: profile.role,
+      semester: periodeAk.semester,
+      tahunAjaran: periodeAk.tahunAjaran,
+      kotaRapor: periodeAk.periode?.kotaRapor,
+      tanggalRapor: tanggalDariPeriode(),
+    })
+      .then((d) => !batal && setKelasData(d))
+      .catch((e) => {
+        console.error(e)
+        if (!batal) setGalat('Gagal memuat data rapor SAS. Periksa koneksi, hak akses, dan rules terbaru.')
+      })
+      .finally(() => !batal && setLoadingRapor(false))
+    return () => {
+      batal = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sas, kelas, siswaList, waliNama, profile.role, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran, periodeAk.periode])
+
+  useEffect(() => {
+    if (sas) {
+      setData(siswaId ? (kelasData?.find((d) => d.siswa.id === siswaId) ?? null) : null)
+      return
+    }
     if (!kelas || !siswaId || !siswaList) {
       setData(null)
       return
@@ -141,7 +190,7 @@ export default function Rapor({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [kelas, siswaId, siswaList, profile, waliNama, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran, periodeAk.periode])
+  }, [sas, kelasData, kelas, siswaId, siswaList, profile, waliNama, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran, periodeAk.periode])
 
   if (!periodeAk.loading && !periodeAk.ready) {
     return (
@@ -172,17 +221,20 @@ export default function Rapor({ profile }: { profile: AppUser }) {
     setCetakKelas(true)
     setGalat('')
     try {
-      const semua = await muatDataRaporStsKelas({
-        kelas,
-        waliNama,
-        role: profile.role,
-        semester: periodeAk.semester,
-        tahunAjaran: periodeAk.tahunAjaran,
-        kotaRapor: periodeAk.periode?.kotaRapor,
-        tanggalRapor: tanggalDariPeriode(),
-      })
+      const semua =
+        sas && kelasData
+          ? kelasData
+          : await (sas ? muatDataRaporSasKelas : muatDataRaporStsKelas)({
+              kelas,
+              waliNama,
+              role: profile.role,
+              semester: periodeAk.semester,
+              tahunAjaran: periodeAk.tahunAjaran,
+              kotaRapor: periodeAk.periode?.kotaRapor,
+              tanggalRapor: tanggalDariPeriode(),
+            })
       if (!semua.length) setGalat(`Tidak ada siswa aktif di kelas ${kelas}.`)
-      else cetakRaporStsBanyak(semua)
+      else cetakRaporBanyak(semua, jenis)
     } catch (e) {
       console.error(e)
       setGalat('Gagal menyiapkan rapor satu kelas. Periksa koneksi dan hak akses.')
@@ -199,11 +251,11 @@ export default function Rapor({ profile }: { profile: AppUser }) {
         <PageHeader
           back={{ to: '/akademik', label: admin ? 'Pantauan Akademik' : 'Akademik & Rapor' }}
           eyebrow="Akademik"
-          title={admin ? 'Cetak Rapor STS' : 'Rapor STS'}
+          title={admin ? `Cetak ${NAMA}` : NAMA}
           subtitle={
             periodeAk.ready
-              ? `Periode ${periodeAk.label} · ${admin ? 'Pratinjau dan cetak rapor STS semua kelas. Admin hanya mencetak; nilai diinput guru.' : 'Pratinjau dan cetak rapor STS untuk kelas yang Anda walikan.'}`
-              : 'Pratinjau dan cetak Laporan Hasil Belajar STS. Pilih periode di header atau login ulang.'
+              ? `Periode ${periodeAk.label} · ${admin ? `Pratinjau dan cetak ${NAMA} semua kelas. Admin hanya mencetak; data diisi guru.` : `Pratinjau dan cetak ${NAMA} untuk kelas yang Anda walikan.`}`
+              : `Pratinjau dan cetak Laporan Hasil Belajar ${sas ? 'SAS' : 'STS'}. Pilih periode di header atau login ulang.`
           }
         />
       </div>
@@ -262,7 +314,7 @@ export default function Rapor({ profile }: { profile: AppUser }) {
         </div>
       ) : !siswaId ? (
         <div className="card-soft p-8 text-center print:hidden">
-          <p className="text-[13px] text-muted">Pilih siswa untuk menampilkan pratinjau rapor STS.</p>
+          <p className="text-[13px] text-muted">Pilih siswa untuk menampilkan pratinjau {NAMA}.</p>
         </div>
       ) : data ? (
         <>
@@ -295,7 +347,7 @@ export default function Rapor({ profile }: { profile: AppUser }) {
               <button type="button" className={btnGhost} disabled={cetakKelas} onClick={cetakSeluruhKelas}>
                 {cetakKelas ? 'Menyiapkan…' : `Cetak seluruh kelas (${siswaList?.length ?? 0})`}
               </button>
-              <button type="button" className={btnPrimary} onClick={() => cetakRaporSts(data)}>
+              <button type="button" className={btnPrimary} onClick={() => cetakRapor(data, jenis)}>
                 Cetak / Simpan PDF
               </button>
             </div>
@@ -303,9 +355,9 @@ export default function Rapor({ profile }: { profile: AppUser }) {
 
           <div className="mx-auto max-w-[760px] overflow-hidden rounded-xl border border-border bg-white shadow-sm print:hidden">
             <iframe
-              title="Pratinjau rapor STS"
+              title={`Pratinjau ${NAMA}`}
               sandbox="allow-same-origin"
-              srcDoc={dokumenPratinjauSts([data])}
+              srcDoc={dokumenPratinjauRapor([data], jenis)}
               className="block w-full"
               style={{ height: tinggiPratinjau }}
               onLoad={(e) => {

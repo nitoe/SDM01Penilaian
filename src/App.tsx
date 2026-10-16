@@ -11,6 +11,8 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import ProfilSaya from './pages/ProfilSaya'
 import Notifikasi from './pages/Notifikasi'
+import KelengkapanRapor from './pages/akademik/KelengkapanRapor'
+import KelolaEkstrakurikuler from './pages/admin/KelolaEkstrakurikuler'
 import LaporanTahsin from './pages/tahsin/LaporanTahsin'
 import Home from './pages/Home'
 import TahsinHub from './pages/TahsinHub'
@@ -149,6 +151,8 @@ export default function App() {
             <Route path="/akademik/nilai-sts" element={profile ? <NilaiStsSas profile={profile} /> : null} />
             <Route path="/akademik/laporan-slm" element={profile ? <LaporanSlm profile={profile} /> : null} />
             <Route path="/akademik/rapor" element={profile ? <Rapor profile={profile} /> : null} />
+            <Route path="/akademik/rapor-sas" element={profile ? <Rapor profile={profile} jenis="sas" /> : null} />
+            <Route path="/akademik/kelengkapan-rapor" element={profile ? <KelengkapanRapor profile={profile} /> : null} />
             <Route path="/akademik/*" element={<Placeholder />} />
           </Route>
 
@@ -174,6 +178,7 @@ export default function App() {
               path="/admin/periode"
               element={profile ? <KelolaPeriode profile={profile} /> : null}
             />
+            <Route path="/admin/ekstrakurikuler" element={<KelolaEkstrakurikuler />} />
             <Route path="/admin/*" element={<Placeholder />} />
           </Route>
         </Route>
