@@ -1,7 +1,7 @@
 import type { TujuanPembelajaran } from '../types/akademik.ts'
-import { bobotTpDiSemester, hitungNilaiAkhirMapel, hitungNilaiAkhirTP } from './akademikRumus.ts'
+import { bobotTpDiSemester, hitungNilaiAkhirMapel, hitungNilaiAkhirTP, tentukanLevel } from './akademikRumus.ts'
 
-// Rumus murni untuk rekap cetak STS/SAS per kelas (ANTIREGRESI §20). Tanpa Firebase agar bisa diuji:
+// Rumus murni nilai STS/SAS untuk rapor cetak (ANTIREGRESI §21). Tanpa Firebase agar bisa diuji:
 // node --experimental-strip-types scripts/cek-laporan-cetak.mjs
 
 type TpRumus = Pick<TujuanPembelajaran, 'id' | 'semester' | 'bobotMapel' | 'bobotPerSemester' | 'bobotSlm' | 'bobotSas'>
@@ -13,18 +13,6 @@ export function bobotUntukSts(tp: Pick<TpRumus, 'semester' | 'bobotMapel' | 'bob
   const b = bobotTpDiSemester(tp, semester)
   if (b != null && b > 0) return b
   return tp.bobotMapel != null && tp.bobotMapel > 0 ? Number(tp.bobotMapel) : 1
-}
-
-/** Nilai STS mapel satu siswa: rata tertimbang nilai STS murni pada TP yang masuk cakupan STS. */
-export function nilaiStsMapel(
-  tpCakupan: TpRumus[],
-  sts: PerTp<{ nilai: number }>,
-  siswaId: string,
-  semester: string,
-): number | null {
-  return hitungNilaiAkhirMapel(
-    tpCakupan.map((tp) => ({ nilai: sts[tp.id]?.[siswaId]?.nilai ?? null, bobot: bobotUntukSts(tp, semester) })),
-  )
 }
 
 /**
@@ -56,30 +44,61 @@ export function nilaiSasMapel(
   )
 }
 
-/** Rata-rata bulat dari nilai yang ada; null bila tidak ada satu pun. */
-export function rataNilai(daftar: (number | null | undefined)[]): number | null {
-  const ada = daftar.filter((n): n is number => typeof n === 'number' && Number.isFinite(n))
-  return ada.length ? Math.round(ada.reduce((a, b) => a + b, 0) / ada.length) : null
+/**
+ * Muatan Yayasan pada rapor (A.2) — mengikuti rapor v1 (ISMUBA di luar Al-Islam): Bahasa Arab dan
+ * Kemuhammadiyahan. Mapel lain masuk Muatan Wajib (A.1). Ubah di sini bila susunan rapor berubah.
+ */
+export const MUATAN_YAYASAN = ['Bahasa Arab', 'Kemuhammadiyahan'] as const
+
+export function muatanMapel(nama: string): 'wajib' | 'yayasan' {
+  return (MUATAN_YAYASAN as readonly string[]).includes(nama) ? 'yayasan' : 'wajib'
 }
 
-export interface RekapKelas {
-  mapel: { nama: string; label: string }[]
-  siswa: { id: string; nama: string }[]
-  /** siswaId → mapel → nilai */
-  nilai: Record<string, Record<string, number | null>>
-  rataMapel: Record<string, number | null>
-  rataSiswa: Record<string, number | null>
+export interface HasilStsMapel {
+  nilaiAkhir: number | null
+  /** deskripsi KKTP TP bernilai tertinggi (tanpa awalan kalimat) */
+  capaianTerbaik: string
+  /** deskripsi KKTP TP bernilai terendah; kosong bila hanya satu TP terisi */
+  capaianPerluBimbingan: string
 }
 
-/** Susun tabel rekap dari nilai per mapel per siswa. Rata-rata siswa dihitung dari mapel yang punya nilai. */
-export function susunRekap(
-  mapel: { nama: string; label: string }[],
-  siswa: { id: string; nama: string }[],
-  nilai: Record<string, Record<string, number | null>>,
-): RekapKelas {
-  const rataMapel: Record<string, number | null> = {}
-  for (const m of mapel) rataMapel[m.nama] = rataNilai(siswa.map((s) => nilai[s.id]?.[m.nama]))
-  const rataSiswa: Record<string, number | null> = {}
-  for (const s of siswa) rataSiswa[s.id] = rataNilai(mapel.map((m) => nilai[s.id]?.[m.nama]))
-  return { mapel, siswa, nilai, rataMapel, rataSiswa }
+/**
+ * Nilai akhir STS + bahan kalimat capaian satu mapel untuk satu siswa. Dipakai Rapor STS satu siswa
+ * dan seluruh kelas supaya hasilnya identik (ANTIREGRESI §21).
+ */
+export function hitungStsMapel(
+  tpCakupan: (TpRumus & Pick<TujuanPembelajaran, 'tipe' | 'levels'>)[],
+  sts: PerTp<{ nilai: number }>,
+  siswaId: string,
+  semester: string,
+): HasilStsMapel {
+  const hasil: HasilStsMapel = { nilaiAkhir: null, capaianTerbaik: '', capaianPerluBimbingan: '' }
+  if (!tpCakupan.length) return hasil
+  const perTp = tpCakupan.map((tp) => ({
+    tp,
+    nilai: sts[tp.id]?.[siswaId]?.nilai ?? null,
+    bobot: bobotUntukSts(tp, semester),
+  }))
+  hasil.nilaiAkhir = hitungNilaiAkhirMapel(perTp.map((x) => ({ nilai: x.nilai, bobot: x.bobot })))
+  const terisi = perTp.filter((x) => x.nilai != null && Number.isFinite(x.nilai))
+  if (terisi.length) {
+    const urut = [...terisi].sort((a, b) => Number(b.nilai) - Number(a.nilai))
+    const terbaik = urut[0]
+    const terendah = urut[urut.length - 1]
+    hasil.capaianTerbaik = tentukanLevel(terbaik.nilai, terbaik.tp)?.deskripsi || ''
+    if (terendah.tp.id !== terbaik.tp.id) {
+      hasil.capaianPerluBimbingan = tentukanLevel(terendah.nilai, terendah.tp)?.deskripsi || ''
+    }
+  }
+  return hasil
+}
+
+const akhiriTitik = (t: string) => (/[.!?]$/.test(t.trim()) ? t.trim() : `${t.trim()}.`)
+
+/** Kalimat capaian pada rapor, pola v1: "Mencapai kompetensi dengan sangat baik dalam …" dan "Perlu peningkatan dalam …". */
+export function kalimatCapaian(terbaik: string, perlu: string): string[] {
+  const hasil: string[] = []
+  if (terbaik.trim()) hasil.push(akhiriTitik(`Mencapai kompetensi dengan sangat baik dalam ${terbaik.trim()}`))
+  if (perlu.trim()) hasil.push(akhiriTitik(`Perlu peningkatan dalam ${perlu.trim()}`))
+  return hasil
 }

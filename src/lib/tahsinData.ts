@@ -213,6 +213,12 @@ export async function saveTargetHafalan(
   })
 }
 
+/** Semua catatan menulis satu kelas (untuk laporan cetak); penyaringan tanggal dilakukan pemanggil. */
+export async function getMenulisKelas(kelas: string): Promise<MenulisRecord[]> {
+  const snap = await getDocs(query(collection(db, 'menulis_log'), where('kelas', '==', kelas)))
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as MenulisRecord)
+}
+
 export async function getMenulisLog(
   siswaId: string,
   kelas: string,

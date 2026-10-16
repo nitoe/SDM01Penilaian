@@ -17,7 +17,7 @@ Semua kolom "Ada" **belum diuji dengan data Firestore sungguhan** — gunakan da
 | Riwayat: ubah (jenis, status, catatan) dan hapus catatan sendiri | Ada | Dikembalikan 10 Okt 2026; butuh `deploy:rules` |
 | Catat Menulis | Belum | |
 | Target Hafalan (Iqro: jilid + halaman; Al-Qur'an: daftar surah, isi cepat Juz 30/29) | Ada | Ringkasan target semua kelas dalam satu daftar. Butuh `target_hafalan` dari migrasi v2 atau diisi baru |
-| Cetak Laporan | Belum | |
+| Cetak Laporan (per siswa, untuk orang tua; satu siswa atau seluruh kelas) | Ada | Belum diuji dengan data. Bagian Menulis menunggu Catat Menulis |
 | Portal orang tua (daftar, riwayat anak, kelola akun ortu) | Belum | |
 | seed-siswa, seed-kktp | Tidak perlu | Diganti impor Excel Dapodik |
 
@@ -33,7 +33,8 @@ Semua kolom "Ada" **belum diuji dengan data Firestore sungguhan** — gunakan da
 | Ekstrakurikuler (+ kelola) | Belum | |
 | Kokurikuler: DPL, Proyek STEM, 7KAIH, deskripsi | Belum | |
 | Kelengkapan rapor (identitas, pilih siswa) | Belum | Data `identitas_siswa` sudah tersedia dari impor Excel |
-| Cetak rapor STS dan SAS | Belum | |
+| Cetak rapor STS (rapor bayangan, per siswa dan seluruh kelas; wali kelas dan admin) | Ada | Belum diuji dengan data. Tanpa kokurikuler/ekskul/absensi (modulnya belum ada) |
+| Cetak rapor SAS | Belum | Menunggu Absensi, Kokurikuler, Ekstrakurikuler |
 | Mutasi siswa | Belum | |
 | Beranda wali kelas (wali-hub) | Belum | |
 

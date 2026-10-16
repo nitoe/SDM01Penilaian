@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { logout } from '../lib/auth'
 import { ringkasKelas } from '../lib/kelasSaya'
-import { canAkademik, canTahsin, isAdminRole } from '../lib/roles'
+import { canAkademik, canTahsin, isAdminRole, isStaff } from '../lib/roles'
+import { hitungBaru } from '../lib/notifikasi'
 import type { AppUser } from '../types/user'
 import { ROLE_LABEL } from '../types/user'
 import { usePeriode } from '../context/PeriodeContext'
@@ -35,6 +37,7 @@ const HALAMAN_SEMPIT = ['/profil']
 function sectionTitle(pathname: string, admin: boolean): string {
   if (pathname.startsWith('/tahsin')) return admin ? 'Pantauan Tahsin & Tahfizh' : 'Tahsin & Tahfizh'
   if (pathname.startsWith('/akademik')) return admin ? 'Pantauan Akademik' : 'Akademik & Rapor'
+  if (pathname.startsWith('/notifikasi')) return admin ? 'Notifikasi' : 'Laporan ke Admin'
   if (pathname.startsWith('/admin')) return 'Administrasi'
   return 'Beranda'
 }
@@ -48,10 +51,10 @@ const TANGGAL = new Intl.DateTimeFormat('id-ID', {
 
 const sideLink = ({ isActive }: { isActive: boolean }) =>
   [
-    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors',
+    'relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors',
     isActive
-      ? 'bg-white/14 text-white'
-      : 'text-white/75 hover:bg-white/8 hover:text-white',
+      ? 'bg-muh-50 text-muh-800 before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-full before:bg-muh-600'
+      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
   ].join(' ')
 
 const tabLink = ({ isActive }: { isActive: boolean }) =>
@@ -64,6 +67,19 @@ export default function Layout({ profile }: LayoutProps) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { periode, daftar, setPeriodeId, isAdmin } = usePeriode()
+  const [laporanBaru, setLaporanBaru] = useState(0)
+
+  // Lonceng admin: jumlah laporan baru. Disegarkan tiap pindah halaman; gagal = diam (tidak mengganggu).
+  useEffect(() => {
+    if (!isAdminRole(profile.role)) return
+    let batal = false
+    hitungBaru()
+      .then((n) => !batal && setLaporanBaru(n))
+      .catch(() => undefined)
+    return () => {
+      batal = true
+    }
+  }, [profile.role, pathname])
 
   async function handleLogout() {
     await logout()
@@ -104,22 +120,22 @@ export default function Layout({ profile }: LayoutProps) {
     .toUpperCase()
 
   return (
-    <div className="flex min-h-full bg-surface-2 print:bg-white">
-      <div className="app-shell flex min-h-full w-full print:rounded-none print:border-0 print:shadow-none">
-        {/* Sidebar desktop: biru tua sekolah */}
-        <aside className="sticky top-0 hidden h-screen w-[244px] shrink-0 flex-col bg-muh-800 px-3 py-4 text-white md:flex print:hidden">
-          <Link to="/" className="flex items-center gap-3 px-2 py-1 no-underline">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white">
-              <img src="/logo-sdm.png" alt="" className="h-7 w-auto" />
-            </span>
+    <div className="flex min-h-full bg-surface-2 md:p-2 print:bg-white print:p-0">
+      <div className="app-shell flex min-h-full w-full bg-white md:min-h-[calc(100vh-1.5rem)] md:overflow-clip md:border md:border-border print:rounded-none print:border-0 print:shadow-none">
+        {/* Sidebar desktop */}
+        <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 flex-col border-r border-border bg-white px-3.5 py-4 md:flex md:h-[calc(100vh-1.5rem)] print:hidden">
+          <Link to="/" className="flex items-center gap-2.5 px-1.5 no-underline">
+            <img src="/favicon-32.png" alt="" className="h-8 w-8 rounded-lg" />
             <div className="min-w-0 leading-tight">
-              <div className="truncate text-[14px] font-semibold text-white">SDM 01 Kukusan</div>
-              <div className="text-[11.5px] text-white/65">Sistem Penilaian</div>
+              <div className="truncate text-[14px] font-semibold text-slate-900">
+                SDM 01 Kukusan
+              </div>
+              <div className="text-[11px] text-muted">Sistem Penilaian</div>
             </div>
           </Link>
 
-          <nav className="mt-7 flex-1 space-y-0.5">
-            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-white/50">
+          <nav className="mt-6 flex-1 space-y-0.5">
+            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
               Menu
             </p>
             {visible.map((i) => (
@@ -130,44 +146,36 @@ export default function Layout({ profile }: LayoutProps) {
             ))}
           </nav>
 
-          <div className="border-t border-white/12 pt-3">
-            <div className="flex items-center gap-2.5 px-2">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/14 text-[12px] font-semibold text-white">
-                {initials}
-              </div>
-              <div className="min-w-0 leading-tight">
-                <p className="truncate text-[13px] font-medium text-white">
-                  {profile.nama}
-                  {profile.gelar ? `, ${profile.gelar}` : ''}
-                </p>
-                <p className="mt-0.5 truncate text-[11.5px] text-white/65">{ROLE_LABEL[profile.role]}</p>
-                {ringkasKelas(profile) && (
-                  <p className="truncate text-[11.5px] text-white/65">{ringkasKelas(profile)}</p>
-                )}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium text-white/75 transition hover:bg-white/8 hover:text-white"
-            >
-              <Icon name="logout" />
-              Keluar
-            </button>
+          <div className="hero-banner rounded-[var(--radius-card)] p-3.5 text-white">
+            <p className="text-[11px] text-muh-100/85">Masuk sebagai</p>
+            <p className="mt-0.5 truncate text-[13px] font-semibold">
+              {profile.nama}
+              {profile.gelar ? `, ${profile.gelar}` : ''}
+            </p>
+            <p className="mt-0.5 text-[11px] text-muh-100/85">
+              {ROLE_LABEL[profile.role]}
+              {ringkasKelas(profile) ? ` · ${ringkasKelas(profile)}` : ''}
+            </p>
           </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-2 flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+          >
+            <Icon name="logout" />
+            Keluar
+          </button>
         </aside>
 
         {/* Kolom utama */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-white/95 px-4 py-2.5 backdrop-blur sm:px-6 md:py-3 print:hidden">
-            <div className="flex min-w-0 items-center gap-3">
-              <img src="/logo-sdm.png" alt="" className="h-8 w-auto shrink-0 md:hidden" />
-              <div className="min-w-0">
-                <h2 className="truncate text-[17px] font-semibold tracking-tight text-slate-900 sm:text-[18px]">
-                  {sectionTitle(pathname, isAdminRole(profile.role))}
-                </h2>
-                <p className="text-[12px] text-muted">{TANGGAL.format(new Date())}</p>
-              </div>
+        <div className="flex min-w-0 flex-1 flex-col bg-surface-2/50">
+          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-white/95 px-4 py-2.5 backdrop-blur sm:px-5 md:py-3 print:hidden">
+            <div className="min-w-0">
+              <h2 className="truncate text-[17px] font-semibold tracking-tight text-slate-900 sm:text-[18px]">
+                {sectionTitle(pathname, isAdminRole(profile.role))}
+              </h2>
+              <p className="text-[12px] text-muted">{TANGGAL.format(new Date())}</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -177,7 +185,7 @@ export default function Layout({ profile }: LayoutProps) {
                     <select
                       value={periode.id}
                       onChange={(e) => setPeriodeId(e.target.value)}
-                      className="rounded-lg border border-border bg-white px-2.5 py-1.5 text-[12px] font-medium text-slate-700 outline-none focus:border-muh-600"
+                      className="rounded-lg border border-border bg-white px-2.5 py-1.5 text-[12px] font-medium text-slate-700 outline-none focus:border-muh-500"
                     >
                       {daftar.map((p) => (
                         <option key={p.id} value={p.id}>
@@ -193,7 +201,30 @@ export default function Layout({ profile }: LayoutProps) {
                   )}
                 </div>
               )}
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muh-50 text-[12px] font-semibold text-muh-700 md:hidden">
+              {isStaff(profile.role) && (
+                <Link
+                  to="/notifikasi"
+                  aria-label={
+                    laporanBaru > 0 ? `Notifikasi, ${laporanBaru} laporan baru` : 'Notifikasi dan laporan'
+                  }
+                  className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border text-slate-500 transition hover:bg-slate-50"
+                >
+                  <Icon name="bell" />
+                  {laporanBaru > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-semibold text-white">
+                      {laporanBaru > 99 ? '99+' : laporanBaru}
+                    </span>
+                  )}
+                </Link>
+              )}
+              <div className="hidden min-w-0 text-right sm:block">
+                <div className="truncate text-[13px] font-medium text-slate-800">
+                  {profile.nama}
+                  {profile.gelar ? `, ${profile.gelar}` : ''}
+                </div>
+                <div className="text-[11px] text-muted">{ROLE_LABEL[profile.role]}</div>
+              </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muh-50 text-[12px] font-semibold text-muh-700">
                 {initials}
               </div>
               <button
@@ -207,7 +238,7 @@ export default function Layout({ profile }: LayoutProps) {
             </div>
           </header>
 
-          <main className="flex-1 p-4 pb-24 sm:p-6 md:pb-6 print:p-0">
+          <main className="flex-1 p-4 pb-24 sm:p-5 md:pb-5 print:p-0">
             <div
               className={`mx-auto w-full ${
                 HALAMAN_SEMPIT.some((p) => pathname.startsWith(p))

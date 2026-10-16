@@ -70,7 +70,7 @@ function jenisBadge(jenis: JenisSetoran) {
 function statusBadge(status: StatusHafalan | null | undefined) {
   if (!status) return null
   const map: Record<StatusHafalan, string> = {
-    lulus: 'bg-emerald-50 text-emerald-700',
+    lulus: 'bg-muh-50 text-muh-700',
     ulang: 'bg-amber-50 text-amber-800',
   }
   return (
@@ -757,7 +757,7 @@ function Ringkasan({
                       aria-label={`Progres ${info?.nama}`}
                     >
                       <span
-                        className={`block h-full rounded-full ${selesai ? 'bg-emerald-600' : 'bg-peach-400'}`}
+                        className={`block h-full rounded-full ${selesai ? 'bg-muh-600' : 'bg-peach-400'}`}
                         style={{ width: `${persen}%` }}
                       />
                     </span>

@@ -27,17 +27,18 @@ Koleksi `notifikasi` (satu koleksi, tiga jenis), rules, indeks, lonceng di heade
 Berkas: `types/notifikasi.ts`, `lib/notifikasiRumus.ts`, `lib/notifikasi.ts`, `pages/Notifikasi.tsx`, `components/Layout.tsx`, `components/Icon.tsx`, `App.tsx`, `pages/AdminDashboard.tsx`, `lib/monitoringAdminRumus.ts`, `lib/monitoringAdmin.ts`, `pages/Home.tsx`, `firestore.rules`, `firestore.indexes.json`, `scripts/cek-notifikasi.mjs`.
 Sisa untuk dijalankan pemilik: deploy rules DAN indeks, lalu uji kirim laporan dengan akun guru dan ubah status dengan akun admin.
 
-## Tahap 4 — Cetak laporan untuk admin — SELESAI (15 Okt 2026)
+## Tahap 4–5 — Cetak untuk admin — SELESAI (16 Okt 2026)
 
-Rekap STS/SAS per kelas dan laporan Tahsin-Tahfizh per kelas, keduanya hanya membaca (ANTIREGRESI §20).
-Berkas: `lib/asesmenRumus.ts`, `lib/rekapAsesmen.ts`, `lib/tahsinLaporanRumus.ts`, `lib/laporanTahsin.ts`, `lib/penandatangan.ts`, `pages/akademik/LaporanStsSas.tsx`, `pages/tahsin/LaporanTahsin.tsx`, `App.tsx`, `AkademikHub.tsx`, `TahsinHub.tsx`, `tahsinData.ts`, `raporSts.ts`, `scripts/cek-laporan-cetak.mjs`.
-Belum diuji dengan data sungguhan: cetak satu kelas yang nilainya sudah terisi dan bandingkan beberapa angka dengan halaman Nilai STS & SAS.
+Tahap 4 (15 Okt) salah menafsirkan "laporan STS" sebagai rekap nilai; dikoreksi di Tahap 5 setelah pemilik menyerahkan repo v1 dan v2 sebagai referensi.
+- Rapor STS (rapor bayangan, format v1) untuk wali kelas dan admin, per siswa dan seluruh kelas. Lihat ANTIREGRESI §21.
+- Laporan Tahsin-Tahfizh per siswa untuk orang tua (format v2). Lihat ANTIREGRESI §22.
+Belum diuji dengan data Firestore sungguhan. Uji: cetak rapor satu kelas yang cakupan dan nilai STS-nya sudah terisi, bandingkan angka dengan halaman Nilai STS & SAS; cetak laporan Tahsin satu kelas yang sudah punya setoran.
 
 ## Ide lanjutan (belum dikerjakan)
 
 - Pengingat dari admin ke guru yang belum input (memakai `notifikasi` arah admin → guru, perlu field penerima dan rules baca baru).
 - Laporan mutasi yang langsung membuka form Data Siswa admin dengan data terisi.
 - Tanggal input terakhir per guru; ekspor rekap guru yang belum input ke Excel.
-- Cetak rekap per mapel (per TP) dan cetak laporan Tahsin satu siswa (riwayat lengkap) bila diperlukan.
-- Rapor SAS (per siswa) untuk wali kelas, bila belum dibuat di v2.
+- Rapor SAS (rapor akhir, v1/v2: capaian, kokurikuler, ekstrakurikuler, absensi, catatan wali, keputusan). Butuh modul Absensi, Kokurikuler, Ekstrakurikuler lebih dulu.
+- Catat Menulis (sumber data bagian 3 laporan Tahsin) dan Absensi (mengisi Ketidakhadiran di rapor STS).
 - Notifikasi real-time dan pemberitahuan di luar aplikasi.

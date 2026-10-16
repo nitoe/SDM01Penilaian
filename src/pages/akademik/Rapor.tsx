@@ -7,25 +7,30 @@ import { getSiswaList } from '../../lib/tahsinData'
 import { kelasSaya } from '../../lib/kelasSaya'
 import { isAdminRole } from '../../lib/roles'
 import {
-  buildBodyPrintSts,
   cetakRaporSts,
+  cetakRaporStsBanyak,
+  dokumenPratinjauSts,
   muatDataRaporSts,
+  muatDataRaporStsKelas,
   type DataRaporSts,
 } from '../../lib/raporSts'
+import { cariWaliKelas } from '../../lib/penandatangan'
+import { SEMUA_KELAS } from '../../types/tahsin'
 import { PageHeader } from '../../components/ui'
 import { BackLink, Notice, Spinner, btnGhost, btnPrimary, inputCls } from './shared'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 
 /**
- * Rapor STS — khusus wali kelas.
- * Alur: pilih kelas (hanya kelas yang diwalikan) → pilih siswa → pratinjau + cetak PDF.
+ * Rapor STS ("rapor bayangan" untuk orang tua, hanya dari hasil STS).
+ * Wali kelas: kelas yang diwalikan. Admin: semua kelas (hanya mencetak, tidak mengubah nilai).
+ * Alur: pilih kelas → pilih siswa → pratinjau + cetak PDF, atau cetak seluruh kelas.
  * Pengaturan disiplin Seni Budaya: Setup TP → Seni Budaya → tab Setup.
  */
 export default function Rapor({ profile }: { profile: AppUser }) {
   const admin = isAdminRole(profile.role)
   const periodeAk = usePeriodeAkademik()
   const { wali } = kelasSaya(profile)
-  const kelasWali = useMemo(() => (admin ? [] : wali), [admin, wali])
+  const kelasWali = useMemo<string[]>(() => (admin ? [...SEMUA_KELAS] : wali), [admin, wali])
 
   const [kelas, setKelas] = useState(kelasWali[0] || '')
   const [siswaList, setSiswaList] = useState<SiswaTahsin[] | null>(null)
@@ -34,6 +39,9 @@ export default function Rapor({ profile }: { profile: AppUser }) {
   const [loadingSiswa, setLoadingSiswa] = useState(false)
   const [loadingRapor, setLoadingRapor] = useState(false)
   const [galat, setGalat] = useState('')
+  const [waliNama, setWaliNama] = useState(namaDenganGelar(profile))
+  const [cetakKelas, setCetakKelas] = useState(false)
+  const [tinggiPratinjau, setTinggiPratinjau] = useState(900)
 
   /** Tanggal rapor dari metadata periode (kelas 6 sem 2 beda). */
   function tanggalDariPeriode(): string | undefined {
@@ -47,6 +55,20 @@ export default function Rapor({ profile }: { profile: AppUser }) {
   useEffect(() => {
     if (!kelas && kelasWali.length) setKelas(kelasWali[0])
   }, [kelas, kelasWali])
+
+  // Nama wali kelas untuk tanda tangan: wali = dirinya; admin = wali kelas terdaftar untuk kelas itu.
+  useEffect(() => {
+    if (!admin) {
+      setWaliNama(namaDenganGelar(profile))
+      return
+    }
+    if (!kelas) return
+    let batal = false
+    void cariWaliKelas(kelas, profile).then((n) => !batal && setWaliNama(n))
+    return () => {
+      batal = true
+    }
+  }, [admin, kelas, profile])
 
   useEffect(() => {
     if (!kelas) {
@@ -101,7 +123,7 @@ export default function Rapor({ profile }: { profile: AppUser }) {
     void muatDataRaporSts({
       siswa: { id: siswa.id, nama: siswa.nama, nisn: siswa.nisn, nipd: siswa.nipd },
       kelas,
-      waliNama: namaDenganGelar(profile),
+      waliNama,
       semester: periodeAk.semester,
       tahunAjaran: periodeAk.tahunAjaran,
       kotaRapor: periodeAk.periode?.kotaRapor,
@@ -120,18 +142,7 @@ export default function Rapor({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [kelas, siswaId, siswaList, profile, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran, periodeAk.periode])
-
-  if (admin) {
-    return (
-      <div className="space-y-4">
-        <BackLink to="/akademik">Akademik & Rapor</BackLink>
-        <Notice tone="warn">
-          Rapor STS dibuka oleh wali kelas. Akun administrator tidak menjadi wali kelas.
-        </Notice>
-      </div>
-    )
-  }
+  }, [kelas, siswaId, siswaList, profile, waliNama, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran, periodeAk.periode])
 
   if (!periodeAk.loading && !periodeAk.ready) {
     return (
@@ -157,17 +168,45 @@ export default function Rapor({ profile }: { profile: AppUser }) {
     )
   }
 
+  async function cetakSeluruhKelas() {
+    if (!kelas || !periodeAk.ready) return
+    setCetakKelas(true)
+    setGalat('')
+    try {
+      const semua = await muatDataRaporStsKelas({
+        kelas,
+        waliNama,
+        role: profile.role,
+        semester: periodeAk.semester,
+        tahunAjaran: periodeAk.tahunAjaran,
+        kotaRapor: periodeAk.periode?.kotaRapor,
+        tanggalRapor: tanggalDariPeriode(),
+      })
+      if (!semua.length) setGalat(`Tidak ada siswa aktif di kelas ${kelas}.`)
+      else cetakRaporStsBanyak(semua)
+    } catch (e) {
+      console.error(e)
+      setGalat('Gagal menyiapkan rapor satu kelas. Periksa koneksi dan hak akses.')
+    } finally {
+      setCetakKelas(false)
+    }
+  }
+
   const idxSiswa = siswaList?.findIndex((s) => s.id === siswaId) ?? -1
 
   return (
     <div className="space-y-5 pb-16">
       <div className="print:hidden">
-        <BackLink to="/akademik">Akademik & Rapor</BackLink>
+        <BackLink to="/akademik">{admin ? 'Pantauan Akademik' : 'Akademik & Rapor'}</BackLink>
         <PageHeader
-          back={{ to: '/akademik', label: 'Akademik & Rapor' }}
+          back={{ to: '/akademik', label: admin ? 'Pantauan Akademik' : 'Akademik & Rapor' }}
           eyebrow="Akademik"
-          title="Rapor STS"
-          subtitle={periodeAk.ready ? `Periode ${periodeAk.label} · Pratinjau & cetak rapor STS untuk kelas yang Anda walikan.` : "Pratinjau dan cetak Laporan Hasil Belajar STS. Pilih periode di header atau login ulang."}
+          title={admin ? 'Cetak Rapor STS' : 'Rapor STS'}
+          subtitle={
+            periodeAk.ready
+              ? `Periode ${periodeAk.label} · ${admin ? 'Pratinjau dan cetak rapor STS semua kelas. Admin hanya mencetak; nilai diinput guru.' : 'Pratinjau dan cetak rapor STS untuk kelas yang Anda walikan.'}`
+              : 'Pratinjau dan cetak Laporan Hasil Belajar STS. Pilih periode di header atau login ulang.'
+          }
         />
       </div>
 
@@ -254,43 +293,29 @@ export default function Rapor({ profile }: { profile: AppUser }) {
                 Berikutnya ▶
               </button>
             </div>
-            <button type="button" className={btnPrimary} onClick={() => cetakRaporSts(data)}>
-              🖨️ Cetak / Simpan PDF
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className={btnGhost} disabled={cetakKelas} onClick={cetakSeluruhKelas}>
+                {cetakKelas ? 'Menyiapkan…' : `Cetak seluruh kelas (${siswaList?.length ?? 0})`}
+              </button>
+              <button type="button" className={btnPrimary} onClick={() => cetakRaporSts(data)}>
+                Cetak / Simpan PDF
+              </button>
+            </div>
           </div>
 
-          <div className="overflow-x-auto print:hidden">
-            <div
-              className="rapor-preview-frame mx-auto origin-top rounded-xl border border-border bg-white p-6 shadow-sm"
-              style={{ maxWidth: 720 }}
-              dangerouslySetInnerHTML={{ __html: buildBodyPrintSts(data) }}
+          <div className="mx-auto max-w-[760px] overflow-hidden rounded-xl border border-border bg-white shadow-sm print:hidden">
+            <iframe
+              title="Pratinjau rapor STS"
+              sandbox="allow-same-origin"
+              srcDoc={dokumenPratinjauSts([data])}
+              className="block w-full"
+              style={{ height: tinggiPratinjau }}
+              onLoad={(e) => {
+                const h = e.currentTarget.contentDocument?.body?.scrollHeight
+                if (h) setTinggiPratinjau(h + 24)
+              }}
             />
           </div>
-
-          <style>{`
-            .rapor-preview-frame .rpr-title{text-align:center;font-size:1.15rem;font-weight:700;margin-bottom:2px}
-            .rapor-preview-frame .rpr-subtitle{text-align:center;font-size:0.95rem;font-weight:600;margin-bottom:12px;color:#334155}
-            .rapor-preview-frame .rpr-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin-bottom:12px;font-size:12.5px}
-            .rapor-preview-frame .rpr-info-row{display:flex;gap:4px;margin-bottom:2px}
-            .rapor-preview-frame .rpr-info-label{min-width:130px;flex-shrink:0;color:#64748b}
-            .rapor-preview-frame .rpr-info-val{font-weight:600;color:#0f172a}
-            .rapor-preview-frame table{width:100%;border-collapse:collapse;font-size:12px}
-            .rapor-preview-frame th,.rapor-preview-frame td{border:1px solid #cbd5e1;padding:6px 8px;vertical-align:top}
-            .rapor-preview-frame th{background:#f8fafc;font-size:11px;font-weight:700;text-align:center}
-            .rapor-preview-frame .td-no{width:32px;text-align:center}
-            .rapor-preview-frame .td-nilai{width:56px;text-align:center;font-weight:700}
-            .rapor-preview-frame .td-mapel{font-weight:600}
-            .rapor-preview-frame .rpr-ttd-wrap{margin-top:28px}
-            .rapor-preview-frame .rpr-ttd-tanda{text-align:right;margin-bottom:10px;font-size:12.5px}
-            .rapor-preview-frame .rpr-ttd{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:12px}
-            .rapor-preview-frame .rpr-ttd-space{height:56px}
-            .rapor-preview-frame .rpr-ttd-name{font-weight:700;text-decoration:underline;text-underline-offset:2px}
-            .rapor-preview-frame .rpr-ttd-nbm{font-size:11px;margin-top:2px;color:#64748b}
-            @media (max-width:640px){
-              .rapor-preview-frame .rpr-info-grid{grid-template-columns:1fr}
-              .rapor-preview-frame .rpr-ttd{grid-template-columns:1fr}
-            }
-          `}</style>
         </>
       ) : null}
     </div>

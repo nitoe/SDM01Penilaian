@@ -154,9 +154,9 @@ const adminNilai: Item[] = [
 
 const adminLaporan: Item[] = [
   {
-    to: '/akademik/laporan-sts-sas',
-    title: 'Cetak Rekap STS & SAS',
-    desc: 'Nilai semua mapel satu kelas dalam satu tabel, siap dicetak',
+    to: '/akademik/rapor',
+    title: 'Cetak Rapor STS',
+    desc: 'Laporan hasil belajar STS untuk orang tua, per siswa atau satu kelas',
     icon: 'printer',
     tone: 'green',
     ready: true,
