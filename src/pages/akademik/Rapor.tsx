@@ -2,55 +2,26 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import { namaDenganGelar } from '../../types/user'
-import type { SiswaTahsin } from '../../types/tahsin'
+import { SEMUA_KELAS, type SiswaTahsin } from '../../types/tahsin'
 import { getSiswaList } from '../../lib/tahsinData'
 import { kelasSaya } from '../../lib/kelasSaya'
 import { isAdminRole } from '../../lib/roles'
 import {
-<<<<<<< Updated upstream
-  buildBodyPrintRapor,
-  cetakRapor,
-=======
   cetakRapor,
   cetakRaporBanyak,
   dokumenPratinjauRapor,
->>>>>>> Stashed changes
   muatDataRaporSts,
   muatDataRaporStsKelas,
   type DataRaporSts,
   type JenisRapor,
 } from '../../lib/raporSts'
-<<<<<<< Updated upstream
-import { muatDataRaporSas } from '../../lib/raporSas'
-import { CSS_ISI_RAPOR } from '../../lib/raporHtml'
-=======
 import { muatDataRaporSasKelas } from '../../lib/raporSas'
 import { cariWaliKelas } from '../../lib/penandatangan'
-import { SEMUA_KELAS } from '../../types/tahsin'
->>>>>>> Stashed changes
 import { PageHeader } from '../../components/ui'
 import { BackLink, Notice, Spinner, btnGhost, btnPrimary, inputCls } from './shared'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 
 /**
-<<<<<<< Updated upstream
- * Rapor STS / SAS — khusus wali kelas.
- * Alur: pilih kelas (hanya kelas yang diwalikan) → pilih siswa → pratinjau + cetak PDF.
- * STS = rapor bayangan (nilai + capaian). SAS = lengkap (kokurikuler, ekskul, absensi, keputusan).
- * Pengaturan disiplin Seni Budaya: Setup TP → Seni Budaya → tab Setup.
- */
-export default function Rapor({
-  profile,
-  jenis = 'sts',
-}: {
-  profile: AppUser
-  jenis?: JenisRapor
-}) {
-  const isSas = jenis === 'sas'
-  const labelJenis = isSas ? 'SAS' : 'STS'
-  const judulJenis = isSas ? 'Sumatif Akhir Semester' : 'Sumatif Tengah Semester'
-
-=======
  * Rapor STS ("rapor bayangan" untuk orang tua, hanya dari hasil STS) dan Rapor SAS (rapor akhir lengkap:
  * nilai, kokurikuler, ekstrakurikuler, ketidakhadiran, catatan wali, keputusan) — satu halaman, dua mode.
  * Wali kelas: kelas yang diwalikan. Admin: semua kelas (hanya mencetak, tidak mengubah nilai).
@@ -60,7 +31,6 @@ export default function Rapor({
 export default function Rapor({ profile, jenis = 'sts' }: { profile: AppUser; jenis?: JenisRapor }) {
   const sas = jenis === 'sas'
   const NAMA = sas ? 'Rapor SAS' : 'Rapor STS'
->>>>>>> Stashed changes
   const admin = isAdminRole(profile.role)
   const periodeAk = usePeriodeAkademik()
   const { wali } = kelasSaya(profile)
@@ -197,7 +167,7 @@ export default function Rapor({ profile, jenis = 'sts' }: { profile: AppUser; je
       setLoadingRapor(false)
       return
     }
-    const ctx = {
+    void muatDataRaporSts({
       siswa: { id: siswa.id, nama: siswa.nama, nisn: siswa.nisn, nipd: siswa.nipd },
       kelas,
       waliNama,
@@ -205,9 +175,7 @@ export default function Rapor({ profile, jenis = 'sts' }: { profile: AppUser; je
       tahunAjaran: periodeAk.tahunAjaran,
       kotaRapor: periodeAk.periode?.kotaRapor,
       tanggalRapor: tanggalDariPeriode(),
-    }
-    const muat = isSas ? muatDataRaporSas(ctx) : muatDataRaporSts(ctx)
-    void muat
+    })
       .then((d) => {
         if (!batal) setData(d)
       })
@@ -221,32 +189,7 @@ export default function Rapor({ profile, jenis = 'sts' }: { profile: AppUser; je
     return () => {
       batal = true
     }
-<<<<<<< Updated upstream
-  }, [
-    kelas,
-    siswaId,
-    siswaList,
-    profile,
-    isSas,
-    periodeAk.ready,
-    periodeAk.semester,
-    periodeAk.tahunAjaran,
-    periodeAk.periode,
-  ])
-
-  if (admin) {
-    return (
-      <div className="space-y-4">
-        <BackLink to="/akademik">Akademik & Rapor</BackLink>
-        <Notice tone="warn">
-          Rapor {labelJenis} dibuka oleh wali kelas. Akun administrator tidak menjadi wali kelas.
-        </Notice>
-      </div>
-    )
-  }
-=======
   }, [sas, kelasData, kelas, siswaId, siswaList, profile, waliNama, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran, periodeAk.periode])
->>>>>>> Stashed changes
 
   if (!periodeAk.loading && !periodeAk.ready) {
     return (
@@ -307,19 +250,11 @@ export default function Rapor({ profile, jenis = 'sts' }: { profile: AppUser; je
         <PageHeader
           back={{ to: '/akademik', label: admin ? 'Pantauan Akademik' : 'Akademik & Rapor' }}
           eyebrow="Akademik"
-<<<<<<< Updated upstream
-          title={`Rapor ${labelJenis}`}
-          subtitle={
-            periodeAk.ready
-              ? `Periode ${periodeAk.label} · Pratinjau & cetak rapor ${labelJenis} (${judulJenis}) untuk kelas yang Anda walikan.`
-              : `Pratinjau dan cetak Laporan Hasil Belajar ${labelJenis}. Pilih periode di header atau login ulang.`
-=======
           title={admin ? `Cetak ${NAMA}` : NAMA}
           subtitle={
             periodeAk.ready
               ? `Periode ${periodeAk.label} · ${admin ? `Pratinjau dan cetak ${NAMA} semua kelas. Admin hanya mencetak; data diisi guru.` : `Pratinjau dan cetak ${NAMA} untuk kelas yang Anda walikan.`}`
               : `Pratinjau dan cetak Laporan Hasil Belajar ${sas ? 'SAS' : 'STS'}. Pilih periode di header atau login ulang.`
->>>>>>> Stashed changes
           }
         />
       </div>
@@ -363,7 +298,7 @@ export default function Rapor({ profile, jenis = 'sts' }: { profile: AppUser; je
             Setup TP → Seni Budaya
           </Link>
           .
-          {isSas && (
+          {sas && (
             <>
               {' '}
               Data pelengkap (absensi, kokurikuler, ekskul) diisi di{' '}
@@ -388,13 +323,7 @@ export default function Rapor({ profile, jenis = 'sts' }: { profile: AppUser; je
         </div>
       ) : !siswaId ? (
         <div className="card-soft p-8 text-center print:hidden">
-<<<<<<< Updated upstream
-          <p className="text-[13px] text-muted">
-            Pilih siswa untuk menampilkan pratinjau rapor {labelJenis}.
-          </p>
-=======
           <p className="text-[13px] text-muted">Pilih siswa untuk menampilkan pratinjau {NAMA}.</p>
->>>>>>> Stashed changes
         </div>
       ) : data ? (
         <>
@@ -431,32 +360,6 @@ export default function Rapor({ profile, jenis = 'sts' }: { profile: AppUser; je
                 Cetak / Simpan PDF
               </button>
             </div>
-<<<<<<< Updated upstream
-            <button type="button" className={btnPrimary} onClick={() => cetakRapor(data, jenis)}>
-              Cetak / Simpan PDF
-            </button>
-          </div>
-
-          <div className="overflow-x-auto print:hidden">
-            <div
-              className="rapor-preview-frame mx-auto origin-top rounded-lg border border-border bg-white p-6 shadow-sm"
-              style={{ maxWidth: 720 }}
-              dangerouslySetInnerHTML={{ __html: buildBodyPrintRapor(data, jenis) }}
-            />
-          </div>
-
-          <style>{`
-            .rapor-preview-frame { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #000; }
-            ${CSS_ISI_RAPOR}
-            .rapor-preview-frame .rpr-ttd.dua { grid-template-columns: 1fr 1fr; gap: 48px; padding: 0 12px; }
-            @media (max-width: 640px) {
-              .rapor-preview-frame .rpr-info-grid { grid-template-columns: 1fr; }
-              .rapor-preview-frame .rpr-ttd,
-              .rapor-preview-frame .rpr-ttd.dua { grid-template-columns: 1fr; gap: 16px; }
-              .rapor-preview-frame .abs-catatan { flex-direction: column; }
-            }
-          `}</style>
-=======
           </div>
 
           <div className="mx-auto max-w-[760px] overflow-hidden rounded-xl border border-border bg-white shadow-sm print:hidden">
@@ -472,7 +375,6 @@ export default function Rapor({ profile, jenis = 'sts' }: { profile: AppUser; je
               }}
             />
           </div>
->>>>>>> Stashed changes
         </>
       ) : null}
     </div>
