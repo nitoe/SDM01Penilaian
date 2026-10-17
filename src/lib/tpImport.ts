@@ -11,6 +11,7 @@
  */
 
 import { LEVEL_RANGE_DEFAULT } from './akademikRumus'
+import { adalahSeniBudaya, disiplinDariTeks, normalisasiDisiplinSeni } from './disiplinSeniRumus'
 import type { LevelKktp, TipeTp } from '../types/akademik'
 
 /** Nama mapel resmi di sistem (sama dengan MAPEL_BAWAAN). */
@@ -104,6 +105,8 @@ export interface TpImportItem {
   code?: string
   source?: string
   element?: string
+  /** Seni Budaya saja: Seni Rupa / Seni Musik / Seni Tari / Seni Teater. Kosong = belum ditentukan. */
+  disiplinSeni?: string
 }
 
 export interface TpImportHasil {
@@ -123,6 +126,17 @@ export function normalisasiKelas(v: unknown): string {
 function clean(v: unknown): string {
   if (v == null) return ''
   return String(v).trim()
+}
+
+/**
+ * Disiplin Seni Budaya dari satu objek sumber. HANYA yang tertulis eksplisit: field disiplin, atau satu
+ * disiplin yang disebut di element/code/source. Tidak pernah menebak dari makna rumusan TP; untuk itu
+ * ada panel "Tetapkan disiplin" yang meminta konfirmasi guru.
+ */
+function ambilDisiplin(mapel: string, r: Record<string, unknown>): string | undefined {
+  if (!adalahSeniBudaya(mapel)) return undefined
+  const eksplisit = normalisasiDisiplinSeni(r.disiplinSeni ?? r.disiplin ?? r.discipline ?? r.cabangSeni ?? r.kategori)
+  return eksplisit || disiplinDariTeks(clean(r.element), clean(r.code), clean(r.source)) || undefined
 }
 
 function asNum(v: unknown, fallback: number): number {
@@ -248,6 +262,7 @@ export function parseTpImport(data: unknown): TpImportHasil {
         code: clean(r.code) || undefined,
         source: clean(r.source) || undefined,
         element: element || undefined,
+        disiplinSeni: ambilDisiplin(mapel, r),
       })
     }
   }
@@ -302,6 +317,7 @@ export function parseTpImport(data: unknown): TpImportHasil {
         code: clean(r.code) || undefined,
         source: clean(r.source) || undefined,
         element: clean(r.element) || undefined,
+        disiplinSeni: ambilDisiplin(mapel, r),
       })
     }
   }
@@ -327,6 +343,7 @@ export function parseTpImport(data: unknown): TpImportHasil {
         bobotSlm: asNum(r.bobotSlm, 60),
         bobotSas: asNum(r.bobotSas, 40),
         levels: parseLevels(r.levels),
+        disiplinSeni: ambilDisiplin(mapel, r),
       })
     }
   }
@@ -374,6 +391,7 @@ export function keFormatSistem(hasil: TpImportHasil, meta?: { version?: string }
       levels: it.levels,
       ...(it.code ? { code: it.code } : {}),
       ...(it.source ? { source: it.source } : {}),
+      ...(it.disiplinSeni ? { disiplinSeni: it.disiplinSeni } : {}),
     })),
   }
 }
@@ -382,7 +400,11 @@ export function keFormatSistem(hasil: TpImportHasil, meta?: { version?: string }
    Template Excel (untuk guru yang mengisi di spreadsheet)
    ========================================================================== */
 
-/** Header resmi template — urutan kolom tetap. Jangan ubah tanpa migrasi. */
+/**
+ * Header resmi template — urutan kolom tetap. Jangan ubah tanpa migrasi.
+ * Kolom baru hanya boleh DITAMBAH DI AKHIR dan bersifat opsional (parser membaca per nama header,
+ * jadi file lama tanpa kolom itu tetap terbaca). `disiplinSeni` ditambahkan dengan cara ini.
+ */
 export const TP_EXCEL_HEADERS = [
   'mapel',
   'kelas',
@@ -404,6 +426,7 @@ export const TP_EXCEL_HEADERS = [
   'level4_min',
   'level4_maks',
   'level4_deskripsi',
+  'disiplinSeni',
 ] as const
 
 const HEADER_ALIAS: Record<string, (typeof TP_EXCEL_HEADERS)[number]> = {
@@ -446,6 +469,10 @@ const HEADER_ALIAS: Record<string, (typeof TP_EXCEL_HEADERS)[number]> = {
   level4_min: 'level4_min',
   level4_maks: 'level4_maks',
   level4_deskripsi: 'level4_deskripsi',
+  disiplinseni: 'disiplinSeni',
+  'disiplin seni': 'disiplinSeni',
+  disiplin: 'disiplinSeni',
+  'cabang seni': 'disiplinSeni',
 }
 
 function cellStr(v: unknown): string {
@@ -477,6 +504,7 @@ function itemKeBarisExcel(it: TpImportItem): (string | number)[] {
     lv[3]!.min,
     lv[3]!.maks,
     lv[3]!.deskripsi || '',
+    it.disiplinSeni || '',
   ]
 }
 
@@ -491,6 +519,7 @@ function barisContohTemplate(mapel?: string, kelas?: string): (string | number)[
     tipe: 'pengetahuan',
     bobotSlm: 60,
     bobotSas: 40,
+    disiplinSeni: adalahSeniBudaya(mapel) ? 'Seni Rupa' : undefined,
     levels: [
       { min: 0, maks: 60, deskripsi: 'Perlu bimbingan: belum konsisten membaca bilangan besar' },
       { min: 61, maks: 75, deskripsi: 'Cukup: membaca dan menulis bilangan dengan sedikit bantuan' },
@@ -594,6 +623,17 @@ export function parseTpExcelRows(rows: unknown[][]): TpImportHasil {
     let bobotSas = asNum(get(row, 'bobotSas'), 40)
     if (get(row, 'bobotSlm') !== '' && get(row, 'bobotSas') === '') bobotSas = 100 - bobotSlm
 
+    let disiplinSeni: string | undefined
+    if (adalahSeniBudaya(mapel)) {
+      const mentah = get(row, 'disiplinSeni')
+      disiplinSeni = normalisasiDisiplinSeni(mentah) || undefined
+      if (mentah && !disiplinSeni) {
+        peringatan.push(
+          `Baris ${i + 1}: disiplin "${mentah}" tidak dikenal (pilih Seni Rupa, Seni Musik, Seni Tari, atau Seni Teater) — dikosongkan.`,
+        )
+      }
+    }
+
     items.push({
       mapel,
       kelas,
@@ -605,6 +645,7 @@ export function parseTpExcelRows(rows: unknown[][]): TpImportHasil {
       bobotSlm,
       bobotSas,
       levels,
+      disiplinSeni,
     })
   }
 
@@ -694,6 +735,7 @@ export async function buatExcelTp(opts?: {
     { wch: 10 },
     { wch: 10 },
     { wch: 36 },
+    { wch: 14 }, // disiplinSeni
   ]
 
   const wb = XLSX.utils.book_new()
@@ -711,6 +753,7 @@ export async function buatExcelTp(opts?: {
     ['6. Level 1–4: min/maks dan deskripsi capaian rapor (KKTP). Deskripsi boleh dikosongkan — dilengkapi nanti di website.'],
     ['7. Baris yang namaTp-nya diawali "Contoh:" diabaikan saat impor.'],
     ['8. Nama mapel harus sama dengan di sistem (Al-Islam, Bahasa Indonesia, Matematika, IPAS, …).'],
+    ['9. Khusus Seni Budaya: kolom disiplinSeni (opsional) diisi Seni Rupa, Seni Musik, Seni Tari, atau Seni Teater. Boleh dikosongkan, lalu ditetapkan di Setup TP (tombol "Tetapkan disiplin").'],
     [],
     ['Impor: Setup TP → Impor → pilih file .xlsx ini.'],
   ])

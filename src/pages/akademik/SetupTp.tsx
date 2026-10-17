@@ -15,6 +15,7 @@ import {
   mapelBerlakuDiTingkatan,
   normalisasiAlokasiTp,
   saveTP,
+  setDisiplinSeniBatch,
   validasiLevels,
   type ModeImporTp,
 } from '../../lib/akademik'
@@ -43,6 +44,13 @@ import {
   tetanggaTp,
   type FilterTp,
 } from '../../lib/setupTpRumus'
+import {
+  DISIPLIN_SENI_NAMA,
+  adalahSeniBudaya,
+  jumlahTanpaDisiplin,
+  normalisasiDisiplinSeni,
+  sarankanDisiplinSeni,
+} from '../../lib/disiplinSeniRumus'
 import { useUnsavedGuard } from '../../lib/useUnsavedGuard'
 import {
   BackLink,
@@ -72,6 +80,8 @@ interface FormState {
   levels: { min: string; maks: string; deskripsi: string }[]
   /** Teks CP resmi — tidak boleh diedit (dari daftar CP, hanya akun AI). */
   cpTerkunci?: boolean
+  /** Seni Budaya saja: Seni Rupa / Seni Musik / Seni Tari / Seni Teater ('' = belum ditentukan). */
+  disiplinSeni?: string
 }
 
 function formBaru(nomor: number): FormState {
@@ -95,6 +105,7 @@ function formDariTp(tp: TujuanPembelajaran): FormState {
     tipe: tp.tipe,
     bobotSlm: String(tp.bobotSlm ?? 60),
     bobotSas: String(tp.bobotSas ?? 40),
+    disiplinSeni: normalisasiDisiplinSeni(tp.disiplinSeni),
     levels: (tp.levels?.length === 4 ? tp.levels : LEVEL_RANGE_DEFAULT.map((l) => ({ ...l, deskripsi: '' }))).map(
       (l) => ({ min: String(l.min), maks: String(l.maks), deskripsi: l.deskripsi || '' }),
     ),
@@ -134,7 +145,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   /** Tab khusus Seni Budaya: 'setup' | nama disiplin | 'semua' */
   const [tabSeni, setTabSeni] = useState<string>('setup')
   // ---- Generate AI: hanya akun pemilik API key (§25). Guru lain tidak pernah melihatnya. ----
-  const [antrianAi, setAntrianAi] = useState<{ namaTp: string; tipe: TipeTp; bobotSlm: number; bobotSas: number; cp: string; nomor: number }[]>([])
+  const [antrianAi, setAntrianAi] = useState<{ namaTp: string; tipe: TipeTp; bobotSlm: number; bobotSas: number; cp: string; nomor: number; disiplinSeni?: string }[]>([])
   const [busyAi, setBusyAi] = useState<'tp' | 'kktp' | null>(null)
   /** CP yang ditandai selesai / disembunyikan (key: elemen|disiplin). */
   const [cpSelesai, setCpSelesai] = useState<Set<string>>(() => new Set())
@@ -148,6 +159,16 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const [kunciForm, setKunciForm] = useState(0)
   const [cariTp, setCariTp] = useState('')
   const [filterTp, setFilterTp] = useState<FilterTp>('semua')
+  // ---- Seni Budaya: penetapan disiplin per TP (§27) ----
+  const [panelDisiplin, setPanelDisiplin] = useState(false)
+  /** Pilihan yang BELUM diterapkan: id TP → disiplin. */
+  const [rancangDisiplin, setRancangDisiplin] = useState<Record<string, string>>({})
+  /** id TP yang pilihannya berasal dari saran otomatis dan belum diubah guru (diberi penanda agar diperiksa). */
+  const [disaranIds, setDisaranIds] = useState<Set<string>>(() => new Set())
+  const [hanyaTanpaDisiplin, setHanyaTanpaDisiplin] = useState(true)
+  const [busyDisiplin, setBusyDisiplin] = useState(false)
+  /** Disiplin untuk TP Seni Budaya di file impor yang tidak mencantumkannya. null = ikuti tab yang sedang dibuka. */
+  const [disiplinImporDefault, setDisiplinImporDefault] = useState<string | null>(null)
   /** Mode baca (§26.8): panel editor disembunyikan, daftar TP melebar, dan tiap TP bisa dibuka rinciannya tanpa masuk mode edit. */
   const [modeBaca, setModeBaca] = useState(false)
   const [bacaTerbuka, setBacaTerbuka] = useState<Set<string>>(() => new Set())
@@ -265,6 +286,13 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     if (daftar.length < sebelum) {
       show(`${sebelum - daftar.length} TP di luar penugasan dilewati.`)
     }
+    // Seni Budaya: TP di file yang tidak mencantumkan disiplin diberi disiplin pilihan guru (bawaan: tab yang dibuka).
+    const disiplinDefault = hanyaMapelTingkatan ? normalisasiDisiplinSeni(disiplinImporDefault ?? disiplinTab ?? '') : ''
+    if (disiplinDefault) {
+      daftar = daftar.map((it) =>
+        adalahSeniBudaya(it.mapel) && !normalisasiDisiplinSeni(it.disiplinSeni) ? { ...it, disiplinSeni: disiplinDefault } : it,
+      )
+    }
     if (
       modeImpor === 'ganti' &&
       !window.confirm(
@@ -280,8 +308,10 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         `Impor selesai: ${hasil.ditulis} ditulis` +
           (hasil.dilewati ? `, ${hasil.dilewati} dilewati (nomor/teks TP sama)` : '') +
           (hasil.dihapus ? `, ${hasil.dihapus} dihapus dulu` : '') +
+          (hasil.disiplinDilengkapi ? `, ${hasil.disiplinDilengkapi} TP lama dilengkapi disiplinnya` : '') +
           '.',
       )
+      setDisiplinImporDefault(null)
       setPratinjauImpor(null)
       setPanelImpor(false)
       if (mapel && kelas) await muat()
@@ -704,7 +734,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   // Layar kecil: bergantian — daftar ATAU editor — supaya tidak ada scroll jauh ke form.
   const layarKecil = () => window.innerWidth < 1280
   const detailTampilDiKecil = !modeBaca && (form !== null || (akunAi && tabKanan === 'cp'))
-  const sibuk = busy || busyAi !== null
+  const sibuk = busy || busyAi !== null || busyDisiplin
 
   /** Buka editor. `snapshot` = isi form yang dianggap "sudah tersimpan"; null = langsung dianggap belum tersimpan. */
   function bukaForm(f: FormState, snapshot: string | null) {
@@ -757,7 +787,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     setModeBaca(false)
     if (!konfirmasiBuang()) return
     setAntrianAi([])
-    const f = formBaru(nomorTpBerikut(list))
+    const f: FormState = { ...formBaru(nomorTpBerikut(list)), ...(disiplinTab ? { disiplinSeni: disiplinTab } : {}) }
     bukaForm(f, JSON.stringify(f))
   }
 
@@ -766,7 +796,13 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     setModeBaca(false)
     if (!konfirmasiBuang()) return
     setAntrianAi([])
-    const f: FormState = { ...formBaru(nomorTpBerikut(list)), cp: cp.teks, cpTerkunci: true }
+    const disiplinCp = isSeniBudaya ? normalisasiDisiplinSeni(cp.disiplinSeni) || disiplinTab : undefined
+    const f: FormState = {
+      ...formBaru(nomorTpBerikut(list)),
+      cp: cp.teks,
+      cpTerkunci: true,
+      ...(disiplinCp ? { disiplinSeni: disiplinCp } : {}),
+    }
     bukaForm(f, JSON.stringify(f))
   }
 
@@ -816,6 +852,77 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     })
   }
 
+  // ---- Seni Budaya: penetapan disiplin ----------------------------------
+  function tutupPanelDisiplin() {
+    if (busyDisiplin) return
+    if (perubahanDisiplin.length && !window.confirm(`${perubahanDisiplin.length} pilihan disiplin belum diterapkan. Buang?`)) return
+    setRancangDisiplin({})
+    setDisaranIds(new Set())
+    setPanelDisiplin(false)
+  }
+
+  function pilihDisiplin(id: string, nilai: string) {
+    setRancangDisiplin((r) => {
+      const n = { ...r }
+      if (nilai) n[id] = nilai
+      else delete n[id]
+      return n
+    })
+    // Pilihan yang diubah/dikonfirmasi guru bukan lagi "saran otomatis".
+    setDisaranIds((s) => {
+      if (!s.has(id)) return s
+      const n = new Set(s)
+      n.delete(id)
+      return n
+    })
+  }
+
+  /** Isi usulan dari kata kunci HANYA pada TP yang masih kosong; guru wajib memeriksa lalu menekan Terapkan. */
+  function isiSaranDisiplin() {
+    const baru: Record<string, string> = {}
+    let belumJelas = 0
+    for (const tp of barisDisiplin) {
+      if (normalisasiDisiplinSeni(tp.disiplinSeni) || rancangDisiplin[tp.id]) continue
+      const saran = sarankanDisiplinSeni(tp.namaTp, tp.cp)
+      if (saran.disiplin) baru[tp.id] = saran.disiplin
+      else belumJelas += 1
+    }
+    const n = Object.keys(baru).length
+    if (!n) return show('Tidak ada saran yang cukup jelas. Pilih disiplin secara manual.', true)
+    setRancangDisiplin((r) => ({ ...r, ...baru }))
+    setDisaranIds((s) => new Set([...s, ...Object.keys(baru)]))
+    show(`Saran terisi untuk ${n} TP${belumJelas ? `; ${belumJelas} TP belum jelas, pilih manual` : ''}. Periksa dulu sebelum menerapkan.`)
+  }
+
+  function semuaKosongKeDisiplin(d: string) {
+    if (!d) return
+    const baru: Record<string, string> = {}
+    for (const tp of barisDisiplin) if (!normalisasiDisiplinSeni(tp.disiplinSeni)) baru[tp.id] = d
+    setRancangDisiplin((r) => ({ ...r, ...baru }))
+    setDisaranIds((s) => {
+      const n = new Set(s)
+      for (const id of Object.keys(baru)) n.delete(id)
+      return n
+    })
+  }
+
+  async function terapkanDisiplin() {
+    if (!perubahanDisiplin.length || busyDisiplin) return
+    setBusyDisiplin(true)
+    try {
+      const n = await setDisiplinSeniBatch(perubahanDisiplin.map(([id, disiplin]) => ({ id, disiplin })))
+      show(`${n} TP ditetapkan disiplinnya.`)
+      setRancangDisiplin({})
+      setDisaranIds(new Set())
+      await muat(true)
+    } catch (e) {
+      console.error(e)
+      show('Gagal menetapkan disiplin. Periksa koneksi dan hak akses.', true)
+    } finally {
+      setBusyDisiplin(false)
+    }
+  }
+
   // ---- Generate AI (hanya akun AI) ----------------------------------
   async function jalankanGenerateTp(provider: ProviderAi, cp: CapaianResmi) {
     if (!akunAi) return
@@ -834,7 +941,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
       const awal = nomorTpBerikut(list)
       const [pertama, ...sisa] = hasil
       if (!pertama) throw new Error('AI tidak menghasilkan TP.')
-      setAntrianAi(sisa.map((d, i) => ({ ...d, cp: cp.teks, nomor: awal + 1 + i })))
+      const disiplinAi = isSeniBudaya ? normalisasiDisiplinSeni(cp.disiplinSeni) || disiplinTab : undefined
+      setAntrianAi(sisa.map((d, i) => ({ ...d, cp: cp.teks, nomor: awal + 1 + i, disiplinSeni: disiplinAi })))
       bukaForm(
         {
           nomorTp: String(awal),
@@ -845,6 +953,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
           bobotSas: String(pertama.bobotSas),
           levels: LEVEL_RANGE_DEFAULT.map((l) => ({ min: String(l.min), maks: String(l.maks), deskripsi: '' })),
           cpTerkunci: true,
+          ...(disiplinAi ? { disiplinSeni: disiplinAi } : {}),
         },
         null,
       )
@@ -904,6 +1013,9 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     const namaTp = form.namaTp.trim()
     const nomor = parseInt(form.nomorTp, 10)
     if (!namaTp) return show('Nama TP wajib diisi.', true)
+    // Seni Budaya: disiplin dari pilihan di editor, bila kosong ikut tab yang dibuka. TP BARU wajib punya disiplin.
+    const disiplinSimpan = isSeniBudaya ? normalisasiDisiplinSeni(form.disiplinSeni) || disiplinTab : undefined
+    if (isSeniBudaya && !form.id && !disiplinSimpan) return show('Pilih disiplin seni untuk TP Seni Budaya ini.', true)
     if (!Number.isInteger(nomor) || nomor < 1) return show('Nomor TP harus bilangan bulat ≥ 1.', true)
     if ((list ?? []).some((t) => t.nomorTp === nomor && t.id !== form.id)) {
       return show(`Nomor TP ${nomor} sudah dipakai TP lain.`, true)
@@ -935,7 +1047,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         bobotSlm: bSlm,
         bobotSas: bSas,
         levels,
-        disiplinSeni: disiplinTab,
+        disiplinSeni: disiplinSimpan,
       })
       if (form.id) {
         setAntrianAi([])
@@ -947,7 +1059,11 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         } else {
           // Editor tetap terbuka pada TP yang sama; hanya penanda "belum disimpan" yang hilang.
           setSnapshotForm(JSON.stringify(form))
-          show(lanjut ? `TP ${nomor} diperbarui. Ini TP terakhir di daftar.` : 'TP diperbarui.')
+          const pindah = disiplinSimpan && disiplinTab && disiplinSimpan !== disiplinTab
+          show(
+            (lanjut ? `TP ${nomor} diperbarui. Ini TP terakhir di daftar.` : 'TP diperbarui.') +
+              (pindah ? ` Dipindah ke ${disiplinSimpan} (tidak lagi tampil di tab ini).` : ''),
+          )
         }
       } else if (antrianAi.length) {
         const [berikut, ...sisa] = antrianAi
@@ -962,6 +1078,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
             bobotSas: String(berikut.bobotSas),
             levels: LEVEL_RANGE_DEFAULT.map((l) => ({ min: String(l.min), maks: String(l.maks), deskripsi: '' })),
             cpTerkunci: true,
+            ...(berikut.disiplinSeni ? { disiplinSeni: berikut.disiplinSeni } : {}),
           },
           null,
         )
@@ -1007,6 +1124,12 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const semuaTp = listTampil ?? []
   const tpTampil = saringTp(semuaTp, { cari: cariTp, filter: filterTp })
   const jumlahKktpKurang = semuaTp.filter((tp) => jumlahKktpTerisi(tp) < JUMLAH_LEVEL_KKTP).length
+  /** Baris di panel penetapan disiplin (semua TP kelas ini; bawaan hanya yang belum ada disiplin). */
+  const barisDisiplin = (list ?? []).filter((tp) => !hanyaTanpaDisiplin || !normalisasiDisiplinSeni(tp.disiplinSeni))
+  const perubahanDisiplin = Object.entries(rancangDisiplin).filter(([id, d]) => {
+    const tp = (list ?? []).find((t) => t.id === id)
+    return Boolean(tp) && Boolean(d) && d !== normalisasiDisiplinSeni(tp!.disiplinSeni)
+  })
   const semuaTerbuka = tpTampil.length > 0 && tpTampil.every((tp) => bacaTerbuka.has(tp.id))
   const toggleSemuaBaca = () => setBacaTerbuka(semuaTerbuka ? new Set() : new Set(tpTampil.map((tp) => tp.id)))
   const { indeks: indeksAktif, sebelumnya: tpSebelumnya, berikutnya: tpBerikutnya } = tetanggaTp(listTampil, form?.id)
@@ -1020,6 +1143,21 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     if (!keys.length) return <Badge tone="peach">Semester &amp; bobot belum diatur</Badge>
     return <Badge>{keys.map((s) => `Sem ${s} ${alokasi[s]}%`).join(' · ')}</Badge>
   }
+
+  /** Badge disiplin Seni Budaya; TP tanpa disiplin diberi penanda mencolok karena tidak tampil di tab disiplin. */
+  const badgeDisiplin = (tp: { disiplinSeni?: string }) => {
+    if (!isSeniBudaya) return null
+    const d = normalisasiDisiplinSeni(tp.disiplinSeni)
+    return d ? (
+      <Badge tone="peach">{d}</Badge>
+    ) : (
+      <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10.5px] font-semibold text-amber-900">
+        Disiplin belum ditentukan
+      </span>
+    )
+  }
+
+  const tanpaDisiplinSemua = isSeniBudaya ? jumlahTanpaDisiplin(list) : 0
 
   const teksKosong =
     isSeniBudaya && tabSeni !== 'semua' && tabSeni !== 'setup'
@@ -1084,6 +1222,19 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
               >
                 Atur semester &amp; bobot
               </Link>
+              {isSeniBudaya && tabSeni !== 'setup' && (
+                <button
+                  type="button"
+                  className={btnGhost}
+                  disabled={sibuk}
+                  aria-pressed={panelDisiplin}
+                  onClick={panelDisiplin ? tutupPanelDisiplin : () => setPanelDisiplin(true)}
+                >
+                  {panelDisiplin
+                    ? 'Tutup penetapan disiplin'
+                    : `Tetapkan disiplin${tanpaDisiplinSemua ? ` (${tanpaDisiplinSemua})` : ''}`}
+                </button>
+              )}
               <button
                 type="button"
                 className={`${btnGhost} ml-auto`}
@@ -1094,6 +1245,139 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                 {modeBaca ? 'Tampilkan editor' : 'Sembunyikan editor'}
               </button>
             </div>
+          )}
+
+          {isSeniBudaya && tabSeni !== 'setup' && list !== null && tanpaDisiplinSemua > 0 && !panelDisiplin && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-950">
+              <span>
+                {tanpaDisiplinSemua} TP Seni Budaya belum punya disiplin, jadi tidak muncul di tab Rupa/Musik/Tari/Teater
+                (hanya di “Semua TP”).
+              </span>
+              {tulis && (
+                <button type="button" className={btnGhostSm} onClick={() => setPanelDisiplin(true)}>
+                  Tetapkan disiplin
+                </button>
+              )}
+            </div>
+          )}
+
+          {tulis && isSeniBudaya && tabSeni !== 'setup' && panelDisiplin && list !== null && (
+            <section className="card-soft space-y-3 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h2 className="text-[14px] font-semibold text-slate-900">
+                    Tetapkan disiplin TP Seni Budaya — kelas {kelas}
+                  </h2>
+                  <p className="mt-1 max-w-3xl text-[12.5px] leading-relaxed text-muted">
+                    Setiap TP Seni Budaya perlu satu disiplin (Rupa, Musik, Tari, atau Teater) agar muncul di tab
+                    disiplinnya. Pilihan baru baru berlaku setelah “Terapkan”. “Isi saran otomatis” hanya menebak dari
+                    kata kunci pada rumusan TP, jadi periksa hasilnya.
+                  </p>
+                </div>
+                <button type="button" className={btnGhostSm} disabled={busyDisiplin} onClick={tutupPanelDisiplin}>
+                  Tutup
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className={btnGhost}
+                  disabled={busyDisiplin || barisDisiplin.length === 0}
+                  onClick={isiSaranDisiplin}
+                >
+                  Isi saran otomatis
+                </button>
+                <label className="inline-flex items-center gap-1.5 text-[12.5px] text-slate-600">
+                  Semua yang kosong →
+                  <select
+                    className={`${inputSempitCls} w-auto`}
+                    value=""
+                    disabled={busyDisiplin}
+                    onChange={(e) => semuaKosongKeDisiplin(e.target.value)}
+                  >
+                    <option value="">pilih disiplin…</option>
+                    {DISIPLIN_SENI_NAMA.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="ml-auto inline-flex items-center gap-1.5 text-[12.5px] text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={hanyaTanpaDisiplin}
+                    onChange={(e) => setHanyaTanpaDisiplin(e.target.checked)}
+                  />
+                  Hanya yang belum ada disiplin
+                </label>
+              </div>
+              {barisDisiplin.length === 0 ? (
+                <p className="rounded-lg bg-slate-50 p-3 text-[12.5px] text-muted">
+                  Semua TP sudah punya disiplin. Hilangkan centang di atas untuk melihat dan mengubahnya.
+                </p>
+              ) : (
+                <div className="max-h-[26rem] overflow-auto rounded-lg border border-border">
+                  <table className="w-full min-w-[34rem] text-left text-[12.5px]">
+                    <thead className="sticky top-0 bg-slate-50 text-[11.5px] uppercase tracking-wide text-muted">
+                      <tr>
+                        <th className="w-14 px-3 py-2 font-semibold">No</th>
+                        <th className="px-3 py-2 font-semibold">Rumusan TP</th>
+                        <th className="w-48 px-3 py-2 font-semibold">Disiplin</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {barisDisiplin.map((tp) => {
+                        const nilai = rancangDisiplin[tp.id] ?? normalisasiDisiplinSeni(tp.disiplinSeni)
+                        const saran = disaranIds.has(tp.id)
+                        return (
+                          <tr key={tp.id} className={nilai && nilai !== normalisasiDisiplinSeni(tp.disiplinSeni) ? 'bg-muh-50/40' : ''}>
+                            <td className="tabular px-3 py-2 align-top font-semibold text-slate-700">{tp.nomorTp}</td>
+                            <td className="px-3 py-2 align-top text-slate-800">
+                              {tp.namaTp}
+                              {saran && (
+                                <span className="mt-0.5 block text-[11.5px] text-amber-800">
+                                  Saran otomatis ({sarankanDisiplinSeni(tp.namaTp, tp.cp).alasan.join(', ')}) — periksa.
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 align-top">
+                              <select
+                                aria-label={`Disiplin TP ${tp.nomorTp}`}
+                                className={`${inputSempitCls} w-full`}
+                                value={nilai}
+                                disabled={busyDisiplin}
+                                onChange={(e) => pilihDisiplin(tp.id, e.target.value)}
+                              >
+                                <option value="">Belum ditentukan</option>
+                                {DISIPLIN_SENI_NAMA.map((d) => (
+                                  <option key={d} value={d}>
+                                    {d}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className={btnPrimary}
+                  disabled={busyDisiplin || perubahanDisiplin.length === 0}
+                  onClick={() => void terapkanDisiplin()}
+                >
+                  {busyDisiplin ? 'Menyimpan…' : `Terapkan ${perubahanDisiplin.length} perubahan`}
+                </button>
+                <span className="text-[12px] text-muted">
+                  {perubahanDisiplin.length === 0 ? 'Belum ada pilihan baru.' : `${perubahanDisiplin.length} TP akan ditetapkan.`}
+                </span>
+              </div>
+            </section>
           )}
 
           {panelImpor && tulis && (
@@ -1134,6 +1418,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                       tipe: tp.tipe,
                       bobotSlm: tp.bobotSlm ?? 60,
                       bobotSas: tp.bobotSas ?? 40,
+                      disiplinSeni: tp.disiplinSeni,
                       levels:
                         tp.levels?.length === 4
                           ? tp.levels
@@ -1208,6 +1493,41 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                             {cocok.length > 12 && <li>…dan {cocok.length - 12} lainnya</li>}
                           </ul>
                         )}
+                        {isSeniBudaya &&
+                          cocok.length > 0 &&
+                          (() => {
+                            const tanpa = cocok.filter((it) => !normalisasiDisiplinSeni(it.disiplinSeni)).length
+                            return (
+                              <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50/70 p-2.5 text-amber-950">
+                                <p>
+                                  Disiplin seni: {cocok.length - tanpa} TP sudah tercantum di file, {tanpa} belum.
+                                </p>
+                                {tanpa > 0 && (
+                                  <label className="flex flex-wrap items-center gap-2">
+                                    TP tanpa disiplin ditetapkan sebagai:
+                                    <select
+                                      className={`${inputSempitCls} w-auto`}
+                                      value={disiplinImporDefault ?? disiplinTab ?? ''}
+                                      onChange={(e) => setDisiplinImporDefault(e.target.value)}
+                                    >
+                                      <option value="">Belum ditentukan (tetapkan nanti)</option>
+                                      {DISIPLIN_SENI_NAMA.map((d) => (
+                                        <option key={d} value={d}>
+                                          {d}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                )}
+                                {modeImpor === 'tambah' && (
+                                  <p className="text-[11.5px]">
+                                    TP yang sudah ada di sistem tanpa disiplin akan dilengkapi bila file mencantumkan
+                                    disiplinnya (disiplin yang sudah ada tidak diubah).
+                                  </p>
+                                )}
+                              </div>
+                            )
+                          })()}
                         <button
                           type="button"
                           className={btnPrimary}
@@ -1249,7 +1569,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                           <span className="block text-[13.5px] font-semibold leading-snug text-slate-900">{tp.namaTp}</span>
                           <span className="mt-1 flex flex-wrap items-center gap-1.5">
                             <Badge tone="green">{tp.tipe}</Badge>
-                            {tp.disiplinSeni && <Badge tone="peach">{tp.disiplinSeni}</Badge>}
+                            {badgeDisiplin(tp)}
                             <Badge>
                               SLM {tp.bobotSlm ?? 60}% · SAS {tp.bobotSas ?? 40}%
                             </Badge>
@@ -1338,6 +1658,16 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                         >
                           KKTP belum lengkap
                         </ChipToggle>
+                        {isSeniBudaya && (
+                          <ChipToggle
+                            active={filterTp === 'tanpa-disiplin'}
+                            count={jumlahTanpaDisiplin(semuaTp)}
+                            perhatian
+                            onClick={() => setFilterTp('tanpa-disiplin')}
+                          >
+                            Belum ada disiplin
+                          </ChipToggle>
+                        )}
                       </div>
                     </>
                   )}
@@ -1384,7 +1714,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                                   </span>
                                   <span className="mt-1 flex flex-wrap items-center gap-1.5">
                                     <Badge tone="green">{labelTipe(tp.tipe)}</Badge>
-                                    {tp.disiplinSeni && <Badge tone="peach">{tp.disiplinSeni}</Badge>}
+                                    {badgeDisiplin(tp)}
                                     {terisi >= JUMLAH_LEVEL_KKTP ? (
                                       <Badge>KKTP {terisi}/{JUMLAH_LEVEL_KKTP}</Badge>
                                     ) : (
@@ -1445,7 +1775,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                                 </span>
                                 <span className="mt-1 flex flex-wrap items-center gap-1">
                                   <Badge tone="green">{labelTipe(tp.tipe)}</Badge>
-                                  {tp.disiplinSeni && <Badge tone="peach">{tp.disiplinSeni}</Badge>}
+                                  {badgeDisiplin(tp)}
                                   {terisi >= JUMLAH_LEVEL_KKTP ? (
                                     <Badge>KKTP {terisi}/{JUMLAH_LEVEL_KKTP}</Badge>
                                   ) : (
@@ -1676,7 +2006,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                     <div ref={badanEditorRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
                       {tpAktif && (
                         <div className="flex flex-wrap items-center gap-1.5">
-                          {tpAktif.disiplinSeni && <Badge tone="peach">{tpAktif.disiplinSeni}</Badge>}
+                          {badgeDisiplin(tpAktif)}
                           {badgeSemester(tpAktif)}
                         </div>
                       )}
@@ -1700,6 +2030,28 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                           />
                         </label>
                       </div>
+                      {isSeniBudaya && (
+                        <label className="block text-[12px] font-medium text-slate-600">
+                          Disiplin seni
+                          <select
+                            className={`${inputCls} mt-1`}
+                            value={form.disiplinSeni ?? ''}
+                            onChange={(e) => setField('disiplinSeni', e.target.value)}
+                          >
+                            {!form.disiplinSeni && <option value="">Belum ditentukan — pilih disiplin</option>}
+                            {DISIPLIN_SENI_NAMA.map((d) => (
+                              <option key={d} value={d}>
+                                {d}
+                              </option>
+                            ))}
+                          </select>
+                          {!form.disiplinSeni && (
+                            <span className="mt-1 block text-[11.5px] text-muted">
+                              TP tanpa disiplin tidak tampil di tab Rupa/Musik/Tari/Teater.
+                            </span>
+                          )}
+                        </label>
+                      )}
                       <label className="block text-[12px] font-medium text-slate-600">
                         Capaian Pembelajaran (opsional)
                         <textarea

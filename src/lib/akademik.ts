@@ -16,6 +16,7 @@ import {
 import { auth, db } from './firebase'
 import { faseDariTingkatan, LEVEL_RANGE_DEFAULT, tingkatanDariKelas } from './akademikRumus'
 import { aliasNamaMapel } from './tpImport'
+import { adalahSeniBudaya, normalisasiDisiplinSeni } from './disiplinSeniRumus'
 import { MAPEL_BAWAAN } from './mapelBawaan'
 import type {
   AsesmenCakupan,
@@ -269,10 +270,12 @@ export async function importTPBatch(
     bobotSlm?: number
     bobotSas?: number
     levels?: LevelKktp[]
+    /** Seni Budaya saja. */
+    disiplinSeni?: string
   }[],
   mode: ModeImporTp = 'tambah',
-): Promise<{ ditulis: number; dilewati: number; dihapus: number }> {
-  if (!items.length) return { ditulis: 0, dilewati: 0, dihapus: 0 }
+): Promise<{ ditulis: number; dilewati: number; dihapus: number; disiplinDilengkapi: number }> {
+  if (!items.length) return { ditulis: 0, dilewati: 0, dihapus: 0, disiplinDilengkapi: 0 }
 
   // Kelompokkan per mapel|kelas
   const grup = new Map<string, typeof items>()
@@ -285,6 +288,7 @@ export async function importTPBatch(
   let ditulis = 0
   let dilewati = 0
   let dihapus = 0
+  let disiplinDilengkapi = 0
 
   for (const [kunci, daftarMentah] of grup) {
     const [mapel, kelas] = kunci.split('|') as [string, string]
@@ -321,10 +325,18 @@ export async function importTPBatch(
       byNama.clear()
     }
 
+    // Mode tambah: TP Seni Budaya yang sudah ada TANPA disiplin dilengkapi dari file (hanya mengisi yang kosong,
+    // tidak pernah menimpa disiplin yang sudah ada, dan tidak menyentuh field lain).
+    const pelengkapDisiplin: { id: string; disiplin: string }[] = []
     const yangAkanDitulis = daftar.filter((it) => {
       if (mode !== 'tambah') return true
       const kn = kunciNamaTp(it.namaTp)
       if (byNomor.has(it.nomorTp) || (kn && byNama.has(kn))) {
+        const ada = byNomor.get(it.nomorTp) ?? (kn ? byNama.get(kn) : undefined)
+        const disiplinFile = adalahSeniBudaya(it.mapel) ? normalisasiDisiplinSeni(it.disiplinSeni) : ''
+        if (ada?.id && disiplinFile && !normalisasiDisiplinSeni(ada.disiplinSeni) && !pelengkapDisiplin.some((p) => p.id === ada.id)) {
+          pelengkapDisiplin.push({ id: ada.id, disiplin: disiplinFile })
+        }
         dilewati += 1
         return false
       }
@@ -333,6 +345,15 @@ export async function importTPBatch(
       if (kn) byNama.set(kn, { id: '', nomorTp: it.nomorTp, namaTp: it.namaTp } as TujuanPembelajaran)
       return true
     })
+
+    for (let i = 0; i < pelengkapDisiplin.length; i += 400) {
+      const batch = writeBatch(db)
+      for (const p of pelengkapDisiplin.slice(i, i + 400)) {
+        batch.update(doc(db, 'tp_kktp', p.id), { disiplinSeni: p.disiplin, updatedAt: serverTimestamp(), updatedBy: uid() })
+        disiplinDilengkapi += 1
+      }
+      await batch.commit()
+    }
 
     for (let i = 0; i < yangAkanDitulis.length; i += 400) {
       const batch = writeBatch(db)
@@ -352,6 +373,9 @@ export async function importTPBatch(
           bobotSlm: it.bobotSlm ?? 60,
           bobotSas: it.bobotSas ?? 40,
           levels: it.levels?.length === 4 ? it.levels : LEVEL_RANGE_DEFAULT.map((l) => ({ ...l, deskripsi: '' })),
+          ...(adalahSeniBudaya(it.mapel) && normalisasiDisiplinSeni(it.disiplinSeni)
+            ? { disiplinSeni: normalisasiDisiplinSeni(it.disiplinSeni) }
+            : {}),
           createdAt: serverTimestamp(),
           createdBy: uid(),
         })
@@ -361,7 +385,28 @@ export async function importTPBatch(
     }
   }
 
-  return { ditulis, dilewati, dihapus }
+  return { ditulis, dilewati, dihapus, disiplinDilengkapi }
+}
+
+/**
+ * Tetapkan disiplin banyak TP Seni Budaya sekaligus. Hanya menulis `disiplinSeni` (dan jejak pembaruan);
+ * nilai, bobot, semester, dan KKTP tidak tersentuh. Disiplin di luar daftar baku ditolak.
+ */
+export async function setDisiplinSeniBatch(daftar: { id: string; disiplin: string }[]): Promise<number> {
+  const sah: { id: string; disiplin: string }[] = []
+  for (const d of daftar) {
+    const disiplin = normalisasiDisiplinSeni(d.disiplin)
+    if (d.id && disiplin) sah.push({ id: d.id, disiplin })
+  }
+  if (sah.length !== daftar.length) throw new Error('Ada disiplin yang tidak dikenal; tidak ada yang disimpan.')
+  for (let i = 0; i < sah.length; i += 400) {
+    const batch = writeBatch(db)
+    for (const d of sah.slice(i, i + 400)) {
+      batch.update(doc(db, 'tp_kktp', d.id), { disiplinSeni: d.disiplin, updatedAt: serverTimestamp(), updatedBy: uid() })
+    }
+    await batch.commit()
+  }
+  return sah.length
 }
 
 /**

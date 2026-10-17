@@ -1,11 +1,12 @@
 // Logika murni untuk halaman Setup TP & KKTP (daftar, saringan, navigasi). Tanpa Firebase/React,
 // supaya bisa diuji: node --experimental-strip-types scripts/cek-setup-tp.mjs
 import type { TujuanPembelajaran } from '../types/akademik'
+import { normalisasiDisiplinSeni } from './disiplinSeniRumus.ts'
 
 /** Jumlah level KKTP per TP. */
 export const JUMLAH_LEVEL_KKTP = 4
 
-type TpRingkas = Pick<TujuanPembelajaran, 'nomorTp' | 'namaTp' | 'levels'>
+type TpRingkas = Pick<TujuanPembelajaran, 'nomorTp' | 'namaTp' | 'levels' | 'disiplinSeni'>
 
 /** Berapa dari 4 level KKTP yang deskripsinya sudah terisi (spasi saja dianggap kosong). */
 export function jumlahKktpTerisi(tp: Pick<TujuanPembelajaran, 'levels'>): number {
@@ -16,7 +17,7 @@ export function kktpLengkap(tp: Pick<TujuanPembelajaran, 'levels'>): boolean {
   return jumlahKktpTerisi(tp) >= JUMLAH_LEVEL_KKTP
 }
 
-export type FilterTp = 'semua' | 'kktp-kurang'
+export type FilterTp = 'semua' | 'kktp-kurang' | 'tanpa-disiplin'
 
 /**
  * Saring daftar TP. `cari` cocok dengan nomor atau nama (tanpa peduli huruf besar/kecil); awalan "TP"
@@ -29,6 +30,7 @@ export function saringTp<T extends TpRingkas>(list: T[], opsi: { cari: string; f
     .replace(/^tp\s*/, '')
   return list.filter((tp) => {
     if (opsi.filter === 'kktp-kurang' && kktpLengkap(tp)) return false
+    if (opsi.filter === 'tanpa-disiplin' && normalisasiDisiplinSeni(tp.disiplinSeni)) return false
     if (!q) return true
     return `${tp.nomorTp} ${tp.namaTp}`.toLowerCase().includes(q)
   })
