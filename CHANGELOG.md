@@ -330,3 +330,13 @@ Catatan koreksi: rilis Tahap 4 sempat memuat "Rekap STS & SAS per kelas". Itu sa
 - Dashboard admin: tab **Kelengkapan Rapor** (per kelas: ketidakhadiran, kokurikuler, keputusan [semester 2], catatan wali, ekskul; status Lengkap/Sebagian/Belum; dapat disaring per wali kelas lewat dropdown guru) dan kartu "Kelengkapan rapor" di Ringkasan.
 - Peringatan di "Perlu ditindaklanjuti admin" bila tanggal penyerahan rapor STS atau SAS periode aktif belum diatur.
 - `ringkasRaporPerKelas` + uji di `scripts/cek-monitoring-admin.mjs`. Tidak ada perubahan rules/indeks. `ANTIREGRESI.md` §24.
+
+## Belum dirilis — Setup TP & KKTP: generate AI dipulihkan + tata letak daftar ⇄ editor
+
+- **Generate TP/KKTP (AI) hilang** setelah optimasi UI karena `SetupTp.tsx` tertimpa salinan tanpa AI. Dipulihkan di atas versi terbaru (semua fitur terbaru tetap: tab Seni Budaya, validasi, badge semester, impor/ekspor). Gerbang akun (UID + email) di klien dan server tidak berubah; hanya akun itu yang melihat tab Capaian Pembelajaran, Gemini/OpenAI, dan Generate KKTP. `ANTIREGRESI.md` §25.
+- **Tata letak**: daftar TP di kiri dan editor di kanan (≥1280px; di bawahnya bergantian dengan tombol "← Daftar TP"). Editor dan daftar menempel (sticky) dan menggulung sendiri; bilah Simpan selalu terlihat. Sebelumnya form berada di atas/bawah daftar sehingga mengedit banyak TP berarti bolak-balik menggulung.
+- Daftar TP: pencarian nomor/nama, saringan "KKTP belum lengkap", tiap baris menampilkan tipe, disiplin Seni, kelengkapan KKTP (mis. 3/4). Editor: "TP ke-N dari M", Sebelumnya/Berikutnya, **Simpan & berikutnya**, Ctrl/Cmd+S, penanda "Belum disimpan", Hapus di "Tindakan lain". Simpan pada TP yang ada tidak lagi menutup editor.
+- Perlindungan: konfirmasi sebelum membuang perubahan (pindah TP, Tambah TP, pindah tab Seni, Pakai CP, Generate TP, Batal), dialog saat meninggalkan halaman, konfirmasi sebelum Generate KKTP menimpa deskripsi yang sudah terisi. Muat ulang setelah simpan/hapus senyap (tanpa spinner, posisi scroll terjaga).
+- Baru: `src/lib/setupTpRumus.ts`, `scripts/cek-setup-tp.mjs` (termasuk pengaman agar fitur AI tidak hilang diam-diam). `useUnsavedGuard.tsx`: teks dialog bisa diganti (argumen opsional; bawaan tidak berubah). `ANTIREGRESI.md` §25–§26.
+- Tidak ada perubahan rules, indeks, atau Cloud Functions pada entri ini. Cukup `npm run deploy` (hosting).
+

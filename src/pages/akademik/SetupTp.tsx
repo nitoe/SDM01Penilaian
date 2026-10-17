@@ -33,15 +33,31 @@ import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { PageHeader, Badge } from '../../components/ui'
 import SeniBudayaPanel from '../../components/SeniBudayaPanel'
 import { DISIPLIN_SENI } from '../../lib/seniKelas'
+import { capaianUntuk, type CapaianResmi } from '../../lib/capaianPembelajaran'
+import { bolehGenerateAi, generateKktpAi, generateTpAi, type ProviderAi } from '../../lib/generateAi'
+import {
+  JUMLAH_LEVEL_KKTP,
+  jumlahKktpTerisi,
+  nomorTpBerikut,
+  saringTp,
+  tetanggaTp,
+  type FilterTp,
+} from '../../lib/setupTpRumus'
+import { useUnsavedGuard } from '../../lib/useUnsavedGuard'
 import {
   BackLink,
+  ChipToggle,
   LEVEL_WARNA,
   Notice,
   NoticeAksesGuru,
+  Segmented,
   Spinner,
+  btnDangerGhostSm,
   btnGhost,
+  btnGhostSm,
   btnPrimary,
   inputCls,
+  inputSempitCls,
   useToast,
 } from './shared'
 
@@ -54,6 +70,8 @@ interface FormState {
   bobotSlm: string
   bobotSas: string
   levels: { min: string; maks: string; deskripsi: string }[]
+  /** Teks CP resmi — tidak boleh diedit (dari daftar CP, hanya akun AI). */
+  cpTerkunci?: boolean
 }
 
 function formBaru(nomor: number): FormState {
@@ -115,8 +133,53 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const [refreshHub, setRefreshHub] = useState(0)
   /** Tab khusus Seni Budaya: 'setup' | nama disiplin | 'semua' */
   const [tabSeni, setTabSeni] = useState<string>('setup')
+  // ---- Generate AI: hanya akun pemilik API key (§25). Guru lain tidak pernah melihatnya. ----
+  const [antrianAi, setAntrianAi] = useState<{ namaTp: string; tipe: TipeTp; bobotSlm: number; bobotSas: number; cp: string; nomor: number }[]>([])
+  const [busyAi, setBusyAi] = useState<'tp' | 'kktp' | null>(null)
+  /** CP yang ditandai selesai / disembunyikan (key: elemen|disiplin). */
+  const [cpSelesai, setCpSelesai] = useState<Set<string>>(() => new Set())
+  const [tampilkanCpSelesai, setTampilkanCpSelesai] = useState(false)
+  // ---- Tata letak daftar ⇄ editor (§26) ----
+  /** Isi panel kanan: editor TP atau daftar CP (tab CP hanya untuk akun AI). */
+  const [tabKanan, setTabKanan] = useState<'editor' | 'cp'>('editor')
+  /** Isi form saat dibuka (JSON). null = form dianggap belum tersimpan (mis. hasil AI). Dasar penanda "belum disimpan". */
+  const [snapshotForm, setSnapshotForm] = useState<string | null>(null)
+  /** Naik tiap editor membuka TP lain: menggulung editor ke atas dan daftar ke baris aktif. */
+  const [kunciForm, setKunciForm] = useState(0)
+  const [cariTp, setCariTp] = useState('')
+  const [filterTp, setFilterTp] = useState<FilterTp>('semua')
+  const badanEditorRef = useRef<HTMLDivElement>(null)
+  /** Posisi scroll halaman saat daftar TP ditinggalkan di layar kecil; dipulihkan saat kembali. */
+  const yDaftar = useRef(0)
   const fileImporRef = useRef<HTMLInputElement>(null)
-  const { show, node } = useToast()
+  // Posisi notifikasi dinaikkan agar tidak menutup bilah Simpan yang menempel di bawah editor.
+  const { show, node } = useToast('bottom-36 md:bottom-24')
+
+  const dirty = form !== null && (snapshotForm === null || JSON.stringify(form) !== snapshotForm)
+  const { dialogNode } = useUnsavedGuard(dirty && tulis, {
+    judul: 'TP belum disimpan',
+    pesan: 'Ada TP yang belum disimpan. Jika keluar sekarang, perubahan pada TP itu bisa hilang. Tetap tinggal di halaman ini?',
+  })
+
+  // Ctrl/Cmd+S menyimpan TP yang sedang dibuka (tidak perlu menggulung ke tombol Simpan).
+  useEffect(() => {
+    function saatTekan(e: KeyboardEvent) {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's') return
+      if (!form) return
+      e.preventDefault()
+      if (busy || (form.id && !dirty)) return
+      void simpan()
+    }
+    window.addEventListener('keydown', saatTekan)
+    return () => window.removeEventListener('keydown', saatTekan)
+  })
+
+  // Tiap editor membuka TP: isi editor kembali ke atas, dan baris TP aktif dibawa ke area terlihat di daftar.
+  useEffect(() => {
+    badanEditorRef.current?.scrollTo({ top: 0 })
+    if (form?.id) document.getElementById(`tp-baris-${form.id}`)?.scrollIntoView({ block: 'nearest' })
+    // Sengaja hanya bergantung pada kunciForm: tidak boleh menggulung ulang tiap ketikan.
+  }, [kunciForm])
 
   async function bacaFileImpor(file: File) {
     const nama = file.name.toLowerCase()
@@ -232,16 +295,23 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const statusCakupan: 'memeriksa' | 'boleh' | 'di luar' =
     !mapel || !kelas ? 'boleh' : cakupan?.kunci === kunciCakupan ? cakupan.status : 'memeriksa'
 
-  const muat = useCallback(async () => {
-    setList(null)
-    try {
-      setList(await getTPList(mapel, kelas))
-    } catch (e) {
-      console.error(e)
-      show('Gagal memuat TP. Periksa koneksi dan hak akses.', true)
-      setList([])
-    }
-  }, [mapel, kelas, show])
+  /**
+   * `senyap` = muat ulang tanpa mengosongkan daftar (dipakai setelah simpan/hapus), supaya tidak muncul
+   * spinner yang meruntuhkan halaman dan menghilangkan posisi scroll.
+   */
+  const muat = useCallback(
+    async (senyap = false) => {
+      if (!senyap) setList(null)
+      try {
+        setList(await getTPList(mapel, kelas))
+      } catch (e) {
+        console.error(e)
+        show('Gagal memuat TP. Periksa koneksi dan hak akses.', true)
+        if (!senyap) setList([])
+      }
+    },
+    [mapel, kelas, show],
+  )
 
   useEffect(() => {
     let batal = false
@@ -606,8 +676,198 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     return list.filter((tp) => (tp.disiplinSeni || '') === tabSeni)
   })()
 
-    async function simpan() {
-    if (!form) return
+  /** Disiplin yang sedang dibuka (hanya Seni Budaya, di tab disiplin). Dipakai untuk menandai TP baru dan memilih CP. */
+  const disiplinTab = isSeniBudaya && tabSeni !== 'setup' && tabSeni !== 'semua' ? tabSeni : undefined
+
+  // Hanya akun pemilik API key yang melihat daftar CP + generate AI (§25). Guru lain: layout tanpa panel itu.
+  const akunAi = bolehGenerateAi(profile.uid)
+  const faseCp = faseDariTingkatan(tingkatan)
+  const daftarCp = akunAi && !(isSeniBudaya && !disiplinTab) ? capaianUntuk(mapel, faseCp, disiplinTab) : []
+
+  function kunciCp(cp: CapaianResmi) {
+    return `${cp.elemen}|${cp.disiplinSeni || ''}`
+  }
+
+  const daftarCpTampil = akunAi
+    ? daftarCp.filter((cp) => tampilkanCpSelesai || !cpSelesai.has(kunciCp(cp)))
+    : daftarCp
+
+  function tandaiCpSelesai(cp: CapaianResmi) {
+    setCpSelesai((s) => new Set(s).add(kunciCp(cp)))
+  }
+
+  // ---- Navigasi daftar ⇄ editor -------------------------------------
+  // Layar lebar (xl, ≥1280px): daftar TP di kiri, editor di kanan, keduanya selalu terlihat.
+  // Layar kecil: bergantian — daftar ATAU editor — supaya tidak ada scroll jauh ke form.
+  const layarKecil = () => window.innerWidth < 1280
+  const detailTampilDiKecil = form !== null || (akunAi && tabKanan === 'cp')
+  const sibuk = busy || busyAi !== null
+
+  /** Buka editor. `snapshot` = isi form yang dianggap "sudah tersimpan"; null = langsung dianggap belum tersimpan. */
+  function bukaForm(f: FormState, snapshot: string | null) {
+    if (layarKecil()) {
+      if (!detailTampilDiKecil) yDaftar.current = window.scrollY
+      window.scrollTo({ top: 0 })
+    }
+    setForm(f)
+    setSnapshotForm(snapshot)
+    setTabKanan('editor')
+    setKunciForm((n) => n + 1)
+  }
+
+  function tutupFormPaksa() {
+    setForm(null)
+    setSnapshotForm(null)
+    setAntrianAi([])
+    setTabKanan('editor')
+    if (layarKecil()) {
+      const y = yDaftar.current
+      window.requestAnimationFrame(() => window.scrollTo({ top: y }))
+    }
+  }
+
+  /** true bila aman melanjutkan (tidak ada perubahan, atau pengguna setuju membuangnya). */
+  function konfirmasiBuang(): boolean {
+    if (!dirty) return true
+    return window.confirm(
+      'Perubahan pada TP yang sedang dibuka belum disimpan.' +
+        (antrianAi.length ? ` ${antrianAi.length} TP antrean AI juga akan dibuang.` : '') +
+        '\n\nBuang perubahan dan lanjut?',
+    )
+  }
+
+  function bukaTp(tp: TujuanPembelajaran) {
+    if (sibuk) return
+    if (form?.id === tp.id) {
+      setTabKanan('editor')
+      return
+    }
+    if (!konfirmasiBuang()) return
+    setAntrianAi([])
+    const f = formDariTp(tp)
+    bukaForm(f, JSON.stringify(f))
+  }
+
+  function bukaTpBaru() {
+    if (sibuk || !konfirmasiBuang()) return
+    setAntrianAi([])
+    const f = formBaru(nomorTpBerikut(list))
+    bukaForm(f, JSON.stringify(f))
+  }
+
+  function bukaFormDariCp(cp: CapaianResmi) {
+    if (sibuk || !konfirmasiBuang()) return
+    setAntrianAi([])
+    const f: FormState = { ...formBaru(nomorTpBerikut(list)), cp: cp.teks, cpTerkunci: true }
+    bukaForm(f, JSON.stringify(f))
+  }
+
+  function kembaliKeDaftar() {
+    if (sibuk || !konfirmasiBuang()) return
+    tutupFormPaksa()
+  }
+
+  /** Pindah tab Seni Budaya. Dulu langsung `setForm(null)`; kini bertanya dulu bila ada perubahan. */
+  function gantiTabSeni(tab: string) {
+    if (tab === tabSeni || sibuk || !konfirmasiBuang()) return
+    setTabSeni(tab)
+    tutupFormPaksa()
+  }
+
+  function tampilkanTabCp() {
+    if (!akunAi) return
+    if (layarKecil()) {
+      if (!detailTampilDiKecil) yDaftar.current = window.scrollY
+      window.scrollTo({ top: 0 })
+    }
+    setTabKanan('cp')
+  }
+
+  // ---- Generate AI (hanya akun AI) ----------------------------------
+  async function jalankanGenerateTp(provider: ProviderAi, cp: CapaianResmi) {
+    if (!akunAi) return
+    if (sibuk || !konfirmasiBuang()) return
+    setBusyAi('tp')
+    try {
+      const hasil = await generateTpAi({
+        provider,
+        mapel,
+        kelas,
+        fase: faseCp,
+        elemen: cp.elemen,
+        teksCp: cp.teks,
+        disiplinSeni: cp.disiplinSeni,
+      })
+      const awal = nomorTpBerikut(list)
+      const [pertama, ...sisa] = hasil
+      if (!pertama) throw new Error('AI tidak menghasilkan TP.')
+      setAntrianAi(sisa.map((d, i) => ({ ...d, cp: cp.teks, nomor: awal + 1 + i })))
+      bukaForm(
+        {
+          nomorTp: String(awal),
+          namaTp: pertama.namaTp,
+          cp: cp.teks,
+          tipe: pertama.tipe,
+          bobotSlm: String(pertama.bobotSlm),
+          bobotSas: String(pertama.bobotSas),
+          levels: LEVEL_RANGE_DEFAULT.map((l) => ({ min: String(l.min), maks: String(l.maks), deskripsi: '' })),
+          cpTerkunci: true,
+        },
+        null,
+      )
+      show(
+        `${hasil.length} TP dari elemen “${cp.elemen}” masuk ke editor. Isi KKTP (bisa dengan AI), lalu Simpan.` +
+          (sisa.length ? ` ${sisa.length} TP lain menunggu setelah yang ini disimpan.` : ''),
+      )
+    } catch (e) {
+      show(e instanceof Error ? e.message : 'Gagal generate TP.', true)
+    } finally {
+      setBusyAi(null)
+    }
+  }
+
+  async function jalankanGenerateKktp(provider: ProviderAi) {
+    if (!akunAi) return
+    if (!form?.namaTp.trim()) return show('Isi nama TP dulu.', true)
+    if (
+      form.levels.some((l) => l.deskripsi.trim()) &&
+      !window.confirm('Deskripsi KKTP yang sudah terisi akan diganti hasil AI. Lanjutkan?')
+    ) {
+      return
+    }
+    setBusyAi('kktp')
+    try {
+      const deskripsi = await generateKktpAi({
+        provider,
+        mapel,
+        kelas,
+        namaTp: form.namaTp.trim(),
+        tipe: form.tipe,
+        teksCp: form.cp,
+      })
+      setForm((f) =>
+        f
+          ? {
+              ...f,
+              levels: f.levels.map((l, i) => ({
+                ...l,
+                deskripsi: deskripsi[i] || l.deskripsi,
+              })),
+            }
+          : f,
+      )
+      show('Deskripsi KKTP diisi AI. Periksa lalu Simpan.')
+    } catch (e) {
+      show(e instanceof Error ? e.message : 'Gagal generate KKTP.', true)
+    } finally {
+      setBusyAi(null)
+    }
+  }
+
+  // ---- Simpan / hapus -----------------------------------------------
+  /** `lanjut` = setelah tersimpan, langsung buka TP berikutnya di daftar (hanya saat mengedit TP yang sudah ada). */
+  async function simpan(lanjut = false) {
+    if (!form || busy) return
     const namaTp = form.namaTp.trim()
     const nomor = parseInt(form.nomorTp, 10)
     if (!namaTp) return show('Nama TP wajib diisi.', true)
@@ -642,12 +902,43 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         bobotSlm: bSlm,
         bobotSas: bSas,
         levels,
-        disiplinSeni:
-          isSeniBudaya && tabSeni !== 'setup' && tabSeni !== 'semua' ? tabSeni : undefined,
+        disiplinSeni: disiplinTab,
       })
-      show(form.id ? 'TP diperbarui.' : 'TP ditambahkan.')
-      setForm(null)
-      await muat()
+      if (form.id) {
+        setAntrianAi([])
+        const berikut = lanjut ? tetanggaTp(listTampil, form.id).berikutnya : undefined
+        if (berikut) {
+          const f = formDariTp(berikut)
+          bukaForm(f, JSON.stringify(f))
+          show(`TP ${nomor} diperbarui. Lanjut ke TP ${berikut.nomorTp}.`)
+        } else {
+          // Editor tetap terbuka pada TP yang sama; hanya penanda "belum disimpan" yang hilang.
+          setSnapshotForm(JSON.stringify(form))
+          show(lanjut ? `TP ${nomor} diperbarui. Ini TP terakhir di daftar.` : 'TP diperbarui.')
+        }
+      } else if (antrianAi.length) {
+        const [berikut, ...sisa] = antrianAi
+        setAntrianAi(sisa)
+        bukaForm(
+          {
+            nomorTp: String(berikut.nomor),
+            namaTp: berikut.namaTp,
+            cp: berikut.cp,
+            tipe: berikut.tipe,
+            bobotSlm: String(berikut.bobotSlm),
+            bobotSas: String(berikut.bobotSas),
+            levels: LEVEL_RANGE_DEFAULT.map((l) => ({ min: String(l.min), maks: String(l.maks), deskripsi: '' })),
+            cpTerkunci: true,
+          },
+          null,
+        )
+        show(`TP ditambahkan. ${sisa.length + 1} TP antrean tersisa — isi KKTP lalu Simpan lagi.`)
+      } else {
+        show('TP ditambahkan.')
+        tutupFormPaksa()
+      }
+      // Muat ulang TANPA mengosongkan daftar, supaya posisi scroll dan pilihan tidak hilang.
+      await muat(true)
     } catch (e) {
       console.error(e)
       show('Gagal menyimpan TP.', true)
@@ -666,7 +957,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     try {
       await deleteTP(tp.id)
       show('TP dihapus.')
-      await muat()
+      if (form?.id === tp.id) tutupFormPaksa()
+      await muat(true)
     } catch (e) {
       console.error(e)
       show('Gagal menghapus TP.', true)
@@ -675,11 +967,39 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
 
   const setLevel = (i: number, k: 'min' | 'maks' | 'deskripsi', v: string) =>
     setForm((f) => (f ? { ...f, levels: f.levels.map((l, j) => (j === i ? { ...l, [k]: v } : l)) } : f))
+  const setField = <K extends keyof FormState>(k: K, v: FormState[K]) =>
+    setForm((f) => (f ? { ...f, [k]: v } : f))
+
+  // ---- Turunan untuk tampilan ---------------------------------------
+  const semuaTp = listTampil ?? []
+  const tpTampil = saringTp(semuaTp, { cari: cariTp, filter: filterTp })
+  const jumlahKktpKurang = semuaTp.filter((tp) => jumlahKktpTerisi(tp) < JUMLAH_LEVEL_KKTP).length
+  const { indeks: indeksAktif, sebelumnya: tpSebelumnya, berikutnya: tpBerikutnya } = tetanggaTp(listTampil, form?.id)
+  const tpAktif = form?.id ? semuaTp.find((t) => t.id === form.id) : undefined
+  const labelTipe = (t: TipeTp) => (t === 'kinerja' ? 'Kinerja' : 'Pengetahuan')
+
+  /** Ringkasan alokasi semester sebuah TP (diatur di menu Bobot Semester, bukan di sini). */
+  const badgeSemester = (tp: TujuanPembelajaran) => {
+    const alokasi = normalisasiAlokasiTp(tp)
+    const keys = (Object.keys(alokasi) as ('1' | '2')[]).sort()
+    if (!keys.length) return <Badge tone="peach">Semester &amp; bobot belum diatur</Badge>
+    return <Badge>{keys.map((s) => `Sem ${s} ${alokasi[s]}%`).join(' · ')}</Badge>
+  }
+
+  const teksKosong =
+    isSeniBudaya && tabSeni !== 'semua' && tabSeni !== 'setup'
+      ? `Belum ada TP untuk ${tabSeni} di kelas ${kelas}. Tambahkan TP di tab ini.`
+      : `Belum ada TP untuk ${mapel} kelas ${kelas}. Tambahkan TP pertama.`
+
+  const kelasTabSeni = (aktif: boolean, tebal = false) =>
+    `rounded-full px-3 py-1.5 text-[12px] ${tebal ? 'font-semibold' : 'font-medium'} transition ${
+      aktif ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+    }`
 
   return (
     <div className="space-y-5">
       <PageHeader
-          back={{ to: '/akademik/setup-tp', label: 'Pilih mata pelajaran' }}
+        back={{ to: '/akademik/setup-tp', label: 'Pilih mata pelajaran' }}
         eyebrow={`Kelas ${kelas} · Fase ${faseDariTingkatan(tingkatan)}`}
         title={tulis ? `TP & KKTP — ${mapel}` : `Tujuan Pembelajaran — ${mapel}`}
         subtitle={
@@ -693,34 +1013,15 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
 
       {isSeniBudaya && (
         <div className="flex flex-wrap gap-1.5 border-b border-border pb-2">
-          <button
-            type="button"
-            onClick={() => { setTabSeni('setup'); setForm(null) }}
-            className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
-              tabSeni === 'setup' ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
+          <button type="button" onClick={() => gantiTabSeni('setup')} className={kelasTabSeni(tabSeni === 'setup', true)}>
             Setup Seni Budaya
           </button>
           {DISIPLIN_SENI.map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => { setTabSeni(d); setForm(null) }}
-              className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
-                tabSeni === d ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
+            <button key={d} type="button" onClick={() => gantiTabSeni(d)} className={kelasTabSeni(tabSeni === d)}>
               TP {d.replace('Seni ', '')}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => { setTabSeni('semua'); setForm(null) }}
-            className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
-              tabSeni === 'semua' ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
+          <button type="button" onClick={() => gantiTabSeni('semua')} className={kelasTabSeni(tabSeni === 'semua')}>
             Semua TP
           </button>
         </div>
@@ -734,371 +1035,717 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         <Spinner />
       ) : (
         <>
-      {!form && tulis && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className={btnPrimary}
-            onClick={() => setForm(formBaru(Math.max(0, ...(list ?? []).map((t) => t.nomorTp || 0)) + 1))}
-          >
-            + Tambah TP
-          </button>
-          <button type="button" className={btnGhost} onClick={() => setPanelImpor((v) => !v)}>
-            {panelImpor ? 'Tutup panel' : 'Impor / Ekspor'}
-          </button>
-          <Link
-            to={`/akademik/bobot-semester?mapel=${encodeURIComponent(mapel)}&kelas=${encodeURIComponent(kelas)}`}
-            className={`${btnGhost} no-underline`}
-          >
-            Atur semester &amp; bobot
-          </Link>
-        </div>
-      )}
-
-      {panelImpor && tulis && !form && (
-        <section className="card-soft space-y-3 p-4">
-          <h2 className="text-[14px] font-semibold text-slate-900">
-            Impor / ekspor — {mapel} kelas {kelas}
-          </h2>
-          <p className="text-[12.5px] leading-relaxed text-muted">
-            Unduh template (kosong atau terisi TP saat ini), edit di Excel, lalu unggah. Saat impor, hanya
-            baris mapel &amp; tingkatan ini yang ditulis. Mode ganti hanya menghapus TP pasangan ini.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={btnGhost}
-              onClick={() =>
-                void unduhTemplateExcel({
-                  mapel,
-                  kelas,
-                  namaFile: `template-tp-${mapel.replace(/\s+/g, '-').toLowerCase()}-${kelas.toLowerCase()}.xlsx`,
-                })
-              }
-            >
-              Template kosong
-            </button>
-            <button
-              type="button"
-              className={btnGhost}
-              disabled={!list?.length}
-              onClick={() => {
-                const items: TpImportItem[] = (list ?? []).map((tp) => ({
-                  mapel: tp.mapel,
-                  kelas: tp.kelas || kelas,
-                  tingkatan: tp.tingkatan,
-                  nomorTp: tp.nomorTp,
-                  namaTp: tp.namaTp,
-                  cp: tp.cp,
-                  tipe: tp.tipe,
-                  bobotSlm: tp.bobotSlm ?? 60,
-                  bobotSas: tp.bobotSas ?? 40,
-                  levels: tp.levels?.length === 4 ? tp.levels : [
-                    { min: 0, maks: 60, deskripsi: '' },
-                    { min: 61, maks: 75, deskripsi: '' },
-                    { min: 76, maks: 85, deskripsi: '' },
-                    { min: 86, maks: 100, deskripsi: '' },
-                  ],
-                }))
-                void unduhTemplateExcel({
-                  items,
-                  mapel,
-                  kelas,
-                  namaFile: `tp-${mapel.replace(/\s+/g, '-').toLowerCase()}-${kelas.toLowerCase()}.xlsx`,
-                })
-              }}
-            >
-              Ekspor TP saat ini ({list?.length ?? 0})
-            </button>
-          </div>
-          <input
-            type="file"
-            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/json,.json"
-            className="block w-full text-[13px] file:mr-3 file:rounded-lg file:border-0 file:bg-muh-50 file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-muh-800"
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) void bacaFileImpor(f)
-              e.target.value = ''
-            }}
-          />
-          <div className="flex flex-wrap gap-3 text-[12.5px]">
-            <label className="inline-flex items-center gap-1.5">
-              <input
-                type="radio"
-                name="modeImporDetail"
-                checked={modeImpor === 'tambah'}
-                onChange={() => setModeImpor('tambah')}
-              />
-              Tambah saja
-            </label>
-            <label className="inline-flex items-center gap-1.5">
-              <input
-                type="radio"
-                name="modeImporDetail"
-                checked={modeImpor === 'ganti'}
-                onChange={() => setModeImpor('ganti')}
-              />
-              Ganti (hapus dulu TP mapel ini)
-            </label>
-          </div>
-          {pratinjauImpor && (
-            <div className="space-y-2 rounded-xl border border-border bg-slate-50/80 p-3 text-[12.5px]">
-              {(() => {
-                const cocok = pratinjauImpor.items.filter(
-                  (it) => ekuivalenMapel(it.mapel, mapel) && it.kelas.toUpperCase() === kelas,
-                )
-                return (
-                  <>
-                    <p className="font-semibold text-slate-800">
-                      Cocok untuk {mapel} kelas {kelas}: {cocok.length} dari{' '}
-                      {pratinjauImpor.items.length} TP di file
-                    </p>
-                    {cocok.length > 0 && (
-                      <ul className="max-h-28 space-y-0.5 overflow-y-auto text-slate-600">
-                        {cocok.slice(0, 12).map((it) => (
-                          <li key={`${it.nomorTp}-${it.namaTp.slice(0, 24)}`}>
-                            TP {it.nomorTp}: {it.namaTp.slice(0, 80)}
-                            {it.namaTp.length > 80 ? '…' : ''}
-                          </li>
-                        ))}
-                        {cocok.length > 12 && <li>…dan {cocok.length - 12} lainnya</li>}
-                      </ul>
-                    )}
-                    <button
-                      type="button"
-                      className={btnPrimary}
-                      disabled={busyImpor || cocok.length === 0}
-                      onClick={() => void jalankanImpor({ mapel, kelas })}
-                    >
-                      {busyImpor ? 'Mengimpor…' : `Impor ${cocok.length} TP ke sini`}
-                    </button>
-                  </>
-                )
-              })()}
+          {tulis && (
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className={btnPrimary} disabled={sibuk} onClick={bukaTpBaru}>
+                + Tambah TP
+              </button>
+              <button type="button" className={btnGhost} onClick={() => setPanelImpor((v) => !v)}>
+                {panelImpor ? 'Tutup panel' : 'Impor / Ekspor'}
+              </button>
+              <Link
+                to={`/akademik/bobot-semester?mapel=${encodeURIComponent(mapel)}&kelas=${encodeURIComponent(kelas)}`}
+                className={`${btnGhost} no-underline`}
+              >
+                Atur semester &amp; bobot
+              </Link>
             </div>
           )}
-        </section>
-      )}
 
-      {form && (
-        <section className="card-soft space-y-4 p-4">
-          <h2 className="text-[14px] font-semibold text-slate-900">{form.id ? 'Edit TP' : 'TP baru'}</h2>
-          <div className="grid gap-3 sm:grid-cols-[110px_1fr]">
-            <label className="block text-[12px] font-medium text-slate-600">
-              Nomor TP
-              <input
-                className={`${inputCls} mt-1`}
-                inputMode="numeric"
-                value={form.nomorTp}
-                onChange={(e) => setForm({ ...form, nomorTp: e.target.value })}
-              />
-            </label>
-            <label className="block text-[12px] font-medium text-slate-600">
-              Nama TP
-              <input
-                className={`${inputCls} mt-1`}
-                value={form.namaTp}
-                onChange={(e) => setForm({ ...form, namaTp: e.target.value })}
-                placeholder="Rumusan tujuan pembelajaran"
-              />
-            </label>
-          </div>
-          <label className="block text-[12px] font-medium text-slate-600">
-            Capaian Pembelajaran (opsional)
-            <textarea
-              className={`${inputCls} mt-1`}
-              rows={2}
-              value={form.cp}
-              onChange={(e) => setForm({ ...form, cp: e.target.value })}
-              placeholder="Kalimat CP dari mapel ini untuk fase terkait"
-            />
-          </label>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <p className="text-[12px] font-medium text-slate-600">Jenis penilaian</p>
-              <div className="mt-1 flex gap-1.5">
-                {(['pengetahuan', 'kinerja'] as TipeTp[]).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setForm({ ...form, tipe: t })}
-                    className={`flex-1 rounded-xl border px-3 py-2 text-[12.5px] font-medium capitalize ${
-                      form.tipe === t
-                        ? 'border-muh-600 bg-muh-50 text-muh-800'
-                        : 'border-border bg-white text-slate-600'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <label className="block text-[12px] font-medium text-slate-600">
-              Bobot SLM (%)
-              <input
-                className={`${inputCls} mt-1`}
-                inputMode="numeric"
-                value={form.bobotSlm}
-                onChange={(e) => {
-                  const v = e.target.value
-                  const n = Number(v)
-                  setForm({
-                    ...form,
-                    bobotSlm: v,
-                    bobotSas: Number.isFinite(n) && n >= 0 && n <= 100 && v !== '' ? String(100 - n) : form.bobotSas,
-                  })
-                }}
-              />
-            </label>
-            <label className="block text-[12px] font-medium text-slate-600">
-              Bobot SAS (%)
-              <input
-                className={`${inputCls} mt-1`}
-                inputMode="numeric"
-                value={form.bobotSas}
-                onChange={(e) => setForm({ ...form, bobotSas: e.target.value })}
-              />
-            </label>
-          </div>
-          <p className="text-[11.5px] leading-relaxed text-muted">
-            Dipakai kalau SAS TP ini diisi. Kalau SAS kosong, nilai akhir TP = SLM saja.
-          </p>
-
-          <div className="space-y-2.5">
-            <p className="text-[12px] font-medium text-slate-600">
-              Empat level KKTP — rentang nilai dan deskripsi capaian
-            </p>
-            {form.levels.map((l, i) => (
-              <div key={i} className="rounded-xl border border-border p-3">
-                <div className="flex items-center gap-2">
-                  <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${LEVEL_WARNA[i]}`}>
-                    {LEVEL_LABEL[form.tipe][i]}
-                  </span>
-                  <input
-                    aria-label={`Nilai minimum level ${i + 1}`}
-                    className={`${inputCls} w-16 text-center`}
-                    inputMode="numeric"
-                    value={l.min}
-                    onChange={(e) => setLevel(i, 'min', e.target.value)}
-                  />
-                  <span className="text-muted">–</span>
-                  <input
-                    aria-label={`Nilai maksimum level ${i + 1}`}
-                    className={`${inputCls} w-16 text-center`}
-                    inputMode="numeric"
-                    value={l.maks}
-                    onChange={(e) => setLevel(i, 'maks', e.target.value)}
-                  />
-                </div>
-                <textarea
-                  aria-label={`Deskripsi level ${i + 1}`}
-                  className={`${inputCls} mt-2`}
-                  rows={2}
-                  value={l.deskripsi}
-                  onChange={(e) => setLevel(i, 'deskripsi', e.target.value)}
-                  placeholder="Kalimat capaian yang akan muncul di rapor"
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="flex gap-2">
-            <button type="button" className={btnPrimary} disabled={busy} onClick={() => void simpan()}>
-              {busy ? 'Menyimpan…' : 'Simpan TP'}
-            </button>
-            <button type="button" className={btnGhost} disabled={busy} onClick={() => setForm(null)}>
-              Batal
-            </button>
-          </div>
-        </section>
-      )}
-
-      {list === null || listTampil === null ? (
-        <Spinner />
-      ) : listTampil.length === 0 ? (
-        <Notice>
-          {isSeniBudaya && tabSeni !== 'semua' && tabSeni !== 'setup'
-            ? `Belum ada TP untuk ${tabSeni} di kelas ${kelas}. Tambahkan TP di tab ini.`
-            : `Belum ada TP untuk ${mapel} kelas ${kelas}. Tambahkan TP pertama.`}
-        </Notice>
-      ) : (
-        <div className="space-y-2.5">
-          {listTampil.map((tp) => {
-            const buka = terbuka === tp.id
-            return (
-              <article key={tp.id} className="card-soft overflow-hidden">
+          {panelImpor && tulis && (
+            <section className="card-soft space-y-3 p-4">
+              <h2 className="text-[14px] font-semibold text-slate-900">
+                Impor / ekspor — {mapel} kelas {kelas}
+              </h2>
+              <p className="text-[12.5px] leading-relaxed text-muted">
+                Unduh template (kosong atau terisi TP saat ini), edit di Excel, lalu unggah. Saat impor, hanya
+                baris mapel &amp; tingkatan ini yang ditulis. Mode ganti hanya menghapus TP pasangan ini.
+              </p>
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => setTerbuka(buka ? null : tp.id)}
-                  className="flex w-full items-center gap-3 p-3.5 text-left"
-                  aria-expanded={buka}
+                  className={btnGhost}
+                  onClick={() =>
+                    void unduhTemplateExcel({
+                      mapel,
+                      kelas,
+                      namaFile: `template-tp-${mapel.replace(/\s+/g, '-').toLowerCase()}-${kelas.toLowerCase()}.xlsx`,
+                    })
+                  }
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muh-50 text-[13px] font-bold text-muh-700">
-                    {tp.nomorTp}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13.5px] font-semibold leading-snug text-slate-900">{tp.namaTp}</span>
-                    <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                      <Badge tone="green">{tp.tipe}</Badge>
-                      {tp.disiplinSeni && <Badge tone="peach">{tp.disiplinSeni}</Badge>}
-                      <Badge>
-                        SLM {tp.bobotSlm ?? 60}% · SAS {tp.bobotSas ?? 40}%
-                      </Badge>
-                      {(() => {
-                        const alokasi = normalisasiAlokasiTp(tp)
-                        const keys = (Object.keys(alokasi) as ('1' | '2')[]).sort()
-                        if (!keys.length) {
-                          return <Badge tone="peach">Semester &amp; bobot belum diatur</Badge>
-                        }
-                        return (
-                          <Badge>
-                            {keys.map((s) => `Sem ${s} ${alokasi[s]}%`).join(' · ')}
-                          </Badge>
-                        )
-                      })()}
-                    </span>
-                  </span>
+                  Template kosong
                 </button>
-                {buka && (
-                  <div className="space-y-3 border-t border-border p-3.5">
-                    {tp.cp && <p className="text-[12.5px] text-slate-600">{tp.cp}</p>}
-                    <ul className="space-y-1.5">
-                      {(tp.levels || []).map((l, i) => (
-                        <li key={i} className="flex gap-2 text-[12.5px]">
-                          <span className={`h-fit shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${LEVEL_WARNA[i]}`}>
-                            {LEVEL_LABEL[tp.tipe][i]} {l.min}–{l.maks}
-                          </span>
-                          <span className="text-slate-600">{l.deskripsi || 'Belum diisi'}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="flex gap-2">
-                      {tulis && (
-                        <>
-                      <button type="button" className={btnGhost} onClick={() => { setForm(formDariTp(tp)); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
-                        Edit
-                      </button>
+                <button
+                  type="button"
+                  className={btnGhost}
+                  disabled={!list?.length}
+                  onClick={() => {
+                    const items: TpImportItem[] = (list ?? []).map((tp) => ({
+                      mapel: tp.mapel,
+                      kelas: tp.kelas || kelas,
+                      tingkatan: tp.tingkatan,
+                      nomorTp: tp.nomorTp,
+                      namaTp: tp.namaTp,
+                      cp: tp.cp,
+                      tipe: tp.tipe,
+                      bobotSlm: tp.bobotSlm ?? 60,
+                      bobotSas: tp.bobotSas ?? 40,
+                      levels:
+                        tp.levels?.length === 4
+                          ? tp.levels
+                          : [
+                              { min: 0, maks: 60, deskripsi: '' },
+                              { min: 61, maks: 75, deskripsi: '' },
+                              { min: 76, maks: 85, deskripsi: '' },
+                              { min: 86, maks: 100, deskripsi: '' },
+                            ],
+                    }))
+                    void unduhTemplateExcel({
+                      items,
+                      mapel,
+                      kelas,
+                      namaFile: `tp-${mapel.replace(/\s+/g, '-').toLowerCase()}-${kelas.toLowerCase()}.xlsx`,
+                    })
+                  }}
+                >
+                  Ekspor TP saat ini ({list?.length ?? 0})
+                </button>
+              </div>
+              <input
+                type="file"
+                accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/json,.json"
+                className="block w-full text-[13px] file:mr-3 file:rounded-lg file:border-0 file:bg-muh-50 file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-muh-800"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void bacaFileImpor(f)
+                  e.target.value = ''
+                }}
+              />
+              <div className="flex flex-wrap gap-3 text-[12.5px]">
+                <label className="inline-flex items-center gap-1.5">
+                  <input
+                    type="radio"
+                    name="modeImporDetail"
+                    checked={modeImpor === 'tambah'}
+                    onChange={() => setModeImpor('tambah')}
+                  />
+                  Tambah saja
+                </label>
+                <label className="inline-flex items-center gap-1.5">
+                  <input
+                    type="radio"
+                    name="modeImporDetail"
+                    checked={modeImpor === 'ganti'}
+                    onChange={() => setModeImpor('ganti')}
+                  />
+                  Ganti (hapus dulu TP mapel ini)
+                </label>
+              </div>
+              {pratinjauImpor && (
+                <div className="space-y-2 rounded-xl border border-border bg-slate-50/80 p-3 text-[12.5px]">
+                  {(() => {
+                    const cocok = pratinjauImpor.items.filter(
+                      (it) => ekuivalenMapel(it.mapel, mapel) && it.kelas.toUpperCase() === kelas,
+                    )
+                    return (
+                      <>
+                        <p className="font-semibold text-slate-800">
+                          Cocok untuk {mapel} kelas {kelas}: {cocok.length} dari {pratinjauImpor.items.length} TP di
+                          file
+                        </p>
+                        {cocok.length > 0 && (
+                          <ul className="max-h-28 space-y-0.5 overflow-y-auto text-slate-600">
+                            {cocok.slice(0, 12).map((it) => (
+                              <li key={`${it.nomorTp}-${it.namaTp.slice(0, 24)}`}>
+                                TP {it.nomorTp}: {it.namaTp.slice(0, 80)}
+                                {it.namaTp.length > 80 ? '…' : ''}
+                              </li>
+                            ))}
+                            {cocok.length > 12 && <li>…dan {cocok.length - 12} lainnya</li>}
+                          </ul>
+                        )}
+                        <button
+                          type="button"
+                          className={btnPrimary}
+                          disabled={busyImpor || cocok.length === 0}
+                          onClick={() => void jalankanImpor({ mapel, kelas })}
+                        >
+                          {busyImpor ? 'Mengimpor…' : `Impor ${cocok.length} TP ke sini`}
+                        </button>
+                      </>
+                    )
+                  })()}
+                </div>
+              )}
+            </section>
+          )}
+
+          {list === null || listTampil === null ? (
+            <Spinner />
+          ) : !tulis ? (
+            // Admin: hanya melihat. Tidak ada editor, jadi rincian dibuka di tempat.
+            listTampil.length === 0 ? (
+              <Notice>{teksKosong}</Notice>
+            ) : (
+              <div className="space-y-2.5">
+                {listTampil.map((tp) => {
+                  const buka = terbuka === tp.id
+                  return (
+                    <article key={tp.id} className="card-soft overflow-hidden">
                       <button
                         type="button"
-                        className="rounded-xl border border-red-200 bg-white px-3.5 py-2 text-[13px] font-medium text-red-700 hover:bg-red-50"
-                        onClick={() => void hapus(tp)}
+                        onClick={() => setTerbuka(buka ? null : tp.id)}
+                        className="flex w-full items-center gap-3 p-3.5 text-left"
+                        aria-expanded={buka}
                       >
-                        Hapus
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muh-50 text-[13px] font-bold text-muh-700">
+                          {tp.nomorTp}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[13.5px] font-semibold leading-snug text-slate-900">{tp.namaTp}</span>
+                          <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <Badge tone="green">{tp.tipe}</Badge>
+                            {tp.disiplinSeni && <Badge tone="peach">{tp.disiplinSeni}</Badge>}
+                            <Badge>
+                              SLM {tp.bobotSlm ?? 60}% · SAS {tp.bobotSas ?? 40}%
+                            </Badge>
+                            {badgeSemester(tp)}
+                          </span>
+                        </span>
                       </button>
-                        </>
+                      {buka && (
+                        <div className="space-y-3 border-t border-border p-3.5">
+                          {tp.cp && <p className="text-[12.5px] text-slate-600">{tp.cp}</p>}
+                          <ul className="space-y-1.5">
+                            {(tp.levels || []).map((l, i) => (
+                              <li key={i} className="flex gap-2 text-[12.5px]">
+                                <span
+                                  className={`h-fit shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${LEVEL_WARNA[i]}`}
+                                >
+                                  {LEVEL_LABEL[tp.tipe][i]} {l.min}–{l.maks}
+                                </span>
+                                <span className="text-slate-600">{l.deskripsi || 'Belum diisi'}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </article>
+                  )
+                })}
+              </div>
+            )
+          ) : (
+            <div className="grid items-start gap-4 xl:grid-cols-[22rem_minmax(0,1fr)]">
+              {/* ===== Kiri: daftar TP ===== */}
+              <section
+                className={`card-soft min-h-0 flex-col xl:sticky xl:top-[4.25rem] xl:max-h-[max(28rem,calc(100vh-14rem))] ${
+                  detailTampilDiKecil ? 'hidden xl:flex' : 'flex'
+                }`}
+              >
+                <div className="shrink-0 space-y-2.5 border-b border-border p-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="text-[14px] font-semibold text-slate-900">
+                      Daftar TP <span className="tabular font-normal text-muted">({semuaTp.length})</span>
+                    </h2>
+                    {akunAi && (
+                      <button type="button" className={`${btnGhostSm} xl:hidden`} onClick={tampilkanTabCp}>
+                        Capaian Pembelajaran
+                      </button>
+                    )}
+                  </div>
+                  {semuaTp.length > 0 && (
+                    <>
+                      <input
+                        type="search"
+                        className={inputCls}
+                        placeholder="Cari nomor atau nama TP…"
+                        value={cariTp}
+                        onChange={(e) => setCariTp(e.target.value)}
+                      />
+                      <div className="flex flex-wrap gap-1.5">
+                        <ChipToggle active={filterTp === 'semua'} count={semuaTp.length} onClick={() => setFilterTp('semua')}>
+                          Semua
+                        </ChipToggle>
+                        <ChipToggle
+                          active={filterTp === 'kktp-kurang'}
+                          count={jumlahKktpKurang}
+                          perhatian
+                          onClick={() => setFilterTp('kktp-kurang')}
+                        >
+                          KKTP belum lengkap
+                        </ChipToggle>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                  {semuaTp.length === 0 ? (
+                    <p className="p-4 text-[13px] leading-relaxed text-muted">{teksKosong}</p>
+                  ) : tpTampil.length === 0 ? (
+                    <div className="space-y-2 p-4 text-[13px] text-muted">
+                      <p>Tidak ada TP yang cocok dengan pencarian atau saringan.</p>
+                      <button
+                        type="button"
+                        className={btnGhostSm}
+                        onClick={() => {
+                          setCariTp('')
+                          setFilterTp('semua')
+                        }}
+                      >
+                        Hapus pencarian
+                      </button>
+                    </div>
+                  ) : (
+                    <ul className="divide-y divide-border">
+                      {tpTampil.map((tp) => {
+                        const aktif = form?.id === tp.id
+                        const terisi = jumlahKktpTerisi(tp)
+                        return (
+                          <li key={tp.id} id={`tp-baris-${tp.id}`}>
+                            <button
+                              type="button"
+                              disabled={sibuk}
+                              aria-current={aktif ? 'true' : undefined}
+                              onClick={() => bukaTp(tp)}
+                              className={`flex w-full items-start gap-2.5 border-l-[3px] px-3.5 py-2.5 text-left transition disabled:opacity-60 ${
+                                aktif ? 'border-muh-600 bg-muh-50' : 'border-transparent hover:bg-slate-50'
+                              }`}
+                            >
+                              <span className="tabular mt-0.5 inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 px-1.5 text-[11.5px] font-semibold text-slate-700">
+                                {tp.nomorTp}
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="line-clamp-2 block text-[13px] font-medium leading-snug text-slate-900">
+                                  {tp.namaTp}
+                                </span>
+                                <span className="mt-1 flex flex-wrap items-center gap-1">
+                                  <Badge tone="green">{labelTipe(tp.tipe)}</Badge>
+                                  {tp.disiplinSeni && <Badge tone="peach">{tp.disiplinSeni}</Badge>}
+                                  {terisi >= JUMLAH_LEVEL_KKTP ? (
+                                    <Badge>KKTP {terisi}/{JUMLAH_LEVEL_KKTP}</Badge>
+                                  ) : (
+                                    <Badge tone="peach">KKTP {terisi}/{JUMLAH_LEVEL_KKTP}</Badge>
+                                  )}
+                                  {aktif && dirty && (
+                                    <span className="text-[11px] font-medium text-peach-500">● belum disimpan</span>
+                                  )}
+                                </span>
+                              </span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </section>
+
+              {/* ===== Kanan: editor (+ tab daftar CP untuk akun AI) ===== */}
+              <section
+                className={`card-soft min-h-0 flex-col xl:sticky xl:top-[4.25rem] xl:h-[max(28rem,calc(100vh-14rem))] ${
+                  detailTampilDiKecil ? 'flex' : 'hidden xl:flex'
+                }`}
+              >
+                <div className="shrink-0 space-y-2 border-b border-border p-3">
+                  <button
+                    type="button"
+                    className="text-[12px] font-medium text-muh-700 hover:underline disabled:opacity-60 xl:hidden"
+                    disabled={sibuk}
+                    onClick={kembaliKeDaftar}
+                  >
+                    ← Daftar TP
+                  </button>
+                  {akunAi ? (
+                    <Segmented
+                      value={tabKanan}
+                      onChange={(v) => (v === 'cp' ? tampilkanTabCp() : setTabKanan('editor'))}
+                      options={[
+                        { value: 'editor', label: form ? (form.id ? `Edit TP ${form.nomorTp}` : 'TP baru') : 'Editor TP' },
+                        { value: 'cp', label: `Capaian Pembelajaran${daftarCp.length ? ` (${daftarCp.length})` : ''}` },
+                      ]}
+                    />
+                  ) : (
+                    <h2 className="text-[14px] font-semibold text-slate-900">
+                      {form ? (form.id ? `Edit TP ${form.nomorTp}` : 'TP baru') : 'Editor TP'}
+                    </h2>
+                  )}
+                </div>
+
+                {akunAi && tabKanan === 'cp' ? (
+                  <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3.5">
+                    <p className="text-[12px] leading-snug text-muted">
+                      Pilih CP untuk menyusun TP. Teks resmi tidak boleh diubah.
+                      {isSeniBudaya && !disiplinTab ? ' Buka tab disiplin dulu.' : ''}
+                    </p>
+                    {daftarCp.length === 0 ? (
+                      <p className="text-[12.5px] text-muted">
+                        {isSeniBudaya && !disiplinTab
+                          ? 'Belum ada elemen yang ditampilkan.'
+                          : `Tidak ada CP untuk ${mapel} fase ${faseCp}.`}
+                      </p>
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-[12px] text-muted">
+                            {daftarCpTampil.length}/{daftarCp.length}
+                          </span>
+                          {daftarCp.some((cp) => cpSelesai.has(kunciCp(cp))) && (
+                            <button
+                              type="button"
+                              className={`${btnGhost} py-1 text-[12px]`}
+                              onClick={() => setTampilkanCpSelesai((v) => !v)}
+                            >
+                              {tampilkanCpSelesai ? 'Sembunyikan selesai' : 'Tampilkan selesai'}
+                            </button>
+                          )}
+                        </div>
+                        <ul className="space-y-1.5">
+                          {daftarCpTampil.map((cp) => {
+                            const selesai = cpSelesai.has(kunciCp(cp))
+                            return (
+                              <li
+                                key={`${cp.elemen}-${cp.disiplinSeni || ''}`}
+                                className={`rounded-lg border px-2.5 py-2 ${
+                                  selesai ? 'border-slate-200 bg-slate-50' : 'border-slate-200 bg-white'
+                                }`}
+                              >
+                                <div className="flex items-start gap-2">
+                                  <input
+                                    type="checkbox"
+                                    className="mt-0.5 h-4 w-4 shrink-0 accent-muh-600"
+                                    checked={selesai}
+                                    title={selesai ? 'Tampilkan lagi' : 'Tandai selesai dan sembunyikan'}
+                                    onChange={() => {
+                                      if (selesai) {
+                                        setCpSelesai((s) => {
+                                          const n = new Set(s)
+                                          n.delete(kunciCp(cp))
+                                          return n
+                                        })
+                                      } else {
+                                        tandaiCpSelesai(cp)
+                                      }
+                                    }}
+                                  />
+                                  <div className="min-w-0">
+                                    <p className="text-[13px] font-semibold text-slate-900">
+                                      {cp.elemen}
+                                      {selesai ? <span className="font-normal text-muted"> · selesai</span> : null}
+                                    </p>
+                                    <p className="mt-0.5 text-[11.5px] leading-snug text-slate-600">{cp.teks}</p>
+                                  </div>
+                                </div>
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  <button
+                                    type="button"
+                                    className={`${btnGhost} px-2.5 py-1 text-[12px]`}
+                                    disabled={sibuk}
+                                    onClick={() => bukaFormDariCp(cp)}
+                                  >
+                                    Pakai
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="rounded-lg bg-muh-600 px-2.5 py-1 text-[12px] font-semibold text-white hover:bg-muh-700 disabled:opacity-50"
+                                    disabled={busyAi !== null}
+                                    onClick={() => void jalankanGenerateTp('gemini', cp)}
+                                  >
+                                    {busyAi === 'tp' ? '…' : 'Gemini'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="rounded-lg border-2 border-emerald-600 bg-emerald-50 px-2.5 py-1 text-[12px] font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
+                                    disabled={busyAi !== null}
+                                    onClick={() => void jalankanGenerateTp('openai', cp)}
+                                  >
+                                    OpenAI
+                                  </button>
+                                </div>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                        {daftarCpTampil.length === 0 && (
+                          <p className="text-[12px] text-muted">
+                            Semua CP ditandai selesai. Tekan “Tampilkan selesai” untuk melihat lagi.
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ) : !form ? (
+                  <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-6">
+                    <h2 className="text-[15px] font-semibold text-slate-900">Belum ada TP yang dibuka</h2>
+                    <p className="max-w-md text-[13px] leading-relaxed text-muted">
+                      Pilih TP di daftar untuk mengedit, atau tambah yang baru. Setelah satu TP disimpan Anda bisa
+                      langsung lanjut ke TP berikutnya tanpa kembali ke daftar.
+                    </p>
+                    {semuaTp.length > 0 && (
+                      <p className="text-[12.5px] text-slate-600">
+                        {semuaTp.length} TP ·{' '}
+                        {jumlahKktpKurang > 0
+                          ? `${jumlahKktpKurang} TP KKTP-nya belum lengkap`
+                          : 'semua KKTP sudah lengkap'}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" className={btnPrimary} disabled={sibuk} onClick={bukaTpBaru}>
+                        + Tambah TP
+                      </button>
+                      {akunAi && (
+                        <button type="button" className={btnGhost} onClick={tampilkanTabCp}>
+                          Susun dari Capaian Pembelajaran
+                        </button>
                       )}
                     </div>
                   </div>
+                ) : (
+                  <>
+                    <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2">
+                      <p className="text-[12px] text-muted">
+                        {form.id
+                          ? indeksAktif >= 0
+                            ? `TP ke-${indeksAktif + 1} dari ${semuaTp.length}`
+                            : 'Edit TP'
+                          : antrianAi.length
+                            ? `TP baru · ${antrianAi.length} TP antrean AI menunggu`
+                            : 'TP baru'}
+                      </p>
+                      {form.id && (
+                        <div className="flex gap-1.5">
+                          <button
+                            type="button"
+                            className={btnGhostSm}
+                            disabled={!tpSebelumnya || sibuk}
+                            onClick={() => tpSebelumnya && bukaTp(tpSebelumnya)}
+                          >
+                            ‹ Sebelumnya
+                          </button>
+                          <button
+                            type="button"
+                            className={btnGhostSm}
+                            disabled={!tpBerikutnya || sibuk}
+                            onClick={() => tpBerikutnya && bukaTp(tpBerikutnya)}
+                          >
+                            Berikutnya ›
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div ref={badanEditorRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+                      {tpAktif && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {tpAktif.disiplinSeni && <Badge tone="peach">{tpAktif.disiplinSeni}</Badge>}
+                          {badgeSemester(tpAktif)}
+                        </div>
+                      )}
+                      <div className="grid gap-3 sm:grid-cols-[110px_1fr]">
+                        <label className="block text-[12px] font-medium text-slate-600">
+                          Nomor TP
+                          <input
+                            className={`${inputCls} mt-1`}
+                            inputMode="numeric"
+                            value={form.nomorTp}
+                            onChange={(e) => setField('nomorTp', e.target.value)}
+                          />
+                        </label>
+                        <label className="block text-[12px] font-medium text-slate-600">
+                          Nama TP
+                          <input
+                            className={`${inputCls} mt-1`}
+                            value={form.namaTp}
+                            onChange={(e) => setField('namaTp', e.target.value)}
+                            placeholder="Rumusan tujuan pembelajaran"
+                          />
+                        </label>
+                      </div>
+                      <label className="block text-[12px] font-medium text-slate-600">
+                        Capaian Pembelajaran (opsional)
+                        <textarea
+                          className={`${inputCls} mt-1`}
+                          rows={2}
+                          value={form.cp}
+                          readOnly={Boolean(form.cpTerkunci)}
+                          onChange={(e) => setField('cp', e.target.value)}
+                          placeholder="Kalimat CP dari mapel ini untuk fase terkait"
+                        />
+                        {form.cpTerkunci && (
+                          <span className="mt-1 block text-[11.5px] text-muted">
+                            Teks CP resmi terkunci (dari dokumen pemerintah).
+                          </span>
+                        )}
+                      </label>
+
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div>
+                          <p className="text-[12px] font-medium text-slate-600">Jenis penilaian</p>
+                          <div className="mt-1 flex gap-1.5">
+                            {(['pengetahuan', 'kinerja'] as TipeTp[]).map((t) => (
+                              <button
+                                key={t}
+                                type="button"
+                                onClick={() => setField('tipe', t)}
+                                className={`flex-1 rounded-lg border px-3 py-2 text-[12.5px] font-medium capitalize ${
+                                  form.tipe === t
+                                    ? 'border-muh-600 bg-muh-50 text-muh-800'
+                                    : 'border-border bg-white text-slate-600'
+                                }`}
+                              >
+                                {t}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <label className="block text-[12px] font-medium text-slate-600">
+                          Bobot SLM (%)
+                          <input
+                            className={`${inputCls} mt-1`}
+                            inputMode="numeric"
+                            value={form.bobotSlm}
+                            onChange={(e) => {
+                              const v = e.target.value
+                              const n = Number(v)
+                              setForm((f) =>
+                                f
+                                  ? {
+                                      ...f,
+                                      bobotSlm: v,
+                                      bobotSas:
+                                        Number.isFinite(n) && n >= 0 && n <= 100 && v !== '' ? String(100 - n) : f.bobotSas,
+                                    }
+                                  : f,
+                              )
+                            }}
+                          />
+                        </label>
+                        <label className="block text-[12px] font-medium text-slate-600">
+                          Bobot SAS (%)
+                          <input
+                            className={`${inputCls} mt-1`}
+                            inputMode="numeric"
+                            value={form.bobotSas}
+                            onChange={(e) => setField('bobotSas', e.target.value)}
+                          />
+                        </label>
+                      </div>
+                      <p className="text-[11.5px] leading-relaxed text-muted">
+                        Dipakai kalau SAS TP ini diisi. Kalau SAS kosong, nilai akhir TP = SLM saja.
+                      </p>
+
+                      <div className="space-y-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-[12px] font-medium text-slate-600">
+                            Empat level KKTP — rentang nilai dan deskripsi capaian
+                          </p>
+                          {akunAi && (
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                className={btnGhost}
+                                disabled={busyAi !== null}
+                                onClick={() => void jalankanGenerateKktp('gemini')}
+                              >
+                                {busyAi === 'kktp' ? 'Menyusun…' : 'Generate KKTP · Gemini'}
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-lg border-2 border-emerald-600 bg-emerald-50 px-3.5 py-2 text-[13px] font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50"
+                                disabled={busyAi !== null}
+                                onClick={() => void jalankanGenerateKktp('openai')}
+                              >
+                                Generate KKTP · OpenAI
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {form.levels.map((l, i) => (
+                          <div key={i} className="rounded-xl border border-border p-3">
+                            <div className="flex items-center gap-2">
+                              <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${LEVEL_WARNA[i]}`}>
+                                {LEVEL_LABEL[form.tipe][i]}
+                              </span>
+                              <input
+                                aria-label={`Nilai minimum level ${i + 1}`}
+                                className={`${inputSempitCls} w-16 text-center`}
+                                inputMode="numeric"
+                                value={l.min}
+                                onChange={(e) => setLevel(i, 'min', e.target.value)}
+                              />
+                              <span className="text-muted">–</span>
+                              <input
+                                aria-label={`Nilai maksimum level ${i + 1}`}
+                                className={`${inputSempitCls} w-16 text-center`}
+                                inputMode="numeric"
+                                value={l.maks}
+                                onChange={(e) => setLevel(i, 'maks', e.target.value)}
+                              />
+                            </div>
+                            <textarea
+                              aria-label={`Deskripsi level ${i + 1}`}
+                              className={`${inputCls} mt-2`}
+                              rows={2}
+                              value={l.deskripsi}
+                              onChange={(e) => setLevel(i, 'deskripsi', e.target.value)}
+                              placeholder="Kalimat capaian yang akan muncul di rapor"
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      {tpAktif && (
+                        <div className="space-y-2 border-t border-border pt-3">
+                          <p className="text-[11.5px] font-semibold uppercase tracking-wide text-muted">Tindakan lain</p>
+                          <button
+                            type="button"
+                            className={btnDangerGhostSm}
+                            disabled={busy}
+                            onClick={() => void hapus(tpAktif)}
+                          >
+                            Hapus TP ini
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-border bg-white p-3 max-xl:sticky max-xl:bottom-[4.25rem] max-xl:z-10 max-xl:rounded-b-xl">
+                      <button
+                        type="button"
+                        className={btnPrimary}
+                        disabled={busy || (Boolean(form.id) && !dirty)}
+                        onClick={() => void simpan()}
+                      >
+                        {busy ? 'Menyimpan…' : antrianAi.length ? `Simpan TP (${antrianAi.length} menunggu)` : 'Simpan TP'}
+                      </button>
+                      {form.id && dirty && tpBerikutnya && (
+                        <button type="button" className={btnGhost} disabled={busy} onClick={() => void simpan(true)}>
+                          Simpan &amp; berikutnya ›
+                        </button>
+                      )}
+                      <button type="button" className={btnGhost} disabled={busy} onClick={kembaliKeDaftar}>
+                        {dirty ? 'Batal' : 'Tutup'}
+                      </button>
+                      <span className="ml-auto text-[11.5px] text-muted">
+                        {dirty ? (
+                          <span className="font-medium text-peach-500">● Belum disimpan</span>
+                        ) : form.id ? (
+                          'Tidak ada perubahan'
+                        ) : null}
+                        <span className="hidden xl:inline"> · Ctrl+S simpan</span>
+                      </span>
+                    </div>
+                  </>
                 )}
-              </article>
-            )
-          })}
-        </div>
-      )}
+              </section>
+            </div>
+          )}
         </>
       )}
+
       {node}
+      {dialogNode}
     </div>
   )
 }

@@ -311,3 +311,36 @@
 24.2 Pemuatan: tiga query tingkat periode (`absensi_rapor`, `kokurikuler_rapor`, `ekstrakurikuler_siswa`; `semester` + `tahunAjaran`), bukan per kelas, memakai hak baca admin. Jumlah siswa aktif memakai hitungan yang sudah dipakai pantauan lain (`getCountFromServer`). Kegagalan satu koleksi hanya menambah peringatan, bukan menggagalkan dashboard.
 
 24.3 Dropdown guru menyaring tab ini ke kelas yang diwalikan guru itu. Kotak "Perlu ditindaklanjuti admin" memperingatkan bila tanggal penyerahan rapor STS atau SAS belum diatur di Periode Akademik (rapor akan memakai tanggal hari ini).
+
+## §25. Generate TP/KKTP dengan AI hanya untuk satu akun (per 17 Okt 2026)
+
+25.1 **Penjaga sebenarnya ada di server.** `generateTpAi` dan `generateKktpAi` (`functions/index.js`) memanggil `bolehPemanggilAi(request.auth)` SEBELUM menyentuh API key. Syaratnya UID `v4fQXsqCzYUtHrqcDM0u48sxIfn1` DAN email token `arif.azwar79@gmail.com`. Jangan menambah Cloud Function AI baru tanpa gerbang yang sama, dan jangan melonggarkannya menjadi "semua admin" atau "semua guru".
+
+25.2 **UI hanyalah kosmetik, dan hanya untuk akun itu.** `bolehGenerateAi()` (`src/lib/generateAi.ts`) memutuskan: tab daftar Capaian Pembelajaran, tombol Gemini/OpenAI, Generate KKTP, kotak centang "selesai", dan konfirmasi menimpa KKTP di `SetupTp.tsx`. Semuanya HARUS di belakang `akunAi`; guru lain melihat editor TP biasa tanpa panel CP. Jangan pernah menganggap UI tersembunyi sebagai pengaman. Membuka daftar CP + "Pakai" untuk semua guru adalah keputusan terpisah (ubah `daftarCp` dan `akunAi &&` pada tab), bukan efek samping.
+
+25.3 `bolehGenerateAi` membaca `auth.currentUser` (sesi Firebase Auth), bukan data profil Firestore. Jangan diganti dengan field `users/{uid}` (mis. `role`, `email`) karena itu data yang bisa diubah admin.
+
+25.4 API key (`GEMINI_API_KEY`, `OPENAI_API_KEY`) hanya di Secret Manager lewat `secrets:` pada Cloud Function. Jangan masukkan ke `.env`, `VITE_*`, atau kode frontend (semua `VITE_*` terbundel ke JS publik).
+
+25.5 Percobaan akun lain tercatat sebagai `generateAi ditolak` (level warning) di log Functions. Email sengaja tidak dicatat.
+
+25.6 **Jangan menimpa `SetupTp.tsx` dengan salinan lama.** Pada 17 Okt 2026 optimasi UI menulis ulang berkas ini dari salinan tanpa AI sehingga fitur hilang diam-diam. Sebelum menimpa berkas ini, bandingkan dulu (`diff`) lalu gabungkan, jangan ganti utuh. `node --experimental-strip-types scripts/cek-setup-tp.mjs` kini gagal bila bagian AI-nya hilang atau tak lagi di belakang `akunAi`.
+
+25.7 Setelah mengubah `functions/`, WAJIB `npm run deploy:functions`; commit ke GitHub tidak mengubah Function yang berjalan. Uji gerbang: `node scripts/cek-generate-ai.mjs`.
+
+## §26. Setup TP & KKTP: tata letak daftar ⇄ editor (per 17 Okt 2026)
+
+26.1 **Editor TIDAK boleh dirender di bawah/atas daftar TP yang panjang.** Sekarang master–detail (`SetupTp.tsx`): daftar di kiri, editor di kanan (`xl:` ≥1280px, keduanya `sticky` dan menggulung di dalam panelnya sendiri, bilah Simpan selalu terlihat). Di bawah `xl` daftar DAN editor bergantian layar (tombol "← Daftar TP"), bukan ditumpuk.
+
+26.2 **Muat ulang setelah simpan/hapus harus senyap**: `muat(true)` tidak memanggil `setList(null)`. `muat()` tanpa argumen hanya untuk pemuatan awal dan setelah impor.
+
+26.3 **Perubahan belum tersimpan tidak boleh hilang diam-diam.** `dirty` = isi form berbeda dari `snapshotForm` (`null` = hasil AI/antrean, selalu dianggap belum tersimpan). Pindah TP, Tambah TP, Pakai CP, Generate TP, pindah tab Seni Budaya, dan Batal harus lewat `konfirmasiBuang()`. Meninggalkan halaman dijaga `useUnsavedGuard` (teks dialognya bisa diganti lewat argumen kedua; tanpa argumen tetap teks input nilai).
+
+26.4 Selama simpan atau generate AI berjalan (`sibuk`), membuka TP lain diabaikan.
+
+26.5 "Simpan TP" pada TP yang sudah ada TIDAK menutup editor; "Simpan & berikutnya" membuka TP berikutnya menurut urutan daftar yang sedang tampil (tab Seni Budaya ikut disaring). TP baru kembali ke daftar setelah tersimpan, kecuali masih ada antrean AI. Nomor TP baru = nomor terbesar + 1 (`nomorTpBerikut`).
+
+26.6 Aturan data tetap seperti sebelumnya: validasi nomor TP unik, deskripsi keempat level wajib, bobot SLM+SAS=100, `disiplinSeni` ikut tersimpan pada tab disiplin Seni Budaya, semester & bobot hanya diatur di menu Bobot Semester (editor menampilkannya hanya-baca). Admin hanya melihat daftar (kartu bisa dibuka).
+
+26.7 Logika daftar (penyaringan, tetangga prev/next, nomor berikut, kelengkapan KKTP) ada di `src/lib/setupTpRumus.ts`. Uji: `node --experimental-strip-types scripts/cek-setup-tp.mjs`.
+

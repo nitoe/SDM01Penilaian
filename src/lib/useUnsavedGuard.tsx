@@ -2,6 +2,13 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 
 const PESAN =
   'Ada nilai yang belum disimpan. Jika keluar sekarang, perubahan bisa hilang. Tetap tinggal di halaman ini?'
+const JUDUL = 'Nilai belum disimpan'
+
+/** Teks dialog. Tanpa argumen = teks input nilai (perilaku lama, dipakai NilaiSlm/NilaiStsSas). */
+export interface TeksGuard {
+  judul?: string
+  pesan?: string
+}
 
 /**
  * Lindungi halaman input nilai:
@@ -11,7 +18,7 @@ const PESAN =
  *
  * Catatan: BrowserRouter tidak mendukung useBlocker; pendekatan ini cukup untuk kasus guru senior.
  */
-export function useUnsavedGuard(dirty: boolean) {
+export function useUnsavedGuard(dirty: boolean, teks?: TeksGuard) {
   const dirtyRef = useRef(dirty)
   dirtyRef.current = dirty
 
@@ -103,9 +110,9 @@ export function useUnsavedGuard(dirty: boolean) {
     >
       <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
         <h2 id="unsaved-title" className="text-[16px] font-semibold text-slate-900">
-          Nilai belum disimpan
+          {teks?.judul ?? JUDUL}
         </h2>
-        <p className="mt-2 text-[13.5px] leading-relaxed text-slate-600">{PESAN}</p>
+        <p className="mt-2 text-[13.5px] leading-relaxed text-slate-600">{teks?.pesan ?? PESAN}</p>
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
