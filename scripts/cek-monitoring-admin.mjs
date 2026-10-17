@@ -1,6 +1,6 @@
 // Uji logika pemantauan admin. Jalankan: node --experimental-strip-types scripts/cek-monitoring-admin.mjs
 import {
-  akunDipantau, hitungPasangan, ringkasTp, statusNilai, ringkasPerGuru, ringkasTahsin, hitungSudahBelum, ringkasPerKelas, hasilMetrik,
+  akunDipantau, hitungPasangan, ringkasTp, statusNilai, ringkasPerGuru, ringkasTahsin, hitungSudahBelum, ringkasPerKelas, hasilMetrik, ringkasRaporPerKelas,
 } from '../src/lib/monitoringAdminRumus.ts'
 
 let gagal = 0
@@ -59,6 +59,24 @@ cek('per kelas nilai: pasangan tanpa TP tidak dihitung', ringkasPerKelas(baris, 
 cek('per kelas bobot: tidak_100 = sebagian', hasilMetrik('bobot', { tp: { status: 'tidak_100' } }) === 'sebagian')
 cek('per kelas bobot: belum_tp tidak relevan', hasilMetrik('bobot', { tp: { status: 'belum_tp' } }) === null)
 cek('kelas tanpa pasangan relevan disembunyikan', ringkasPerKelas(baris, 'bobot', ['5A', '5B', '6A']).every((r) => r.kelas !== '6A'))
+
+// ── kelengkapan rapor ──
+const aktif = { '5A': 2, '5B': 2, '6A': 0 }
+const gW = [g('wali5A', 'guru_akademik', { waliKelas: ['5A'], nama: 'Bu A' })]
+const ab = [{ siswaId: 'a', kelas: '5A', catatanWali: 'baik', keputusan: 'Naik Kelas' }, { siswaId: 'b', kelas: '5A', catatanWali: '', keputusan: 'Belum diputuskan' }, { siswaId: 'c', kelas: '5B', keputusan: 'Belum diputuskan' }]
+const ko = [{ siswaId: 'a', kelas: '5A', deskripsi: 'ok' }, { siswaId: 'b', kelas: '5A', deskripsi: '  ' }]
+const ek = [{ siswaId: 'a', kelas: '5A', level: 3 }, { siswaId: 'a', kelas: '5A', level: 1 }, { siswaId: 'b', kelas: '5A', level: 4 }]
+const rr = ringkasRaporPerKelas(aktif, gW, ab, ko, ek, '2', ['5A', '5B', '6A'])
+cek('rapor: kelas tanpa siswa aktif tidak muncul', rr.length === 2 && !rr.some((x) => x.kelas === '6A'))
+const r5a = rr.find((x) => x.kelas === '5A')
+cek('rapor 5A: absensi 2, catatan 1, keputusan 1, kokurikuler 1 (spasi tidak dihitung)', r5a.absensi === 2 && r5a.catatanWali === 1 && r5a.keputusan === 1 && r5a.kokurikuler === 1)
+cek('rapor 5A: ekskul dihitung per siswa unik, level 4 tidak', r5a.ekskul === 1)
+cek('rapor 5A: sebagian, wali tercatat', r5a.status === 'sebagian' && r5a.wali[0] === 'Bu A')
+cek('rapor 5B: absensi tersimpan tapi belum diputuskan → sebagian', rr.find((x) => x.kelas === '5B').status === 'sebagian')
+cek('rapor: belum bila tidak ada isian wajib', ringkasRaporPerKelas({ '5C': 3 }, [], [], [], [], '1', ['5C'])[0].status === 'belum')
+cek('rapor semester 1: keputusan tidak diwajibkan', ringkasRaporPerKelas({ '5A': 1 }, [], [{ siswaId: 'a', kelas: '5A' }], [{ siswaId: 'a', kelas: '5A', deskripsi: 'x' }], [], '1', ['5A'])[0].status === 'lengkap')
+cek('rapor semester 2: keputusan diwajibkan', ringkasRaporPerKelas({ '5A': 1 }, [], [{ siswaId: 'a', kelas: '5A' }], [{ siswaId: 'a', kelas: '5A', deskripsi: 'x' }], [], '2', ['5A'])[0].status === 'sebagian')
+cek('rapor: dokumen ganda satu siswa dihitung sekali', ringkasRaporPerKelas({ '5A': 5 }, [], [{ siswaId: 'a', kelas: '5A' }, { siswaId: 'a', kelas: '5A' }], [], [], '1', ['5A'])[0].absensi === 1)
 
 if (gagal) { console.log(`\n${gagal} uji GAGAL`); process.exit(1) }
 console.log('\nSEMUA UJI LULUS')

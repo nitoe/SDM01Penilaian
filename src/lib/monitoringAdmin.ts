@@ -10,6 +10,8 @@ import {
   hitungPasangan,
   keGuruPantau,
   ringkasPerGuru,
+  ringkasRaporPerKelas,
+  type RingkasRaporKelas,
   ringkasTahsin,
   ringkasTp,
   statusNilai,
@@ -35,6 +37,8 @@ export interface PantauanAdmin {
   /** Semua pasangan mapel×kelas beserta status (dipakai grafik per kelas) */
   semuaPasangan: BarisPasangan[]
   tahsin: RingkasTahsinGuru[]
+  /** Kelengkapan data Rapor SAS per kelas (absensi, kokurikuler, keputusan, ekskul) */
+  rapor: RingkasRaporKelas[]
   /** Akun guru yang masih menunggu persetujuan (tidak ikut hitungan) */
   menunggu: number
   /** Catatan bila sebagian data gagal dimuat */
@@ -141,6 +145,24 @@ export async function muatPantauanAdmin(periode: {
     }
   })
 
+  // Data pelengkap rapor: 3 query tingkat periode (admin boleh list), bukan per kelas.
+  const perPeriode = [where('semester', '==', periode.semester), where('tahunAjaran', '==', periode.tahunAjaran)]
+  const bacaDok = async <T,>(koleksi: string, nama: string): Promise<T[]> => {
+    try {
+      const s = await getDocs(query(collection(db, koleksi), ...perPeriode))
+      return s.docs.map((d) => d.data() as T)
+    } catch {
+      peringatan.push(`Data ${nama} gagal dimuat (cek rules terbaru).`)
+      return []
+    }
+  }
+  const [dokAbsensi, dokKokur, dokEkskul] = await Promise.all([
+    bacaDok<{ siswaId: string; kelas: string; catatanWali?: string; keputusan?: string }>('absensi_rapor', 'ketidakhadiran'),
+    bacaDok<{ siswaId: string; kelas: string; deskripsi?: string }>('kokurikuler_rapor', 'kokurikuler'),
+    bacaDok<{ siswaId: string; kelas: string; level?: number }>('ekstrakurikuler_siswa', 'ekstrakurikuler'),
+  ])
+  const rapor = ringkasRaporPerKelas(aktifPerKelas, guruAktif, dokAbsensi, dokKokur, dokEkskul, periode.semester)
+
   return {
     periode,
     dimuatPada: new Date(),
@@ -149,6 +171,7 @@ export async function muatPantauanAdmin(periode: {
     tanpaPenanggung,
     semuaPasangan: baris,
     tahsin: ringkasTahsin(guruAktif, setoranPerUid),
+    rapor,
     menunggu,
     peringatan,
   }

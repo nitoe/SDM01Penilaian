@@ -42,11 +42,7 @@ import {
   btnGhost,
   btnPrimary,
   inputCls,
-  inputSempitCls,
   useToast,
-  Segmented,
-  btnDanger,
-  btnDangerGhost,
 } from './shared'
 
 interface FormState {
@@ -106,8 +102,6 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const [form, setForm] = useState<FormState | null>(null)
   const [busy, setBusy] = useState(false)
   const [terbuka, setTerbuka] = useState<string | null>(null)
-  /** ID TP yang diminta konfirmasi hapus (inline, bukan window.confirm). */
-  const [konfirmasiHapusTp, setKonfirmasiHapusTp] = useState<string | null>(null)
   const [jumlahTp, setJumlahTp] = useState<Record<string, number | 'gagal'> | null>(null)
   const [cakupan, setCakupan] = useState<{ kunci: string; status: 'boleh' | 'di luar' } | null>(null)
   const [filterMapel, setFilterMapel] = useState('')
@@ -462,7 +456,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                     }`}
                   >
                     Kelas {tg}
-                    <span className={`ml-1.5 text-[11px] font-medium ${aktif ? 'text-muh-600' : 'text-muted'}`}>
+                    <span className={`ml-1.5 text-[11px] font-medium ${aktif ? 'text-muh-600' : 'text-slate-400'}`}>
                       {count}
                     </span>
                   </button>
@@ -663,7 +657,12 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   }
 
   async function hapus(tp: TujuanPembelajaran) {
-    setKonfirmasiHapusTp(null)
+    if (
+      !window.confirm(
+        `Hapus TP ${tp.nomorTp} "${tp.namaTp}"?\n\nNilai siswa yang sudah diinput untuk TP ini tidak ikut terhapus tetapi menjadi yatim dan tidak lagi tampil. Tindakan ini tidak dapat dibatalkan.`,
+      )
+    )
+      return
     try {
       await deleteTP(tp.id)
       show('TP dihapus.')
@@ -687,7 +686,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
           isSeniBudaya
             ? 'Seni Budaya punya tab khusus: atur disiplin aktif per semester, lalu susun TP per cabang seni (rupa, musik, tari, teater).'
             : tulis
-              ? 'Dipakai bersama guru kelas dan guru bidang studi yang mengampu mapel ini. Semester dan bobot diatur di Bobot Semester.'
+              ? 'TP & KKTP dipakai bersama di kelas ini untuk mapel ini — guru kelas dan guru bidang studi yang mengampu melihat data yang sama. Semester & bobot diatur di menu Bobot Semester.'
               : 'Mode lihat. TP dan KKTP disusun oleh guru kelas dan guru bidang studi; administrator hanya membaca.'
         }
       />
@@ -843,7 +842,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
             </label>
           </div>
           {pratinjauImpor && (
-            <div className="space-y-2 rounded-lg border border-border bg-slate-50/80 p-3 text-[12.5px]">
+            <div className="space-y-2 rounded-xl border border-border bg-slate-50/80 p-3 text-[12.5px]">
               {(() => {
                 const cocok = pratinjauImpor.items.filter(
                   (it) => ekuivalenMapel(it.mapel, mapel) && it.kelas.toUpperCase() === kelas,
@@ -885,7 +884,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         <section className="card-soft space-y-4 p-4">
           <h2 className="text-[14px] font-semibold text-slate-900">{form.id ? 'Edit TP' : 'TP baru'}</h2>
           <div className="grid gap-3 sm:grid-cols-[110px_1fr]">
-            <label className="block text-[12px] font-medium text-slate-700">
+            <label className="block text-[12px] font-medium text-slate-600">
               Nomor TP
               <input
                 className={`${inputCls} mt-1`}
@@ -894,7 +893,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                 onChange={(e) => setForm({ ...form, nomorTp: e.target.value })}
               />
             </label>
-            <label className="block text-[12px] font-medium text-slate-700">
+            <label className="block text-[12px] font-medium text-slate-600">
               Nama TP
               <input
                 className={`${inputCls} mt-1`}
@@ -904,7 +903,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
               />
             </label>
           </div>
-          <label className="block text-[12px] font-medium text-slate-700">
+          <label className="block text-[12px] font-medium text-slate-600">
             Capaian Pembelajaran (opsional)
             <textarea
               className={`${inputCls} mt-1`}
@@ -917,19 +916,25 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <p className="text-[12px] font-medium text-slate-700">Jenis penilaian</p>
-              <div className="mt-1">
-                <Segmented<TipeTp>
-                  value={form.tipe}
-                  onChange={(t) => setForm({ ...form, tipe: t })}
-                  options={[
-                    { value: 'pengetahuan', label: 'Pengetahuan' },
-                    { value: 'kinerja', label: 'Kinerja' },
-                  ]}
-                />
+              <p className="text-[12px] font-medium text-slate-600">Jenis penilaian</p>
+              <div className="mt-1 flex gap-1.5">
+                {(['pengetahuan', 'kinerja'] as TipeTp[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setForm({ ...form, tipe: t })}
+                    className={`flex-1 rounded-xl border px-3 py-2 text-[12.5px] font-medium capitalize ${
+                      form.tipe === t
+                        ? 'border-muh-600 bg-muh-50 text-muh-800'
+                        : 'border-border bg-white text-slate-600'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
               </div>
             </div>
-            <label className="block text-[12px] font-medium text-slate-700">
+            <label className="block text-[12px] font-medium text-slate-600">
               Bobot SLM (%)
               <input
                 className={`${inputCls} mt-1`}
@@ -946,7 +951,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                 }}
               />
             </label>
-            <label className="block text-[12px] font-medium text-slate-700">
+            <label className="block text-[12px] font-medium text-slate-600">
               Bobot SAS (%)
               <input
                 className={`${inputCls} mt-1`}
@@ -961,18 +966,18 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
           </p>
 
           <div className="space-y-2.5">
-            <p className="text-[12px] font-medium text-slate-700">
+            <p className="text-[12px] font-medium text-slate-600">
               Empat level KKTP — rentang nilai dan deskripsi capaian
             </p>
             {form.levels.map((l, i) => (
-              <div key={i} className="rounded-lg border border-border p-3">
+              <div key={i} className="rounded-xl border border-border p-3">
                 <div className="flex items-center gap-2">
                   <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${LEVEL_WARNA[i]}`}>
                     {LEVEL_LABEL[form.tipe][i]}
                   </span>
                   <input
                     aria-label={`Nilai minimum level ${i + 1}`}
-                    className={`${inputSempitCls} w-16 text-center`}
+                    className={`${inputCls} w-16 text-center`}
                     inputMode="numeric"
                     value={l.min}
                     onChange={(e) => setLevel(i, 'min', e.target.value)}
@@ -980,7 +985,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                   <span className="text-muted">–</span>
                   <input
                     aria-label={`Nilai maksimum level ${i + 1}`}
-                    className={`${inputSempitCls} w-16 text-center`}
+                    className={`${inputCls} w-16 text-center`}
                     inputMode="numeric"
                     value={l.maks}
                     onChange={(e) => setLevel(i, 'maks', e.target.value)}
@@ -1029,13 +1034,13 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                   className="flex w-full items-center gap-3 p-3.5 text-left"
                   aria-expanded={buka}
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muh-50 text-[13px] font-semibold text-muh-700">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muh-50 text-[13px] font-bold text-muh-700">
                     {tp.nomorTp}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13.5px] font-semibold leading-snug text-slate-900">{tp.namaTp}</span>
                     <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                      <Badge tone="brand">{tp.tipe}</Badge>
+                      <Badge tone="green">{tp.tipe}</Badge>
                       {tp.disiplinSeni && <Badge tone="peach">{tp.disiplinSeni}</Badge>}
                       <Badge>
                         SLM {tp.bobotSlm ?? 60}% · SAS {tp.bobotSas ?? 40}%
@@ -1071,34 +1076,16 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                     <div className="flex gap-2">
                       {tulis && (
                         <>
-                      {konfirmasiHapusTp === tp.id ? (
-                        <div className="w-full">
-                          <Notice tone="error">
-                            <p>
-                              Hapus TP {tp.nomorTp} <strong>&quot;{tp.namaTp}&quot;</strong>? Nilai siswa yang
-                              sudah diinput untuk TP ini tidak ikut terhapus, tetapi menjadi yatim dan tidak
-                              lagi tampil. Tindakan ini tidak dapat dibatalkan.
-                            </p>
-                            <div className="mt-2.5 flex gap-2">
-                              <button type="button" className={btnDanger} onClick={() => void hapus(tp)}>
-                                Ya, hapus TP
-                              </button>
-                              <button type="button" className={btnGhost} onClick={() => setKonfirmasiHapusTp(null)}>
-                                Batal
-                              </button>
-                            </div>
-                          </Notice>
-                        </div>
-                      ) : (
-                        <>
-                          <button type="button" className={btnGhost} onClick={() => { setForm(formDariTp(tp)); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
-                            Edit
-                          </button>
-                          <button type="button" className={btnDangerGhost} onClick={() => setKonfirmasiHapusTp(tp.id)}>
-                            Hapus
-                          </button>
-                        </>
-                      )}
+                      <button type="button" className={btnGhost} onClick={() => { setForm(formDariTp(tp)); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-xl border border-red-200 bg-white px-3.5 py-2 text-[13px] font-medium text-red-700 hover:bg-red-50"
+                        onClick={() => void hapus(tp)}
+                      >
+                        Hapus
+                      </button>
                         </>
                       )}
                     </div>

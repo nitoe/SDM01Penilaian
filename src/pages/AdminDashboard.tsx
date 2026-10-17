@@ -16,7 +16,7 @@ import { hitungBaru } from '../lib/notifikasi'
 import { muatPantauanAdmin, type PantauanAdmin } from '../lib/monitoringAdmin'
 import { namaDenganGelar } from '../types/user'
 
-type TabId = 'ringkasan' | 'tp' | 'bobot' | 'nilai' | 'tahsin'
+type TabId = 'ringkasan' | 'tp' | 'bobot' | 'nilai' | 'tahsin' | 'rapor'
 type Saring = 'belum' | 'semua'
 
 const JAM = new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' })
@@ -168,6 +168,70 @@ function TabelGuru({
   )
 }
 
+const STATUS_RAPOR = {
+  lengkap: { teks: 'Lengkap', tone: 'green' as const },
+  sebagian: { teks: 'Sebagian', tone: 'peach' as const },
+  belum: { teks: 'Belum diisi', tone: 'peach' as const },
+}
+
+/** Kelengkapan data Rapor SAS per kelas. Dropdown guru menyaring ke kelas yang diwalikan guru itu. */
+function TabRapor({ data, uid, semester }: { data: PantauanAdmin; uid: string; semester: '1' | '2' }) {
+  const guru = data.guru.find((g) => g.uid === uid)
+  const baris = guru ? data.rapor.filter((r) => guru.waliKelas.includes(r.kelas)) : data.rapor
+  const sel = (n: number, total: number) => (
+    <span className={n >= total ? 'font-semibold text-muh-800' : n === 0 ? 'text-slate-400' : 'text-slate-800'}>
+      {n}/{total}
+    </span>
+  )
+  if (guru && baris.length === 0) {
+    return <p className="card-soft p-4 text-[13px] text-muted">Guru ini bukan wali kelas, jadi tidak mengisi data rapor.</p>
+  }
+  return (
+    <div className="space-y-3">
+      <div className="card-soft overflow-x-auto">
+        <table className="w-full min-w-[640px] text-left text-[12.5px]">
+          <thead>
+            <tr className="border-b border-border bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+              <th className="px-3 py-2">Kelas</th>
+              <th className="px-2 py-2">Wali kelas</th>
+              <th className="px-2 py-2 text-center">Ketidakhadiran</th>
+              <th className="px-2 py-2 text-center">Kokurikuler</th>
+              {semester === '2' && <th className="px-2 py-2 text-center">Keputusan</th>}
+              <th className="px-2 py-2 text-center">Catatan wali</th>
+              <th className="px-2 py-2 text-center">Ekskul</th>
+              <th className="px-3 py-2 text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {baris.map((r) => (
+              <tr key={r.kelas} className="border-b border-border">
+                <td className="px-3 py-2 font-semibold text-slate-900">{r.kelas}</td>
+                <td className="px-2 py-2 text-slate-700">{r.wali.join(', ') || <span className="text-muted">Belum ada</span>}</td>
+                <td className="px-2 py-2 text-center tabular-nums">{sel(r.absensi, r.siswaAktif)}</td>
+                <td className="px-2 py-2 text-center tabular-nums">{sel(r.kokurikuler, r.siswaAktif)}</td>
+                {semester === '2' && <td className="px-2 py-2 text-center tabular-nums">{sel(r.keputusan, r.siswaAktif)}</td>}
+                <td className="px-2 py-2 text-center tabular-nums">{sel(r.catatanWali, r.siswaAktif)}</td>
+                <td className="px-2 py-2 text-center tabular-nums text-slate-600">{r.ekskul}/{r.siswaAktif}</td>
+                <td className="px-3 py-2 text-right">
+                  <Badge tone={STATUS_RAPOR[r.status].tone}>{STATUS_RAPOR[r.status].teks}</Badge>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-[12px] text-muted">
+        Angka = siswa yang sudah diisi dari seluruh siswa aktif kelas. Status "Lengkap" bila ketidakhadiran dan kokurikuler
+        terisi untuk semua siswa{semester === '2' ? ' dan keputusan kenaikan sudah ditetapkan' : ''}. Catatan wali dan ekstrakurikuler
+        bersifat informasi karena tidak wajib untuk semua siswa.{' '}
+        <Link to="/akademik/kelengkapan-rapor" className="font-medium text-muh-700 hover:underline">
+          Lihat isian per kelas
+        </Link>
+      </p>
+    </div>
+  )
+}
+
 const METRIK: { id: MetrikKelas; label: string }[] = [
   { id: 'nilai', label: 'Nilai' },
   { id: 'bobot', label: 'Bobot' },
@@ -293,6 +357,12 @@ export default function AdminDashboard() {
 
   const sb = data ? hitungSudahBelum(data.perGuru) : null
   const tahsinBelum = data ? data.tahsin.filter((t) => t.status === 'belum').length : 0
+  const raporBelum = data ? data.rapor.filter((r) => r.status !== 'lengkap').length : 0
+  // Tanggal penyerahan rapor belum diatur → rapor tercetak dengan tanggal hari ini.
+  const pAk = periodeAk.periode
+  const tglStsKosong = periodeAk.ready && !pAk?.tglRaporSts?.trim()
+  const tglSasKosong =
+    periodeAk.ready && !(periodeAk.semester === '1' ? pAk?.tglRaporKelas1sampai6Sem1 : pAk?.tglRaporKelas1sampai5Sem2)?.trim()
 
   const tabs: TabItem[] = [
     { id: 'ringkasan', label: 'Ringkasan' },
@@ -300,6 +370,7 @@ export default function AdminDashboard() {
     { id: 'bobot', label: 'Bobot', hitung: sb?.bobot.belum },
     { id: 'nilai', label: 'Nilai', hitung: sb?.nilai.belum },
     { id: 'tahsin', label: 'Tahsin-Tahfizh', hitung: tahsinBelum },
+    { id: 'rapor', label: 'Kelengkapan Rapor', hitung: raporBelum },
   ]
 
   if (!periode) {
@@ -410,7 +481,7 @@ export default function AdminDashboard() {
 
         {data && sb && tab === 'ringkasan' && !guruPilihan && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
               <StatCard
                 label="TP sudah disusun"
                 value={`${sb.tp.sudah}/${sb.total}`}
@@ -439,6 +510,13 @@ export default function AdminDashboard() {
                 icon="quran"
                 tone={tahsinBelum ? 'peach' : 'green'}
               />
+              <StatCard
+                label="Kelengkapan rapor"
+                value={`${data.rapor.length - raporBelum}/${data.rapor.length}`}
+                hint={`${raporBelum} kelas belum lengkap`}
+                icon="printer"
+                tone={raporBelum ? 'peach' : 'green'}
+              />
             </div>
             <GrafikKelas baris={data.semuaPasangan} />
             <p className="text-[12px] text-muted">
@@ -446,9 +524,18 @@ export default function AdminDashboard() {
               beres. Mapel bidang studi menjadi tanggung jawab guru penugasan; mapel lain ke wali kelas.
             </p>
 
-            {(data.tanpaPenanggung.length > 0 || data.menunggu > 0 || (laporanBaru ?? 0) > 0) && (
+            {(data.tanpaPenanggung.length > 0 || data.menunggu > 0 || (laporanBaru ?? 0) > 0 || tglStsKosong || tglSasKosong) && (
               <div className="card-soft space-y-2 p-4">
                 <h3 className="text-[14px] font-semibold text-slate-900">Perlu ditindaklanjuti admin</h3>
+                {(tglStsKosong || tglSasKosong) && (
+                  <p className="text-[13px] text-slate-700">
+                    Tanggal penyerahan rapor {[tglStsKosong && 'STS', tglSasKosong && 'SAS'].filter(Boolean).join(' dan ')} belum
+                    diatur untuk periode ini; rapor akan tercetak dengan tanggal hari ini.{' '}
+                    <Link to="/admin/periode" className="font-medium text-muh-700 hover:underline">
+                      Atur di Periode Akademik
+                    </Link>
+                  </p>
+                )}
                 {(laporanBaru ?? 0) > 0 && (
                   <p className="text-[13px] text-slate-700">
                     {laporanBaru} laporan guru belum ditangani.{' '}
@@ -487,6 +574,8 @@ export default function AdminDashboard() {
         {data && tab === 'tp' && <TabelGuru jenis="tp" perGuru={data.perGuru} tautan="/akademik/setup-tp" uid={uid} />}
         {data && tab === 'bobot' && <TabelGuru jenis="bobot" perGuru={data.perGuru} tautan="/akademik/bobot-semester" uid={uid} />}
         {data && tab === 'nilai' && <TabelGuru jenis="nilai" perGuru={data.perGuru} tautan="/akademik/nilai-slm" uid={uid} />}
+
+        {data && tab === 'rapor' && <TabRapor data={data} uid={uid} semester={periode.semester} />}
 
         {data && tab === 'tahsin' && (
           <div className="space-y-2">

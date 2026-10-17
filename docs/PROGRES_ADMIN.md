@@ -39,13 +39,21 @@ Belum diuji dengan data Firestore sungguhan. Uji: cetak rapor satu kelas yang ca
 Rapor SAS (form penuh v1), data pelengkap yang diisi wali kelas (absensi, catatan wali, keputusan, kokurikuler manual, ekskul), master ekskul oleh admin. ANTIREGRESI §23.
 Belum diuji dengan data sungguhan. Uji: deploy rules; admin isi master ekskul; wali kelas isi Kelengkapan satu kelas; cetak Rapor SAS dan cocokkan nilai dengan halaman Nilai STS & SAS.
 
+## Tahap 7 — Pantauan kelengkapan rapor — SELESAI (16 Okt 2026)
+
+Tab Kelengkapan Rapor + kartu Ringkasan + peringatan tanggal rapor belum diatur. ANTIREGRESI §24.
+
+## Tahap 8 — Kokurikuler penuh seperti v2 — BELUM (menunggu keputusan pemilik)
+
+Sekarang deskripsi kokurikuler ditulis manual per siswa. Di v2 alurnya: (1) master Dimensi Profil Lulusan (`dpl`) per kelas, (2) Proyek STEM per kelas/semester yang memilih DPL, (3) penilaian per siswa × DPL × proyek (level 1–4 + deskripsi), (4) observasi 7 Kebiasaan (G7KAIH) per siswa, (5) `susunDraftDeskripsiKokurikuler` menyusun draf dari (3) dan (4) yang tetap diedit wali kelas, hasilnya mengisi `kokurikuler_rapor`.
+Rencana bertahap: 8a master DPL + Proyek STEM; 8b penilaian per siswa; 8c 7KAIH; 8d tombol "Susun draf" di Kelengkapan Rapor. Perlu dari pemilik: daftar DPL yang dipakai sekolah dan apakah 7KAIH ikut dipakai.
+
 ## Ide lanjutan (belum dikerjakan)
 
 - Pengingat dari admin ke guru yang belum input (memakai `notifikasi` arah admin → guru, perlu field penerima dan rules baca baru).
 - Laporan mutasi yang langsung membuka form Data Siswa admin dengan data terisi.
 - Tanggal input terakhir per guru; ekspor rekap guru yang belum input ke Excel.
-- Penyusun otomatis deskripsi kokurikuler seperti v2 (Dimensi Profil Lulusan, Proyek STEM, 7 Kebiasaan/G7KAIH, Kelola DPL); saat ini deskripsi ditulis manual.
+- Deskripsi otomatis predikat ekstrakurikuler (v2: empat kalimat tetap per predikat di master ekskul, mengisi keterangan saat predikat dipilih).
 - Rapor SAS untuk kelas 6: teks kelulusan (v1 tetap "Naik ke Fase D | Kelas 7").
-- Pantauan admin untuk kelengkapan rapor (berapa kelas sudah mengisi absensi/kokurikuler) di dashboard admin.
 - Catat Menulis (sumber data bagian 3 laporan Tahsin) dan Absensi (mengisi Ketidakhadiran di rapor STS).
 - Notifikasi real-time dan pemberitahuan di luar aplikasi.

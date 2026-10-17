@@ -254,3 +254,59 @@ export function ringkasPerKelas(
     })
     .filter((r) => r.total > 0)
 }
+
+export interface RingkasRaporKelas {
+  kelas: string
+  siswaAktif: number
+  wali: string[]
+  /** siswa yang punya catatan absensi tersimpan */
+  absensi: number
+  catatanWali: number
+  /** hanya bermakna di semester 2 */
+  keputusan: number
+  kokurikuler: number
+  /** siswa dengan minimal satu kegiatan ekskul berpredikat 1–3 (informasi; tidak wajib) */
+  ekskul: number
+  status: 'lengkap' | 'sebagian' | 'belum'
+}
+
+interface DokAbsensi { siswaId: string; kelas: string; catatanWali?: string; keputusan?: string }
+interface DokKokurikuler { siswaId: string; kelas: string; deskripsi?: string }
+interface DokEkskul { siswaId: string; kelas: string; level?: number }
+
+/**
+ * Kelengkapan data Rapor SAS per kelas (ANTIREGRESI §23/§24). Wajib: ketidakhadiran dan kokurikuler untuk
+ * SEMUA siswa aktif (+ keputusan di semester 2). Catatan wali dan ekskul bersifat informasi, tidak menentukan status.
+ * Status: lengkap = semua wajib terisi; belum = tidak ada yang terisi; selainnya sebagian.
+ */
+export function ringkasRaporPerKelas(
+  siswaAktifPerKelas: Record<string, number>,
+  guru: GuruPantau[],
+  absensi: DokAbsensi[],
+  kokurikuler: DokKokurikuler[],
+  ekskul: DokEkskul[],
+  semester: '1' | '2',
+  daftarKelas: readonly string[] = SEMUA_KELAS,
+): RingkasRaporKelas[] {
+  const unik = <T extends { siswaId: string; kelas: string }>(arr: T[], kelas: string, ok: (x: T) => boolean) =>
+    new Set(arr.filter((x) => x.kelas === kelas && ok(x)).map((x) => x.siswaId)).size
+  return daftarKelas
+    .filter((kelas) => (siswaAktifPerKelas[kelas] ?? 0) > 0)
+    .map((kelas) => {
+      const n = siswaAktifPerKelas[kelas] ?? 0
+      const r: RingkasRaporKelas = {
+        kelas,
+        siswaAktif: n,
+        wali: guru.filter((g) => adaAkademik(g) && g.waliKelas.includes(kelas)).map((g) => g.nama),
+        absensi: Math.min(n, unik(absensi, kelas, () => true)),
+        catatanWali: Math.min(n, unik(absensi, kelas, (x) => !!x.catatanWali?.trim())),
+        keputusan: Math.min(n, unik(absensi, kelas, (x) => !!x.keputusan && x.keputusan !== 'Belum diputuskan')),
+        kokurikuler: Math.min(n, unik(kokurikuler, kelas, (x) => !!x.deskripsi?.trim())),
+        ekskul: Math.min(n, unik(ekskul, kelas, (x) => (x.level ?? 0) >= 1 && (x.level ?? 0) <= 3)),
+        status: 'belum',
+      }
+      const wajib = [r.absensi, r.kokurikuler, ...(semester === '2' ? [r.keputusan] : [])]
+      r.status = wajib.every((v) => v >= n) ? 'lengkap' : wajib.every((v) => v === 0) ? 'belum' : 'sebagian'
+      return r
+    })
+}

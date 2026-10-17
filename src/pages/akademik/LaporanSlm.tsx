@@ -160,7 +160,7 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
         <BackLink to="/akademik/laporan-slm">Pilih mata pelajaran</BackLink>
         <div className="flex gap-2">
           <Link to={inputUrl} className={`${btnGhost} no-underline`}>
-            Input nilai
+            {admin ? 'Lihat daftar nilai' : 'Input nilai'}
           </Link>
           <button type="button" className={btnPrimary} onClick={() => window.print()}>
             Cetak
@@ -178,7 +178,7 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
           kelompokkan di Bobot Semester.
         </Notice>
       ) : (
-        <article className="overflow-hidden rounded-[var(--radius-card)] border border-border bg-white print:rounded-none print:border-0">
+        <article className="card-soft overflow-hidden print:border-0 print:shadow-none">
           <header className="border-b border-border px-4 py-4">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{sekolah}</p>
             <h1 className="mt-1 text-[18px] font-semibold text-slate-900">Laporan Nilai SLM</h1>
@@ -202,7 +202,7 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
                     {tpList.map((tp) => (
                       <th key={tp.id} className="px-2 py-2 text-center font-semibold" title={tp.namaTp}>
                         TP {tp.nomorTp}
-                        <span className="mt-0.5 block font-medium normal-case tracking-normal text-muted">
+                        <span className="mt-0.5 block font-medium normal-case tracking-normal text-slate-400">
                           {(() => {
                             const b = bobotTpDiSemester(tp, config.semesterAktif)
                             return b == null ? 'setara' : `${b}%`
@@ -225,14 +225,14 @@ export default function LaporanSlm({ profile }: { profile: AppUser }) {
                           <td key={tp.id} className="px-2 py-2 text-center">
                             <div className="font-semibold text-slate-800">{slm == null ? '–' : slm}</div>
                             {lv && (
-                              <div className={`mx-auto mt-0.5 w-fit rounded-full px-1.5 text-[10px] font-semibold ${LEVEL_WARNA[lv.index]}`}>
+                              <div className={`mx-auto mt-0.5 w-fit rounded-full px-1.5 text-[9.5px] font-semibold ${LEVEL_WARNA[lv.index]}`}>
                                 {lv.label}
                               </div>
                             )}
                           </td>
                         )
                       })}
-                      <td className="px-3 py-2 text-center text-[14px] font-semibold text-muh-800">
+                      <td className="px-3 py-2 text-center text-[14px] font-bold text-muh-800">
                         {rataSlm(s.id, tpList, nilai, config.semesterAktif) ?? '–'}
                       </td>
                     </tr>
