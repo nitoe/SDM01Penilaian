@@ -64,23 +64,54 @@ export function susunPromptTp(input) {
   return { ok: true, sistem, user }
 }
 
+/** SD: kelas 1–2 = Fase A, 3–4 = Fase B, 5–6 = Fase C. '' bila tak dikenali. */
+export function faseDariKelas(kelas) {
+  const n = parseInt(String(kelas ?? '').replace(/[^0-9]/g, ''), 10)
+  if (n === 1 || n === 2) return 'A'
+  if (n === 3 || n === 4) return 'B'
+  if (n === 5 || n === 6) return 'C'
+  return ''
+}
+
 export function susunPromptKktp(input) {
   const namaTp = potong(input.namaTp, 500)
   const tipe = input.tipe === 'kinerja' ? 'kinerja' : 'pengetahuan'
   const teks = potong(input.teksCp, 6000)
   const mapel = potong(input.mapel, 80)
+  const kelas = potong(input.kelas, 8)
   if (!namaTp) return { ok: false, pesan: 'Nama TP wajib diisi sebelum menyusun KKTP.' }
   const label = LABEL[tipe]
+  const fase = faseDariKelas(kelas)
+  const tingkat = fase ? `kelas ${kelas} (Fase ${fase})` : kelas ? `kelas ${kelas}` : 'kelas ini'
+  // Panduan: Buku Saku KKTP v1 (deskriptor konkret, skala 4 level, bahasa jernih bagi guru).
   const sistem = [
-    'Anda menyusun deskripsi KKTP (4 level) untuk satu Tujuan Pembelajaran SD.',
-    'Empat deskripsi menaik: dari belum tercapai sampai mahir. Setiap deskripsi 1–2 kalimat, spesifik terhadap TP ini, bahasa rapor (orang ketiga, "Peserta didik ...").',
-    `Label berurutan untuk tipe ${tipe}: ${label.join(', ')}.`,
-    'Jangan mengubah rentang angka. Jangan mengubah teks CP.',
-    'Balas HANYA JSON: {"deskripsi":["...","...","...","..."]} berisi tepat 4 string.',
-  ].join(' ')
+    'Anda menyusun deskripsi KKTP (4 level) untuk satu Tujuan Pembelajaran SD Kurikulum Merdeka.',
+    'KKTP adalah dokumen guru: bahasa formal-profesional tetapi jernih dan konkret, bukan bahasa anak-anak.',
+    '',
+    'BENTUK TIAP DESKRIPSI',
+    '- Langsung tulis kompetensi capaian yang teramati pada level itu. DILARANG memakai subjek: jangan membuka atau menyisipkan "Peserta didik", "Siswa", "Murid", "Anak", "Ananda", atau "Mereka". Buka dengan kata kerja capaian (mis. "Menyebutkan ...", "Menyelesaikan ...", "Menyusun ...") atau dengan hasil/bukti yang tampak (mis. "Catatan pengamatan ...", "Laporan memuat ...").',
+    '- 1–2 kalimat pendek, spesifik untuk TP ini, sehingga guru langsung tahu PERSIS apa yang harus diamati.',
+    '- Gambarkan bukti konkret pada level itu. Untuk level rendah, sebutkan apa yang masih keliru atau belum ada, jangan hanya menulis "belum mampu".',
+    '- DILARANG kata pengisi tanpa penanda nyata ("secara jelas", "dengan tepat", "dengan benar", "secara baik") dan jargon ("holistik", "komprehensif", "terintegrasi secara utuh", "optimal", "berdampak"). Hapus kata yang tidak mengubah makna.',
+    '- Jangan menulis angka nilai atau rentang di deskripsi. Jangan mengubah teks CP.',
+    '',
+    `ISI TIAP LEVEL (ukur terhadap capaian wajar untuk ${tingkat}; jangan terlalu mudah atau terlalu sulit untuk tingkat ini)`,
+    `1. ${label[0]}: bukti capaian belum tampak atau baru sangat sebagian; perlu pendampingan dari awal.`,
+    `2. ${label[1]}: bukti capaian mulai tampak sebagian, masih ada yang keliru atau perlu bimbingan.`,
+    `3. ${label[2]}: bukti capaian sesuai target TP untuk ${tingkat}. Inilah kompetensi yang diharapkan.`,
+    `4. ${label[3]}: melampaui target, ditambah satu kemampuan lanjutan yang wajar untuk ${tingkat} (mis. memberi contoh sendiri, menjelaskan alasan, atau mengerjakan variasi bentuk soal); siap pengayaan.`,
+    'Keempat level naik bertahap secara logis, bukan loncatan drastis tanpa dasar.',
+    '',
+    'CONTOH GAYA YANG BENAR (hanya untuk gaya; jangan menyalin isinya ke TP lain)',
+    'TP pengetahuan: ["Sebagian besar langkah pengerjaan masih keliru.","Memahami sebagian langkah, tetapi masih keliru di beberapa operasi hitung.","Menyelesaikan sebagian besar soal dengan langkah dan urutan operasi yang benar.","Menyelesaikan seluruh soal, termasuk soal dengan variasi bentuk operasi."]',
+    'TP kinerja: ["Catatan pengamatan tidak berurutan atau hanya memuat satu detail.","Catatan memuat beberapa detail, tetapi urutannya belum sistematis.","Laporan berurutan (awal, proses, hasil) dan memuat detail yang relevan dari pengamatan.","Laporan berurutan, detailnya lengkap, dan ditambah kesimpulan sederhana dari hasil pengamatan."]',
+    'CONTOH YANG SALAH (jangan ditiru): "Peserta didik mampu menjelaskan ide pokok teks secara jelas dan komprehensif."',
+    '',
+    'Balas HANYA JSON: {"deskripsi":["...","...","...","..."]} berisi tepat 4 string, urut dari level 1 sampai 4.',
+  ].join('\n')
   const user = [
     `Mapel: ${mapel}`,
-    `Kelas: ${potong(input.kelas, 8)}`,
+    `Kelas: ${kelas}${fase ? ` (Fase ${fase})` : ''}`,
     `TP: ${namaTp}`,
     `Jenis: ${tipe}`,
     teks ? `CP resmi terkait:\n${teks}` : '',
@@ -119,9 +150,25 @@ export function normalisasiTp(data) {
   return keluar
 }
 
+const SUBJEK_AWAL = /^(?:peserta\s+didik|siswa|murid|anak\s+didik|ananda)\b[\s,]*/i
+const MODAL_AWAL = /^(?:mampu|dapat|bisa)\s+/i
+
+/**
+ * Pengaman terakhir bila model tetap membuka dengan subjek ("Peserta didik mampu menyebutkan ...").
+ * Hanya membuang subjek di awal kalimat (dan "mampu/dapat" yang langsung mengikutinya), lalu kapitalisasi.
+ * "Peserta didik belum mampu ..." menjadi "Belum mampu ..."; kalimat tanpa subjek tidak diubah sama sekali.
+ */
+export function bersihkanSubjekKktp(teks) {
+  const asli = String(teks ?? '').trim()
+  if (!SUBJEK_AWAL.test(asli)) return asli
+  const sisa = asli.replace(SUBJEK_AWAL, '').replace(MODAL_AWAL, '').trim()
+  if (!sisa) return asli
+  return sisa.charAt(0).toUpperCase() + sisa.slice(1)
+}
+
 export function normalisasiKktp(data) {
   const list = Array.isArray(data?.deskripsi) ? data.deskripsi : []
-  const keluar = list.slice(0, 4).map((d) => potong(d, 500))
+  const keluar = list.slice(0, 4).map((d) => bersihkanSubjekKktp(potong(d, 500)))
   if (keluar.length !== 4 || keluar.some((d) => !d)) {
     throw new Error('AI harus mengembalikan tepat 4 deskripsi KKTP.')
   }
