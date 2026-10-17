@@ -1,6 +1,8 @@
 /** Logika murni generate TP/KKTP (tanpa Firebase) + pemanggilan Gemini/OpenAI. */
 
 export const UID_AI = 'v4fQXsqCzYUtHrqcDM0u48sxIfn1'
+/** Email akun pemilik; dicek BERSAMA UID (dua-duanya harus cocok). Harus sama dengan src/lib/generateAi.ts. */
+export const EMAIL_AI = 'arif.azwar79@gmail.com'
 
 const LABEL = {
   pengetahuan: ['Perlu Bimbingan', 'Cukup', 'Baik', 'Sangat Baik'],
@@ -9,6 +11,18 @@ const LABEL = {
 
 export function bolehUidAi(uid) {
   return uid === UID_AI
+}
+
+/**
+ * Gerbang utama server. `auth` = request.auth dari Callable Function (uid + token terverifikasi).
+ * UID DAN email di token harus sama dengan akun pemilik. Email dibaca dari token yang ditandatangani
+ * Firebase, bukan dari dokumen Firestore (yang bisa diubah admin lain).
+ */
+export function bolehPemanggilAi(auth) {
+  if (!auth || typeof auth.uid !== 'string') return false
+  if (!bolehUidAi(auth.uid)) return false
+  const email = String(auth.token?.email ?? '').trim().toLowerCase()
+  return email === EMAIL_AI
 }
 
 function potong(s, n) {

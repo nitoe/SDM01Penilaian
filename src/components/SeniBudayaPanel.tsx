@@ -77,7 +77,7 @@ export default function SeniBudayaPanel({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-amber-950">
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-amber-950">
         <strong className="font-semibold">Langkah pertama untuk Seni Budaya.</strong> Tentukan disiplin
         yang diajarkan di kelas ini per semester. Boleh lebih dari satu. Setelah itu susun TP di tab
         masing-masing disiplin.
@@ -85,7 +85,7 @@ export default function SeniBudayaPanel({
 
       <div className="grid gap-4 sm:grid-cols-2">
         {(['ganjil', 'genap'] as const).map((sem) => (
-          <div key={sem} className="rounded-xl border border-border bg-white p-4">
+          <div key={sem} className="rounded-lg border border-border bg-white p-4">
             <p className="mb-2 text-[12px] font-semibold text-slate-800">
               Semester {sem === 'ganjil' ? '1 (ganjil)' : '2 (genap)'}
             </p>
@@ -122,7 +122,7 @@ export default function SeniBudayaPanel({
             type="button"
             disabled={!dirty || busy}
             onClick={() => void simpan()}
-            className="rounded-xl bg-muh-600 px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-muh-700 disabled:opacity-50"
+            className="rounded-lg bg-muh-600 px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-muh-700 disabled:opacity-50"
           >
             {busy ? 'Menyimpan…' : 'Simpan pengaturan seni'}
           </button>

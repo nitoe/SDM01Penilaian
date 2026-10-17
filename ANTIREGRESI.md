@@ -228,78 +228,91 @@
 
 18.7 Uji: `node --experimental-strip-types scripts/cek-monitoring-admin.mjs` (harus mencetak SEMUA UJI LULUS) setiap kali mengubah `monitoringAdminRumus.ts`.
 
-## §19. Notifikasi dan laporan guru (Tahap 3)
 
-19.1 Satu koleksi `notifikasi` untuk laporan tugas, laporan kendala, dan mutasi siswa masuk/keluar (dibedakan field `jenis`). Jenis baru: tambahkan ke `JenisNotifikasi`, `JENIS_LABEL`, daftar `jenis in [...]` di rules, dan uji di `scripts/cek-notifikasi.mjs`. Jangan membuat koleksi terpisah per jenis.
+## §19. Identitas visual (per 15 Okt 2026)
 
-19.2 Rules: guru dan admin boleh `create` dengan `dariUid == uid`, `status == 'baru'`, `createdAt == request.time`, dan kunci dibatasi `hasOnly`. Hanya admin yang `update`, dan hanya `status`, `catatanAdmin`, `updatedAt`. `delete` selalu ditolak. Baca: admin semua, pengirim hanya miliknya. Jika menambah field dokumen, ubah `hasOnly` di rules, `susunDokumen()`, dan `dariDok()` bersamaan.
+19.1 **Warna merek adalah biru lambang sekolah, `#313083`** (`muh-600`). Nama token `muh-*` sengaja dipertahankan karena dipakai di seluruh halaman; hanya nilainya yang berpindah dari hijau ke biru (skala 50–950 di `src/index.css`). Jangan mengembalikan hijau sebagai warna merek dan jangan menambah warna merek lain (indigo, magenta, ruby, gradient mesh).
 
-19.3 Batas panjang (judul 120, isi 2000) ada di `types/notifikasi.ts` dan rules; keduanya harus sama. Validasi klien (`validasiLaporan`) mencerminkan rules, bukan menggantikannya.
+19.2 **Warna hanya boleh membawa arti.** Hijau (`emerald`) = sukses, lulus, lengkap, aktif (`Badge tone="green"` atau `"ok"`, status Lulus, progres selesai). Ambar (`peach-*`/`gold-*`) = perlu perhatian atau perlu diulang. Merah = gagal atau galat. Biru = merek, pilihan aktif, tombol utama (`Badge tone="brand"`). Jangan menampilkan "Lulus" dengan biru, dan jangan memberi warna dekoratif per kartu. Tone `sky` dan `violet` di `ui.tsx` hanya dipertahankan agar halaman lama tetap terbuild dan kini tampil biru. Melengkapi §5.1.
 
-19.4 Kotak masuk admin membaca 200 laporan terbaru (`orderBy createdAt desc`) dan menyaring di klien. Laporan guru memakai indeks `dariUid + createdAt` di `firestore.indexes.json`; deploy indeks sebelum halaman Laporan ke Admin dipakai guru (`npm run deploy:indexes` bila skripnya ada, atau `firebase deploy --only firestore:indexes`).
+19.3 Melengkapi §5.3: `.hero-banner` kini biru tua rata (`muh-700`) tanpa gradient dan tanpa peach. Teks putih hanya boleh di atas area biru tua (`.hero-banner`, sidebar `bg-muh-800`, panel `.auth-brand`). Jangan memindahkan teks putih ke area terang.
 
-19.5 Lonceng di header hanya menghitung (`getCountFromServer`, status `baru`) untuk admin dan disegarkan saat pindah halaman. Tidak ada listener real-time; kegagalan hitung diabaikan agar header tidak terganggu.
+19.4 **Inter dihosting sendiri** di `public/fonts/inter-latin-wght-normal.woff2` (SIL OFL 1.1; `Inter-LICENSE-OFL.txt` harus tetap menyertainya). `index.html` tidak boleh memuat Google Fonts atau CDN apa pun (§5.2). Bobot teks minimal 400: jangan memakai `font-light`/300 (tidak terbaca baik di isian dan tabel). Angka di tabel dan isian nilai memakai `tabular-nums` (sudah diatur global untuk `td`, `th`, `input[type=number]`).
 
-19.6 Mutasi siswa pada tahap ini hanya MELAPORKAN ke admin. Admin tetap mengubah data siswa sendiri di Data Siswa. Jangan menambahkan jalur otomatis dari laporan ke `siswa` tanpa keputusan baru (menyentuh §5 dan §14).
+19.5 `DESIGN.md` lama (analisis situs pemasaran Stripe: gradient mesh, kartu harga, huruf 300) sudah diganti. Aplikasi ini alat kerja guru, bukan situs pemasaran. Jangan menulis ulang `DESIGN.md` dari rujukan situs pemasaran; acuan desain adalah `DESIGN.md` yang berlaku.
 
-19.7 Beranda admin tidak lagi menampilkan grafik jumlah siswa per kelas (diputuskan 15 Okt 2026). Gantinya: grafik Kelengkapan per kelas (TP/Bobot/Nilai) dari data pantauan, dan dropdown guru. Beranda guru tetap memakai `KelasBars` bila punya kelas.
+19.6 Layout: tanpa bingkai melayang (padding dan border yang mengelilingi seluruh aplikasi). Sidebar biru tua dengan lambang sekolah. Pembungkus Layout tetap tanpa `overflow-hidden` (§11.4).
 
-## §20. Admin boleh mencetak, tidak menulis (per 16 Okt 2026)
+19.7 **Struktur beranda guru**: ringkasan angka (`StatStrip`) → alur penilaian bernomor (`FlowRow`, status hanya dari progres TP, tanpa query nilai, §8.3) → diagram siswa per kelas. Kartu "Akses cepat" dan "Modul" di beranda dihapus karena menduplikasi sidebar, navigasi bawah, dan hub; jangan dikembalikan. Admin tetap melihat `AdminDashboard` di atas diagram.
 
-20.1 Admin tetap memerlukan fitur cetak (Rapor STS dan Laporan Tahsin-Tahfizh). Mencetak bukan menulis: halaman cetak hanya membaca. `scripts/cek-laporan-cetak.mjs` gagal bila `laporanTahsin.ts`, `raporSts.ts`, `Rapor.tsx`, atau `LaporanTahsin.tsx` memuat operasi tulis (`setDoc`, `addDoc`, `updateDoc`, `deleteDoc`, `writeBatch`, `save*`).
+19.8 **Aset logo bernama baru** (`logo-sdm.png`, `favicon-sdm-32.png`, `apple-touch-icon-sdm.png`) karena `firebase.json` memberi cache `immutable` satu tahun untuk png dan woff2: menimpa berkas dengan nama sama membuat pengunjung lama tetap melihat gambar lama. Jika logo berubah, beri nama baru. Lambang tidak diubah warna atau bentuknya; satu-satunya pengecualian adalah watermark putih berkeburaman 6% di panel `.auth-brand`.
 
-20.2 "Laporan STS" yang dimaksud pemilik adalah **rapor bayangan untuk orang tua** (laporan hasil belajar berdasarkan STS saja), BUKAN rekap nilai per kelas. Halaman rekap STS/SAS yang sempat dibuat (15 Okt) sudah dihapus; jangan dibuat lagi tanpa permintaan baru.
+19.9 Setelah mengubah token atau `Layout`, periksa tampilan: halaman masuk, beranda guru (progres campuran, lengkap, kosong), beranda Tahsin, hub Akademik dan Administrasi, di lebar 1440px dan 390px. Kontras teks kecil minimal 4,5:1.
 
-20.3 Cetak memakai iframe tersembunyi (`lib/cetakIframe.ts`), bukan `window.open`, dan dialog cetak dibuka satu kali. Pratinjau di layar memakai iframe `srcDoc` dengan HTML dan CSS yang sama dengan cetak, supaya pratinjau tidak berbeda dari hasil cetak.
 
-## §21. Rapor STS (rapor bayangan)
+## §20. Halaman admin: Kelola Periode dan Kelola Akun (per 15 Okt 2026)
 
-21.1 Format dasar mengikuti rapor PAS/SAS v1 (`rapor/preview.html`) dan dibangun oleh `raporHtml.ts` (murni, diuji). **Rapor STS = hanya nilai dan capaian**: judul "Laporan Hasil Belajar" + "Sumatif Tengah Semester" (TANPA Ganjil/Genap, semester ada di identitas), identitas siswa dan sekolah (kolom kanan digeser ke tepi kanan agar alamat sekolah cukup satu baris), A.1 Muatan Wajib, A.2 Muatan Yayasan, lalu tanda tangan Orang Tua/Wali dan Wali Kelas saja. TIDAK ada ketidakhadiran, catatan wali, tanggapan orang tua, maupun tanda tangan kepala sekolah (permintaan pemilik, 16 Okt 2026). Jangan menambahkannya kembali ke STS.
+20.1 **Halaman admin memakai token bersama di `src/pages/akademik/shared.tsx`**: `inputCls`, `btnPrimary`/`btnGhost` (varian `Sm`), `btnDanger`/`btnDangerGhost`/`btnWarn`, `Field`, `ChipToggle`, `Segmented`, `Notice`, `Spinner`, `useToast`. Jangan menulis kelas tombol, isian, atau kotak pesan sendiri di halaman admin. Radius kontrol `rounded-lg`; jangan `rounded-xl`, `shadow-sm` pada tombol, atau cincin pada kartu. (Berkas `shared.tsx` berada di folder `akademik` karena lebih dulu ada di sana; pemindahan ke `components/` ditunda agar impor halaman Akademik tidak ikut berubah.)
 
-21.1a **Form lengkap v1 dipertahankan untuk Rapor SAS** (`buildBodyPrintSas`): A nilai, B Kokurikuler, C Ekstrakurikuler, D Ketidakhadiran + Catatan Wali, Tanggapan Orang Tua/Wali Murid, kotak Keputusan (hanya semester 2; Naik/Tinggal, pola v1), tanda tangan tiga pihak. Datanya (`kokurikuler`, `ekskul`, `absensi`, `catatanWali`, `keputusan`) opsional di `DataRaporSts`; belum ada halaman SAS dan modul sumber datanya (Absensi, Kokurikuler, Ekstrakurikuler) belum dibangun. Saat Rapor SAS dibuat, pakai `buildBodyPrintSas` dan isi field itu dari modul-modulnya.
+20.2 **`.card-soft` ditulis di luar `@layer`, sehingga `border`, `box-shadow`, `background`, dan `border-radius`-nya mengalahkan utilitas Tailwind.** Utilitas seperti `border-l-4`, `ring-2`, `shadow-lg`, `bg-slate-50`, `border-dashed`, atau `print:border-0` yang ditumpuk pada `.card-soft` tidak berlaku. Untuk penanda (mis. strip periode default) pakai elemen tersendiri; untuk keadaan kosong bergaris putus jangan pakai `.card-soft`. Diketahui masih terkena: `LaporanSlm.tsx` (`print:border-0 print:shadow-none` tidak berlaku saat cetak), `TargetHafalan.tsx` dan `InputSetoran.tsx` (`shadow-lg` tidak berlaku), serta kerangka `animate-pulse bg-slate-50` di `TahunAjaran.tsx` dan `AdminDashboard.tsx`. Belum diubah karena memindahkan `.card-soft` ke `@layer components` mengubah tampilan dan cetakan di banyak halaman sekaligus; lakukan sebagai langkah tersendiri dengan pemeriksaan cetak rapor.
 
-21.2 Kokurikuler, Ekstrakurikuler, dan Absensi memang tidak ada di STS. Ketiganya hanya untuk Rapor SAS; modulnya belum dibangun (hub Akademik: "Segera hadir").
+20.3 **Arti warna di halaman admin:** merah hanya untuk hapus permanen dan galat; ambar hanya untuk konfirmasi menonaktifkan dan hal yang perlu ditindaklanjuti (chip "Menunggu" berjumlah > 0, "Tanggal rapor belum diisi"); hijau hanya status Aktif. Tombol merah penuh ("Ya, hapus permanen", "Ya, hapus periode") hanya muncul setelah langkah konfirmasi. Hapus permanen akun tetap mewajibkan mengetik email persis. Jangan kembali ke `confirm()` bawaan browser.
 
-21.3 Muatan Yayasan = Bahasa Arab dan Kemuhammadiyahan (`MUATAN_YAYASAN` di `asesmenRumus.ts`, mengikuti MP12/MP13 di v1). Kelas 1–2 (Fase A) menampilkan dua baris keterangan baku v1 karena kedua mapel tidak berlaku di tingkatan itu.
+20.4 `Notice` bernada `info` kini memakai biru merek (sebelumnya `sky`), dan ada nada `ok` baru. Ini juga mengubah kotak info di halaman Akademik; tidak ada perubahan logika.
 
-21.4 Nilai akhir mapel dan bahan capaian dihitung SATU fungsi, `hitungStsMapel()` (`asesmenRumus.ts`), dipakai rapor satu siswa dan rapor seluruh kelas. Kalimat capaian memakai pola v1: "Mencapai kompetensi dengan sangat baik dalam …" (TP tertinggi) dan "Perlu peningkatan dalam …" (TP terendah, hanya bila ada lebih dari satu TP terisi). Ini menganggap deskripsi level KKTP berupa frasa lanjutan; bila guru menulis kalimat penuh, awalan ini perlu ditinjau.
+20.5 **Kelola Akun:** logika data tidak berubah (simpan, reset password, aktif/nonaktif, hapus permanen, persetujuan). Jumlah di chip saringan dihitung dari `list` dengan aturan yang sama seperti penyaringan tabel; jika aturan penyaringan diubah, ubah `hitung` bersamaan. Pada layar < 1024px panel detail digulir ke tampilan saat akun dipilih (panel berada di bawah tabel). Baris tabel dapat difokus dan dipilih dengan Enter/Spasi.
 
-21.5 Cetak seluruh kelas (`muatDataRaporStsKelas`) memuat bahan tiap mapel sekali per kelas (TP, cakupan, nilai), bukan per siswa. Halaman cetak banyak siswa tidak memakai pengaki nama/NISN karena pengaki satu @page tidak bisa berganti per siswa.
+20.6 **Kelola Periode:** formulir berada di samping daftar pada layar lebar (menempel, tingginya dibatasi dan menggulir sendiri) dan di bawah daftar pada layar kecil; tombol Edit menggulir ke formulir hanya di layar kecil. Penjelasan istilah Aktif/Default hanya ada di satu tempat (panel "Cara kerja singkat"), jangan diulang di ringkasan.
 
-21.6 Akses: wali kelas hanya kelas yang diwalikan; admin semua kelas. Nama wali kelas di tanda tangan untuk admin dicari dari akun (`cariWaliKelas`), kosong bila belum ada.
+20.7 Skrip `scripts/cek-*` tidak menguji tampilan. Setelah mengubah halaman admin, periksa di 1440px dan 390px: daftar penuh dan kosong, mode edit, dan setiap alur konfirmasi (nonaktifkan, hapus).
 
-## §22. Laporan Tahsin-Tahfizh untuk orang tua
 
-22.1 Format mengikuti `tahsin-tahfizh/cetak-laporan.html` v2: kepala laporan + identitas, 1. Membaca Al-Qur'an (ayat dinilai, catatan tajwid/makhraj, perkiraan akurasi, narasi), 2. Menghapal (materi baru lulus, sesi muroja'ah, narasi), Target Hafalan (Iqro: jilid+halaman; Al-Qur'an: surah tercapai), 3. Menulis Al-Qur'an, tanda tangan. Satu siswa atau seluruh kelas (satu siswa per halaman). Tanpa emoji.
+## §21. Halaman admin lainnya: Data Sekolah, Mata Pelajaran, Data Siswa (per 16 Okt 2026)
 
-22.2 Narasi dan perkiraan akurasi memakai rumus v2 persis (`tahsinLaporanRumus.ts`); mengubah ambang kualitas berarti mengubah laporan semua siswa. Akurasi hanyalah perkiraan (100 − 35 × galat per ayat), diberi keterangan di laporan.
+21.1 Seluruh halaman admin (Kelola Akun, Kelola Periode, Data Sekolah, Mata Pelajaran, Data Siswa) kini memakai token bersama §20.1. Jangan menambah kelas tombol, isian, atau kotak pesan lokal di halaman-halaman ini. Berkas `TahunAjaran.tsx` adalah halaman **Data Sekolah** (identitas, NPSN, kepala sekolah), bukan halaman tahun ajaran; periode ada di `KelolaPeriode.tsx`.
 
-22.3 Pemuatan: satu query `setoran` (kelas + `tahunAjaran` + `semester`) dan satu query `menulis_log` (kelas) per pembukaan kelas, dikelompokkan di klien. Jangan query per siswa. Rentang tanggal bawaan semester (`rentangSemester`) dapat dipersempit; setoran lama tanpa field periode tidak ikut. Target dihitung dari seluruh setoran periode, bukan hanya rentang tanggal.
+21.2 **Dilarang memakai bilah simpan `fixed bottom-0`.** Navigasi bawah di layar kecil (`Layout.tsx`, `fixed bottom-0 z-30`) menutupinya: pada versi lama Data Sekolah, titik tengah tombol "Simpan data sekolah" (setelah halaman digulir ke bawah di 390px) dipegang oleh tautan navigasi, sehingga tombol tidak bisa ditekan. Letakkan tombol simpan di dalam alur halaman (mis. bagian bawah kartu formulir). Bila perlu menempel, pakai `sticky` dengan jarak bawah yang memperhitungkan tinggi navigasi bawah.
 
-22.4 Catat Menulis belum ada di situs baru; bagian Menulis tampil dari data `menulis_log` yang ada (migrasi v2) dan berisi "Belum ada catatan" bila kosong.
+21.3 Label kecil huruf besar memakai `text-muted`, bukan `text-slate-400` (kontras sekitar 2,6:1, di bawah 4,5:1). `PageHeader` (`eyebrow`) sudah diperbaiki. Masih memakai `text-slate-400` untuk teks kecil: `LaporanSlm.tsx`, `RiwayatSiswa.tsx` (label tabel), `MapelKelasPicker.tsx`, dan `SetupTp.tsx` (keterangan jumlah); perbaiki saat halaman itu dikerjakan.
 
-22.5 Akses: admin semua kelas; guru Tahsin hanya `kelasAmpu`. Baca lewat rules `lihatKelas()` (§17.2).
+21.4 **Kelola Periode:** daftar dikelompokkan per tahun ajaran (urutan dari `listSemuaPeriode` dipertahankan di dalam kelompok). Pengelompokan hanya mengubah tampilan; jangan mengubah urutan atau penyaringan data di lapisan ini.
 
-21.7 **Tanggal rapor STS** diatur admin di Periode Akademik (field `tglRaporSts`, teks bebas, berlaku semua kelas, ada di kedua semester) dan TERPISAH dari tanggal rapor akhir semester (`tglRaporKelas1sampai6Sem1`, dst., milik rapor SAS). Rapor STS tidak boleh memakai tanggal rapor akhir. Bila `tglRaporSts` kosong, rapor memakai tanggal hari ini dan daftar periode menandainya "Tanggal rapor STS belum diisi". Field ini tidak disinkron ke `config/akademik` (kode legacy tidak mengenal STS).
+21.5 **Data Siswa:** daftar difilter di server per kelas (`listSiswaLengkap(kelasFilter)`), sehingga jumlah per kelas pada chip tidak dapat ditampilkan tanpa memuat semua siswa; jangan menambahkannya tanpa mengubah cara muat. Tombol status Aktif/Nonaktif di baris tabel mengubah data dengan satu klik (tanpa konfirmasi): perilaku ini sengaja tidak diubah, tetapi pertimbangkan konfirmasi bila ada salah klik. Panel detail digulir ke tampilan di layar < 1024px.
 
-21.8 **Tempat dan tanggal** ("Depok, 16 Oktober 2026") dicetak DI DALAM kolom Wali Kelas, rata tengah sejajar jabatan, bukan rata kanan halaman. Kolom lain memakai baris kosong setinggi sama (`.rpr-ttd-tempat`) agar "Orang Tua/Wali", "Kepala Sekolah", dan "Wali Kelas," tetap sejajar. Diuji di `cek-laporan-cetak.mjs`.
+21.6 **Mata Pelajaran:** konfirmasi hapus kini inline (bukan `window.confirm`). Kotak kelas 1–6 per mapel adalah tombol ganda aktif/tidak: tampil biru penuh bila berlaku, putih bergaris bila tidak. Mapel tanpa `tingkatanBerlaku` dianggap berlaku di semua kelas (logika lama dipertahankan).
 
-## §23. Rapor SAS dan data pelengkapnya (per 16 Okt 2026)
+21.7 Setelah mengubah halaman admin, periksa di 390px dan 1024px selain 1440px: di 1024px kolom daftar dan formulir sama-sama sempit.
 
-23.1 **Rapor SAS** (`/akademik/rapor-sas`, halaman yang sama dengan Rapor STS: `Rapor.tsx` prop `jenis`). Format penuh v1: A.1/A.2 nilai dan capaian, B Kokurikuler, C Ekstrakurikuler (No, Kegiatan, Predikat, Keterangan), D Ketidakhadiran + Catatan Wali, Tanggapan Orang Tua/Wali Murid, kotak Keputusan (hanya semester 2), tanda tangan Orang Tua/Wali, Kepala Sekolah, Wali Kelas dengan tempat/tanggal di atas kolom Wali Kelas. Pembangunnya `buildBodyPrintSas` (`raporHtml.ts`).
 
-23.2 **Nilai akhir SAS** per mapel = `hitungSasMapel()` (`asesmenRumus.ts`): per TP digabung SLM, STS (bila lebih tinggi menggantikan SLM), dan SAS hanya bila TP masuk cakupan SAS; lalu rata tertimbang `bobotTpDiSemester` (bobot 0 tidak dihitung). Sama dengan kolom "Akhir" di Nilai STS & SAS. Capaian: TP berhasil akhir tertinggi ("Mencapai kompetensi dengan sangat baik dalam …") dan terendah ("Perlu peningkatan dalam …", bila beda TP). Catatan: v2 memakai `bobotMapel ?? 1` (model lama); v2 baru memakai bobot semester, jangan disamakan.
+## §22. Makna warna, bilah simpan, dan Input Nilai/Setoran (per 16 Okt 2026)
 
-23.3 **Dimuat per kelas**, bukan per siswa: `muatDataRaporSasKelas` membaca tiap mapel sekali (TP, cakupan, nilai SLM/STS/SAS kelas) dan satu query per kelas untuk absensi, kokurikuler, ekskul. Pratinjau memilih siswa dari hasil itu; cetak seluruh kelas memakai hasil yang sama.
+22.1 **Koreksi atas §19.1.** Memindahkan token `muh-*` dari hijau ke biru mengubah arti setiap tempat yang memakai `muh-*` sebagai "hijau = baik/selesai". Telah diaudit dan dikembalikan ke `emerald-*`: skala level `LEVEL_WARNA` (level tertinggi), progres selesai di Nilai SLM dan Nilai STS/SAS (angka persen dan bilah), kartu "lengkap" di pemilih Nilai SLM, bobot semester yang pas 100% di Bobot Semester, target Iqro tercapai di Riwayat Siswa, pesan sukses Seni Budaya, status Lulus (Baca & Tandai, Input Setoran, Riwayat), dan tombol status "Lulus" di Input Setoran. **Aturan: warna yang berarti baik, selesai, atau sukses selalu `emerald-*`, tidak pernah `muh-*`.** Saat menambah indikator baru, tanyakan dulu "apa artinya warna ini?". Audit dilakukan dengan pencarian pola (baris yang mempertentangkan `muh-` dengan `amber/red/rose/peach`, serta kata kunci status); pemakaian yang tidak terjaring pola itu perlu dicek secara visual.
 
-23.4 **Tanggal rapor SAS**: tanggal rapor akhir di Periode Akademik (semester 1 semua kelas; semester 2 kelas 1–5 dan kelas 6 terpisah). Tanggal STS terpisah (§21.7). Kosong → tanggal hari ini.
+22.2 **Skala 4 level** (`LEVEL_WARNA`, urutan terendah ke tertinggi): merah, ambar, sky, emerald. Setelah §19.1 level 3 dan 4 sama-sama biru dan sulit dibedakan; jangan mengembalikannya. Ini satu-satunya pemakaian `sky` yang disengaja untuk skala (Muroja'ah di Tahsin juga memakai `sky` sebagai penanda jenis).
 
-23.5 **Penulisan hanya oleh wali kelas** (`waliKelasSendiri`), admin hanya membaca dan mencetak (§17). Halaman `Kelengkapan Rapor SAS` (`/akademik/kelengkapan-rapor`) berisi tiga tab: Ketidakhadiran & Keputusan, Kokurikuler, Ekstrakurikuler; untuk admin semua isian dinonaktifkan. Master kegiatan ekstrakurikuler dikelola admin di `/admin/ekstrakurikuler`.
+22.3 **Bilah simpan `fixed` di Nilai SLM dan Nilai STS/SAS** harus berhenti di tepi sidebar: `md:left-[244px]` harus sama dengan lebar sidebar di `Layout.tsx` (`w-[244px]`). Bila lebar sidebar diubah, ubah keduanya. Pada versi lama, bilah itu membentang selebar layar dan menimpa profil dan tombol Keluar di sidebar (klik pada Keluar mengenai bilah). Bilah hanya tampil saat panel materi disembunyikan; `bottom-16` di layar kecil memperhitungkan navigasi bawah.
 
-23.6 **Keputusan kenaikan**: 'Belum diputuskan' (bawaan) mencetak kedua pilihan TANPA coretan agar dicoret tangan; 'Naik Kelas'/'Tinggal Kelas' mencoret pilihan lain. Kelas 6 mengikuti v1 (tetap "Naik ke Fase D | Kelas 7"); belum ada penyesuaian untuk kelulusan.
+22.4 **`useToast(posisi)`** menerima kelas posisi (`bottom-*`) opsional; bawaannya tidak berubah. Halaman dengan bilah simpan menempel di bawah memakainya agar notifikasi tidak menutup tombol Simpan: Input Setoran memakai `bottom-44 lg:bottom-24`. Jangan kembali ke notifikasi inline di puncak halaman di sana: saat guru menggulir Baca & Tandai dan menekan Simpan di bilah bawah, pesan (termasuk galat validasi) berada di luar layar.
 
-23.7 Ekskul berpredikat level 4 ("Tidak Ikut") disaring dari rapor (`ekskulUntukRapor`). Siswa tanpa ekskul tercetak keterangan "tidak mengikuti kegiatan ekstrakurikuler semester ini".
+22.5 **Sel nilai** di grid Nilai SLM/STS-SAS memakai garis 1px (`border`), bukan `border-2`; puluhan sel bergaris tebal membuat grid tampak berat. Fokus tetap jelas lewat `focus:border-muh-600` dan cincin 2px. Teks chip level di bawah sel minimal 10px.
 
-23.8 Deskripsi kokurikuler pada tahap ini ditulis MANUAL oleh wali kelas. Penyusun otomatis v2 (Dimensi Profil Lulusan, Proyek STEM, 7 Kebiasaan/G7KAIH, Kelola DPL) belum dimigrasi; bila dibangun, hasilnya mengisi `kokurikuler_rapor.deskripsi`.
+22.6 **Tombol status hafalan** di Input Setoran: Lulus = putih di atas `emerald-700` (5,5:1), Perlu diulang = putih di atas `amber-700` (5,0:1). Sebelumnya `amber-500` (2,1:1). Isian Input Setoran memakai `inputCls` dan `rounded-lg` seperti halaman lain.
 
-23.9 Uji: `node --experimental-strip-types scripts/cek-rapor-sas.mjs`. Deploy rules sebelum halaman Kelengkapan dipakai (koleksi baru ditolak tanpa rules).
+22.7 Perilaku yang sengaja tidak diubah: navigasi keyboard grid (Enter, panah, `select()` saat fokus), draf lokal dan pemulihannya, `useUnsavedGuard`, `saveNilaiTPBatch`, dan pintasan Ctrl+Enter di catatan Input Setoran. Uji: `scripts/cek-rumus-akademik.mjs`, `cek-baca-tandai.mts`, `cek-target.mts`.
+
+
+## §23. Sisa halaman Akademik (per 16 Okt 2026)
+
+23.1 **`inputCls` berisi `w-full` yang mengalahkan kelas lebar tambahan** (`w-14`, `w-16`) bila ditulis bersama: isian angka pendek menjadi selebar kolom. Untuk isian pendek pakai `inputSempitCls` (di `akademik/shared.tsx`, tanpa lebar bawaan) lalu tentukan lebarnya sendiri. Cacat ini tampak pada rentang nilai level KKTP di Setup TP (label level terlipat dua baris) dan kolom bobot di Bobot Semester; keduanya sudah diperbaiki.
+
+23.2 **Bobot Semester:** peringatan sebelum simpan (ada TP belum berbobot, total semester tidak 100%) kini inline di bilah simpan dengan tombol "Tetap simpan" dan "Periksa lagi", bukan `window.confirm`. Peringatan ditutup otomatis bila guru mengubah data (`tandaiKotor`), karena daftar peringatan lama sudah usang. Keadaan semester memakai lencana (hijau = pas 100%, ambar = kurang atau lebih), bukan kotak berwarna. `useToast` diberi posisi di atas bilah simpan (`bottom-40 md:bottom-24`), sama seperti §22.4.
+
+23.3 **Setup TP:** hapus TP kini konfirmasi inline (tidak dapat dibatalkan, jadi tombol merah penuh hanya muncul setelah satu langkah). Satu `window.confirm` sengaja dibiarkan: konfirmasi mode "Ganti" saat impor Excel, karena berada di tengah alur asinkron impor dan jalurnya jarang dipakai; jangan diubah tanpa menguji impor.
+
+23.4 **Rapor:** `PageHeader` dengan `back` sudah menampilkan tautan kembali; jangan menambah `BackLink` di atasnya (sebelumnya muncul dua kali). Tombol tidak memakai emoji atau glyph (🖨️ ◀ ▶); pakai teks dan panah `←` `→`. Simbol fungsional di Baca & Tandai (✓ ✕ ■ ▶) dipertahankan.
+
+23.5 **Laporan SLM (cetak):** artikel laporan tidak lagi memakai `.card-soft`, sebab `.card-soft` mengalahkan `print:border-0 print:shadow-none` (§20.2) sehingga garis, bayangan, dan sudut membulat ikut tercetak. Dibuktikan dengan emulasi media cetak: sebelum garis 1px/radius 12px, sesudah 0/0. Halaman cetak lain yang memakai `.card-soft` perlu dicek dengan cara yang sama.
+
+23.6 Dialog `useUnsavedGuard` (muncul saat meninggalkan nilai yang belum disimpan): bobot huruf dan radius disamakan (judul `font-semibold`, tombol `rounded-lg`); urutan tombol dan teks tidak diubah ("Tetap di sini" aman, "Keluar tanpa menyimpan" merah). `MapelKelasPicker` dan `SeniBudayaPanel`: hanya penyesuaian radius, kontras, dan ukuran teks.
+
+23.7 **Belum disentuh (halaman Tahsin):** `RiwayatSiswa.tsx` (avatar dengan `bg-gradient` di baris 475, banyak `rounded-xl`, satu `window.confirm`), `TargetHafalan.tsx`, `ProfilSaya.tsx`, `PanelSiswa.tsx`, dan `BacaTandai.tsx` (`rounded-xl`). Sisa `window.confirm` di `InputSetoran.tsx` (konfirmasi sebelum menyimpan) sengaja dibiarkan.

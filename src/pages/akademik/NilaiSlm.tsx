@@ -40,7 +40,7 @@ type StatusKartu =
   | { jenis: 'gagal' }
 
 const cellInputCls =
-  'h-11 w-[3.75rem] rounded-lg border-2 border-slate-200 bg-white text-center text-[16px] font-semibold tabular-nums text-slate-900 outline-none transition focus:border-muh-500 focus:ring-2 focus:ring-muh-500/25 disabled:bg-slate-50 disabled:text-slate-400 sm:h-12 sm:w-16 sm:text-[17px]'
+  'h-11 w-[3.75rem] rounded-lg border border-slate-300 bg-white text-center text-[16px] font-semibold tabular-nums text-slate-900 outline-none transition focus:border-muh-600 focus:ring-2 focus:ring-muh-600/25 disabled:bg-slate-50 disabled:text-slate-500 sm:h-12 sm:w-16 sm:text-[17px]'
 
 function parseNilai(t: string | undefined): number | null {
   if (t === undefined || t.trim() === '') return null
@@ -246,7 +246,7 @@ export default function NilaiSlm({ profile }: { profile: AppUser }) {
             if (st.jenis === 'gagal') return <span className="text-red-600">!</span>
             if (st.jenis === 'tanpa-tp') return <span className="text-amber-700">Tanpa TP</span>
             if (st.lengkap === st.total)
-              return <span className="text-muh-700">{st.lengkap}/{st.total}</span>
+              return <span className="text-emerald-700">{st.lengkap}/{st.total}</span>
             return (
               <span className="text-amber-700">
                 {st.lengkap}/{st.total}
@@ -551,7 +551,7 @@ function Detail({
     <div className="flex h-full flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h2 className="text-[14px] font-bold text-slate-900">Materi di tabel</h2>
+          <h2 className="text-[14px] font-semibold text-slate-900">Materi di tabel</h2>
           <p className="mt-0.5 text-[12px] leading-snug text-muted">
             Centang materi yang ingin ditampilkan sebagai kolom. Semua materi semester tetap tersimpan.
           </p>
@@ -591,7 +591,7 @@ function Detail({
               return (
                 <li key={t.id}>
                   <label
-                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-2.5 py-2 transition ${
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-lg border px-2.5 py-2 transition ${
                       checked ? 'border-muh-400 bg-muh-50' : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
@@ -622,14 +622,14 @@ function Detail({
             Terisi {progress.terisi}/{progress.total}
           </span>
           {progress.total > 0 && (
-            <span className={progress.terisi === progress.total ? 'font-semibold text-muh-700' : ''}>
+            <span className={progress.terisi === progress.total ? 'font-semibold text-emerald-700' : ''}>
               {Math.round((progress.terisi / progress.total) * 100)}%
             </span>
           )}
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
           <div
-            className={`h-full rounded-full ${progress.terisi === progress.total && progress.total > 0 ? 'bg-muh-600' : 'bg-amber-400'}`}
+            className={`h-full rounded-full ${progress.terisi === progress.total && progress.total > 0 ? 'bg-emerald-600' : 'bg-amber-400'}`}
             style={{ width: `${progress.total ? (progress.terisi / progress.total) * 100 : 0}%` }}
           />
         </div>
@@ -731,7 +731,7 @@ function Detail({
                           </th>
                           {kolom.map((t) => (
                             <th key={t.id} className="max-w-[7.5rem] px-2 py-2 text-center sm:px-3" title={t.namaTp}>
-                              <span className="block text-[12px] font-bold text-slate-800">M.{t.nomorTp}</span>
+                              <span className="block text-[12px] font-semibold text-slate-800">M.{t.nomorTp}</span>
                               <span className="mt-0.5 line-clamp-2 block text-[10.5px] font-normal leading-tight text-muted">
                                 {t.namaTp}
                               </span>
@@ -771,7 +771,7 @@ function Detail({
                                           invalid
                                             ? 'border-red-400 ring-2 ring-red-200'
                                             : terisi
-                                              ? 'border-muh-400 bg-muh-50/50'
+                                              ? 'border-muh-300 bg-muh-50/60'
                                               : ''
                                         }`}
                                         inputMode="decimal"
@@ -784,7 +784,7 @@ function Detail({
                                       />
                                       {lv && (
                                         <span
-                                          className={`rounded px-1 text-[9px] font-semibold ${LEVEL_WARNA[lv.index]}`}
+                                          className={`rounded px-1 text-[10px] font-semibold ${LEVEL_WARNA[lv.index]}`}
                                         >
                                           {lv.label}
                                         </span>
@@ -814,7 +814,7 @@ function Detail({
       )}
 
       {tulis && !panelMateri && siswa && kolom.length > 0 && nilai && (
-        <div className="fixed bottom-16 left-0 right-0 z-40 border-t border-border bg-white/95 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm md:bottom-0">
+        <div className="fixed bottom-16 left-0 right-0 z-40 border-t border-border bg-white/95 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm md:bottom-0 md:left-[244px]">
           <div className="mx-auto flex max-w-[1500px] items-center gap-3">
             <div className="min-w-0 flex-1 text-[13px] text-slate-700">
               {perubahan.length > 0 ? (

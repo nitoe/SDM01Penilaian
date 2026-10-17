@@ -1,16 +1,31 @@
 import { getFunctions, httpsCallable } from 'firebase/functions'
-import { app } from './firebase'
+import { app, auth } from './firebase'
 import type { TipeTp } from '../types/akademik'
 
-/** Hanya akun ini yang boleh memanggil generate TP/KKTP. */
+/** Hanya akun ini yang boleh memanggil generate TP/KKTP. UID dan email harus cocok keduanya. */
 export const UID_GENERATE_AI = 'v4fQXsqCzYUtHrqcDM0u48sxIfn1'
+export const EMAIL_GENERATE_AI = 'arif.azwar79@gmail.com'
 
 const REGION_FUNGSI = 'asia-southeast2'
 
 export type ProviderAi = 'gemini' | 'openai'
 
+/**
+ * Penentu tampilan fitur AI. Hanya kosmetik: yang benar-benar menjaga API key adalah Cloud Function
+ * (`bolehPemanggilAi` di functions/generateAi.js). Dicek terhadap sesi Firebase Auth yang aktif,
+ * bukan hanya argumen, sehingga data profil Firestore tidak bisa membuat fitur ini muncul.
+ */
 export function bolehGenerateAi(uid: string | undefined): boolean {
-  return uid === UID_GENERATE_AI
+  if (!uid || uid !== UID_GENERATE_AI) return false
+  const sesi = auth.currentUser
+  if (!sesi || sesi.uid !== UID_GENERATE_AI) return false
+  return (sesi.email ?? '').trim().toLowerCase() === EMAIL_GENERATE_AI
+}
+
+function pastikanBerhak() {
+  if (!bolehGenerateAi(auth.currentUser?.uid)) {
+    throw new Error('Fitur ini tidak tersedia untuk akun Anda.')
+  }
 }
 
 export interface HasilTpAi {
@@ -37,6 +52,7 @@ export async function generateTpAi(input: {
   teksCp: string
   disiplinSeni?: string
 }): Promise<HasilTpAi[]> {
+  pastikanBerhak()
   const panggil = httpsCallable<typeof input, { tp: HasilTpAi[] }>(
     getFunctions(app, REGION_FUNGSI),
     'generateTpAi',
@@ -57,6 +73,7 @@ export async function generateKktpAi(input: {
   tipe: TipeTp
   teksCp: string
 }): Promise<string[]> {
+  pastikanBerhak()
   const panggil = httpsCallable<typeof input, { deskripsi: string[] }>(
     getFunctions(app, REGION_FUNGSI),
     'generateKktpAi',

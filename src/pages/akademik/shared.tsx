@@ -88,6 +88,8 @@ export const LEVEL_WARNA = [
 /** Token form/tombol — selaras radius formal di seluruh app (ANTIREGRESI §19, §20). */
 export const inputCls =
   'w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] outline-none focus:border-muh-500 focus:ring-2 focus:ring-muh-500/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500'
+/** Isian tanpa lebar bawaan, untuk isian pendek (angka). `w-full` pada `inputCls` mengalahkan kelas lebar tambahan, jadi atur lebar lewat kelas ini. */
+export const inputSempitCls = inputCls.replace('w-full ', '')
 export const btnPrimary =
   'rounded-lg bg-muh-600 px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-muh-700 disabled:opacity-50'
 export const btnGhost =

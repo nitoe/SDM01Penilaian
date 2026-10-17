@@ -5,7 +5,7 @@ import { logger } from 'firebase-functions'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { periksaPenghapusan } from './aturan.js'
 import {
-  bolehUidAi,
+  bolehPemanggilAi,
   mintaModel,
   normalisasiKktp,
   normalisasiTp,
@@ -82,8 +82,10 @@ function kunciProvider(provider) {
 
 function pastikanAi(request) {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Masuk dulu.')
-  if (!bolehUidAi(request.auth.uid)) {
-    throw new HttpsError('permission-denied', 'Generate AI hanya untuk satu akun guru yang ditetapkan.')
+  if (!bolehPemanggilAi(request.auth)) {
+    // Dicatat supaya percobaan akun lain terlihat di log Functions. Email sengaja tidak dicatat.
+    logger.warn('generateAi ditolak: akun tidak berhak', { uid: request.auth.uid })
+    throw new HttpsError('permission-denied', 'Fitur ini tidak tersedia untuk akun Anda.')
   }
   const provider = request.data?.provider
   if (provider !== 'gemini' && provider !== 'openai') {

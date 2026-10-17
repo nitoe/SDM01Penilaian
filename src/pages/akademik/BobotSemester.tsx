@@ -11,9 +11,20 @@ import {
 } from '../../lib/akademik'
 import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
-import { PageHeader } from '../../components/ui'
+import { Badge, PageHeader } from '../../components/ui'
 import { MapelKelasPicker } from '../../components/MapelKelasPicker'
-import { BackLink, Notice, NoticeAksesGuru, Spinner, btnGhost, btnPrimary, inputCls, useToast } from './shared'
+import {
+  BackLink,
+  Notice,
+  NoticeAksesGuru,
+  Spinner,
+  btnGhost,
+  btnGhostSm,
+  btnPrimary,
+  btnWarn,
+  inputSempitCls,
+  useToast,
+} from './shared'
 
 /** State UI per TP: alokasi bisa 0, 1, atau 2 semester sekaligus. */
 interface Baris {
@@ -46,7 +57,10 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
   const [baris, setBaris] = useState<Baris[] | null>(null)
   const [kotor, setKotor] = useState(false)
   const [busy, setBusy] = useState(false)
-  const { show, node } = useToast()
+  // Bilah simpan menempel di bawah: notifikasi ditempatkan di atasnya agar tidak menutup tombol Simpan.
+  const { show, node } = useToast('bottom-40 md:bottom-24')
+  /** Peringatan sebelum simpan (total tidak 100% dsb.), ditampilkan inline, bukan window.confirm. */
+  const [peringatanSimpan, setPeringatanSimpan] = useState<string[] | null>(null)
 
   useEffect(() => {
     let batal = false
@@ -128,6 +142,12 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
     )
   }
 
+  /** Perubahan apa pun membuat peringatan simpan sebelumnya usang: tutup. */
+  const tandaiKotor = () => {
+    setKotor(true)
+    setPeringatanSimpan(null)
+  }
+
   /** Isi angka = aktifkan semester itu; kosongkan = cabut dari semester. */
   const setBobotKolom = (id: string, semester: Semester, value: string) => {
     setBaris((prev) => {
@@ -143,7 +163,7 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
         return { ...r, bobot: next }
       })
     })
-    setKotor(true)
+    tandaiKotor()
   }
 
   /** Tombol cepat: masukkan ke semester dengan bobot awal 1. */
@@ -156,7 +176,7 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
         return { ...r, bobot: { ...r.bobot, [semester]: '1' } }
       })
     })
-    setKotor(true)
+    tandaiKotor()
   }
 
   const totalSemester = (s: Semester) =>
@@ -184,10 +204,10 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
         peta.has(r.tp.id) ? { ...r, bobot: { ...r.bobot, [s]: String(peta.get(r.tp.id)) } } : r,
       ),
     )
-    setKotor(true)
+    tandaiKotor()
   }
 
-  async function simpan() {
+  async function simpan(paksa = false) {
     if (!baris) return
     const teralokasi = baris.filter((r) => Object.keys(r.bobot).length > 0)
     for (const r of teralokasi) {
@@ -207,8 +227,12 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
         peringatan.push(`Total Semester ${s} = ${totalSemester(s).toFixed(1)}% (seharusnya 100%).`)
       }
     })
-    if (peringatan.length && !window.confirm(`${peringatan.join('\n')}\n\nTetap simpan?`)) return
+    if (peringatan.length && !paksa) {
+      setPeringatanSimpan(peringatan)
+      return
+    }
 
+    setPeringatanSimpan(null)
     setBusy(true)
     try {
       await saveBobotSemesterBatch(
@@ -246,10 +270,19 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
   const belum = (baris ?? []).filter((r) => Object.keys(r.bobot).length === 0)
   const sudah = (baris ?? []).filter((r) => Object.keys(r.bobot).length > 0)
 
+  /** Badge keadaan total satu semester: warna hanya untuk arti (hijau = pas, ambar = perlu perhatian). */
+  const keadaan = (r: { n: number; pas: boolean; sisa: number }) => {
+    if (r.n === 0) return { tone: 'neutral' as const, label: 'Belum ada TP' }
+    if (r.pas) return { tone: 'ok' as const, label: 'Total pas 100%' }
+    return r.sisa > 0
+      ? { tone: 'peach' as const, label: `Kurang ${r.sisa.toFixed(1)}%` }
+      : { tone: 'peach' as const, label: `Lebih ${Math.abs(r.sisa).toFixed(1)}%` }
+  }
+
   return (
     <div className="space-y-5">
-      <BackLink to="/akademik/bobot-semester">Pilih mata pelajaran</BackLink>
       <PageHeader
+        back={{ to: '/akademik/bobot-semester', label: 'Pilih mata pelajaran' }}
         eyebrow={`Kelas ${kelas}`}
         title={tulis ? `Bobot Semester — ${mapel}` : `Bobot Tujuan Pembelajaran — ${mapel}`}
         subtitle={
@@ -265,118 +298,101 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
         <Notice>Belum ada TP. Susun dulu di menu Setup TP &amp; KKTP.</Notice>
       ) : (
         <>
-          {/* ===== RINGKASAN BESAR ===== */}
+          {/* Ringkasan total per semester */}
           <div className="grid gap-3 sm:grid-cols-2">
             {(['1', '2'] as Semester[]).map((s) => {
               const r = s === '1' ? r1 : r2
+              const k = keadaan(r)
               return (
-                <div
-                  key={s}
-                  className={`rounded-2xl border-2 p-4 ${
-                    r.n === 0
-                      ? 'border-slate-200 bg-slate-50'
-                      : r.pas
-                        ? 'border-muh-300 bg-muh-50/40'
-                        : 'border-amber-300 bg-amber-50/50'
-                  }`}
-                >
+                <div key={s} className="card-soft p-4">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[16px] font-bold text-slate-900">Semester {s}</p>
-                    <p
-                      className={`text-[22px] font-bold tabular-nums ${
-                        r.n === 0 ? 'text-slate-400' : r.pas ? 'text-muh-700' : 'text-amber-700'
-                      }`}
-                    >
-                      {r.n === 0 ? '—' : `${Math.round(r.total * 10) / 10}%`}
-                    </p>
+                    <p className="text-[14px] font-semibold text-slate-900">Semester {s}</p>
+                    <Badge tone={k.tone}>{k.label}</Badge>
                   </div>
-                  <div className="mt-2 h-3 overflow-hidden rounded-full bg-white/80">
+                  <p
+                    className={`tabular mt-1.5 text-[26px] font-semibold leading-tight tracking-tight ${
+                      r.n === 0 ? 'text-muted' : r.pas ? 'text-emerald-700' : 'text-amber-700'
+                    }`}
+                  >
+                    {r.n === 0 ? '—' : `${Math.round(r.total * 10) / 10}%`}
+                  </p>
+                  <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-slate-100">
                     <div
                       className={`h-full rounded-full transition-all ${
-                        r.n === 0 ? 'bg-slate-200' : r.pas ? 'bg-muh-500' : r.total > 100 ? 'bg-rose-400' : 'bg-amber-400'
+                        r.n === 0
+                          ? 'bg-slate-200'
+                          : r.pas
+                            ? 'bg-emerald-500'
+                            : r.total > 100
+                              ? 'bg-rose-400'
+                              : 'bg-amber-400'
                       }`}
                       style={{ width: `${Math.min(100, Math.max(0, r.total))}%` }}
                     />
                   </div>
-                  <p className="mt-2 text-[13px] leading-snug text-slate-600">
-                    {r.n === 0
-                      ? 'Belum ada TP di semester ini'
-                      : r.pas
-                        ? `✓ ${r.n} TP · total sudah 100%`
-                        : r.sisa > 0
-                          ? `${r.n} TP · masih kurang ${r.sisa.toFixed(1)}% lagi`
-                          : `${r.n} TP · kelebihan ${Math.abs(r.sisa).toFixed(1)}%`}
-                  </p>
-                  {tulis && r.n > 0 && !r.pas && (
-                    <button
-                      type="button"
-                      className={`${btnGhost} mt-2 !px-3 !py-1.5 !text-[13px]`}
-                      onClick={() => ratakan(s)}
-                    >
-                      Ratakan otomatis ke 100%
-                    </button>
-                  )}
+                  <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[12.5px] text-muted">
+                      {r.n === 0 ? 'Belum ada TP di semester ini' : `${r.n} TP di semester ini`}
+                    </p>
+                    {tulis && r.n > 0 && !r.pas && (
+                      <button type="button" className={btnGhostSm} onClick={() => ratakan(s)}>
+                        Ratakan ke 100%
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             })}
           </div>
 
-          {/* ===== PETUNJUK SINGKAT ===== */}
-          <div className="rounded-xl border border-border bg-white px-4 py-3 text-[13.5px] leading-relaxed text-slate-700">
-            <p className="font-semibold text-slate-900">Cara mengisi</p>
-            <ol className="mt-1.5 list-decimal space-y-1 pl-5">
+          <details className="card-soft px-4 py-3 text-[13px] leading-relaxed text-slate-700">
+            <summary className="cursor-pointer select-none text-[13px] font-semibold text-slate-900">
+              Cara mengisi
+            </summary>
+            <ol className="mt-2 list-decimal space-y-1 pl-5">
               <li>
                 Ketik angka di kolom <strong>Semester 1</strong> dan/atau <strong>Semester 2</strong>.
               </li>
               <li>
                 TP yang sama boleh diisi di <strong>kedua kolom</strong> (dipakai di dua semester).
               </li>
+              <li>Kolom kosong = TP tidak dipakai di semester itu.</li>
               <li>
-                Kolom kosong = TP tidak dipakai di semester itu.
-              </li>
-              <li>
-                Total tiap semester sebaiknya <strong>100%</strong> (lihat kotak hijau di atas).
+                Total tiap semester sebaiknya <strong>100%</strong> (lihat ringkasan di atas).
               </li>
             </ol>
-          </div>
+          </details>
 
-          {/* ===== TP BELUM DIISI ===== */}
+          {/* TP yang belum punya bobot */}
           {belum.length > 0 && (
-            <section className="rounded-2xl border-2 border-amber-200 bg-amber-50/40 p-4">
-              <h2 className="text-[16px] font-bold text-slate-900">
-                Belum diisi <span className="ml-1 text-[14px] font-semibold text-amber-700">({belum.length} TP)</span>
-              </h2>
-              <p className="mt-1 text-[13px] text-slate-600">
-                Klik tombol di bawah untuk memasukkan TP ke semester, lalu ubah angkanya.
+            <section className="rounded-[var(--radius-card)] border border-amber-200 bg-amber-50/50 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-[14px] font-semibold text-slate-900">Belum diisi</h2>
+                <Badge tone="peach">{belum.length} TP</Badge>
+              </div>
+              <p className="mt-1 text-[12.5px] text-slate-600">
+                Masukkan TP ke semester, lalu ubah angkanya di tabel.
               </p>
-              <ul className="mt-3 space-y-3">
+              <ul className="mt-3 space-y-2.5">
                 {belum.map((r) => (
-                  <li key={r.tp.id} className="rounded-xl border border-amber-200 bg-white p-3.5">
+                  <li key={r.tp.id} className="rounded-lg border border-amber-200 bg-white p-3">
                     <div className="flex gap-3">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-[14px] font-bold text-amber-800">
+                      <span className="tabular flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-[13px] font-semibold text-amber-800">
                         {r.tp.nomorTp}
                       </span>
-                      <p className="min-w-0 flex-1 text-[14px] leading-snug text-slate-800">{r.tp.namaTp}</p>
+                      <p className="min-w-0 flex-1 text-[13.5px] leading-snug text-slate-800">{r.tp.namaTp}</p>
                     </div>
                     {tulis && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="rounded-xl border border-muh-300 bg-muh-50 px-3.5 py-2 text-[13px] font-semibold text-muh-800 hover:bg-muh-100"
-                          onClick={() => masukkanKe(r.tp.id, '1')}
-                        >
+                      <div className="mt-2.5 flex flex-wrap gap-1.5">
+                        <button type="button" className={btnGhostSm} onClick={() => masukkanKe(r.tp.id, '1')}>
                           + Semester 1
                         </button>
-                        <button
-                          type="button"
-                          className="rounded-xl border border-muh-300 bg-muh-50 px-3.5 py-2 text-[13px] font-semibold text-muh-800 hover:bg-muh-100"
-                          onClick={() => masukkanKe(r.tp.id, '2')}
-                        >
+                        <button type="button" className={btnGhostSm} onClick={() => masukkanKe(r.tp.id, '2')}>
                           + Semester 2
                         </button>
                         <button
                           type="button"
-                          className="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50"
+                          className={btnGhostSm}
                           onClick={() => {
                             masukkanKe(r.tp.id, '1')
                             // kedua: butuh setTimeout state sequential — lakukan langsung
@@ -387,7 +403,7 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
                                 return { ...x, bobot: { '1': x.bobot['1'] ?? '1', '2': '1' } }
                               })
                             })
-                            setKotor(true)
+                            tandaiKotor()
                           }}
                         >
                           + Kedua semester
@@ -400,22 +416,23 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
             </section>
           )}
 
-          {/* ===== TABEL BOBOT ===== */}
+          {/* Tabel bobot */}
           {sudah.length > 0 && (
-            <section className="overflow-hidden rounded-2xl border border-border bg-white">
+            <section className="card-soft overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-slate-50 px-4 py-3">
-                <h2 className="text-[16px] font-bold text-slate-900">
-                  Bobot TP <span className="ml-1 text-[14px] font-semibold text-slate-500">({sudah.length})</span>
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-[14px] font-semibold text-slate-900">Bobot TP</h2>
+                  <Badge>{sudah.length}</Badge>
+                </div>
                 {tulis && (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {r1.n > 0 && (
-                      <button type="button" className={`${btnGhost} !px-3 !py-1.5 !text-[13px]`} onClick={() => ratakan('1')}>
+                      <button type="button" className={btnGhostSm} onClick={() => ratakan('1')}>
                         Ratakan Sem 1
                       </button>
                     )}
                     {r2.n > 0 && (
-                      <button type="button" className={`${btnGhost} !px-3 !py-1.5 !text-[13px]`} onClick={() => ratakan('2')}>
+                      <button type="button" className={btnGhostSm} onClick={() => ratakan('2')}>
                         Ratakan Sem 2
                       </button>
                     )}
@@ -423,8 +440,7 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
                 )}
               </div>
 
-              {/* Header kolom — sticky-ish on mobile via sticky top of section */}
-              <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] gap-2 border-b border-border bg-slate-50/80 px-3 py-2.5 text-[12px] font-bold uppercase tracking-wide text-slate-500 sm:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem] sm:px-4">
+              <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] gap-2 border-b border-border bg-slate-50/80 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem] sm:px-4">
                 <span>Tujuan Pembelajaran</span>
                 <span className="text-center">Sem 1 (%)</span>
                 <span className="text-center">Sem 2 (%)</span>
@@ -440,14 +456,12 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
                     >
                       <div className="min-w-0">
                         <div className="flex items-start gap-2">
-                          <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muh-50 text-[12px] font-bold text-muh-700">
+                          <span className="tabular mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muh-50 text-[12px] font-semibold text-muh-700">
                             {r.tp.nomorTp}
                           </span>
                           <div className="min-w-0">
                             <p className="text-[13.5px] leading-snug text-slate-800">{r.tp.namaTp}</p>
-                            {dual && (
-                              <p className="mt-0.5 text-[11.5px] font-medium text-peach-700">Dipakai di kedua semester</p>
-                            )}
+                            {dual && <p className="mt-0.5 text-[11.5px] text-muted">Dipakai di kedua semester</p>}
                           </div>
                         </div>
                       </div>
@@ -459,7 +473,7 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
                             {aktif ? (
                               <input
                                 aria-label={`Bobot TP ${r.tp.nomorTp} Semester ${s}`}
-                                className={`${inputCls} w-14 text-center text-[15px] font-semibold tabular-nums sm:w-16 ${
+                                className={`${inputSempitCls} w-14 text-center text-[14px] font-semibold tabular-nums sm:w-16 ${
                                   !tulis ? 'bg-slate-50' : ''
                                 }`}
                                 inputMode="decimal"
@@ -475,7 +489,8 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
                               <button
                                 type="button"
                                 title={`Masukkan ke Semester ${s}`}
-                                className="flex h-10 w-14 items-center justify-center rounded-lg border border-dashed border-slate-300 text-[18px] text-slate-400 hover:border-muh-400 hover:bg-muh-50 hover:text-muh-700 sm:w-16"
+                                aria-label={`Masukkan TP ${r.tp.nomorTp} ke Semester ${s}`}
+                                className="flex h-9 w-14 items-center justify-center rounded-lg border border-dashed border-slate-300 text-[18px] text-slate-500 hover:border-muh-400 hover:bg-muh-50 hover:text-muh-700 sm:w-16"
                                 onClick={() => masukkanKe(r.tp.id, s)}
                               >
                                 +
@@ -491,16 +506,15 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
                 })}
               </ul>
 
-              {/* Footer total */}
-              <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] gap-2 border-t-2 border-border bg-slate-50 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem] sm:px-4">
+              <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] gap-2 border-t border-border bg-slate-50 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem] sm:px-4">
                 <span className="text-[13px] font-semibold text-slate-700">Total</span>
                 {SEMS.map((s) => {
                   const r = s === '1' ? r1 : r2
                   return (
                     <span
                       key={s}
-                      className={`text-center text-[15px] font-bold tabular-nums ${
-                        r.n === 0 ? 'text-slate-400' : r.pas ? 'text-muh-700' : 'text-amber-700'
+                      className={`tabular text-center text-[14px] font-semibold ${
+                        r.n === 0 ? 'text-muted' : r.pas ? 'text-emerald-700' : 'text-amber-700'
                       }`}
                     >
                       {r.n === 0 ? '—' : `${Math.round(r.total * 10) / 10}%`}
@@ -512,18 +526,43 @@ export default function BobotSemester({ profile }: { profile: AppUser }) {
           )}
 
           {tulis && (
-            <div className="sticky bottom-16 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-white/95 p-3.5 shadow-lg backdrop-blur md:bottom-4">
-              <button type="button" className={`${btnPrimary} !px-5 !py-2.5 !text-[15px]`} disabled={busy || !kotor} onClick={() => void simpan()}>
-                {busy ? 'Menyimpan…' : 'Simpan bobot'}
-              </button>
-              {kotor ? (
-                <span className="text-[13px] font-medium text-amber-700">Ada perubahan yang belum disimpan</span>
-              ) : (
-                <span className="text-[13px] text-muted">
-                  Sem 1: {r1.n ? `${Math.round(r1.total * 10) / 10}%` : '—'} · Sem 2:{' '}
-                  {r2.n ? `${Math.round(r2.total * 10) / 10}%` : '—'}
-                </span>
+            <div className="sticky bottom-16 z-10 space-y-3 rounded-lg border border-border bg-white/95 p-3.5 shadow-md backdrop-blur md:bottom-4">
+              {peringatanSimpan && (
+                <Notice tone="warn">
+                  <p className="font-semibold">Periksa sebelum menyimpan</p>
+                  <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                    {peringatanSimpan.map((t) => (
+                      <li key={t}>{t}</li>
+                    ))}
+                  </ul>
+                  <div className="mt-2.5 flex flex-wrap gap-2">
+                    <button type="button" className={btnWarn} disabled={busy} onClick={() => void simpan(true)}>
+                      Tetap simpan
+                    </button>
+                    <button type="button" className={btnGhost} onClick={() => setPeringatanSimpan(null)}>
+                      Periksa lagi
+                    </button>
+                  </div>
+                </Notice>
               )}
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  className={btnPrimary}
+                  disabled={busy || !kotor}
+                  onClick={() => void simpan()}
+                >
+                  {busy ? 'Menyimpan…' : 'Simpan bobot'}
+                </button>
+                {kotor ? (
+                  <span className="text-[13px] font-medium text-amber-700">Ada perubahan yang belum disimpan</span>
+                ) : (
+                  <span className="text-[13px] text-muted">
+                    Sem 1: {r1.n ? `${Math.round(r1.total * 10) / 10}%` : '—'} · Sem 2:{' '}
+                    {r2.n ? `${Math.round(r2.total * 10) / 10}%` : '—'}
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </>

@@ -101,22 +101,22 @@ export function useUnsavedGuard(dirty: boolean) {
       aria-modal="true"
       aria-labelledby="unsaved-title"
     >
-      <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
-        <h2 id="unsaved-title" className="text-[16px] font-bold text-slate-900">
+      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+        <h2 id="unsaved-title" className="text-[16px] font-semibold text-slate-900">
           Nilai belum disimpan
         </h2>
         <p className="mt-2 text-[13.5px] leading-relaxed text-slate-600">{PESAN}</p>
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
-            className="h-11 rounded-xl border border-border bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-slate-50"
+            className="h-11 rounded-lg border border-border bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-slate-50"
             onClick={stay}
           >
             Tetap di sini
           </button>
           <button
             type="button"
-            className="h-11 rounded-xl bg-red-600 px-4 text-[14px] font-semibold text-white hover:bg-red-700"
+            className="h-11 rounded-lg bg-red-600 px-4 text-[14px] font-semibold text-white hover:bg-red-700"
             onClick={leave}
           >
             Keluar tanpa menyimpan

@@ -102,7 +102,7 @@ export function MapelKelasPicker({
               }`}
             >
               Kelas {tg}
-              <span className={`ml-1.5 text-[11px] font-medium ${aktif ? 'text-muh-600' : 'text-slate-400'}`}>
+              <span className={`ml-1.5 text-[11px] font-medium ${aktif ? 'text-muh-600' : 'text-muted'}`}>
                 {count}
               </span>
             </button>
@@ -132,7 +132,7 @@ export function MapelKelasPicker({
                   key={id}
                   type="button"
                   onClick={() => setFilterStatus(id)}
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap ${
+                  className={`rounded-full px-2.5 py-1 text-[12px] font-medium whitespace-nowrap ${
                     filterStatus === id ? 'bg-muh-600 text-white' : 'bg-slate-100 text-slate-600'
                   }`}
                 >

@@ -1,7 +1,0 @@
-    // ---- Periode akademik (tahun ajaran + semester) -------------------------
-    // Admin mengelola, guru membaca (untuk memilih konteks saat login).
-    match /periode_akademik/{id} {
-      allow read: if isGuru();
-      allow write: if isAdmin();
-    }
-

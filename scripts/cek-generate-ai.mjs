@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import {
+  bolehPemanggilAi,
   bolehUidAi,
   normalisasiKktp,
   normalisasiTp,
@@ -9,6 +10,20 @@ import {
 
 assert.equal(bolehUidAi('v4fQXsqCzYUtHrqcDM0u48sxIfn1'), true)
 assert.equal(bolehUidAi('lain'), false)
+
+// Gerbang server: UID DAN email harus cocok.
+const UID = 'v4fQXsqCzYUtHrqcDM0u48sxIfn1'
+const EMAIL = 'arif.azwar79@gmail.com'
+assert.equal(bolehPemanggilAi({ uid: UID, token: { email: EMAIL } }), true)
+assert.equal(bolehPemanggilAi({ uid: UID, token: { email: 'Arif.Azwar79@Gmail.com ' } }), true)
+assert.equal(bolehPemanggilAi({ uid: UID, token: { email: 'guru@sdm01.sch.id' } }), false, 'UID cocok, email beda')
+assert.equal(bolehPemanggilAi({ uid: UID, token: {} }), false, 'UID cocok, tanpa email')
+assert.equal(bolehPemanggilAi({ uid: UID }), false, 'tanpa token')
+assert.equal(bolehPemanggilAi({ uid: 'lain', token: { email: EMAIL } }), false, 'email cocok, UID beda')
+assert.equal(bolehPemanggilAi({ uid: 'lain', token: { email: 'x@y.z' } }), false)
+assert.equal(bolehPemanggilAi(null), false)
+assert.equal(bolehPemanggilAi(undefined), false)
+assert.equal(bolehPemanggilAi({ uid: 123, token: { email: EMAIL } }), false)
 
 const prompt = susunPromptTp({
   mapel: 'Matematika',
