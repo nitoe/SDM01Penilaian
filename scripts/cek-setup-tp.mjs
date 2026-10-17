@@ -71,6 +71,8 @@ for (const [nama, pola] of [
   ['antrean TP hasil AI', /setAntrianAi\(/],
   ['tata letak daftar ⇄ editor', /xl:grid-cols-\[22rem_minmax\(0,1fr\)\]/],
   ['muat ulang senyap', /await muat\(true\)/],
+  ['mode baca: sembunyikan/tampilkan editor', /Sembunyikan editor/],
+  ['mode baca: buka semua rincian', /Buka semua rincian/],
 ]) assert.match(src, pola, `SetupTp.tsx kehilangan: ${nama}`)
 assert.match(src, /if \(!akunAi\) return\n\s+if \(sibuk \|\| !konfirmasiBuang\(\)\) return\n\s+setBusyAi\('tp'\)/, 'jalankanGenerateTp harus menolak non-akun-AI')
 assert.match(src, /async function jalankanGenerateKktp\(provider: ProviderAi\) \{\n\s+if \(!akunAi\) return/, 'jalankanGenerateKktp harus menolak non-akun-AI')

@@ -148,6 +148,9 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const [kunciForm, setKunciForm] = useState(0)
   const [cariTp, setCariTp] = useState('')
   const [filterTp, setFilterTp] = useState<FilterTp>('semua')
+  /** Mode baca (§26.8): panel editor disembunyikan, daftar TP melebar, dan tiap TP bisa dibuka rinciannya tanpa masuk mode edit. */
+  const [modeBaca, setModeBaca] = useState(false)
+  const [bacaTerbuka, setBacaTerbuka] = useState<Set<string>>(() => new Set())
   const badanEditorRef = useRef<HTMLDivElement>(null)
   /** Posisi scroll halaman saat daftar TP ditinggalkan di layar kecil; dipulihkan saat kembali. */
   const yDaftar = useRef(0)
@@ -165,7 +168,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   useEffect(() => {
     function saatTekan(e: KeyboardEvent) {
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's') return
-      if (!form) return
+      if (!form || modeBaca) return
       e.preventDefault()
       if (busy || (form.id && !dirty)) return
       void simpan()
@@ -700,7 +703,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   // Layar lebar (xl, ≥1280px): daftar TP di kiri, editor di kanan, keduanya selalu terlihat.
   // Layar kecil: bergantian — daftar ATAU editor — supaya tidak ada scroll jauh ke form.
   const layarKecil = () => window.innerWidth < 1280
-  const detailTampilDiKecil = form !== null || (akunAi && tabKanan === 'cp')
+  const detailTampilDiKecil = !modeBaca && (form !== null || (akunAi && tabKanan === 'cp'))
   const sibuk = busy || busyAi !== null
 
   /** Buka editor. `snapshot` = isi form yang dianggap "sudah tersimpan"; null = langsung dianggap belum tersimpan. */
@@ -738,6 +741,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
 
   function bukaTp(tp: TujuanPembelajaran) {
     if (sibuk) return
+    setModeBaca(false)
     if (form?.id === tp.id) {
       setTabKanan('editor')
       return
@@ -749,14 +753,18 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   }
 
   function bukaTpBaru() {
-    if (sibuk || !konfirmasiBuang()) return
+    if (sibuk) return
+    setModeBaca(false)
+    if (!konfirmasiBuang()) return
     setAntrianAi([])
     const f = formBaru(nomorTpBerikut(list))
     bukaForm(f, JSON.stringify(f))
   }
 
   function bukaFormDariCp(cp: CapaianResmi) {
-    if (sibuk || !konfirmasiBuang()) return
+    if (sibuk) return
+    setModeBaca(false)
+    if (!konfirmasiBuang()) return
     setAntrianAi([])
     const f: FormState = { ...formBaru(nomorTpBerikut(list)), cp: cp.teks, cpTerkunci: true }
     bukaForm(f, JSON.stringify(f))
@@ -776,11 +784,36 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
 
   function tampilkanTabCp() {
     if (!akunAi) return
+    setModeBaca(false)
     if (layarKecil()) {
       if (!detailTampilDiKecil) yDaftar.current = window.scrollY
       window.scrollTo({ top: 0 })
     }
     setTabKanan('cp')
+  }
+
+  // ---- Mode baca ------------------------------------------------------
+  function tampilkanEditor() {
+    setModeBaca(false)
+  }
+
+  /**
+   * Sembunyikan panel editor. TP yang sudah bersih ditutup; TP yang BELUM tersimpan tetap ada di memori
+   * (dan diberi penanda di daftar) supaya muncul utuh lagi saat editor ditampilkan.
+   */
+  function sembunyikanEditor() {
+    if (sibuk) return
+    if (form && !dirty) tutupFormPaksa()
+    setModeBaca(true)
+  }
+
+  function toggleBaca(id: string) {
+    setBacaTerbuka((s) => {
+      const n = new Set(s)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
   }
 
   // ---- Generate AI (hanya akun AI) ----------------------------------
@@ -974,6 +1007,8 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const semuaTp = listTampil ?? []
   const tpTampil = saringTp(semuaTp, { cari: cariTp, filter: filterTp })
   const jumlahKktpKurang = semuaTp.filter((tp) => jumlahKktpTerisi(tp) < JUMLAH_LEVEL_KKTP).length
+  const semuaTerbuka = tpTampil.length > 0 && tpTampil.every((tp) => bacaTerbuka.has(tp.id))
+  const toggleSemuaBaca = () => setBacaTerbuka(semuaTerbuka ? new Set() : new Set(tpTampil.map((tp) => tp.id)))
   const { indeks: indeksAktif, sebelumnya: tpSebelumnya, berikutnya: tpBerikutnya } = tetanggaTp(listTampil, form?.id)
   const tpAktif = form?.id ? semuaTp.find((t) => t.id === form.id) : undefined
   const labelTipe = (t: TipeTp) => (t === 'kinerja' ? 'Kinerja' : 'Pengetahuan')
@@ -1049,6 +1084,15 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
               >
                 Atur semester &amp; bobot
               </Link>
+              <button
+                type="button"
+                className={`${btnGhost} ml-auto`}
+                aria-pressed={modeBaca}
+                disabled={sibuk}
+                onClick={modeBaca ? tampilkanEditor : sembunyikanEditor}
+              >
+                {modeBaca ? 'Tampilkan editor' : 'Sembunyikan editor'}
+              </button>
             </div>
           )}
 
@@ -1236,11 +1280,15 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
               </div>
             )
           ) : (
-            <div className="grid items-start gap-4 xl:grid-cols-[22rem_minmax(0,1fr)]">
+            <div className={`grid items-start gap-4 ${modeBaca ? '' : 'xl:grid-cols-[22rem_minmax(0,1fr)]'}`}>
               {/* ===== Kiri: daftar TP ===== */}
               <section
-                className={`card-soft min-h-0 flex-col xl:sticky xl:top-[4.25rem] xl:max-h-[max(28rem,calc(100vh-14rem))] ${
-                  detailTampilDiKecil ? 'hidden xl:flex' : 'flex'
+                className={`card-soft min-h-0 flex-col ${
+                  modeBaca
+                    ? 'flex'
+                    : `xl:sticky xl:top-[4.25rem] xl:max-h-[max(28rem,calc(100vh-14rem))] ${
+                        detailTampilDiKecil ? 'hidden xl:flex' : 'flex'
+                      }`
                 }`}
               >
                 <div className="shrink-0 space-y-2.5 border-b border-border p-3.5">
@@ -1248,12 +1296,27 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                     <h2 className="text-[14px] font-semibold text-slate-900">
                       Daftar TP <span className="tabular font-normal text-muted">({semuaTp.length})</span>
                     </h2>
-                    {akunAi && (
-                      <button type="button" className={`${btnGhostSm} xl:hidden`} onClick={tampilkanTabCp}>
-                        Capaian Pembelajaran
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {modeBaca && semuaTp.length > 0 && (
+                        <button type="button" className={btnGhostSm} onClick={toggleSemuaBaca}>
+                          {semuaTerbuka ? 'Tutup semua rincian' : 'Buka semua rincian'}
+                        </button>
+                      )}
+                      {akunAi && !modeBaca && (
+                        <button type="button" className={`${btnGhostSm} xl:hidden`} onClick={tampilkanTabCp}>
+                          Capaian Pembelajaran
+                        </button>
+                      )}
+                    </div>
                   </div>
+                  {modeBaca && form && dirty && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-950">
+                      <span>{form.id ? `TP ${form.nomorTp}` : 'TP baru'} belum disimpan.</span>
+                      <button type="button" className={btnGhostSm} onClick={tampilkanEditor}>
+                        Kembali ke editor
+                      </button>
+                    </div>
+                  )}
                   {semuaTp.length > 0 && (
                     <>
                       <input
@@ -1302,6 +1365,66 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                       {tpTampil.map((tp) => {
                         const aktif = form?.id === tp.id
                         const terisi = jumlahKktpTerisi(tp)
+                        if (modeBaca) {
+                          const buka = bacaTerbuka.has(tp.id)
+                          return (
+                            <li key={tp.id} id={`tp-baris-${tp.id}`}>
+                              <button
+                                type="button"
+                                aria-expanded={buka}
+                                onClick={() => toggleBaca(tp.id)}
+                                className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-slate-50"
+                              >
+                                <span className="tabular mt-0.5 inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 px-1.5 text-[11.5px] font-semibold text-slate-700">
+                                  {tp.nomorTp}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block text-[13.5px] font-medium leading-snug text-slate-900">
+                                    {tp.namaTp}
+                                  </span>
+                                  <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                                    <Badge tone="green">{labelTipe(tp.tipe)}</Badge>
+                                    {tp.disiplinSeni && <Badge tone="peach">{tp.disiplinSeni}</Badge>}
+                                    {terisi >= JUMLAH_LEVEL_KKTP ? (
+                                      <Badge>KKTP {terisi}/{JUMLAH_LEVEL_KKTP}</Badge>
+                                    ) : (
+                                      <Badge tone="peach">KKTP {terisi}/{JUMLAH_LEVEL_KKTP}</Badge>
+                                    )}
+                                    <Badge>
+                                      SLM {tp.bobotSlm ?? 60}% · SAS {tp.bobotSas ?? 40}%
+                                    </Badge>
+                                    {badgeSemester(tp)}
+                                  </span>
+                                </span>
+                                <span aria-hidden="true" className="mt-1 text-[11px] text-muted">
+                                  {buka ? '▲' : '▼'}
+                                </span>
+                              </button>
+                              {buka && (
+                                <div className="space-y-3 border-t border-border bg-slate-50/50 px-4 py-3 sm:pl-[3.25rem]">
+                                  {tp.cp && (
+                                    <p className="max-w-4xl text-[12.5px] leading-relaxed text-slate-600">{tp.cp}</p>
+                                  )}
+                                  <ul className="max-w-4xl space-y-1.5">
+                                    {(tp.levels || []).map((l, i) => (
+                                      <li key={i} className="flex gap-2 text-[12.5px]">
+                                        <span
+                                          className={`h-fit shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${LEVEL_WARNA[i]}`}
+                                        >
+                                          {LEVEL_LABEL[tp.tipe][i]} {l.min}–{l.maks}
+                                        </span>
+                                        <span className="text-slate-700">{l.deskripsi || 'Belum diisi'}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                  <button type="button" className={btnGhostSm} disabled={sibuk} onClick={() => bukaTp(tp)}>
+                                    Edit TP ini
+                                  </button>
+                                </div>
+                              )}
+                            </li>
+                          )
+                        }
                         return (
                           <li key={tp.id} id={`tp-baris-${tp.id}`}>
                             <button
@@ -1344,19 +1467,34 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
 
               {/* ===== Kanan: editor (+ tab daftar CP untuk akun AI) ===== */}
               <section
-                className={`card-soft min-h-0 flex-col xl:sticky xl:top-[4.25rem] xl:h-[max(28rem,calc(100vh-14rem))] ${
-                  detailTampilDiKecil ? 'flex' : 'hidden xl:flex'
+                className={`card-soft min-h-0 flex-col ${
+                  modeBaca
+                    ? 'hidden'
+                    : `xl:sticky xl:top-[4.25rem] xl:h-[max(28rem,calc(100vh-14rem))] ${
+                        detailTampilDiKecil ? 'flex' : 'hidden xl:flex'
+                      }`
                 }`}
               >
                 <div className="shrink-0 space-y-2 border-b border-border p-3">
-                  <button
-                    type="button"
-                    className="text-[12px] font-medium text-muh-700 hover:underline disabled:opacity-60 xl:hidden"
-                    disabled={sibuk}
-                    onClick={kembaliKeDaftar}
-                  >
-                    ← Daftar TP
-                  </button>
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      className="text-[12px] font-medium text-muh-700 hover:underline disabled:opacity-60 xl:hidden"
+                      disabled={sibuk}
+                      onClick={kembaliKeDaftar}
+                    >
+                      ← Daftar TP
+                    </button>
+                    <button
+                      type="button"
+                      className={`${btnGhostSm} ml-auto hidden xl:inline-flex`}
+                      disabled={sibuk}
+                      onClick={sembunyikanEditor}
+                      title="Lebarkan daftar TP untuk membaca; editor bisa ditampilkan lagi kapan saja"
+                    >
+                      Sembunyikan editor
+                    </button>
+                  </div>
                   {akunAi ? (
                     <Segmented
                       value={tabKanan}
