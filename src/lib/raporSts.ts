@@ -22,7 +22,14 @@ import type { ConfigAkademik, Mapel, Semester, TujuanPembelajaran } from '../typ
 
 import { buildBodyPrintRapor, cssHalaman, escapeHtml, PRINT_CSS, type BarisRaporSts, type DataRaporSts, type JenisRapor } from './raporHtml'
 export type { BarisRaporSts, DataRaporSts } from './raporHtml'
-export { buildBodyPrintSts, buildBodyPrintSas, dokumenPratinjauSts, dokumenPratinjauRapor, type JenisRapor } from './raporHtml'
+export {
+  buildBodyPrintRapor,
+  buildBodyPrintSts,
+  buildBodyPrintSas,
+  dokumenPratinjauSts,
+  dokumenPratinjauRapor,
+  type JenisRapor,
+} from './raporHtml'
 
 const NAMA_BULAN = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',

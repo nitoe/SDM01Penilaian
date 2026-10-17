@@ -7,21 +7,35 @@ import { getSiswaList } from '../../lib/tahsinData'
 import { kelasSaya } from '../../lib/kelasSaya'
 import { isAdminRole } from '../../lib/roles'
 import {
-  buildBodyPrintSts,
-  cetakRaporSts,
+  buildBodyPrintRapor,
+  cetakRapor,
   muatDataRaporSts,
   type DataRaporSts,
+  type JenisRapor,
 } from '../../lib/raporSts'
+import { muatDataRaporSas } from '../../lib/raporSas'
+import { CSS_ISI_RAPOR } from '../../lib/raporHtml'
 import { PageHeader } from '../../components/ui'
 import { BackLink, Notice, Spinner, btnGhost, btnPrimary, inputCls } from './shared'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 
 /**
- * Rapor STS — khusus wali kelas.
+ * Rapor STS / SAS — khusus wali kelas.
  * Alur: pilih kelas (hanya kelas yang diwalikan) → pilih siswa → pratinjau + cetak PDF.
+ * STS = rapor bayangan (nilai + capaian). SAS = lengkap (kokurikuler, ekskul, absensi, keputusan).
  * Pengaturan disiplin Seni Budaya: Setup TP → Seni Budaya → tab Setup.
  */
-export default function Rapor({ profile }: { profile: AppUser }) {
+export default function Rapor({
+  profile,
+  jenis = 'sts',
+}: {
+  profile: AppUser
+  jenis?: JenisRapor
+}) {
+  const isSas = jenis === 'sas'
+  const labelJenis = isSas ? 'SAS' : 'STS'
+  const judulJenis = isSas ? 'Sumatif Akhir Semester' : 'Sumatif Tengah Semester'
+
   const admin = isAdminRole(profile.role)
   const periodeAk = usePeriodeAkademik()
   const { wali } = kelasSaya(profile)
@@ -98,7 +112,7 @@ export default function Rapor({ profile }: { profile: AppUser }) {
       setLoadingRapor(false)
       return
     }
-    void muatDataRaporSts({
+    const ctx = {
       siswa: { id: siswa.id, nama: siswa.nama, nisn: siswa.nisn, nipd: siswa.nipd },
       kelas,
       waliNama: namaDenganGelar(profile),
@@ -106,7 +120,9 @@ export default function Rapor({ profile }: { profile: AppUser }) {
       tahunAjaran: periodeAk.tahunAjaran,
       kotaRapor: periodeAk.periode?.kotaRapor,
       tanggalRapor: tanggalDariPeriode(),
-    })
+    }
+    const muat = isSas ? muatDataRaporSas(ctx) : muatDataRaporSts(ctx)
+    void muat
       .then((d) => {
         if (!batal) setData(d)
       })
@@ -120,14 +136,24 @@ export default function Rapor({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [kelas, siswaId, siswaList, profile, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran, periodeAk.periode])
+  }, [
+    kelas,
+    siswaId,
+    siswaList,
+    profile,
+    isSas,
+    periodeAk.ready,
+    periodeAk.semester,
+    periodeAk.tahunAjaran,
+    periodeAk.periode,
+  ])
 
   if (admin) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik">Akademik & Rapor</BackLink>
         <Notice tone="warn">
-          Rapor STS dibuka oleh wali kelas. Akun administrator tidak menjadi wali kelas.
+          Rapor {labelJenis} dibuka oleh wali kelas. Akun administrator tidak menjadi wali kelas.
         </Notice>
       </div>
     )
@@ -165,8 +191,12 @@ export default function Rapor({ profile }: { profile: AppUser }) {
         <PageHeader
           back={{ to: '/akademik', label: 'Akademik & Rapor' }}
           eyebrow="Akademik"
-          title="Rapor STS"
-          subtitle={periodeAk.ready ? `Periode ${periodeAk.label} · Pratinjau & cetak rapor STS untuk kelas yang Anda walikan.` : "Pratinjau dan cetak Laporan Hasil Belajar STS. Pilih periode di header atau login ulang."}
+          title={`Rapor ${labelJenis}`}
+          subtitle={
+            periodeAk.ready
+              ? `Periode ${periodeAk.label} · Pratinjau & cetak rapor ${labelJenis} (${judulJenis}) untuk kelas yang Anda walikan.`
+              : `Pratinjau dan cetak Laporan Hasil Belajar ${labelJenis}. Pilih periode di header atau login ulang.`
+          }
         />
       </div>
 
@@ -209,6 +239,16 @@ export default function Rapor({ profile }: { profile: AppUser }) {
             Setup TP → Seni Budaya
           </Link>
           .
+          {isSas && (
+            <>
+              {' '}
+              Data pelengkap (absensi, kokurikuler, ekskul) diisi di{' '}
+              <Link to="/akademik/kelengkapan-rapor" className="font-medium text-muh-700 underline">
+                Kelengkapan Rapor SAS
+              </Link>
+              .
+            </>
+          )}
         </p>
       )}
 
@@ -224,7 +264,9 @@ export default function Rapor({ profile }: { profile: AppUser }) {
         </div>
       ) : !siswaId ? (
         <div className="card-soft p-8 text-center print:hidden">
-          <p className="text-[13px] text-muted">Pilih siswa untuk menampilkan pratinjau rapor STS.</p>
+          <p className="text-[13px] text-muted">
+            Pilih siswa untuk menampilkan pratinjau rapor {labelJenis}.
+          </p>
         </div>
       ) : data ? (
         <>
@@ -253,7 +295,7 @@ export default function Rapor({ profile }: { profile: AppUser }) {
                 Berikutnya →
               </button>
             </div>
-            <button type="button" className={btnPrimary} onClick={() => cetakRaporSts(data)}>
+            <button type="button" className={btnPrimary} onClick={() => cetakRapor(data, jenis)}>
               Cetak / Simpan PDF
             </button>
           </div>
@@ -262,32 +304,19 @@ export default function Rapor({ profile }: { profile: AppUser }) {
             <div
               className="rapor-preview-frame mx-auto origin-top rounded-lg border border-border bg-white p-6 shadow-sm"
               style={{ maxWidth: 720 }}
-              dangerouslySetInnerHTML={{ __html: buildBodyPrintSts(data) }}
+              dangerouslySetInnerHTML={{ __html: buildBodyPrintRapor(data, jenis) }}
             />
           </div>
 
           <style>{`
-            .rapor-preview-frame .rpr-title{text-align:center;font-size:1.15rem;font-weight:700;margin-bottom:2px}
-            .rapor-preview-frame .rpr-subtitle{text-align:center;font-size:0.95rem;font-weight:600;margin-bottom:12px;color:#334155}
-            .rapor-preview-frame .rpr-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin-bottom:12px;font-size:12.5px}
-            .rapor-preview-frame .rpr-info-row{display:flex;gap:4px;margin-bottom:2px}
-            .rapor-preview-frame .rpr-info-label{min-width:130px;flex-shrink:0;color:#64748b}
-            .rapor-preview-frame .rpr-info-val{font-weight:600;color:#0f172a}
-            .rapor-preview-frame table{width:100%;border-collapse:collapse;font-size:12px}
-            .rapor-preview-frame th,.rapor-preview-frame td{border:1px solid #cbd5e1;padding:6px 8px;vertical-align:top}
-            .rapor-preview-frame th{background:#f8fafc;font-size:11px;font-weight:700;text-align:center}
-            .rapor-preview-frame .td-no{width:32px;text-align:center}
-            .rapor-preview-frame .td-nilai{width:56px;text-align:center;font-weight:700}
-            .rapor-preview-frame .td-mapel{font-weight:600}
-            .rapor-preview-frame .rpr-ttd-wrap{margin-top:28px}
-            .rapor-preview-frame .rpr-ttd-tanda{text-align:right;margin-bottom:10px;font-size:12.5px}
-            .rapor-preview-frame .rpr-ttd{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:12px}
-            .rapor-preview-frame .rpr-ttd-space{height:56px}
-            .rapor-preview-frame .rpr-ttd-name{font-weight:700;text-decoration:underline;text-underline-offset:2px}
-            .rapor-preview-frame .rpr-ttd-nbm{font-size:11px;margin-top:2px;color:#64748b}
-            @media (max-width:640px){
-              .rapor-preview-frame .rpr-info-grid{grid-template-columns:1fr}
-              .rapor-preview-frame .rpr-ttd{grid-template-columns:1fr}
+            .rapor-preview-frame { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #000; }
+            ${CSS_ISI_RAPOR}
+            .rapor-preview-frame .rpr-ttd.dua { grid-template-columns: 1fr 1fr; gap: 48px; padding: 0 12px; }
+            @media (max-width: 640px) {
+              .rapor-preview-frame .rpr-info-grid { grid-template-columns: 1fr; }
+              .rapor-preview-frame .rpr-ttd,
+              .rapor-preview-frame .rpr-ttd.dua { grid-template-columns: 1fr; gap: 16px; }
+              .rapor-preview-frame .abs-catatan { flex-direction: column; }
             }
           `}</style>
         </>
