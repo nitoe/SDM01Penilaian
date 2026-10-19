@@ -1,8 +1,14 @@
-/** Logika murni generate TP/KKTP (tanpa Firebase) + pemanggilan Gemini/OpenAI. */
+/** Logika murni generate TP/KKTP + generate aset dari foto (vision). */
 
 export const UID_AI = 'v4fQXsqCzYUtHrqcDM0u48sxIfn1'
-/** Email akun pemilik; dicek BERSAMA UID (dua-duanya harus cocok). Harus sama dengan src/lib/generateAi.ts. */
+/** Email akun pemilik TP/KKTP; dicek BERSAMA UID. Harus sama dengan src/lib/generateAi.ts. */
 export const EMAIL_AI = 'arif.azwar79@gmail.com'
+
+/** Akun yang boleh generate data aset dari foto (Sarpras). UID + email harus cocok. */
+export const AKUN_AI_ASET = [
+  { uid: '2rAXEqFfWDRqxRTY21PV4h9tC5F2', email: 'arif.nitoe@gmail.com' },
+  { uid: 'v4fQXsqCzYUtHrqcDM0u48sxIfn1', email: 'arif.azwar79@gmail.com' },
+]
 
 const LABEL = {
   pengetahuan: ['Perlu Bimbingan', 'Cukup', 'Baik', 'Sangat Baik'],
@@ -13,16 +19,17 @@ export function bolehUidAi(uid) {
   return uid === UID_AI
 }
 
-/**
- * Gerbang utama server. `auth` = request.auth dari Callable Function (uid + token terverifikasi).
- * UID DAN email di token harus sama dengan akun pemilik. Email dibaca dari token yang ditandatangani
- * Firebase, bukan dari dokumen Firestore (yang bisa diubah admin lain).
- */
 export function bolehPemanggilAi(auth) {
   if (!auth || typeof auth.uid !== 'string') return false
   if (!bolehUidAi(auth.uid)) return false
   const email = String(auth.token?.email ?? '').trim().toLowerCase()
   return email === EMAIL_AI
+}
+
+export function bolehPemanggilAiAset(auth) {
+  if (!auth || typeof auth.uid !== 'string') return false
+  const email = String(auth.token?.email ?? '').trim().toLowerCase()
+  return AKUN_AI_ASET.some((a) => a.uid === auth.uid && a.email === email)
 }
 
 function potong(s, n) {
@@ -58,13 +65,10 @@ export function susunPromptTp(input) {
     `Elemen: ${elemen}`,
     'Teks CP resmi (jangan diubah):',
     teks,
-  ]
-    .filter(Boolean)
-    .join('\n')
+  ].filter(Boolean).join('\n')
   return { ok: true, sistem, user }
 }
 
-/** SD: kelas 1–2 = Fase A, 3–4 = Fase B, 5–6 = Fase C. '' bila tak dikenali. */
 export function faseDariKelas(kelas) {
   const n = parseInt(String(kelas ?? '').replace(/[^0-9]/g, ''), 10)
   if (n === 1 || n === 2) return 'A'
@@ -83,41 +87,19 @@ export function susunPromptKktp(input) {
   const label = LABEL[tipe]
   const fase = faseDariKelas(kelas)
   const tingkat = fase ? `kelas ${kelas} (Fase ${fase})` : kelas ? `kelas ${kelas}` : 'kelas ini'
-  // Panduan: Buku Saku KKTP v1 (deskriptor konkret, skala 4 level, bahasa jernih bagi guru).
   const sistem = [
     'Anda menyusun deskripsi KKTP (4 level) untuk satu Tujuan Pembelajaran SD Kurikulum Merdeka.',
     'KKTP adalah dokumen guru: bahasa formal-profesional tetapi jernih dan konkret, bukan bahasa anak-anak.',
-    '',
-    'BENTUK TIAP DESKRIPSI',
-    '- Langsung tulis kompetensi capaian yang teramati pada level itu. DILARANG memakai subjek: jangan membuka atau menyisipkan "Peserta didik", "Siswa", "Murid", "Anak", "Ananda", atau "Mereka". Buka dengan kata kerja capaian (mis. "Menyebutkan ...", "Menyelesaikan ...", "Menyusun ...") atau dengan hasil/bukti yang tampak (mis. "Catatan pengamatan ...", "Laporan memuat ...").',
-    '- 1–2 kalimat pendek, spesifik untuk TP ini, sehingga guru langsung tahu PERSIS apa yang harus diamati.',
-    '- Gambarkan bukti konkret pada level itu. Untuk level rendah, sebutkan apa yang masih keliru atau belum ada, jangan hanya menulis "belum mampu".',
-    '- DILARANG kata pengisi tanpa penanda nyata ("secara jelas", "dengan tepat", "dengan benar", "secara baik") dan jargon ("holistik", "komprehensif", "terintegrasi secara utuh", "optimal", "berdampak"). Hapus kata yang tidak mengubah makna.',
-    '- Jangan menulis angka nilai atau rentang di deskripsi. Jangan mengubah teks CP.',
-    '',
-    `ISI TIAP LEVEL (ukur terhadap capaian wajar untuk ${tingkat}; jangan terlalu mudah atau terlalu sulit untuk tingkat ini)`,
-    `1. ${label[0]}: bukti capaian belum tampak atau baru sangat sebagian; perlu pendampingan dari awal.`,
-    `2. ${label[1]}: bukti capaian mulai tampak sebagian, masih ada yang keliru atau perlu bimbingan.`,
-    `3. ${label[2]}: bukti capaian sesuai target TP untuk ${tingkat}. Inilah kompetensi yang diharapkan.`,
-    `4. ${label[3]}: melampaui target, ditambah satu kemampuan lanjutan yang wajar untuk ${tingkat} (mis. memberi contoh sendiri, menjelaskan alasan, atau mengerjakan variasi bentuk soal); siap pengayaan.`,
-    'Keempat level naik bertahap secara logis, bukan loncatan drastis tanpa dasar.',
-    '',
-    'CONTOH GAYA YANG BENAR (hanya untuk gaya; jangan menyalin isinya ke TP lain)',
-    'TP pengetahuan: ["Sebagian besar langkah pengerjaan masih keliru.","Memahami sebagian langkah, tetapi masih keliru di beberapa operasi hitung.","Menyelesaikan sebagian besar soal dengan langkah dan urutan operasi yang benar.","Menyelesaikan seluruh soal, termasuk soal dengan variasi bentuk operasi."]',
-    'TP kinerja: ["Catatan pengamatan tidak berurutan atau hanya memuat satu detail.","Catatan memuat beberapa detail, tetapi urutannya belum sistematis.","Laporan berurutan (awal, proses, hasil) dan memuat detail yang relevan dari pengamatan.","Laporan berurutan, detailnya lengkap, dan ditambah kesimpulan sederhana dari hasil pengamatan."]',
-    'CONTOH YANG SALAH (jangan ditiru): "Peserta didik mampu menjelaskan ide pokok teks secara jelas dan komprehensif."',
-    '',
     'Balas HANYA JSON: {"deskripsi":["...","...","...","..."]} berisi tepat 4 string, urut dari level 1 sampai 4.',
-  ].join('\n')
+    `Level: 1 ${label[0]}, 2 ${label[1]}, 3 ${label[2]}, 4 ${label[3]} untuk ${tingkat}.`,
+  ].join(' ')
   const user = [
     `Mapel: ${mapel}`,
     `Kelas: ${kelas}${fase ? ` (Fase ${fase})` : ''}`,
     `TP: ${namaTp}`,
     `Jenis: ${tipe}`,
     teks ? `CP resmi terkait:\n${teks}` : '',
-  ]
-    .filter(Boolean)
-    .join('\n')
+  ].filter(Boolean).join('\n')
   return { ok: true, sistem, user, tipe }
 }
 
@@ -153,11 +135,6 @@ export function normalisasiTp(data) {
 const SUBJEK_AWAL = /^(?:peserta\s+didik|siswa|murid|anak\s+didik|ananda)\b[\s,]*/i
 const MODAL_AWAL = /^(?:mampu|dapat|bisa)\s+/i
 
-/**
- * Pengaman terakhir bila model tetap membuka dengan subjek ("Peserta didik mampu menyebutkan ...").
- * Hanya membuang subjek di awal kalimat (dan "mampu/dapat" yang langsung mengikutinya), lalu kapitalisasi.
- * "Peserta didik belum mampu ..." menjadi "Belum mampu ..."; kalimat tanpa subjek tidak diubah sama sekali.
- */
 export function bersihkanSubjekKktp(teks) {
   const asli = String(teks ?? '').trim()
   if (!SUBJEK_AWAL.test(asli)) return asli
@@ -176,7 +153,7 @@ export function normalisasiKktp(data) {
 }
 
 async function panggilGemini(apiKey, sistem, user) {
-  const model = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.0-flash']
+  const model = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
   let terakhir = 'Gemini tidak menjawab.'
   for (const nama of model) {
     const res = await fetch(
@@ -187,11 +164,7 @@ async function panggilGemini(apiKey, sistem, user) {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: sistem }] },
           contents: [{ role: 'user', parts: [{ text: user }] }],
-          generationConfig: {
-            temperature: 0.4,
-            responseMimeType: 'application/json',
-            maxOutputTokens: 4096,
-          },
+          generationConfig: { temperature: 0.4, responseMimeType: 'application/json', maxOutputTokens: 4096 },
         }),
       },
     )
@@ -202,10 +175,7 @@ async function panggilGemini(apiKey, sistem, user) {
       throw new Error(terakhir)
     }
     const teks = json?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || ''
-    if (!teks) {
-      terakhir = 'Gemini mengembalikan jawaban kosong.'
-      continue
-    }
+    if (!teks) { terakhir = 'Gemini mengembalikan jawaban kosong.'; continue }
     return teks
   }
   throw new Error(terakhir)
@@ -214,10 +184,7 @@ async function panggilGemini(apiKey, sistem, user) {
 async function panggilOpenAi(apiKey, sistem, user) {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model: 'gpt-4o-mini',
       temperature: 0.4,
@@ -241,4 +208,136 @@ export async function mintaModel(provider, apiKey, sistem, user) {
   }
   const teks = provider === 'openai' ? await panggilOpenAi(apiKey, sistem, user) : await panggilGemini(apiKey, sistem, user)
   return ambilJson(teks)
+}
+
+async function panggilGeminiVision(apiKey, sistem, user, b64, mime) {
+  const model = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
+  let terakhir = 'Gemini tidak menjawab.'
+  for (const nama of model) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${nama}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: sistem }] },
+          contents: [{
+            role: 'user',
+            parts: [
+              { text: user },
+              { inlineData: { mimeType: mime, data: b64 } },
+            ],
+          }],
+          generationConfig: { temperature: 0.2, responseMimeType: 'application/json', maxOutputTokens: 2048 },
+        }),
+      },
+    )
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      terakhir = json?.error?.message || `Gemini ${res.status}`
+      if (res.status === 404) continue
+      throw new Error(terakhir)
+    }
+    const teks = json?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || ''
+    if (!teks) { terakhir = 'Gemini mengembalikan jawaban kosong.'; continue }
+    return teks
+  }
+  throw new Error(terakhir)
+}
+
+async function panggilOpenAiVision(apiKey, sistem, user, b64, mime) {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: sistem },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: user },
+            { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}` } },
+          ],
+        },
+      ],
+    }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json?.error?.message || `OpenAI ${res.status}`)
+  const teks = json?.choices?.[0]?.message?.content || ''
+  if (!teks) throw new Error('OpenAI mengembalikan jawaban kosong.')
+  return teks
+}
+
+export async function mintaModelVision(provider, apiKey, sistem, user, imageBase64, mimeType) {
+  if (!apiKey) {
+    throw new Error(provider === 'openai' ? 'OPENAI_API_KEY belum diatur di Cloud Functions.' : 'GEMINI_API_KEY belum diatur di Cloud Functions.')
+  }
+  const mime = mimeType && String(mimeType).startsWith('image/') ? mimeType : 'image/jpeg'
+  const b64 = String(imageBase64 || '').replace(/^data:image\/[^;]+;base64,/, '')
+  if (!b64 || b64.length < 100) throw new Error('Foto tidak valid atau terlalu kecil.')
+  if (b64.length > 400000) throw new Error('Foto terlalu besar untuk AI. Kompres dulu.')
+  const teks = provider === 'openai'
+    ? await panggilOpenAiVision(apiKey, sistem, user, b64, mime)
+    : await panggilGeminiVision(apiKey, sistem, user, b64, mime)
+  return ambilJson(teks)
+}
+
+export function susunPromptAset(input) {
+  const kategori = Array.isArray(input.kategori) ? input.kategori.slice(0, 40) : []
+  const sumber = Array.isArray(input.sumber) ? input.sumber.slice(0, 20) : []
+  const ruang = Array.isArray(input.ruang) ? input.ruang.slice(0, 80) : []
+  const daftarKat = kategori.map((k) => `${k.kode}:${k.nama}`).join(', ')
+    || 'MBL:Mebel, ELK:Elektronik, OLR:Alat olahraga, PRG:Alat peraga, BUK:Buku, KND:Kendaraan, BGN:Bangunan, LNY:Lainnya'
+  const daftarSum = sumber.map((s) => s.kode || s).join(', ') || 'BOS, Yayasan, Hibah, Wakaf, Lainnya'
+  const daftarRuang = ruang.map((r) => `${r.id}|${r.kode}|${r.nama}`).join('\n') || '(tidak ada daftar ruang)'
+  const sistem = [
+    'Anda asisten inventaris sarana prasarana SD Muhammadiyah 01 Kukusan.',
+    'Amati foto barang/peralatan sekolah dan isi data aset dalam bahasa Indonesia.',
+    'Balas HANYA JSON objek dengan kunci: nama, kategori, kondisi, jumlah, tahun, sumber, catatan.',
+    'nama: nama barang singkat jelas (contoh: "Meja siswa kayu", "Proyektor Epson").',
+    `kategori: salah satu KODE dari daftar: ${daftarKat}. Pilih yang paling dekat.`,
+    'kondisi: "baik" | "rusak_ringan" | "rusak_berat" sesuai tampak di foto.',
+    'jumlah: bilangan bulat unit yang terlihat (minimal 1).',
+    'tahun: tahun perolehan jika terbaca di label/barang, atau null.',
+    `sumber: salah satu dari [${daftarSum}] atau null jika tidak diketahui.`,
+    'catatan: detail tambahan singkat (merek, warna, kondisi khusus) atau string kosong.',
+    'Jangan mengarang merek/tahun yang tidak terlihat. Jika ragu, pakai null atau string kosong.',
+  ].join(' ')
+  const user = [
+    'Isi data inventaris dari foto ini.',
+    'Daftar ruang (id|kode|nama) bila relevan untuk konteks saja — jangan wajib isi ruangId:',
+    daftarRuang,
+  ].join('\n')
+  return { ok: true, sistem, user }
+}
+
+export function normalisasiAset(data, daftarKategori, daftarSumber) {
+  const nama = potong(data?.nama, 120)
+  if (!nama) throw new Error('AI tidak mengenali nama barang.')
+  const kodeKat = potong(data?.kategori, 12).toUpperCase()
+  const katValid = Array.isArray(daftarKategori) && daftarKategori.length
+    ? daftarKategori.map((k) => String(k.kode || k).toUpperCase())
+    : ['MBL', 'ELK', 'OLR', 'PRG', 'BUK', 'KND', 'BGN', 'LNY']
+  const kategori = katValid.includes(kodeKat) ? kodeKat : (katValid.includes('LNY') ? 'LNY' : katValid[0])
+  let kondisi = String(data?.kondisi || 'baik')
+  if (!['baik', 'rusak_ringan', 'rusak_berat'].includes(kondisi)) kondisi = 'baik'
+  let jumlah = parseInt(data?.jumlah, 10)
+  if (!Number.isFinite(jumlah) || jumlah < 1) jumlah = 1
+  if (jumlah > 999) jumlah = 999
+  let tahun = data?.tahun == null || data?.tahun === '' ? null : parseInt(data?.tahun, 10)
+  if (tahun !== null && (!Number.isFinite(tahun) || tahun < 1950 || tahun > new Date().getFullYear() + 1)) tahun = null
+  const sumValid = Array.isArray(daftarSumber) && daftarSumber.length
+    ? daftarSumber.map((s) => String(s.kode || s))
+    : ['BOS', 'Yayasan', 'Hibah', 'Wakaf', 'Lainnya']
+  let sumber = potong(data?.sumber, 24)
+  if (sumber && !sumValid.some((s) => s.toLowerCase() === sumber.toLowerCase())) {
+    const hit = sumValid.find((s) => s.toLowerCase().includes(sumber.toLowerCase()) || sumber.toLowerCase().includes(s.toLowerCase()))
+    sumber = hit || ''
+  }
+  const catatan = potong(data?.catatan, 300)
+  return { nama, kategori, kondisi, jumlah, tahun, sumber: sumber || '', catatan }
 }
