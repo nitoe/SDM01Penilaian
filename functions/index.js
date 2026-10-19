@@ -6,9 +6,13 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { periksaPenghapusan } from './aturan.js'
 import {
   bolehPemanggilAi,
+  bolehPemanggilAiAset,
   mintaModel,
+  mintaModelVision,
+  normalisasiAset,
   normalisasiKktp,
   normalisasiTp,
+  susunPromptAset,
   susunPromptKktp,
   susunPromptTp,
 } from './generateAi.js'
@@ -55,7 +59,7 @@ export const hapusAkunAuth = onCall({ region: 'asia-southeast2', maxInstances: 3
     await getAuth().deleteUser(uidTarget)
   } catch (err) {
     if (err?.code === 'auth/user-not-found') {
-      authDihapus = false // sudah tidak ada (mis. dihapus manual di Console); lanjut hapus profil
+      authDihapus = false
     } else {
       logger.error('hapusAkunAuth: gagal menghapus user Auth', { uidTarget, kode: err?.code })
       throw new HttpsError('internal', 'Gagal menghapus user di Firebase Authentication. Coba lagi.')
@@ -83,7 +87,6 @@ function kunciProvider(provider) {
 function pastikanAi(request) {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Masuk dulu.')
   if (!bolehPemanggilAi(request.auth)) {
-    // Dicatat supaya percobaan akun lain terlihat di log Functions. Email sengaja tidak dicatat.
     logger.warn('generateAi ditolak: akun tidak berhak', { uid: request.auth.uid })
     throw new HttpsError('permission-denied', 'Fitur ini tidak tersedia untuk akun Anda.')
   }
@@ -121,5 +124,43 @@ export const generateKktpAi = onCall(opsiAi, async (request) => {
   } catch (err) {
     logger.error('generateKktpAi gagal', { pesan: err?.message })
     throw new HttpsError('internal', err?.message || 'Gagal menyusun KKTP.')
+  }
+})
+
+/** Generate data inventaris aset Sarpras dari foto (vision). Hanya 2 akun pemilik. */
+export const generateAsetAi = onCall(opsiAi, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Masuk dulu.')
+  if (!bolehPemanggilAiAset(request.auth)) {
+    logger.warn('generateAsetAi ditolak: akun tidak berhak', { uid: request.auth.uid })
+    throw new HttpsError('permission-denied', 'Fitur ini tidak tersedia untuk akun Anda.')
+  }
+  const provider = request.data?.provider
+  if (provider !== 'gemini' && provider !== 'openai') {
+    throw new HttpsError('invalid-argument', 'Pilih Gemini atau OpenAI.')
+  }
+  const imageBase64 = request.data?.imageBase64
+  const mimeType = request.data?.mimeType || 'image/jpeg'
+  if (typeof imageBase64 !== 'string' || imageBase64.length < 100) {
+    throw new HttpsError('invalid-argument', 'Foto wajib diunggah.')
+  }
+  const kategori = Array.isArray(request.data?.kategori) ? request.data.kategori : []
+  const sumber = Array.isArray(request.data?.sumber) ? request.data.sumber : []
+  const ruang = Array.isArray(request.data?.ruang) ? request.data.ruang : []
+  const prompt = susunPromptAset({ kategori, sumber, ruang })
+  try {
+    const json = await mintaModelVision(
+      provider,
+      kunciProvider(provider),
+      prompt.sistem,
+      prompt.user,
+      imageBase64,
+      mimeType,
+    )
+    const aset = normalisasiAset(json, kategori, sumber)
+    logger.info('generateAsetAi', { uid: request.auth.uid, provider, nama: aset.nama })
+    return { aset }
+  } catch (err) {
+    logger.error('generateAsetAi gagal', { pesan: err?.message })
+    throw new HttpsError('internal', err?.message || 'Gagal menganalisis foto aset.')
   }
 })
