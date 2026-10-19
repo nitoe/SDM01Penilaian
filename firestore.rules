@@ -11,6 +11,9 @@ rules_version = '2';
 //   3. Data siswa itu data pribadi anak. Orang tua hanya boleh GET anaknya
 //      sendiri (anakIds), TIDAK boleh list.
 //
+// Gabungan: aturan aplikasi Penilaian + aturan koleksi sarpras_* (aplikasi Sarpras, repo nitoe/sarpras).
+// Bagian Sarpras ditandai komentar "Sarpras". Sumber aslinya: firestore.rules.sarpras.
+//
 // Catatan: file ini baru berlaku setelah `npm run deploy:rules`. Uji dulu
 // dengan akun admin, guru Tahsin-Tahfizh, dan orang tua sebelum deploy.
 // Lihat ANTIREGRESI.md bagian rules sebelum mengubah apa pun di sini.
@@ -56,6 +59,25 @@ service cloud.firestore {
 
     function isGuruAkademik() {
       return akunAktif() && myRole() in ['guru_akademik', 'guru'];
+    }
+
+    // ---- Sarpras: peran ------------------------------------------------------
+    // Sumber peran: admin Penilaian = admin sarpras. Selain itu field users/{uid}.peranSarpras
+    // ('admin' | 'pimpinan' | 'guru' | 'petugas'), yang hanya bisa diubah admin (aturan `users`
+    // melarang pemilik akun mengubahnya). Bila kosong, semua jenis guru dianggap 'guru'.
+    // Peran lain (mis. orangtua) tanpa peranSarpras = tidak punya akses.
+    // Harus sama dengan peranDari() di src/lib/peran.ts repo sarpras.
+    function peranSarpras() {
+      return isAdmin() ? 'admin'
+        : myProfile().get('peranSarpras', isGuru() ? 'guru' : '');
+    }
+
+    function sarprasAdmin() {
+      return akunAktif() && peranSarpras() == 'admin';
+    }
+
+    function sarprasStaf() {
+      return akunAktif() && peranSarpras() in ['admin', 'pimpinan', 'guru', 'petugas'];
     }
 
     function isApprovedParent() {
@@ -401,6 +423,74 @@ service cloud.firestore {
     match /periode_akademik/{id} {
       allow read: if isGuru() || resource.data.aktif == true;
       allow write: if isAdmin();
+    }
+
+    // ---- Sarpras (koleksi berawalan sarpras_) --------------------------------
+
+    // Master data: semua staf membaca, admin mengelola.
+    match /sarpras_ruang/{id} {
+      allow read: if sarprasStaf();
+      allow write: if sarprasAdmin();
+    }
+
+    match /sarpras_kategori/{id} {
+      allow read: if sarprasStaf();
+      allow write: if sarprasAdmin();
+    }
+
+    match /sarpras_aset/{id} {
+      allow read: if sarprasStaf();
+      allow write: if sarprasAdmin();
+    }
+
+    // Foto terkompres (string base64). Staf boleh menambah foto laporannya; tidak ada ubah.
+    match /sarpras_foto/{id} {
+      allow read: if sarprasStaf();
+      allow create: if sarprasStaf()
+                    && request.resource.data.keys().hasOnly(['data', 'createdBy', 'createdAt'])
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.data is string
+                    && request.resource.data.data.size() <= 300000;
+      allow update: if false;
+      allow delete: if sarprasAdmin();
+    }
+
+    // Laporan kerusakan: staf membuat (status awal 'baru'); admin mengelola;
+    // petugas hanya mengubah status dan penanganan. Tidak ada hapus.
+    match /sarpras_kerusakan/{id} {
+      allow read: if sarprasStaf();
+      allow create: if sarprasStaf()
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.status == 'baru';
+      allow update: if sarprasAdmin()
+                    || (akunAktif() && peranSarpras() == 'petugas'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'penanganan', 'biaya', 'tanggalSelesai', 'updatedAt'])
+                        && request.resource.data.status in ['dicek', 'dalam_perbaikan', 'selesai']);
+      allow delete: if false;
+    }
+
+    // Peminjaman: staf mengajukan atas namanya sendiri (status awal 'diajukan');
+    // admin memutuskan; peminjam hanya boleh membatalkan pengajuannya sendiri.
+    match /sarpras_peminjaman/{id} {
+      allow read: if sarprasStaf();
+      allow create: if sarprasStaf()
+                    && request.resource.data.peminjamUid == request.auth.uid
+                    && request.resource.data.status == 'diajukan';
+      allow update: if sarprasAdmin()
+                    || (akunAktif() && resource.data.peminjamUid == request.auth.uid
+                        && resource.data.status == 'diajukan'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'updatedAt'])
+                        && request.resource.data.status == 'dibatalkan');
+      allow delete: if false;
+    }
+
+    // Log perubahan: staf menulis atas namanya, hanya admin membaca, tidak bisa diubah.
+    match /sarpras_log/{id} {
+      allow read: if sarprasAdmin();
+      allow create: if sarprasStaf() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
     }
 
     // ---- Default: tolak semuanya -------------------------------------------
