@@ -13,6 +13,7 @@ rules_version = '2';
 //
 // Gabungan: aturan aplikasi Penilaian
 //   + koleksi sarpras_* (aplikasi Sarpras, repo nitoe/sarpras)
+//     termasuk sarpras_sumber, sarpras_pemeliharaan, sarpras_usulan
 //   + koleksi perpus_* (aplikasi Perpustakaan, firestore.rules.perpustakaan)
 // Bagian Sarpras/Perpustakaan ditandai komentar masing-masing.
 //
@@ -481,6 +482,11 @@ service cloud.firestore {
       allow write: if sarprasAdmin();
     }
 
+    match /sarpras_sumber/{id} {
+      allow read: if sarprasStaf();
+      allow write: if sarprasAdmin();
+    }
+
     match /sarpras_aset/{id} {
       allow read: if sarprasStaf();
       allow write: if sarprasAdmin();
@@ -533,6 +539,41 @@ service cloud.firestore {
                         && request.resource.data.diff(resource.data).affectedKeys()
                              .hasOnly(['status', 'catatanPengembalian', 'updatedAt'])
                         && request.resource.data.status == 'pengembalian');
+      allow delete: if false;
+    }
+
+    // Jadwal pemeliharaan rutin (fase 2): admin kelola penuh;
+    // petugas boleh menandai sudah dikerjakan (terakhirDilakukan, catatan, jatuhTempo, petugas*).
+    match /sarpras_pemeliharaan/{id} {
+      allow read: if sarprasStaf();
+      allow create: if sarprasAdmin()
+                    && request.resource.data.keys().hasAll(['jenis', 'kegiatan', 'periode', 'jatuhTempo']);
+      allow update: if sarprasAdmin()
+                    || (akunAktif() && peranSarpras() == 'petugas'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['terakhirDilakukan', 'catatan', 'jatuhTempo',
+                                       'petugasUid', 'petugasNama', 'updatedAt']));
+      allow delete: if sarprasAdmin();
+    }
+
+    // Usulan pengadaan/perbaikan (fase 2): staf mengajukan atas namanya;
+    // admin mengelola; pimpinan boleh setujui/tolak; pengusul boleh batalkan saat diajukan.
+    match /sarpras_usulan/{id} {
+      allow read: if sarprasStaf();
+      allow create: if sarprasStaf()
+                    && request.resource.data.pengusulUid == request.auth.uid
+                    && request.resource.data.status == 'diajukan';
+      allow update: if sarprasAdmin()
+                    || (akunAktif() && peranSarpras() == 'pimpinan'
+                        && resource.data.status == 'diajukan'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'catatanAdmin', 'updatedAt'])
+                        && request.resource.data.status in ['disetujui', 'ditolak'])
+                    || (akunAktif() && resource.data.pengusulUid == request.auth.uid
+                        && resource.data.status == 'diajukan'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'updatedAt'])
+                        && request.resource.data.status == 'dibatalkan');
       allow delete: if false;
     }
 
@@ -623,9 +664,18 @@ service cloud.firestore {
     }
 
     // Pengaturan (dokumen `aturan`): staf membaca, admin mengubah.
+    // Dokumen `penomoran` (penghitung kode eksemplar PRP-000123): pustakawan boleh MENAIKKAN
+    // `terakhir` (hanya field terakhir dan updatedAt; tidak boleh turun) supaya dua petugas
+    // yang menambah buku bersamaan tidak mendapat kode yang sama.
     match /perpus_config/{id} {
       allow read: if perpusStaf();
       allow write: if perpusAdmin();
+      allow create, update: if perpusPustakawan() && id == 'penomoran'
+                            && request.resource.data.keys().hasOnly(['terakhir', 'updatedAt'])
+                            && request.resource.data.terakhir is int
+                            && request.resource.data.terakhir >= 0
+                            && (request.method == 'create'
+                                || request.resource.data.terakhir >= resource.data.terakhir);
     }
 
     // Log perubahan: staf menulis atas namanya, hanya admin membaca, tidak bisa diubah.
