@@ -11,8 +11,10 @@ rules_version = '2';
 //   3. Data siswa itu data pribadi anak. Orang tua hanya boleh GET anaknya
 //      sendiri (anakIds), TIDAK boleh list.
 //
-// Gabungan: aturan aplikasi Penilaian + aturan koleksi sarpras_* (aplikasi Sarpras, repo nitoe/sarpras).
-// Bagian Sarpras ditandai komentar "Sarpras". Sumber aslinya: firestore.rules.sarpras.
+// Gabungan: aturan aplikasi Penilaian
+//   + koleksi sarpras_* (aplikasi Sarpras, repo nitoe/sarpras)
+//   + koleksi perpus_* (aplikasi Perpustakaan, firestore.rules.perpustakaan)
+// Bagian Sarpras/Perpustakaan ditandai komentar masing-masing.
 //
 // Catatan: file ini baru berlaku setelah `npm run deploy:rules`. Uji dulu
 // dengan akun admin, guru Tahsin-Tahfizh, dan orang tua sebelum deploy.
@@ -78,6 +80,46 @@ service cloud.firestore {
 
     function sarprasStaf() {
       return akunAktif() && peranSarpras() in ['admin', 'pimpinan', 'guru', 'petugas'];
+    }
+
+    // ---- Perpustakaan: peran -------------------------------------------------
+    // Sumber peran: admin Penilaian = admin perpustakaan. Selain itu field
+    // users/{uid}.peranPerpus ('admin' | 'pustakawan' | 'pimpinan' | 'guru'), yang hanya bisa
+    // diubah admin (aturan `users` melarang pemilik akun mengubahnya). Bila kosong, semua
+    // jenis guru dianggap 'guru'. Peran lain tanpa peranPerpus = tidak punya akses.
+    // Memakai .get('role', '') (bukan myRole()) supaya akun tanpa field `role`, mis. petugas TU
+    // yang hanya diberi peranPerpus, tidak membuat aturan error.
+    // Harus sama dengan peranDari() di src/lib/peran.ts repo perpustakaan.
+    function peranPerpus() {
+      return myProfile().get('role', '') == 'admin' ? 'admin'
+        : myProfile().get('peranPerpus',
+            myProfile().get('role', '') in ['guru', 'guru_tahsin_tahfizh', 'guru_akademik'] ? 'guru' : '');
+    }
+
+    function perpusAdmin() {
+      return akunAktif() && peranPerpus() == 'admin';
+    }
+
+    // Admin dan pustakawan: mengelola koleksi dan mencatat sirkulasi.
+    function perpusPustakawan() {
+      return akunAktif() && peranPerpus() in ['admin', 'pustakawan'];
+    }
+
+    function perpusStaf() {
+      return akunAktif() && peranPerpus() in ['admin', 'pustakawan', 'pimpinan', 'guru'];
+    }
+
+    function perpusBukuSah(d) {
+      return d.judul is string && d.judul.size() > 0 && d.judul.size() <= 300
+        && d.jenis in ['cetak', 'digital', 'keduanya'];
+    }
+
+    // Status eksemplar sebelum dan sesudah permintaan (batch) dijalankan.
+    function perpusEksemplarSebelum(kode) {
+      return get(/databases/$(database)/documents/perpus_eksemplar/$(kode)).data;
+    }
+    function perpusEksemplarSesudah(kode) {
+      return getAfter(/databases/$(database)/documents/perpus_eksemplar/$(kode)).data;
     }
 
     function isApprovedParent() {
@@ -184,8 +226,9 @@ service cloud.firestore {
     // Biodata sensitif ada di identitas_siswa. Guru boleh baca roster. Tulis khusus admin, kecuali
     // guru Tahsin-Tahfizh yang boleh mengubah HANYA field tamatIqro.
     match /siswa/{id} {
-      allow get: if isGuru() || anakSaya(id);
-      allow list: if isGuru();
+      // perpusPustakawan: baca data dasar (nama, NIS, kelas) untuk kartu anggota & peminjaman.
+      allow get: if isGuru() || perpusPustakawan() || anakSaya(id);
+      allow list: if isGuru() || perpusPustakawan();
       allow create, delete: if isAdmin();
       allow update: if isAdmin()
         || (isGuruTahsin()
@@ -471,7 +514,8 @@ service cloud.firestore {
     }
 
     // Peminjaman: staf mengajukan atas namanya sendiri (status awal 'diajukan');
-    // admin memutuskan; peminjam hanya boleh membatalkan pengajuannya sendiri.
+    // admin memutuskan; peminjam boleh membatalkan pengajuan sendiri;
+    // peminjam alat yang disetujui boleh mengajukan pengembalian (status 'pengembalian').
     match /sarpras_peminjaman/{id} {
       allow read: if sarprasStaf();
       allow create: if sarprasStaf()
@@ -482,7 +526,13 @@ service cloud.firestore {
                         && resource.data.status == 'diajukan'
                         && request.resource.data.diff(resource.data).affectedKeys()
                              .hasOnly(['status', 'updatedAt'])
-                        && request.resource.data.status == 'dibatalkan');
+                        && request.resource.data.status == 'dibatalkan')
+                    || (akunAktif() && resource.data.peminjamUid == request.auth.uid
+                        && resource.data.status == 'disetujui'
+                        && resource.data.get('jenis', '') == 'alat'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'catatanPengembalian', 'updatedAt'])
+                        && request.resource.data.status == 'pengembalian');
       allow delete: if false;
     }
 
@@ -492,6 +542,101 @@ service cloud.firestore {
       allow create: if sarprasStaf() && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
+
+    // ---- Perpustakaan (koleksi berawalan perpus_) ----------------------------
+
+    // Kategori: semua staf membaca, admin dan pustakawan mengelola.
+    match /perpus_kategori/{id} {
+      allow read: if perpusStaf();
+      allow create, update: if perpusPustakawan();
+      allow delete: if perpusAdmin();
+    }
+
+    // Katalog buku. Staf membaca; buku bertanda `publik` boleh dibaca siapa saja (katalog publik,
+    // fase 2 — kueri wajib memakai where('publik','==',true)). Bawaan: tidak publik.
+    match /perpus_buku/{id} {
+      allow read: if perpusStaf() || resource.data.get('publik', false) == true;
+      allow create, update: if perpusPustakawan() && perpusBukuSah(request.resource.data);
+      allow delete: if perpusAdmin();
+    }
+
+    // Eksemplar: ID dokumen = kode di label (mis. PRP-000123). Status berubah lewat sirkulasi.
+    match /perpus_eksemplar/{id} {
+      allow read: if perpusStaf();
+      allow create: if perpusPustakawan()
+                    && request.resource.data.status == 'tersedia'
+                    && request.resource.data.bukuId is string;
+      allow update: if perpusPustakawan()
+                    && request.resource.data.bukuId == resource.data.bukuId
+                    && request.resource.data.status in ['tersedia', 'dipinjam', 'hilang', 'dihapus'];
+      allow delete: if perpusAdmin();
+    }
+
+    // Anggota non-siswa (guru, karyawan, kelas). Siswa dikenali dari koleksi `siswa` (ID = NIS).
+    match /perpus_anggota/{id} {
+      allow read: if perpusStaf();
+      allow create, update: if perpusPustakawan();
+      allow delete: if perpusAdmin();
+    }
+
+    // Peminjaman: hanya admin/pustakawan. Membuat peminjaman WAJIB satu batch dengan perubahan
+    // status eksemplar tersedia -> dipinjam; mengembalikan WAJIB satu batch dengan eksemplar
+    // kembali tersedia (atau hilang). Tidak ada hapus (riwayat tetap).
+    match /perpus_peminjaman/{id} {
+      allow read: if perpusStaf();
+      allow create: if perpusPustakawan()
+                    && request.resource.data.status == 'dipinjam'
+                    && request.resource.data.petugasUid == request.auth.uid
+                    && request.resource.data.peminjam.tipe in ['siswa', 'anggota']
+                    && perpusEksemplarSebelum(request.resource.data.eksemplarId).status == 'tersedia'
+                    && perpusEksemplarSesudah(request.resource.data.eksemplarId).status == 'dipinjam';
+      allow update: if perpusPustakawan()
+                    && resource.data.status == 'dipinjam'
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'tglKembali', 'jatuhTempo', 'jumlahPerpanjang',
+                                   'kondisiKembali', 'catatan', 'updatedAt'])
+                    && request.resource.data.status in ['dipinjam', 'dikembalikan']
+                    && (request.resource.data.status == 'dipinjam'
+                        || perpusEksemplarSesudah(resource.data.eksemplarId).status in ['tersedia', 'hilang']);
+      allow delete: if false;
+    }
+
+    // Kunjungan: dicatat pustakawan; tidak bisa diubah.
+    match /perpus_kunjungan/{id} {
+      allow read: if perpusStaf();
+      allow create: if perpusPustakawan()
+                    && request.resource.data.keys().hasAll(['tanggal', 'pengunjung']);
+      allow update: if false;
+      allow delete: if perpusAdmin();
+    }
+
+    // Sampul buku terkompres (string base64). Tidak ada ubah.
+    match /perpus_foto/{id} {
+      allow read: if perpusStaf();
+      allow create: if perpusPustakawan()
+                    && request.resource.data.keys().hasOnly(['data', 'createdBy', 'createdAt'])
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.data is string
+                    && request.resource.data.data.size() <= 120000;
+      allow update: if false;
+      allow delete: if perpusAdmin();
+    }
+
+    // Pengaturan (dokumen `aturan`): staf membaca, admin mengubah.
+    match /perpus_config/{id} {
+      allow read: if perpusStaf();
+      allow write: if perpusAdmin();
+    }
+
+    // Log perubahan: staf menulis atas namanya, hanya admin membaca, tidak bisa diubah.
+    match /perpus_log/{id} {
+      allow read: if perpusAdmin();
+      allow create: if perpusStaf() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Koleksi fase 2 dan 3 (perpus_usulan, perpus_reservasi, perpus_jurnal) sengaja belum ada:
+    // tanpa aturan = ditolak oleh blok "Default: tolak semuanya".
 
     // ---- Default: tolak semuanya -------------------------------------------
     match /{document=**} {
