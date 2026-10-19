@@ -83,6 +83,22 @@
         { "fieldPath": "dariUid", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "perpus_peminjaman",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "peminjam.id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "perpus_peminjaman",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "eksemplarId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
