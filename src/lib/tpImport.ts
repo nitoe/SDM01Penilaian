@@ -521,10 +521,10 @@ function barisContohTemplate(mapel?: string, kelas?: string): (string | number)[
     bobotSas: 40,
     disiplinSeni: adalahSeniBudaya(mapel) ? 'Seni Rupa' : undefined,
     levels: [
-      { min: 0, maks: 60, deskripsi: 'Perlu bimbingan: belum konsisten membaca bilangan besar' },
-      { min: 61, maks: 75, deskripsi: 'Cukup: membaca dan menulis bilangan dengan sedikit bantuan' },
-      { min: 76, maks: 85, deskripsi: 'Baik: membaca, menulis, membandingkan bilangan secara mandiri' },
-      { min: 86, maks: 100, deskripsi: 'Sangat baik: menguasai dan menjelaskan ke teman' },
+      { min: 0, maks: 60, deskripsi: 'belum konsisten membaca bilangan besar' },
+      { min: 61, maks: 75, deskripsi: 'membaca dan menulis bilangan dengan sedikit bantuan' },
+      { min: 76, maks: 85, deskripsi: 'membaca, menulis, membandingkan bilangan secara mandiri' },
+      { min: 86, maks: 100, deskripsi: 'menguasai dan menjelaskan ke teman' },
     ],
   })
 }

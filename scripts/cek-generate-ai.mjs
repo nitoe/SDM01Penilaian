@@ -81,16 +81,16 @@ assert.doesNotMatch(susunPromptKktp({ namaTp: 'x', kelas: '' }).sistem, /Fase un
 assert.equal(faseDariKelas('1A'), 'A'); assert.equal(faseDariKelas('4C'), 'B'); assert.equal(faseDariKelas('6B'), 'C')
 assert.equal(faseDariKelas('9'), ''); assert.equal(faseDariKelas(''), ''); assert.equal(faseDariKelas(undefined), '')
 
-// Pengaman bila model tetap memakai subjek: buang subjek (+ "mampu/dapat"), huruf awal besar.
-assert.equal(bersihkanSubjekKktp('Peserta didik mampu menyebutkan ide pokok teks.'), 'Menyebutkan ide pokok teks.')
-assert.equal(bersihkanSubjekKktp('peserta didik dapat menjelaskan alasan'), 'Menjelaskan alasan')
-assert.equal(bersihkanSubjekKktp('Siswa bisa menghitung luas persegi.'), 'Menghitung luas persegi.')
-assert.equal(bersihkanSubjekKktp('Peserta didik belum mampu menghitung.'), 'Belum mampu menghitung.', 'makna "belum" tidak boleh hilang')
-assert.equal(bersihkanSubjekKktp('Murid, menyelesaikan soal cerita.'), 'Menyelesaikan soal cerita.')
-assert.equal(bersihkanSubjekKktp('  PESERTA DIDIK   menyusun laporan  '), 'Menyusun laporan')
-assert.equal(bersihkanSubjekKktp('Ananda sudah menuliskan laporan.'), 'Sudah menuliskan laporan.')
+// Pengaman bila model tetap memakai subjek: buang subjek (+ "mampu/dapat"), huruf awal kecil (fragmen rapor).
+assert.equal(bersihkanSubjekKktp('Peserta didik mampu menyebutkan ide pokok teks.'), 'menyebutkan ide pokok teks.')
+assert.equal(bersihkanSubjekKktp('peserta didik dapat menjelaskan alasan'), 'menjelaskan alasan')
+assert.equal(bersihkanSubjekKktp('Siswa bisa menghitung luas persegi.'), 'menghitung luas persegi.')
+assert.equal(bersihkanSubjekKktp('Peserta didik belum mampu menghitung.'), 'belum mampu menghitung.', 'makna "belum" tidak boleh hilang')
+assert.equal(bersihkanSubjekKktp('Murid, menyelesaikan soal cerita.'), 'menyelesaikan soal cerita.')
+assert.equal(bersihkanSubjekKktp('  PESERTA DIDIK   menyusun laporan  '), 'menyusun laporan')
+assert.equal(bersihkanSubjekKktp('Ananda sudah menuliskan laporan.'), 'sudah menuliskan laporan.')
 // yang sudah benar tidak disentuh
-assert.equal(bersihkanSubjekKktp('Menyebutkan ide pokok teks.'), 'Menyebutkan ide pokok teks.')
+assert.equal(bersihkanSubjekKktp('Menyebutkan ide pokok teks.'), 'Menyebutkan ide pokok teks.', 'tanpa subjek: biarkan apa adanya (normalisasi huruf di kalimatCapaian)')
 assert.equal(bersihkanSubjekKktp('Catatan pengamatan tidak berurutan.'), 'Catatan pengamatan tidak berurutan.')
 assert.equal(bersihkanSubjekKktp('a'), 'a', 'huruf kecil tanpa subjek tidak dikapitalkan')
 assert.equal(bersihkanSubjekKktp('Siswanya menulis.'), 'Siswanya menulis.', 'kata lain yang diawali "siswa" tidak terpotong')
@@ -100,7 +100,7 @@ assert.equal(bersihkanSubjekKktp(undefined), '')
 // terpasang di normalisasiKktp
 assert.deepEqual(
   normalisasiKktp({ deskripsi: ['Peserta didik belum mampu menyebutkan.', 'Peserta didik mampu menyebutkan sebagian.', 'Siswa dapat menyebutkan semuanya.', 'Menyebutkan dan memberi contoh.'] }),
-  ['Belum mampu menyebutkan.', 'Menyebutkan sebagian.', 'Menyebutkan semuanya.', 'Menyebutkan dan memberi contoh.'],
+  ['belum mampu menyebutkan.', 'menyebutkan sebagian.', 'menyebutkan semuanya.', 'Menyebutkan dan memberi contoh.'],
 )
 
 // ---- Pagar struktural: fitur AI tidak boleh bocor ke akun lain (ANTIREGRESI §25) ----

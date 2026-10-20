@@ -126,10 +126,24 @@ export function hitungStsMapel(
 
 const akhiriTitik = (t: string) => (/[.!?]$/.test(t.trim()) ? t.trim() : `${t.trim()}.`)
 
+/**
+ * Fragmen deskripsi KKTP untuk disambung setelah "… dalam …".
+ * Huruf pertama dipaksa kecil agar tidak muncul kapital di tengah kalimat
+ * (banyak isian guru/AI masih diawali huruf besar). Kalimat berikutnya di
+ * dalam fragmen yang sudah diawali kapital (mis. ". Menjawab …") tetap utuh.
+ */
+export function fragmenCapaian(teks: string): string {
+  const s = String(teks ?? '').trim()
+  if (!s) return ''
+  return s.charAt(0).toLowerCase() + s.slice(1)
+}
+
 /** Kalimat capaian pada rapor, pola v1: "Mencapai kompetensi dengan sangat baik dalam …" dan "Perlu peningkatan dalam …". */
 export function kalimatCapaian(terbaik: string, perlu: string): string[] {
   const hasil: string[] = []
-  if (terbaik.trim()) hasil.push(akhiriTitik(`Mencapai kompetensi dengan sangat baik dalam ${terbaik.trim()}`))
-  if (perlu.trim()) hasil.push(akhiriTitik(`Perlu peningkatan dalam ${perlu.trim()}`))
+  const b = fragmenCapaian(terbaik)
+  const p = fragmenCapaian(perlu)
+  if (b) hasil.push(akhiriTitik(`Mencapai kompetensi dengan sangat baik dalam ${b}`))
+  if (p) hasil.push(akhiriTitik(`Perlu peningkatan dalam ${p}`))
   return hasil
 }

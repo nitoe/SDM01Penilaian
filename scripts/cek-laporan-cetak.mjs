@@ -1,7 +1,7 @@
 // Uji rumus laporan cetak: Rapor STS (rapor bayangan) dan Laporan Tahsin-Tahfizh.
 // Jalankan: node --experimental-strip-types scripts/cek-laporan-cetak.mjs
 import { readFileSync } from 'node:fs'
-import { bobotUntukSts, hitungStsMapel, kalimatCapaian, muatanMapel, nilaiSasMapel } from '../src/lib/asesmenRumus.ts'
+import { bobotUntukSts, fragmenCapaian, hitungStsMapel, kalimatCapaian, muatanMapel, nilaiSasMapel } from '../src/lib/asesmenRumus.ts'
 import {
   akurasiBacaan, dalamRentang, kelompokkanMenulis, kelompokkanSetoran, narasiHafalan, narasiMembaca,
   posisiMenulis, rataMenulis, rentangSemester, susunLaporanSiswa,
@@ -33,6 +33,10 @@ cek('kalimat capaian pola v1', kalimatCapaian('menerapkan hukum nun sukun', 'men
   'Mencapai kompetensi dengan sangat baik dalam menerapkan hukum nun sukun.|Perlu peningkatan dalam mengenal pesan pokok.')
 cek('kalimat capaian: titik tidak ganda', kalimatCapaian('x.', '')[0] === 'Mencapai kompetensi dengan sangat baik dalam x.')
 cek('kalimat capaian kosong', kalimatCapaian('', '  ').length === 0)
+cek('fragmen: huruf pertama dipaksa kecil', fragmenCapaian('Membuat diagram batang') === 'membuat diagram batang')
+cek('fragmen: kalimat kedua tetap kapital', fragmenCapaian('Membuat diagram. Menjawab soal.') === 'membuat diagram. Menjawab soal.')
+cek('kalimat capaian: tidak ada kapital di tengah setelah dalam', kalimatCapaian('Membuat diagram batang', 'Menyusun tangram').join('|') ===
+  'Mencapai kompetensi dengan sangat baik dalam membuat diagram batang.|Perlu peningkatan dalam menyusun tangram.')
 cek('muatan: Bahasa Arab & Kemuhammadiyahan = yayasan', muatanMapel('Bahasa Arab') === 'yayasan' && muatanMapel('Kemuhammadiyahan') === 'yayasan')
 cek('muatan: Al-Islam dan lainnya = wajib', muatanMapel('Al-Islam') === 'wajib' && muatanMapel('IPAS') === 'wajib')
 const slm = { t1: { a: { slm: 70 } }, t2: { a: { slm: 80 } } }

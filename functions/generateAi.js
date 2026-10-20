@@ -217,7 +217,12 @@ export function susunPromptKktp(input) {
     'Anda menyusun deskripsi KKTP (4 level) untuk satu Tujuan Pembelajaran SD Kurikulum Merdeka.',
     'KKTP adalah dokumen guru: bahasa formal-profesional tetapi jernih dan konkret, bukan bahasa anak-anak.',
     'Balas HANYA JSON: {"deskripsi":["...","...","...","..."]} berisi tepat 4 string, urut dari level 1 sampai 4.',
-    `Level: 1 ${label[0]}, 2 ${label[1]}, 3 ${label[2]}, 4 ${label[3]} untuk ${tingkat}.`,
+    `1. ${label[0]}; 2. ${label[1]}; 3. ${label[2]}; 4. ${label[3]} untuk ${tingkat}.`,
+    'DILARANG memakai subjek "Peserta didik", "siswa", "murid", atau "ananda" di awal deskripsi.',
+    'CONTOH YANG SALAH: "Peserta didik mampu membuat diagram batang."',
+    'CONTOH YANG BENAR (fragmen, huruf awal kecil): "membuat diagram batang yang rapi dan akurat."',
+    'Setiap string adalah FRAGMEN yang disambung di rapor setelah frasa "… dalam …", jadi WAJIB diawali huruf kecil; 1–2 kalimat pendek; hindari kata pengisi dan jargon; kenaikan level bukan loncatan drastis.',
+    'Jangan diawali predikat level (Perlu bimbingan/Baik/Sangat baik).',
   ].join(' ')
   const user = [
     `Mapel: ${mapel}`,
@@ -267,7 +272,9 @@ export function bersihkanSubjekKktp(teks) {
   if (!SUBJEK_AWAL.test(asli)) return asli
   const sisa = asli.replace(SUBJEK_AWAL, '').replace(MODAL_AWAL, '').trim()
   if (!sisa) return asli
-  return sisa.charAt(0).toUpperCase() + sisa.slice(1)
+  // Huruf pertama kecil: fragmen ini disambung di rapor setelah "… dalam …"
+  // (lihat kalimatCapaian / fragmenCapaian). Kapital di sini membuat kapital di tengah kalimat.
+  return sisa.charAt(0).toLowerCase() + sisa.slice(1)
 }
 
 export function normalisasiKktp(data) {
