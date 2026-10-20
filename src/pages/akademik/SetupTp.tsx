@@ -1004,6 +1004,11 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     if (sibuk || !konfirmasiBuang()) return
     setBusyAi('tp')
     try {
+      // IPAS: sertakan kerangka Keterampilan Proses agar AI memadukan proses + pemahaman
+      const isIpas = ekuivalenMapel(mapel, 'IPAS')
+      const cpProses = isIpas
+        ? daftarCp.find((c) => /keterampilan proses/i.test(c.elemen))
+        : undefined
       const hasil = await generateTpAi({
         provider,
         mapel,
@@ -1012,11 +1017,13 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         elemen: cp.elemen,
         teksCp: cp.teks,
         disiplinSeni: cp.disiplinSeni,
+        ...(cpProses?.teks ? { keterampilanProses: cpProses.teks } : {}),
       })
       const awal = nomorTpBerikut(list)
       const [pertama, ...sisa] = hasil
       if (!pertama) throw new Error('AI tidak menghasilkan TP.')
       const disiplinAi = isSeniBudaya ? normalisasiDisiplinSeni(cp.disiplinSeni) || disiplinTab : undefined
+      // IPAS: CP di form = unit pemahaman (teks elemen yang digenerate), bukan hanya label elemen
       setAntrianAi(sisa.map((d, i) => ({ ...d, cp: cp.teks, nomor: awal + 1 + i, disiplinSeni: disiplinAi })))
       bukaForm(
         {

@@ -37,6 +37,125 @@ function potong(s, n) {
   return t.length > n ? t.slice(0, n) : t
 }
 
+/** Nama mapel IPAS (singkat atau panjang). */
+function adalahMapelIpas(mapel) {
+  const n = String(mapel || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+  if (!n) return false
+  if (n === 'ipas') return true
+  if (n.includes('ilmu pengetahuan alam') && n.includes('sosial')) return true
+  return false
+}
+
+/**
+ * Pecah teks Pemahaman IPAS yang dipisah tanda baca ;
+ * Unit terakhir sering diawali "serta ".
+ */
+export function pisahUnitPemahamanIpas(teks) {
+  const t = String(teks || '').trim()
+  if (!t) return []
+  return t
+    .split(';')
+    .map((u) => u.replace(/^\s*serta\s+/i, '').trim())
+    .filter((u) => u.length > 0)
+}
+
+/** Apakah elemen CP adalah keterampilan proses IPAS (bukan sasaran isi). */
+function adalahElemenKeterampilanProses(elemen) {
+  const e = String(elemen || '').trim().toLowerCase()
+  return e.includes('keterampilan proses')
+}
+
+/**
+ * Prompt khusus IPAS.
+ * - Pemahaman IPAS = sasaran isi (satu unit atau beberapa unit dipisah ;).
+ * - Keterampilan Proses = cara mencapai pemahaman; tidak boleh jadi TP mandiri.
+ * - Setiap TP memadukan satu unit pemahaman + tahap proses yang relevan.
+ */
+function susunPromptTpIpas(input, mapel, kelas, fase, elemen, teks, disiplin) {
+  const proses = potong(input.keterampilanProses, 6000)
+  const unitEksplisit = potong(input.pemahamanUnit, 2000)
+  const elemenProses = adalahElemenKeterampilanProses(elemen)
+
+  // Generate hanya dari elemen Keterampilan Proses → tolak (bukan sasaran isi)
+  if (elemenProses && !unitEksplisit) {
+    return {
+      ok: false,
+      pesan:
+        'Untuk IPAS, Keterampilan Proses tidak digenerate sebagai TP mandiri. Pilih unit Pemahaman IPAS; proses dipakai untuk mencapai pemahaman itu.',
+    }
+  }
+
+  const units = unitEksplisit ? [unitEksplisit] : pisahUnitPemahamanIpas(teks)
+  const jumlahUnit = units.length
+  const satuUnit = jumlahUnit <= 1
+
+  const daftarUnit =
+    jumlahUnit > 1
+      ? units.map((u, i) => `${i + 1}. ${u}`).join('\n')
+      : units[0] || teks
+
+  const tahapBaku =
+    fase === 'C'
+      ? [
+          'Mengamati — mencatat, mencari persamaan dan perbedaan',
+          'Mempertanyakan dan Memprediksi — pertanyaan ilmiah + prediksi',
+          'Merencanakan dan Melakukan Penyelidikan — mandiri, alat ukur sederhana',
+          'Memproses serta Menganalisis Data dan Informasi — tabel/grafik, bukti',
+          'Mengevaluasi dan Refleksi — saran perbaikan penyelidikan',
+          'Mengomunikasikan Hasil — utuh dengan argumen',
+        ].join('; ')
+      : [
+          'Mengamati — pengamatan sederhana + mencatat',
+          'Mempertanyakan dan Memprediksi — pertanyaan mandiri + prediksi',
+          'Merencanakan dan Melakukan Penyelidikan — dengan panduan pendidik',
+          'Memproses, Menganalisis Data dan Informasi — turus/diagram, banding prediksi',
+          'Mengevaluasi dan Refleksi — refleksi penyelidikan',
+          'Mengomunikasikan Hasil — lisan dan tertulis',
+        ].join('; ')
+
+  const sistem = [
+    'Anda merumuskan Tujuan Pembelajaran (TP) untuk mapel IPAS (Ilmu Pengetahuan Alam dan Sosial) SD Kurikulum Merdeka.',
+    'IPAS punya dua elemen yang TIDAK setara: (1) Pemahaman IPAS = sasaran isi/materi; (2) Keterampilan Proses = cara ilmiah mencapai pemahaman itu.',
+    'Jangan membuat TP yang hanya melatih keterampilan proses tanpa sasaran pemahaman isi.',
+    'Pemahaman IPAS sering berupa beberapa unit materi dalam satu paragraf, dipisahkan tanda baca titik koma (;). Setiap unit materi = satu lingkup isi yang berdiri sendiri.',
+    satuUnit
+      ? 'Input berisi SATU unit pemahaman. Hasilkan TEPAT 1 TP untuk unit itu.'
+      : `Input berisi ${jumlahUnit} unit pemahaman (sudah diurutkan). Hasilkan TEPAT satu TP per unit (total ${jumlahUnit} TP), urut sama dengan daftar unit. Jangan menggabungkan dua unit berbeda dalam satu TP.`,
+    'Untuk setiap TP: pilih 1 sampai 3 tahap Keterampilan Proses yang paling sesuai untuk mencapai unit pemahaman tersebut, lalu rumuskan nama TP yang memadukan proses + isi dalam satu kalimat operasional.',
+    'Contoh gaya nama TP: "Melalui pengamatan dan pencatatan, murid menjelaskan bentuk dan fungsi pancaindra." — proses tersirat di awal, pemahaman di predikat.',
+    'Nama TP: bahasa Indonesia, satu kalimat, terukur, sesuai fase dan kelas. Jangan menyalin utuh teks CP sebagai nama TP. Jangan mengubah makna CP resmi.',
+    'tipe: "kinerja" bila unjuk kerja/pengamatan/penyelidikan/produk dominan; "pengetahuan" bila penekanan utama pada konsep/penjelasan tanpa unjuk kerja kuat.',
+    'bobotSlm dan bobotSas bilangan bulat, jumlah tepat 100. Default 60 dan 40 bila tidak ada alasan kuat.',
+    'Balas HANYA JSON: {"tp":[{"namaTp":"...","tipe":"kinerja","bobotSlm":60,"bobotSas":40}]}',
+    satuUnit
+      ? 'Array tp berisi tepat 1 objek.'
+      : `Array tp berisi tepat ${jumlahUnit} objek, urut unit 1 sampai ${jumlahUnit}.`,
+  ].join(' ')
+
+  const user = [
+    `Mapel: ${mapel}`,
+    disiplin ? `Disiplin seni: ${disiplin}` : '',
+    `Kelas: ${kelas}`,
+    `Fase: ${fase}`,
+    `Elemen yang dipilih: ${elemen}`,
+    '',
+    satuUnit
+      ? 'Unit Pemahaman IPAS (sasaran isi, jangan diubah maknanya):'
+      : 'Daftar unit Pemahaman IPAS (satu TP per baris, jangan diubah maknanya):',
+    daftarUnit,
+    '',
+    'Kerangka Keterampilan Proses fase ini (bukan sasaran TP mandiri — pilih tahap yang relevan per unit):',
+    proses || tahapBaku,
+  ]
+    .filter((baris) => baris !== '')
+    .join('\n')
+
+  return { ok: true, sistem, user }
+}
+
 export function susunPromptTp(input) {
   const mapel = potong(input.mapel, 80)
   const kelas = potong(input.kelas, 8)
@@ -47,6 +166,11 @@ export function susunPromptTp(input) {
   if (!mapel || !kelas || !fase || !elemen || !teks) {
     return { ok: false, pesan: 'Data capaian pembelajaran tidak lengkap.' }
   }
+
+  if (adalahMapelIpas(mapel)) {
+    return susunPromptTpIpas(input, mapel, kelas, fase, elemen, teks, disiplin)
+  }
+
   const sistem = [
     'Anda merumuskan Tujuan Pembelajaran (TP) SD Kurikulum Merdeka untuk satu elemen Capaian Pembelajaran.',
     'Jumlah TP ditentukan oleh analisis Anda: pisahkan hanya bila CP memuat kompetensi yang berbeda, tingkat kompleksitas berbeda, atau materi yang berdiri sendiri.',
@@ -65,7 +189,9 @@ export function susunPromptTp(input) {
     `Elemen: ${elemen}`,
     'Teks CP resmi (jangan diubah):',
     teks,
-  ].filter(Boolean).join('\n')
+  ]
+    .filter(Boolean)
+    .join('\n')
   return { ok: true, sistem, user }
 }
 
@@ -116,7 +242,8 @@ function ambilJson(teks) {
 export function normalisasiTp(data) {
   const list = Array.isArray(data?.tp) ? data.tp : []
   const keluar = []
-  for (const item of list.slice(0, 6)) {
+  // IPAS Fase B bisa 11 unit pemahaman → longgarkan batas (mapel lain tetap jarang >6)
+  for (const item of list.slice(0, 12)) {
     const namaTp = potong(item?.namaTp, 400)
     if (!namaTp) continue
     const tipe = item?.tipe === 'kinerja' ? 'kinerja' : 'pengetahuan'

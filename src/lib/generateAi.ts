@@ -51,6 +51,10 @@ export async function generateTpAi(input: {
   elemen: string
   teksCp: string
   disiplinSeni?: string
+  /** IPAS: teks lengkap elemen Keterampilan Proses fase yang sama. */
+  keterampilanProses?: string
+  /** IPAS: satu unit pemahaman (sudah dipisah ;). Jika diisi, AI membuat tepat 1 TP. */
+  pemahamanUnit?: string
 }): Promise<HasilTpAi[]> {
   pastikanBerhak()
   const panggil = httpsCallable<typeof input, { tp: HasilTpAi[] }>(
