@@ -35,7 +35,12 @@ import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { PageHeader, Badge } from '../../components/ui'
 import SeniBudayaPanel from '../../components/SeniBudayaPanel'
 import { DISIPLIN_SENI } from '../../lib/seniKelas'
-import { capaianUntuk, type CapaianResmi } from '../../lib/capaianPembelajaran'
+import {
+  capaianUntuk,
+  perluasCpUntukTampil,
+  type CapaianResmi,
+  type CapaianTampil,
+} from '../../lib/capaianPembelajaran'
 import { bolehGenerateAi, generateKktpAi, generateTpAi, type ProviderAi } from '../../lib/generateAi'
 import {
   JUMLAH_LEVEL_KKTP,
@@ -790,17 +795,25 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   // Hanya akun pemilik API key yang melihat daftar CP + generate AI (§25). Guru lain: layout tanpa panel itu.
   const akunAi = bolehGenerateAi(profile.uid)
   const faseCp = faseDariTingkatan(tingkatan)
-  const daftarCp = akunAi && !(isSeniBudaya && !disiplinTab) ? capaianUntuk(mapel, faseCp, disiplinTab) : []
+  /** CP resmi mentah (elemen utuh). */
+  const daftarCpMentah =
+    akunAi && !(isSeniBudaya && !disiplinTab) ? capaianUntuk(mapel, faseCp, disiplinTab) : []
+  /** IPAS: Pemahaman dipecah per unit `;`; Keterampilan Proses = referensi saja. */
+  const daftarCp: CapaianTampil[] = akunAi ? perluasCpUntukTampil(daftarCpMentah, mapel) : []
 
-  function kunciCp(cp: CapaianResmi) {
-    return `${cp.elemen}|${cp.disiplinSeni || ''}`
+  function kunciCp(cp: CapaianTampil | CapaianResmi) {
+    const unit =
+      'unitIndex' in cp && cp.unitIndex != null
+        ? `|u${cp.unitIndex}`
+        : `|${(cp.teks || '').slice(0, 48)}`
+    return `${cp.elemen}|${cp.disiplinSeni || ''}${unit}`
   }
 
   const daftarCpTampil = akunAi
     ? daftarCp.filter((cp) => tampilkanCpSelesai || !cpSelesai.has(kunciCp(cp)))
     : daftarCp
 
-  function tandaiCpSelesai(cp: CapaianResmi) {
+  function tandaiCpSelesai(cp: CapaianTampil) {
     setCpSelesai((s) => new Set(s).add(kunciCp(cp)))
   }
 
@@ -866,7 +879,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
     bukaForm(f, JSON.stringify(f))
   }
 
-  function bukaFormDariCp(cp: CapaianResmi) {
+  function bukaFormDariCp(cp: CapaianTampil) {
     if (sibuk) return
     setModeBaca(false)
     if (!konfirmasiBuang()) return
@@ -999,15 +1012,22 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   }
 
   // ---- Generate AI (hanya akun AI) ----------------------------------
-  async function jalankanGenerateTp(provider: ProviderAi, cp: CapaianResmi) {
+  async function jalankanGenerateTp(provider: ProviderAi, cp: CapaianTampil) {
     if (!akunAi) return
+    if (!cp.bisaGenerate) {
+      show(
+        'Untuk IPAS, Keterampilan Proses tidak digenerate sebagai TP mandiri. Pilih unit Pemahaman IPAS.',
+        true,
+      )
+      return
+    }
     if (sibuk || !konfirmasiBuang()) return
     setBusyAi('tp')
     try {
-      // IPAS: sertakan kerangka Keterampilan Proses agar AI memadukan proses + pemahaman
+      // IPAS: sertakan kerangka Keterampilan Proses + unit pemahaman (teks kartu)
       const isIpas = ekuivalenMapel(mapel, 'IPAS')
-      const cpProses = isIpas
-        ? daftarCp.find((c) => /keterampilan proses/i.test(c.elemen))
+      const cpProsesMentah = isIpas
+        ? daftarCpMentah.find((c) => /keterampilan proses/i.test(c.elemen))
         : undefined
       const hasil = await generateTpAi({
         provider,
@@ -1017,13 +1037,14 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         elemen: cp.elemen,
         teksCp: cp.teks,
         disiplinSeni: cp.disiplinSeni,
-        ...(cpProses?.teks ? { keterampilanProses: cpProses.teks } : {}),
+        ...(cpProsesMentah?.teks ? { keterampilanProses: cpProsesMentah.teks } : {}),
+        // Satu kartu = satu unit → minta tepat 1 TP
+        ...(isIpas && /pemahaman/i.test(cp.elemen) ? { pemahamanUnit: cp.teks } : {}),
       })
       const awal = nomorTpBerikut(list)
       const [pertama, ...sisa] = hasil
       if (!pertama) throw new Error('AI tidak menghasilkan TP.')
       const disiplinAi = isSeniBudaya ? normalisasiDisiplinSeni(cp.disiplinSeni) || disiplinTab : undefined
-      // IPAS: CP di form = unit pemahaman (teks elemen yang digenerate), bukan hanya label elemen
       setAntrianAi(sisa.map((d, i) => ({ ...d, cp: cp.teks, nomor: awal + 1 + i, disiplinSeni: disiplinAi })))
       bukaForm(
         {
@@ -1040,7 +1061,7 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
         null,
       )
       show(
-        `${hasil.length} TP dari elemen “${cp.elemen}” masuk ke editor. Isi KKTP (bisa dengan AI), lalu Simpan.` +
+        `${hasil.length} TP dari “${cp.elemen}${cp.unitIndex != null ? ` · unit ${(cp.unitIndex ?? 0) + 1}` : ''}” masuk ke editor. Isi KKTP (bisa dengan AI), lalu Simpan.` +
           (sisa.length ? ` ${sisa.length} TP lain menunggu setelah yang ini disimpan.` : ''),
       )
     } catch (e) {
@@ -2077,9 +2098,13 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                         <ul className="space-y-1.5">
                           {daftarCpTampil.map((cp) => {
                             const selesai = cpSelesai.has(kunciCp(cp))
+                            const labelUnit =
+                              cp.unitIndex != null && /pemahaman/i.test(cp.elemen)
+                                ? `${cp.elemen} · ${cp.unitIndex + 1}`
+                                : cp.elemen
                             return (
                               <li
-                                key={`${cp.elemen}-${cp.disiplinSeni || ''}`}
+                                key={kunciCp(cp)}
                                 className={`rounded-lg border px-2.5 py-2 ${
                                   selesai ? 'border-slate-200 bg-slate-50' : 'border-slate-200 bg-white'
                                 }`}
@@ -2104,37 +2129,47 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                                   />
                                   <div className="min-w-0">
                                     <p className="text-[13px] font-semibold text-slate-900">
-                                      {cp.elemen}
+                                      {labelUnit}
                                       {selesai ? <span className="font-normal text-muted"> · selesai</span> : null}
                                     </p>
                                     <p className="mt-0.5 text-[11.5px] leading-snug text-slate-600">{cp.teks}</p>
+                                    {!cp.bisaGenerate && (
+                                      <p className="mt-1 text-[11px] leading-snug text-amber-800">
+                                        Referensi kerangka ilmiah — tidak digenerate sebagai TP mandiri. Dipakai AI
+                                        saat generate unit Pemahaman.
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="mt-2 flex flex-wrap gap-1.5">
-                                  <button
-                                    type="button"
-                                    className={`${btnGhost} px-2.5 py-1 text-[12px]`}
-                                    disabled={sibuk}
-                                    onClick={() => bukaFormDariCp(cp)}
-                                  >
-                                    Pakai
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="rounded-lg bg-muh-600 px-2.5 py-1 text-[12px] font-semibold text-white hover:bg-muh-700 disabled:opacity-50"
-                                    disabled={busyAi !== null}
-                                    onClick={() => void jalankanGenerateTp('gemini', cp)}
-                                  >
-                                    {busyAi === 'tp' ? '…' : 'Gemini'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="rounded-lg border-2 border-emerald-600 bg-emerald-50 px-2.5 py-1 text-[12px] font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
-                                    disabled={busyAi !== null}
-                                    onClick={() => void jalankanGenerateTp('openai', cp)}
-                                  >
-                                    OpenAI
-                                  </button>
+                                  {cp.bisaGenerate ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className={`${btnGhost} px-2.5 py-1 text-[12px]`}
+                                        disabled={sibuk}
+                                        onClick={() => bukaFormDariCp(cp)}
+                                      >
+                                        Pakai
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="rounded-lg bg-muh-600 px-2.5 py-1 text-[12px] font-semibold text-white hover:bg-muh-700 disabled:opacity-50"
+                                        disabled={busyAi !== null}
+                                        onClick={() => void jalankanGenerateTp('gemini', cp)}
+                                      >
+                                        {busyAi === 'tp' ? '…' : 'Gemini'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="rounded-lg border-2 border-emerald-600 bg-emerald-50 px-2.5 py-1 text-[12px] font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
+                                        disabled={busyAi !== null}
+                                        onClick={() => void jalankanGenerateTp('openai', cp)}
+                                      >
+                                        OpenAI
+                                      </button>
+                                    </>
+                                  ) : null}
                                 </div>
                               </li>
                             )

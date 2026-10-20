@@ -1189,3 +1189,57 @@ export function capaianUntuk(mapel: string, fase: string, disiplinSeni?: string)
     return true
   })
 }
+
+/**
+ * Pecah teks Pemahaman IPAS yang dipisah tanda baca ;
+ * Unit terakhir sering diawali "serta ".
+ */
+export function pisahUnitPemahamanIpas(teks: string): string[] {
+  const t = String(teks || '').trim()
+  if (!t) return []
+  return t
+    .split(';')
+    .map((u) => u.replace(/^\s*serta\s+/i, '').trim())
+    .filter((u) => u.length > 0)
+}
+
+/** Item CP untuk panel Setup TP (IPAS: satu kartu per unit pemahaman). */
+export interface CapaianTampil extends CapaianResmi {
+  /** Indeks unit pemahaman (0-based); hanya untuk elemen Pemahaman IPAS yang dipecah. */
+  unitIndex?: number
+  /**
+   * false = hanya referensi (Keterampilan Proses IPAS).
+   * Tidak boleh digenerate sebagai TP mandiri.
+   */
+  bisaGenerate: boolean
+}
+
+/**
+ * Perluas daftar CP resmi untuk tampilan UI.
+ * - IPAS Pemahaman → satu item per unit (`;`)
+ * - IPAS Keterampilan Proses → satu item, bisaGenerate=false
+ * - Mapel lain → satu item per elemen, bisaGenerate=true
+ */
+export function perluasCpUntukTampil(list: CapaianResmi[], mapel: string): CapaianTampil[] {
+  const isIpas = ekuivalenMapel(mapel, 'IPAS')
+  const out: CapaianTampil[] = []
+  for (const cp of list) {
+    if (isIpas && /pemahaman\s*ipas/i.test(cp.elemen)) {
+      const units = pisahUnitPemahamanIpas(cp.teks)
+      if (units.length <= 1) {
+        out.push({ ...cp, teks: units[0] || cp.teks, unitIndex: 0, bisaGenerate: true })
+      } else {
+        units.forEach((teks, unitIndex) => {
+          out.push({ ...cp, teks, unitIndex, bisaGenerate: true })
+        })
+      }
+      continue
+    }
+    if (isIpas && /keterampilan\s*proses/i.test(cp.elemen)) {
+      out.push({ ...cp, bisaGenerate: false })
+      continue
+    }
+    out.push({ ...cp, bisaGenerate: true })
+  }
+  return out
+}
