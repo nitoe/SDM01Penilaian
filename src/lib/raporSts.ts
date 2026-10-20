@@ -92,6 +92,7 @@ function barisDariSumber(sumber: SumberMapelSts[], siswaId: string, semester: Se
       nilaiAkhir: h.nilaiAkhir,
       capaianTerbaik: h.capaianTerbaik,
       capaianPerluBimbingan: h.capaianPerluBimbingan,
+      levelIndexTerbaik: h.levelIndexTerbaik,
     }
   })
 }

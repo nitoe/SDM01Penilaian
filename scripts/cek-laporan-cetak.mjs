@@ -1,7 +1,7 @@
 // Uji rumus laporan cetak: Rapor STS (rapor bayangan) dan Laporan Tahsin-Tahfizh.
 // Jalankan: node --experimental-strip-types scripts/cek-laporan-cetak.mjs
 import { readFileSync } from 'node:fs'
-import { bobotUntukSts, fragmenCapaian, hitungStsMapel, kalimatCapaian, muatanMapel, nilaiSasMapel } from '../src/lib/asesmenRumus.ts'
+import { awalanCapaianTerbaik, bobotUntukSts, fragmenCapaian, hitungStsMapel, kalimatCapaian, muatanMapel, nilaiSasMapel } from '../src/lib/asesmenRumus.ts'
 import {
   akurasiBacaan, dalamRentang, kelompokkanMenulis, kelompokkanSetoran, narasiHafalan, narasiMembaca,
   posisiMenulis, rataMenulis, rentangSemester, susunLaporanSiswa,
@@ -25,17 +25,35 @@ const h = hitungStsMapel([tp1, tp2], sts, 'a', '1')
 cek('STS mapel tertimbang 60/40 = 74', h.nilaiAkhir === 74)
 cek('capaian terbaik dari TP bernilai tertinggi', h.capaianTerbaik === 'menerapkan hukum nun sukun')
 cek('capaian perlu bimbingan dari TP terendah', h.capaianPerluBimbingan === 'mengenal pesan pokok')
+cek('levelIndex terbaik 90 → 3 (Sangat Baik)', h.levelIndexTerbaik === 3)
 const h1 = hitungStsMapel([tp1], { t1: { a: { nilai: 90 } } }, 'a', '1')
 cek('satu TP: tidak ada "perlu bimbingan"', h1.capaianPerluBimbingan === '' && h1.nilaiAkhir === 90)
 cek('siswa tanpa nilai STS → null, tanpa capaian', hitungStsMapel([tp1, tp2], sts, 'b', '1').nilaiAkhir === null && hitungStsMapel([tp1], sts, 'b', '1').capaianTerbaik === '')
 cek('tanpa TP cakupan → kosong', hitungStsMapel([], sts, 'a', '1').nilaiAkhir === null)
-cek('kalimat capaian pola v1', kalimatCapaian('menerapkan hukum nun sukun', 'mengenal pesan pokok').join('|') ===
+
+// Nilai rendah (34): awalan BUKAN "sangat baik"
+const stsRendah = { t1: { a: { nilai: 34 } }, t2: { a: { nilai: 20 } }, t3: { a: { nilai: 40 } } }
+const tp3 = { id: 't3', tipe: 'pengetahuan', bobotPerSemester: { 1: 1 }, levels: L(['identifikasi lemah', 'b', 'c', 'identifikasi kuat']) }
+const hR = hitungStsMapel([tp1, tp2, tp3], stsRendah, 'a', '1')
+cek('3 TP terisi: ada diferensiasi terbaik vs terendah', hR.capaianTerbaik === 'identifikasi lemah' && hR.capaianPerluBimbingan === 'mengenal pesan pokok')
+cek('nilai terbaik 40 → levelIndex 0 (Perlu Bimbingan)', hR.levelIndexTerbaik === 0)
+cek('awalan level 0', awalanCapaianTerbaik(0) === 'Masih memerlukan bimbingan dalam')
+cek('awalan level 1', awalanCapaianTerbaik(1) === 'Mencapai kompetensi dengan cukup baik dalam')
+cek('awalan level 2', awalanCapaianTerbaik(2) === 'Mencapai kompetensi dengan baik dalam')
+cek('awalan level 3', awalanCapaianTerbaik(3) === 'Mencapai kompetensi dengan sangat baik dalam')
+cek('awalan tanpa level → netral', awalanCapaianTerbaik(null) === 'Mencapai kompetensi dalam')
+const kalR = kalimatCapaian(hR.capaianTerbaik, hR.capaianPerluBimbingan, hR.levelIndexTerbaik)
+cek('nilai rendah: tidak ada frasa "sangat baik"', !kalR.some((k) => /sangat baik/i.test(k)))
+cek('nilai rendah: awalan level 0 + diferensiasi perlu', kalR[0].startsWith('Masih memerlukan bimbingan dalam') && kalR[1].startsWith('Perlu peningkatan dalam'))
+
+// Pola v1 untuk capaian tinggi (level 3)
+cek('kalimat capaian level 3 (sangat baik)', kalimatCapaian('menerapkan hukum nun sukun', 'mengenal pesan pokok', 3).join('|') ===
   'Mencapai kompetensi dengan sangat baik dalam menerapkan hukum nun sukun.|Perlu peningkatan dalam mengenal pesan pokok.')
-cek('kalimat capaian: titik tidak ganda', kalimatCapaian('x.', '')[0] === 'Mencapai kompetensi dengan sangat baik dalam x.')
+cek('kalimat capaian: titik tidak ganda', kalimatCapaian('x.', '', 3)[0] === 'Mencapai kompetensi dengan sangat baik dalam x.')
 cek('kalimat capaian kosong', kalimatCapaian('', '  ').length === 0)
 cek('fragmen: huruf pertama dipaksa kecil', fragmenCapaian('Membuat diagram batang') === 'membuat diagram batang')
 cek('fragmen: kalimat kedua tetap kapital', fragmenCapaian('Membuat diagram. Menjawab soal.') === 'membuat diagram. Menjawab soal.')
-cek('kalimat capaian: tidak ada kapital di tengah setelah dalam', kalimatCapaian('Membuat diagram batang', 'Menyusun tangram').join('|') ===
+cek('kalimat capaian: tidak ada kapital di tengah setelah dalam', kalimatCapaian('Membuat diagram batang', 'Menyusun tangram', 3).join('|') ===
   'Mencapai kompetensi dengan sangat baik dalam membuat diagram batang.|Perlu peningkatan dalam menyusun tangram.')
 cek('muatan: Bahasa Arab & Kemuhammadiyahan = yayasan', muatanMapel('Bahasa Arab') === 'yayasan' && muatanMapel('Kemuhammadiyahan') === 'yayasan')
 cek('muatan: Al-Islam dan lainnya = wajib', muatanMapel('Al-Islam') === 'wajib' && muatanMapel('IPAS') === 'wajib')
@@ -88,7 +106,7 @@ cek('HTML: memuat tiga bagian, target, dan tanda tangan', ['1. Membaca', '2. Men
 cek('HTML: tanpa emoji', !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(html))
 
 // ── HTML rapor ──
-const mk = (mapel, n, b, w, muatan) => ({ mapel, labelMapel: mapel, urutan: 1, muatan, nilaiAkhir: n, capaianTerbaik: b, capaianPerluBimbingan: w })
+const mk = (mapel, n, b, w, muatan, levelIndexTerbaik = 3) => ({ mapel, labelMapel: mapel, urutan: 1, muatan, nilaiAkhir: n, capaianTerbaik: b, capaianPerluBimbingan: w, levelIndexTerbaik })
 const dRapor = (over = {}) => ({ config: { namaSekolah: 'SD Muhammadiyah 01 Kukusan', alamatSekolah: 'Jl. Contoh', namaKepsek: 'Drs. Contoh', nbmKepsek: '123' },
   siswa: { id: 'a', nama: 'Ahmad', nisn: '999' }, kelas: '5A', fase: 'C', semester: '1', semLabel: 'Ganjil', tahunAjaran: '2026/2027',
   waliNama: 'Bu Wali', kota: 'Depok', tanggal: '16 Oktober 2026',
