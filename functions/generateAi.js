@@ -279,31 +279,55 @@ export function normalisasiKktp(data) {
   return keluar
 }
 
+/** Model 2.5 memakai token "berpikir" yang ikut memakan maxOutputTokens → JSON bisa terpotong. Matikan untuk keluaran JSON. */
+function configGemini(nama) {
+  const cfg = { temperature: 0.4, responseMimeType: 'application/json', maxOutputTokens: 8192 }
+  if (/^gemini-2\.5-/.test(nama)) cfg.thinkingConfig = { thinkingBudget: 0 }
+  return cfg
+}
+
+const tunggu = (ms) => new Promise((r) => setTimeout(r, ms))
+
 async function panggilGemini(apiKey, sistem, user) {
   const model = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
   let terakhir = 'Gemini tidak menjawab.'
   for (const nama of model) {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${nama}:generateContent?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: sistem }] },
-          contents: [{ role: 'user', parts: [{ text: user }] }],
-          generationConfig: { temperature: 0.4, responseMimeType: 'application/json', maxOutputTokens: 4096 },
-        }),
-      },
-    )
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      terakhir = json?.error?.message || `Gemini ${res.status}`
-      if (res.status === 404) continue
-      throw new Error(terakhir)
+    // Beban/kuota sesaat (429/500/503): coba ulang sekali pada model yang sama, lalu lanjut ke model berikutnya.
+    for (let percobaan = 0; percobaan < 2; percobaan++) {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${nama}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: sistem }] },
+            contents: [{ role: 'user', parts: [{ text: user }] }],
+            generationConfig: configGemini(nama),
+          }),
+        },
+      )
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        terakhir = `Gemini (${nama}) ${res.status}: ${json?.error?.message || 'gagal'}`
+        if (res.status === 404) break
+        if ([429, 500, 503].includes(res.status)) {
+          if (percobaan === 0) { await tunggu(1500); continue }
+          break
+        }
+        throw new Error(terakhir)
+      }
+      const kandidat = json?.candidates?.[0]
+      const teks = kandidat?.content?.parts?.map((p) => p.text || '').join('') || ''
+      if (!teks) {
+        terakhir = `Gemini (${nama}) mengembalikan jawaban kosong` + (kandidat?.finishReason ? ` (${kandidat.finishReason}).` : '.')
+        break
+      }
+      if (kandidat?.finishReason === 'MAX_TOKENS') {
+        terakhir = `Gemini (${nama}) terpotong (MAX_TOKENS).`
+        break
+      }
+      return teks
     }
-    const teks = json?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || ''
-    if (!teks) { terakhir = 'Gemini mengembalikan jawaban kosong.'; continue }
-    return teks
   }
   throw new Error(terakhir)
 }
