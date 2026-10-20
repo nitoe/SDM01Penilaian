@@ -1,4 +1,6 @@
 /** Capaian Pembelajaran resmi (Kurikulum Merdeka 2025 + ISMUBA). Teks tidak boleh diubah aplikasi. */
+import { ekuivalenMapel } from './tpImport'
+
 export type FaseCp = 'A' | 'B' | 'C'
 
 export interface CapaianResmi {
@@ -1171,10 +1173,19 @@ export const CAPAIAN_RESMI: CapaianResmi[] = [
   }
 ]
 
+/**
+ * Ambil CP resmi untuk mapel + fase.
+ * Nama mapel dicocokkan lewat ekuivalenMapel agar alias tetap ketemu, contoh:
+ * - "Ilmu Pengetahuan Alam dan Sosial" ↔ "IPAS"
+ * - "Pendidikan Jasmani, Olahraga, dan Kesehatan" ↔ "PJOK"
+ * Teks CAPAIAN_RESMI tetap memakai nama kanonik di file (IPAS, PJOK, …).
+ */
 export function capaianUntuk(mapel: string, fase: string, disiplinSeni?: string): CapaianResmi[] {
   return CAPAIAN_RESMI.filter((c) => {
-    if (c.mapel !== mapel || c.fase !== fase) return false
-    if (mapel === 'Seni Budaya') return !disiplinSeni || c.disiplinSeni === disiplinSeni
+    if (!ekuivalenMapel(c.mapel, mapel) || c.fase !== fase) return false
+    if (ekuivalenMapel(c.mapel, 'Seni Budaya') || ekuivalenMapel(mapel, 'Seni Budaya')) {
+      return !disiplinSeni || c.disiplinSeni === disiplinSeni
+    }
     return true
   })
 }
