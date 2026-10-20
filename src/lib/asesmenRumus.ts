@@ -39,7 +39,7 @@ export function hitungSasMapel(
   siswaId: string,
   semester: string,
 ): HasilStsMapel {
-  const hasil: HasilStsMapel = { nilaiAkhir: null, capaianTerbaik: '', capaianPerluBimbingan: '', levelIndexTerbaik: null }
+  const hasil: HasilStsMapel = { nilaiAkhir: null, capaianTerbaik: '', capaianPerluBimbingan: '', levelIndexTerbaik: null, levelIndexTerendah: null }
   if (!tpSemester.length) return hasil
   const perTp = tpSemester.map((tp) => ({
     tp,
@@ -110,7 +110,7 @@ export function fragmenDariTpNilai(
  * Ini menjamin setiap mapel menampilkan dua baris bila ada diferensiasi TP.
  */
 export function isiCapaianDariTerisi(
-  hasil: Pick<HasilStsMapel, 'capaianTerbaik' | 'capaianPerluBimbingan' | 'levelIndexTerbaik'>,
+  hasil: Pick<HasilStsMapel, 'capaianTerbaik' | 'capaianPerluBimbingan' | 'levelIndexTerbaik' | 'levelIndexTerendah'>,
   terisi: { tp: TpUntukCapaian; nilai: number }[],
 ): void {
   if (!terisi.length) return
@@ -121,7 +121,9 @@ export function isiCapaianDariTerisi(
   hasil.capaianTerbaik = best.deskripsi
   hasil.levelIndexTerbaik = best.levelIndex
   if (terendah.tp.id !== terbaik.tp.id) {
-    hasil.capaianPerluBimbingan = fragmenDariTpNilai(terendah.nilai, terendah.tp).deskripsi
+    const worst = fragmenDariTpNilai(terendah.nilai, terendah.tp)
+    hasil.capaianPerluBimbingan = worst.deskripsi
+    hasil.levelIndexTerendah = worst.levelIndex
   }
 }
 
@@ -137,6 +139,12 @@ export interface HasilStsMapel {
    * (mis. nilai 34 → level 0 → "Masih memerlukan bimbingan dalam …").
    */
   levelIndexTerbaik: number | null
+  /**
+   * Indeks level KKTP (0–3) dari nilai TP terendah (bila beda TP).
+   * Awalan baris kedua mengikuti level ini — "perlu bimbingan/peningkatan"
+   * HANYA jika level benar-benar rendah (0–1), bukan untuk nilai 82 (level 2).
+   */
+  levelIndexTerendah: number | null
 }
 
 /**
@@ -159,17 +167,29 @@ export function hitungStsMapel(
   semester: string,
   tpUntukCapaian?: TpUntukCapaian[],
 ): HasilStsMapel {
-  const hasil: HasilStsMapel = { nilaiAkhir: null, capaianTerbaik: '', capaianPerluBimbingan: '', levelIndexTerbaik: null }
-  const perTpNilai = tpCakupan.map((tp) => ({
-    tp,
-    nilai: sts[tp.id]?.[siswaId]?.nilai ?? null,
-    bobot: bobotUntukSts(tp, semester),
-  }))
-  if (tpCakupan.length) {
-    hasil.nilaiAkhir = hitungNilaiAkhirMapel(perTpNilai.map((x) => ({ nilai: x.nilai, bobot: x.bobot })))
+  const hasil: HasilStsMapel = {
+    nilaiAkhir: null,
+    capaianTerbaik: '',
+    capaianPerluBimbingan: '',
+    levelIndexTerbaik: null,
+    levelIndexTerendah: null,
   }
 
   const pool = tpUntukCapaian ?? tpCakupan
+  const nilaiDari = (daftar: TpUntukCapaian[]) =>
+    hitungNilaiAkhirMapel(
+      daftar.map((tp) => ({
+        nilai: sts[tp.id]?.[siswaId]?.nilai ?? null,
+        bobot: bobotUntukSts(tp, semester),
+      })),
+    )
+
+  // Utama: cakupan STS. Fallback: pool ber-nilai (hindari capaian tanpa angka).
+  hasil.nilaiAkhir = nilaiDari(tpCakupan)
+  if (hasil.nilaiAkhir == null && pool.length) {
+    hasil.nilaiAkhir = nilaiDari(pool)
+  }
+
   const terisi = pool
     .map((tp) => ({ tp, nilai: sts[tp.id]?.[siswaId]?.nilai ?? null }))
     .filter((x) => x.nilai != null && Number.isFinite(x.nilai))
@@ -193,42 +213,63 @@ export function fragmenCapaian(teks: string): string {
 }
 
 /**
- * Awalan kalimat capaian terbaik — mengikuti level KKTP nilai TP tertinggi.
- * Indeks: 0 Perlu Bimbingan/Mulai Berkembang … 3 Sangat Baik/Mahir.
- * Jangan selalu "sangat baik": nilai 34 (level 0) harus memakai awalan level 0.
+ * Awalan capaian sesuai level KKTP (0–3).
+ * Dipakai untuk TP terbaik maupun TP terendah yang nilainya masih baik/sangat baik.
  */
-export const AWALAN_CAPAIAN_TERBAIK = [
-  'Masih memerlukan bimbingan dalam',
-  'Mencapai kompetensi dengan cukup baik dalam',
-  'Mencapai kompetensi dengan baik dalam',
-  'Mencapai kompetensi dengan sangat baik dalam',
+export const AWALAN_CAPAIAN_LEVEL = [
+  'Masih memerlukan bimbingan dalam',       // 0 — sangat rendah
+  'Mencapai kompetensi dengan cukup baik dalam', // 1
+  'Mencapai kompetensi dengan baik dalam',       // 2
+  'Mencapai kompetensi dengan sangat baik dalam', // 3
 ] as const
 
+/** @deprecated alias — pakai AWALAN_CAPAIAN_LEVEL */
+export const AWALAN_CAPAIAN_TERBAIK = AWALAN_CAPAIAN_LEVEL
+
+/** Awalan perbaikan — HANYA untuk TP terendah ber-level rendah (0–1). */
 export const AWALAN_CAPAIAN_PERLU = 'Perlu peningkatan dalam'
 
 export function awalanCapaianTerbaik(levelIndex: number | null | undefined): string {
   if (levelIndex == null || !Number.isFinite(levelIndex)) {
-    // Tanpa info level: netral (bukan mengklaim "sangat baik")
     return 'Mencapai kompetensi dalam'
   }
   const i = Math.max(0, Math.min(3, Math.floor(Number(levelIndex))))
-  return AWALAN_CAPAIAN_TERBAIK[i]
+  return AWALAN_CAPAIAN_LEVEL[i]
+}
+
+/**
+ * Awalan baris TP terendah.
+ * - Level 0: "Masih memerlukan bimbingan dalam …" (nilai sangat rendah)
+ * - Level 1: "Perlu peningkatan dalam …" (masih perlu penguatan)
+ * - Level 2–3: awalan capaian positif (bukan "perlu …") — mis. nilai 82 tidak boleh
+ *   ditulis seolah butuh bimbingan.
+ */
+export function awalanCapaianTerendah(levelIndex: number | null | undefined): string {
+  if (levelIndex == null || !Number.isFinite(levelIndex)) {
+    return AWALAN_CAPAIAN_PERLU
+  }
+  const i = Math.max(0, Math.min(3, Math.floor(Number(levelIndex))))
+  if (i === 0) return AWALAN_CAPAIAN_LEVEL[0]
+  if (i === 1) return AWALAN_CAPAIAN_PERLU
+  return AWALAN_CAPAIAN_LEVEL[i]
 }
 
 /**
  * Kalimat capaian rapor.
- * - Terbaik: awalan sesuai level KKTP nilai TP tertinggi + fragmen deskripsi level itu.
- * - Perlu: "Perlu peningkatan dalam …" dari TP bernilai terendah (bila beda TP).
+ * - Baris 1: TP nilai tertinggi — awalan sesuai level nilai itu.
+ * - Baris 2: TP nilai terendah (bila beda TP) — awalan sesuai level nilai terendah
+ *   ("perlu bimbingan/peningkatan" hanya jika level 0–1).
  */
 export function kalimatCapaian(
   terbaik: string,
   perlu: string,
   levelIndexTerbaik?: number | null,
+  levelIndexTerendah?: number | null,
 ): string[] {
   const hasil: string[] = []
   const b = fragmenCapaian(terbaik)
   const p = fragmenCapaian(perlu)
   if (b) hasil.push(akhiriTitik(`${awalanCapaianTerbaik(levelIndexTerbaik)} ${b}`))
-  if (p) hasil.push(akhiriTitik(`${AWALAN_CAPAIAN_PERLU} ${p}`))
+  if (p) hasil.push(akhiriTitik(`${awalanCapaianTerendah(levelIndexTerendah)} ${p}`))
   return hasil
 }

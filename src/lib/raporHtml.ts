@@ -20,6 +20,8 @@ export interface BarisRaporSts {
   capaianPerluBimbingan: string
   /** Indeks level KKTP (0–3) TP bernilai tertinggi — memilih awalan kalimat capaian. */
   levelIndexTerbaik?: number | null
+  /** Level KKTP TP terendah — awalan baris kedua. */
+  levelIndexTerendah?: number | null
 }
 
 export interface DataRaporSts {
@@ -70,7 +72,7 @@ const FASE_A_YAYASAN = [
 
 function barisTabel(no: number, item: BarisRaporSts): string {
   const nilai = item.nilaiAkhir == null ? '—' : String(item.nilaiAkhir)
-  const kalimat = kalimatCapaian(item.capaianTerbaik, item.capaianPerluBimbingan, item.levelIndexTerbaik)
+  const kalimat = kalimatCapaian(item.capaianTerbaik, item.capaianPerluBimbingan, item.levelIndexTerbaik, item.levelIndexTerendah)
   const capaian = kalimat.length
     ? kalimat.map((k, i) => `<div class="${i === 0 ? 'desc-best' : 'desc-worst'}">${escapeHtml(k)}</div>`).join('')
     : item.nilaiAkhir == null

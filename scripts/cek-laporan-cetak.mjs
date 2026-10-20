@@ -1,7 +1,7 @@
 // Uji rumus laporan cetak: Rapor STS (rapor bayangan) dan Laporan Tahsin-Tahfizh.
 // Jalankan: node --experimental-strip-types scripts/cek-laporan-cetak.mjs
 import { readFileSync } from 'node:fs'
-import { awalanCapaianTerbaik, bobotUntukSts, fragmenCapaian, hitungStsMapel, kalimatCapaian, muatanMapel, nilaiSasMapel } from '../src/lib/asesmenRumus.ts'
+import { awalanCapaianTerbaik, awalanCapaianTerendah, bobotUntukSts, fragmenCapaian, hitungStsMapel, kalimatCapaian, muatanMapel, nilaiSasMapel } from '../src/lib/asesmenRumus.ts'
 import {
   akurasiBacaan, dalamRentang, kelompokkanMenulis, kelompokkanSetoran, narasiHafalan, narasiMembaca,
   posisiMenulis, rataMenulis, rentangSemester, susunLaporanSiswa,
@@ -42,9 +42,27 @@ cek('awalan level 1', awalanCapaianTerbaik(1) === 'Mencapai kompetensi dengan cu
 cek('awalan level 2', awalanCapaianTerbaik(2) === 'Mencapai kompetensi dengan baik dalam')
 cek('awalan level 3', awalanCapaianTerbaik(3) === 'Mencapai kompetensi dengan sangat baik dalam')
 cek('awalan tanpa level → netral', awalanCapaianTerbaik(null) === 'Mencapai kompetensi dalam')
-const kalR = kalimatCapaian(hR.capaianTerbaik, hR.capaianPerluBimbingan, hR.levelIndexTerbaik)
+const kalR = kalimatCapaian(hR.capaianTerbaik, hR.capaianPerluBimbingan, hR.levelIndexTerbaik, hR.levelIndexTerendah)
 cek('nilai rendah: tidak ada frasa "sangat baik"', !kalR.some((k) => /sangat baik/i.test(k)))
-cek('nilai rendah: awalan level 0 + diferensiasi perlu', kalR[0].startsWith('Masih memerlukan bimbingan dalam') && kalR[1].startsWith('Perlu peningkatan dalam'))
+cek('nilai rendah: kedua baris awalan bimbingan (level 0)', kalR[0].startsWith('Masih memerlukan bimbingan dalam') && kalR[1].startsWith('Masih memerlukan bimbingan dalam'))
+cek('levelIndex terendah 20 → 0', hR.levelIndexTerendah === 0)
+
+// Kasus Abyan: TP terendah 82 (level 2) — BUKAN "perlu bimbingan/peningkatan"
+cek('awalan terendah level 0 = bimbingan', awalanCapaianTerendah(0) === 'Masih memerlukan bimbingan dalam')
+cek('awalan terendah level 1 = perlu peningkatan', awalanCapaianTerendah(1) === 'Perlu peningkatan dalam')
+cek('awalan terendah level 2 = baik (bukan perlu)', awalanCapaianTerendah(2) === 'Mencapai kompetensi dengan baik dalam')
+cek('awalan terendah level 3 = sangat baik (bukan perlu)', awalanCapaianTerendah(3) === 'Mencapai kompetensi dengan sangat baik dalam')
+const tpHigh = [
+  { id: 'h1', tipe: 'pengetahuan', namaTp: 'TP A', bobotPerSemester: { 1: 1 }, levels: L(['a0', 'a1', 'a2', 'menyelesaikan semua soal dengan benar']) },
+  { id: 'h2', tipe: 'pengetahuan', namaTp: 'TP B', bobotPerSemester: { 1: 1 }, levels: L(['b0', 'b1', 'menyelesaikan sebagian besar soal perkalian', 'b3']) },
+]
+const stsHigh = { h1: { a: { nilai: 91 } }, h2: { a: { nilai: 82 } } }
+const hAbyan = hitungStsMapel(tpHigh, stsHigh, 'a', '1')
+cek('Abyan: level terbaik 91 → 3, terendah 82 → 2', hAbyan.levelIndexTerbaik === 3 && hAbyan.levelIndexTerendah === 2)
+const kalAbyan = kalimatCapaian(hAbyan.capaianTerbaik, hAbyan.capaianPerluBimbingan, hAbyan.levelIndexTerbaik, hAbyan.levelIndexTerendah)
+cek('Abyan: baris 1 sangat baik', kalAbyan[0].startsWith('Mencapai kompetensi dengan sangat baik dalam'))
+cek('Abyan: baris 2 "dengan baik" — tanpa perlu bimbingan/peningkatan', kalAbyan[1].startsWith('Mencapai kompetensi dengan baik dalam') && !/perlu (bimbingan|peningkatan)/i.test(kalAbyan[1]))
+
 
 // Diferensiasi 2 baris wajib bila ≥2 TP ber-nilai (meski deskripsi level kosong → fallback nama TP)
 const tpKosong = [
@@ -131,7 +149,7 @@ cek('HTML: memuat tiga bagian, target, dan tanda tangan', ['1. Membaca', '2. Men
 cek('HTML: tanpa emoji', !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(html))
 
 // ── HTML rapor ──
-const mk = (mapel, n, b, w, muatan, levelIndexTerbaik = 3) => ({ mapel, labelMapel: mapel, urutan: 1, muatan, nilaiAkhir: n, capaianTerbaik: b, capaianPerluBimbingan: w, levelIndexTerbaik })
+const mk = (mapel, n, b, w, muatan, levelIndexTerbaik = 3, levelIndexTerendah = null) => ({ mapel, labelMapel: mapel, urutan: 1, muatan, nilaiAkhir: n, capaianTerbaik: b, capaianPerluBimbingan: w, levelIndexTerbaik, levelIndexTerendah })
 const dRapor = (over = {}) => ({ config: { namaSekolah: 'SD Muhammadiyah 01 Kukusan', alamatSekolah: 'Jl. Contoh', namaKepsek: 'Drs. Contoh', nbmKepsek: '123' },
   siswa: { id: 'a', nama: 'Ahmad', nisn: '999' }, kelas: '5A', fase: 'C', semester: '1', semLabel: 'Ganjil', tahunAjaran: '2026/2027',
   waliNama: 'Bu Wali', kota: 'Depok', tanggal: '16 Oktober 2026',

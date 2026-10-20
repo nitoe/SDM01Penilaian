@@ -84,6 +84,7 @@ function barisDariSumberSas(
       capaianTerbaik: h.capaianTerbaik,
       capaianPerluBimbingan: h.capaianPerluBimbingan,
       levelIndexTerbaik: h.levelIndexTerbaik,
+      levelIndexTerendah: h.levelIndexTerendah,
     }
   })
 }
