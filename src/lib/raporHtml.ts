@@ -55,6 +55,26 @@ export function escapeHtml(str: unknown): string {
     .replace(/"/g, '&quot;')
 }
 
+/**
+ * Nama file default saat "Simpan sebagai PDF".
+ * Format: "Rapor STS - Nama Siswa" / "Rapor SAS - Nama Siswa".
+ */
+export function namaFileRapor(jenis: JenisRapor, namaSiswa: string): string {
+  const label = jenis === 'sas' ? 'Rapor SAS' : 'Rapor STS'
+  const nama = String(namaSiswa ?? '')
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return nama ? `${label} - ${nama}` : label
+}
+
+export function namaFileRaporKelas(jenis: JenisRapor, kelas: string): string {
+  const label = jenis === 'sas' ? 'Rapor SAS' : 'Rapor STS'
+  const k = String(kelas ?? '').trim() || 'Kelas'
+  return `${label} - Kelas ${k}`
+}
+
 const nomorKelas = (kelas: string) => parseInt(String(kelas).replace(/[^0-9]/g, ''), 10)
 const faseDariNomor = (n: number) => (isNaN(n) ? '?' : n <= 2 ? 'A' : n <= 4 ? 'B' : n <= 6 ? 'C' : 'D')
 

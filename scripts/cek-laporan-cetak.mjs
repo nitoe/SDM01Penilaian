@@ -8,6 +8,7 @@ import {
 } from '../src/lib/tahsinLaporanRumus.ts'
 import { bangunHalamanTahsin } from '../src/lib/tahsinLaporanHtml.ts'
 import { buildBodyPrintSts, buildBodyPrintSas, dokumenPratinjauRapor } from '../src/lib/raporHtml.ts'
+import { namaFileRapor, namaFileRaporKelas } from '../src/lib/raporHtml.ts'
 
 let gagal = 0
 const cek = (n, ok) => { if (!ok) gagal++; console.log(`${ok ? 'LULUS' : 'GAGAL'}  ${n}`) }
@@ -103,6 +104,14 @@ cek('muatan: Al-Islam dan lainnya = wajib', muatanMapel('Al-Islam') === 'wajib' 
 const slm = { t1: { a: { slm: 70 } }, t2: { a: { slm: 80 } } }
 const sas = { t1: { a: { nilai: 90 } }, t2: { a: { nilai: 100 } } }
 cek('SAS: gabung SLM+SAS per TP lalu bobot = 82', nilaiSasMapel([tp1, tp2], { slm, sts: {}, sas, cakupanSas: new Set(['t1', 't2']) }, 'a', '1') === 82)
+
+
+// ── Nama file PDF cetak ──
+cek('nama file STS satu siswa', namaFileRapor('sts', 'Abyan Nandana Khalif') === 'Rapor STS - Abyan Nandana Khalif')
+cek('nama file SAS satu siswa', namaFileRapor('sas', 'Abdurrahman Ar Ribery') === 'Rapor SAS - Abdurrahman Ar Ribery')
+cek('nama file: karakter terlarang dibersihkan', namaFileRapor('sts', 'Ahmad / Siti: Uji') === 'Rapor STS - Ahmad Siti Uji')
+cek('nama file kelas', namaFileRaporKelas('sts', '5A') === 'Rapor STS - Kelas 5A')
+cek('nama file tanpa nama siswa', namaFileRapor('sas', '  ') === 'Rapor SAS')
 
 // ── Tahsin ──
 const kw = (detik) => ({ seconds: detik, nanoseconds: 0 })

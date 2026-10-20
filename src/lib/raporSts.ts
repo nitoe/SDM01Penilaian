@@ -20,7 +20,7 @@ import { cetakDokumenHtml } from './cetakIframe'
 import { hitungStsMapel, muatanMapel } from './asesmenRumus'
 import type { ConfigAkademik, Mapel, Semester, TujuanPembelajaran } from '../types/akademik'
 
-import { buildBodyPrintRapor, cssHalaman, escapeHtml, PRINT_CSS, type BarisRaporSts, type DataRaporSts, type JenisRapor } from './raporHtml'
+import { buildBodyPrintRapor, cssHalaman, escapeHtml, namaFileRapor, namaFileRaporKelas, PRINT_CSS, type BarisRaporSts, type DataRaporSts, type JenisRapor } from './raporHtml'
 export type { BarisRaporSts, DataRaporSts } from './raporHtml'
 export {
   buildBodyPrintRapor,
@@ -213,6 +213,8 @@ export async function muatDataRaporStsKelas(ctx: {
   }))
 }
 
+export { namaFileRapor, namaFileRaporKelas } from './raporHtml'
+
 function cetakHtml(judul: string, body: string, d?: DataRaporSts): void {
   const html = `<!DOCTYPE html>
 <html lang="id">
@@ -226,17 +228,17 @@ ${body}
 </body>
 </html>`
 
-  cetakDokumenHtml(html)
+  cetakDokumenHtml(html, judul)
 }
 
 export function cetakRapor(d: DataRaporSts, jenis: JenisRapor): void {
-  cetakHtml(`Rapor ${jenis.toUpperCase()} — ${d.siswa.nama} — Kelas ${d.kelas}`, buildBodyPrintRapor(d, jenis), d)
+  cetakHtml(namaFileRapor(jenis, d.siswa.nama), buildBodyPrintRapor(d, jenis), d)
 }
 
 /** Cetak banyak siswa sekaligus: satu siswa per halaman (atau lebih bila rapornya panjang). */
 export function cetakRaporBanyak(daftar: DataRaporSts[], jenis: JenisRapor): void {
   if (!daftar.length) return
-  cetakHtml(`Rapor ${jenis.toUpperCase()} — Kelas ${daftar[0].kelas}`, daftar.map((d) => buildBodyPrintRapor(d, jenis)).join('\n'))
+  cetakHtml(namaFileRaporKelas(jenis, daftar[0].kelas), daftar.map((d) => buildBodyPrintRapor(d, jenis)).join('\n'))
 }
 
 export const cetakRaporSts = (d: DataRaporSts) => cetakRapor(d, 'sts')
