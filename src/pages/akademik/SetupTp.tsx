@@ -14,6 +14,7 @@ import {
   importTPBatch,
   mapelBerlakuDiTingkatan,
   normalisasiAlokasiTp,
+  salinTPKeKelas,
   saveTP,
   setDisiplinSeniBatch,
   validasiLevels,
@@ -141,6 +142,12 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
   const [pratinjauImpor, setPratinjauImpor] = useState<TpImportHasil | null>(null)
   const [modeImpor, setModeImpor] = useState<ModeImporTp>('tambah')
   const [busyImpor, setBusyImpor] = useState(false)
+  /** Panel salin TP+KKTP(+bobot) ke kelas paralel setingkat. */
+  const [panelSalin, setPanelSalin] = useState(false)
+  const [kelasSalinDipilih, setKelasSalinDipilih] = useState<string[]>([])
+  const [modeSalin, setModeSalin] = useState<ModeImporTp>('tambah')
+  const [termasukBobotSalin, setTermasukBobotSalin] = useState(true)
+  const [busySalin, setBusySalin] = useState(false)
   const [refreshHub, setRefreshHub] = useState(0)
   /** Tab khusus Seni Budaya: 'setup' | nama disiplin | 'semua' */
   const [tabSeni, setTabSeni] = useState<string>('setup')
@@ -321,6 +328,74 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
       show('Gagal mengimpor TP. Periksa hak akses Firestore.', true)
     } finally {
       setBusyImpor(false)
+    }
+  }
+
+  /** Kelas paralel setingkat yang guru ajar untuk mapel ini (selain kelas sumber). */
+  const kelasParalelSalin = useMemo(() => {
+    if (!mapel || !kelas || !tingkatan) return [] as string[]
+    return pilihan
+      .filter((p) => p.mapel === mapel && tingkatanDariKelas(p.kelas) === tingkatan && p.kelas !== kelas)
+      .map((p) => p.kelas)
+      .sort((a, b) => a.localeCompare(b, 'id'))
+  }, [pilihan, mapel, kelas, tingkatan])
+
+  async function jalankanSalin() {
+    if (!mapel || !kelas || !kelasSalinDipilih.length || !list?.length) return
+    // Hanya kelas setingkat + yang ada di penugasan (atau admin lewat pilihan)
+    const tujuan = kelasSalinDipilih
+      .map((k) => k.toUpperCase())
+      .filter((k) => k !== kelas && tingkatanDariKelas(k) === tingkatan && kelasParalelSalin.includes(k))
+    if (!tujuan.length) {
+      show('Pilih minimal satu kelas paralel setingkat.', true)
+      return
+    }
+    if (
+      modeSalin === 'ganti' &&
+      !window.confirm(
+        `Mode GANTI akan menghapus SEMUA TP ${mapel} di kelas ${tujuan.join(', ')}, lalu menyalin ulang dari kelas ${kelas}.\n\nLanjutkan?`,
+      )
+    ) {
+      return
+    }
+    if (
+      modeSalin === 'tambah' &&
+      !window.confirm(
+        `Salin ${list.length} TP ${mapel} dari kelas ${kelas} ke ${tujuan.join(', ')}?\n` +
+          (termasukBobotSalin ? 'Bobot semester ikut disalin.\n' : 'Bobot semester TIDAK disalin.\n') +
+          'TP yang nomor/namanya sudah ada di tujuan akan dilewati.',
+      )
+    ) {
+      return
+    }
+    setBusySalin(true)
+    try {
+      const hasil = await salinTPKeKelas({
+        mapel,
+        kelasSumber: kelas,
+        kelasTujuan: tujuan,
+        mode: modeSalin,
+        termasukBobot: termasukBobotSalin,
+      })
+      const totalDitulis = hasil.reduce((s, h) => s + h.ditulis, 0)
+      const totalLewat = hasil.reduce((s, h) => s + h.dilewati, 0)
+      const totalHapus = hasil.reduce((s, h) => s + h.dihapus, 0)
+      const rincian = hasil
+        .map((h) => `${h.kelasTujuan}: ${h.ditulis} ditulis` + (h.dilewati ? `/${h.dilewati} dilewati` : '') + (h.dihapus ? `/${h.dihapus} dihapus` : ''))
+        .join('; ')
+      show(
+        totalDitulis || totalLewat || totalHapus
+          ? `Salin selesai — ${rincian}.`
+          : 'Tidak ada TP yang disalin (sumber kosong atau semua sudah ada di tujuan).',
+      )
+      setPanelSalin(false)
+      setKelasSalinDipilih([])
+      setRefreshHub((n) => n + 1)
+    } catch (e) {
+      console.error(e)
+      show('Gagal menyalin TP. Periksa hak akses Firestore.', true)
+    } finally {
+      setBusySalin(false)
     }
   }
 
@@ -1216,6 +1291,20 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
               <button type="button" className={btnGhost} onClick={() => setPanelImpor((v) => !v)}>
                 {panelImpor ? 'Tutup panel' : 'Impor / Ekspor'}
               </button>
+              {kelasParalelSalin.length > 0 && (
+                <button
+                  type="button"
+                  className={btnGhost}
+                  disabled={!list?.length}
+                  onClick={() => {
+                    setPanelSalin((v) => !v)
+                    if (!panelSalin) setKelasSalinDipilih([])
+                  }}
+                  title={list?.length ? 'Salin TP, KKTP, dan bobot ke kelas paralel setingkat' : 'Belum ada TP untuk disalin'}
+                >
+                  {panelSalin ? 'Tutup salin' : 'Salin ke kelas lain'}
+                </button>
+              )}
               <Link
                 to={`/akademik/bobot-semester?mapel=${encodeURIComponent(mapel)}&kelas=${encodeURIComponent(kelas)}`}
                 className={`${btnGhost} no-underline`}
@@ -1540,6 +1629,115 @@ export default function SetupTp({ profile }: { profile: AppUser }) {
                     )
                   })()}
                 </div>
+              )}
+            </section>
+          )}
+
+          {panelSalin && tulis && kelasParalelSalin.length > 0 && (
+            <section className="card-soft space-y-3 p-4">
+              <h2 className="text-[14px] font-semibold text-slate-900">
+                Salin TP &amp; KKTP — {mapel} kelas {kelas} → kelas paralel
+              </h2>
+              <p className="text-[12.5px] leading-relaxed text-muted">
+                Salin seluruh Tujuan Pembelajaran, deskripsi KKTP, dan (opsional) bobot semester ke kelas
+                paralel setingkat yang Anda ajar. Hanya kelas tingkat {tingkatan} yang ditampilkan agar
+                tidak tersalin ke tingkat lain. Nilai siswa tidak ikut disalin.
+              </p>
+              {!list?.length ? (
+                <Notice>Belum ada TP di kelas sumber. Susun TP dulu sebelum menyalin.</Notice>
+              ) : (
+                <>
+                  <fieldset className="space-y-2">
+                    <legend className="text-[12.5px] font-medium text-slate-800">Pilih kelas tujuan</legend>
+                    <div className="flex flex-wrap gap-x-4 gap-y-2">
+                      {kelasParalelSalin.map((k) => {
+                        const checked = kelasSalinDipilih.includes(k)
+                        return (
+                          <label key={k} className="inline-flex cursor-pointer items-center gap-2 text-[13px]">
+                            <input
+                              type="checkbox"
+                              className="rounded border-slate-300"
+                              checked={checked}
+                              onChange={() =>
+                                setKelasSalinDipilih((prev) =>
+                                  checked ? prev.filter((x) => x !== k) : [...prev, k],
+                                )
+                              }
+                            />
+                            <span className="font-medium text-slate-900">{k}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        type="button"
+                        className={btnGhostSm}
+                        onClick={() => setKelasSalinDipilih([...kelasParalelSalin])}
+                      >
+                        Pilih semua
+                      </button>
+                      <button type="button" className={btnGhostSm} onClick={() => setKelasSalinDipilih([])}>
+                        Kosongkan
+                      </button>
+                    </div>
+                  </fieldset>
+
+                  <div className="flex flex-wrap items-center gap-4 text-[12.5px]">
+                    <label className="inline-flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="modeSalin"
+                        checked={modeSalin === 'tambah'}
+                        onChange={() => setModeSalin('tambah')}
+                      />
+                      Tambah (lewati nomor/nama yang sudah ada)
+                    </label>
+                    <label className="inline-flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="modeSalin"
+                        checked={modeSalin === 'ganti'}
+                        onChange={() => setModeSalin('ganti')}
+                      />
+                      Ganti (hapus TP di tujuan dulu)
+                    </label>
+                  </div>
+
+                  <label className="inline-flex items-center gap-2 text-[12.5px]">
+                    <input
+                      type="checkbox"
+                      className="rounded border-slate-300"
+                      checked={termasukBobotSalin}
+                      onChange={(e) => setTermasukBobotSalin(e.target.checked)}
+                    />
+                    Sertakan bobot semester (bobotPerSemester)
+                  </label>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className={btnPrimary}
+                      disabled={busySalin || !kelasSalinDipilih.length || !list?.length}
+                      onClick={() => void jalankanSalin()}
+                    >
+                      {busySalin
+                        ? 'Menyalin…'
+                        : `Salin ${list.length} TP ke ${kelasSalinDipilih.length || '…'} kelas`}
+                    </button>
+                    <button
+                      type="button"
+                      className={btnGhost}
+                      disabled={busySalin}
+                      onClick={() => {
+                        setPanelSalin(false)
+                        setKelasSalinDipilih([])
+                      }}
+                    >
+                      Batal
+                    </button>
+                  </div>
+                </>
               )}
             </section>
           )}

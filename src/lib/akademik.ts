@@ -388,6 +388,149 @@ export async function importTPBatch(
   return { ditulis, dilewati, dihapus, disiplinDilengkapi }
 }
 
+export interface HasilSalinTpKelas {
+  kelasTujuan: string
+  ditulis: number
+  dilewati: number
+  dihapus: number
+}
+
+/**
+ * Salin seluruh TP + KKTP (dan opsional bobot semester) dari satu kelas paralel ke kelas lain
+ * yang setingkat. Untuk guru bidang studi yang menyusun TP di satu rombel lalu menyalin ke
+ * rombel paralel (mis. PJOK 5A → 5B, 5C).
+ *
+ * - Hanya kelas tujuan dengan `tingkatan` sama dengan sumber yang diproses; yang beda tingkat dilewati.
+ * - Mode `tambah`: lewati nomorTp / namaTp yang sudah ada di tujuan.
+ * - Mode `ganti`: hapus dulu semua TP mapel×kelas tujuan, lalu tulis ulang dari sumber.
+ * - `termasukBobot` (default true): salin juga `bobotPerSemester` + field legacy. Ini disengaja —
+ *   berbeda dari `saveTP`/`importTPBatch` yang sengaja tidak menyentuh bobot (ANTIREGRESI §14.3).
+ *   Salin antar-kelas adalah aksi eksplisit guru untuk menyamakan alokasi.
+ * - Nilai siswa (nilai_tp / STS / SAS) TIDAK disalin.
+ */
+export async function salinTPKeKelas(opts: {
+  mapel: string
+  kelasSumber: string
+  kelasTujuan: string[]
+  mode?: ModeImporTp
+  termasukBobot?: boolean
+}): Promise<HasilSalinTpKelas[]> {
+  const mapel = String(opts.mapel || '').trim()
+  const sumber = String(opts.kelasSumber || '').toUpperCase()
+  const mode: ModeImporTp = opts.mode === 'ganti' ? 'ganti' : 'tambah'
+  const termasukBobot = opts.termasukBobot !== false
+  if (!mapel || !sumber) return []
+
+  const tingkatanSumber = tingkatanDariKelas(sumber)
+  const tujuanUnik = [
+    ...new Set(
+      (opts.kelasTujuan || [])
+        .map((k) => String(k || '').toUpperCase())
+        .filter((k) => k && k !== sumber && tingkatanDariKelas(k) === tingkatanSumber),
+    ),
+  ]
+  if (!tujuanUnik.length) return []
+
+  const daftarSumber = await getTPList(mapel, sumber)
+  if (!daftarSumber.length) {
+    return tujuanUnik.map((kelasTujuan) => ({ kelasTujuan, ditulis: 0, dilewati: 0, dihapus: 0 }))
+  }
+
+  const hasil: HasilSalinTpKelas[] = []
+
+  for (const kelasTujuan of tujuanUnik) {
+    let ditulis = 0
+    let dilewati = 0
+    let dihapus = 0
+
+    const existing = await getTPList(mapel, kelasTujuan)
+    const byNomor = new Map(existing.map((t) => [t.nomorTp, t]))
+    const byNama = new Map(
+      existing.map((t) => [kunciNamaTp(t.namaTp), t] as const).filter(([k]) => k),
+    )
+
+    if (mode === 'ganti') {
+      for (let i = 0; i < existing.length; i += 400) {
+        const batch = writeBatch(db)
+        existing.slice(i, i + 400).forEach((t) => batch.delete(doc(db, 'tp_kktp', t.id)))
+        await batch.commit()
+        dihapus += Math.min(400, existing.length - i)
+      }
+      byNomor.clear()
+      byNama.clear()
+    }
+
+    const yangAkanDitulis = daftarSumber.filter((tp) => {
+      if (mode !== 'tambah') return true
+      const kn = kunciNamaTp(tp.namaTp)
+      if (byNomor.has(tp.nomorTp) || (kn && byNama.has(kn))) {
+        dilewati += 1
+        return false
+      }
+      byNomor.set(tp.nomorTp, tp)
+      if (kn) byNama.set(kn, tp)
+      return true
+    })
+
+    const tingkatan = tingkatanDariKelas(kelasTujuan)
+    for (let i = 0; i < yangAkanDitulis.length; i += 400) {
+      const batch = writeBatch(db)
+      for (const tp of yangAkanDitulis.slice(i, i + 400)) {
+        const ref = doc(collection(db, 'tp_kktp'))
+        const data: Record<string, unknown> = {
+          mapel,
+          kelas: kelasTujuan,
+          tingkatan,
+          fase: faseDariTingkatan(tingkatan),
+          nomorTp: tp.nomorTp,
+          namaTp: tp.namaTp,
+          cp: tp.cp || '',
+          tipe: tp.tipe === 'kinerja' ? 'kinerja' : 'pengetahuan',
+          bobotSlm: tp.bobotSlm ?? 60,
+          bobotSas: tp.bobotSas ?? 40,
+          levels:
+            tp.levels?.length === 4
+              ? tp.levels.map((l) => ({ min: l.min, maks: l.maks, deskripsi: l.deskripsi || '' }))
+              : LEVEL_RANGE_DEFAULT.map((l) => ({ ...l, deskripsi: '' })),
+          createdAt: serverTimestamp(),
+          createdBy: uid(),
+        }
+        if (adalahSeniBudaya(mapel) && normalisasiDisiplinSeni(tp.disiplinSeni)) {
+          data.disiplinSeni = normalisasiDisiplinSeni(tp.disiplinSeni)
+        }
+        if (termasukBobot) {
+          const bps = tp.bobotPerSemester
+          if (bps && typeof bps === 'object') {
+            const keys = (Object.keys(bps) as Semester[]).filter((s) => bps[s] != null)
+            if (keys.length) {
+              const copy: Partial<Record<Semester, number>> = {}
+              keys.forEach((s) => {
+                copy[s] = Number(bps[s])
+              })
+              const primer: Semester = keys.includes('1') ? '1' : '2'
+              data.bobotPerSemester = copy
+              data.semester = primer
+              data.bobotMapel = copy[primer] ?? 0
+            }
+          } else if (tp.semester && tp.bobotMapel != null) {
+            // Legacy sumber tanpa bobotPerSemester
+            data.semester = tp.semester === '2' ? '2' : '1'
+            data.bobotMapel = Number(tp.bobotMapel)
+            data.bobotPerSemester = { [data.semester as Semester]: Number(tp.bobotMapel) }
+          }
+        }
+        batch.set(ref, data)
+        ditulis += 1
+      }
+      await batch.commit()
+    }
+
+    hasil.push({ kelasTujuan, ditulis, dilewati, dihapus })
+  }
+
+  return hasil
+}
+
 /**
  * Tetapkan disiplin banyak TP Seni Budaya sekaligus. Hanya menulis `disiplinSeni` (dan jejak pembaruan);
  * nilai, bobot, semester, dan KKTP tidak tersentuh. Disiplin di luar daftar baku ditolak.
