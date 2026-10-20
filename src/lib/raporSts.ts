@@ -50,7 +50,10 @@ export function faseDariKelas(kelas: string): string {
 interface SumberMapelSts {
   mapel: Mapel
   labelMapel: string
+  /** TP masuk cakupan STS — dasar nilai akhir. */
   tpCakupan: TujuanPembelajaran[]
+  /** Semua TP mapel di semester ini — pool diferensiasi capaian terbaik/terburuk. */
+  tpSemester: TujuanPembelajaran[]
   nilaiKelas: Awaited<ReturnType<typeof getNilaiAsesmenKelas>>
 }
 
@@ -71,10 +74,12 @@ async function muatSumberSts(kelas: string, semester: Semester, tahunAjaran: str
         getNilaiAsesmenKelas({ jenis: 'sts', mapel: m.nama, kelas, semester, tahunAjaran }),
       ])
       const ids = new Set(cakupan?.tpIds ?? [])
+      const tpSemester = tpList.filter((tp) => tpMasukSemester(tp, semester))
       return {
         mapel: m,
         labelMapel: m.nama === 'Seni Budaya' ? labelSeniBudaya(disiplinAktif) : m.nama,
-        tpCakupan: tpList.filter((tp) => ids.has(tp.id) && tpMasukSemester(tp, semester)),
+        tpCakupan: tpSemester.filter((tp) => ids.has(tp.id)),
+        tpSemester,
         nilaiKelas,
       }
     }),
@@ -83,7 +88,7 @@ async function muatSumberSts(kelas: string, semester: Semester, tahunAjaran: str
 
 function barisDariSumber(sumber: SumberMapelSts[], siswaId: string, semester: Semester): BarisRaporSts[] {
   return sumber.map((s) => {
-    const h = hitungStsMapel(s.tpCakupan, s.nilaiKelas, siswaId, semester)
+    const h = hitungStsMapel(s.tpCakupan, s.nilaiKelas, siswaId, semester, s.tpSemester)
     return {
       mapel: s.mapel.nama,
       labelMapel: s.labelMapel,

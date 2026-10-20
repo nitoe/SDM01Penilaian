@@ -46,6 +46,31 @@ const kalR = kalimatCapaian(hR.capaianTerbaik, hR.capaianPerluBimbingan, hR.leve
 cek('nilai rendah: tidak ada frasa "sangat baik"', !kalR.some((k) => /sangat baik/i.test(k)))
 cek('nilai rendah: awalan level 0 + diferensiasi perlu', kalR[0].startsWith('Masih memerlukan bimbingan dalam') && kalR[1].startsWith('Perlu peningkatan dalam'))
 
+// Diferensiasi 2 baris wajib bila ≥2 TP ber-nilai (meski deskripsi level kosong → fallback nama TP)
+const tpKosong = [
+  { id: 'k1', tipe: 'pengetahuan', namaTp: 'Mengamati perubahan alam', bobotPerSemester: { 1: 1 }, levels: L(['', '', '', '']) },
+  { id: 'k2', tipe: 'pengetahuan', namaTp: 'Menjelaskan dampak aktivitas manusia', bobotPerSemester: { 1: 1 }, levels: L(['', '', '', '']) },
+  { id: 'k3', tipe: 'pengetahuan', namaTp: 'Mengusulkan solusi sederhana', bobotPerSemester: { 1: 1 }, levels: L(['', '', '', '']) },
+]
+const sts3 = { k1: { a: { nilai: 50 } }, k2: { a: { nilai: 30 } }, k3: { a: { nilai: 40 } } }
+const hKosong = hitungStsMapel(tpKosong, sts3, 'a', '1')
+cek('3 TP deskripsi kosong: tetap ada terbaik + terburuk (fallback nama)', !!hKosong.capaianTerbaik && !!hKosong.capaianPerluBimbingan)
+cek('fallback terbaik dari TP nilai tertinggi (50)', hKosong.capaianTerbaik.toLowerCase().includes('mengamati perubahan alam'))
+cek('fallback terburuk dari TP nilai terendah (30)', hKosong.capaianPerluBimbingan.toLowerCase().includes('menjelaskan dampak'))
+const kalKosong = kalimatCapaian(hKosong.capaianTerbaik, hKosong.capaianPerluBimbingan, hKosong.levelIndexTerbaik)
+cek('2 kalimat capaian tercetak', kalKosong.length === 2)
+
+// Pool capaian di luar cakupan: nilai akhir hanya dari cakupan, capaian dari semua yang ber-nilai
+const hPool = hitungStsMapel(
+  [tpKosong[0]], // cakupan hanya k1
+  sts3,
+  'a',
+  '1',
+  tpKosong, // pool capaian: ketiga TP
+)
+cek('nilai akhir tetap dari cakupan saja (50)', hPool.nilaiAkhir === 50)
+cek('capaian tetap diferensiasi dari pool 3 TP', !!hPool.capaianTerbaik && !!hPool.capaianPerluBimbingan && hPool.capaianPerluBimbingan.toLowerCase().includes('menjelaskan dampak'))
+
 // Pola v1 untuk capaian tinggi (level 3)
 cek('kalimat capaian level 3 (sangat baik)', kalimatCapaian('menerapkan hukum nun sukun', 'mengenal pesan pokok', 3).join('|') ===
   'Mencapai kompetensi dengan sangat baik dalam menerapkan hukum nun sukun.|Perlu peningkatan dalam mengenal pesan pokok.')

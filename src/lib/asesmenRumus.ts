@@ -34,7 +34,7 @@ function nilaiAkhirPerTp(tp: TpRumus & Pick<TujuanPembelajaran, 'tipe' | 'levels
  * Capaian: deskripsi KKTP TP bernilai akhir tertinggi dan terendah (pola v1/v2), TP terendah hanya bila beda TP.
  */
 export function hitungSasMapel(
-  tpSemester: (TpRumus & Pick<TujuanPembelajaran, 'tipe' | 'levels'>)[],
+  tpSemester: TpUntukCapaian[],
   data: SumberSas,
   siswaId: string,
   semester: string,
@@ -47,18 +47,10 @@ export function hitungSasMapel(
     bobot: bobotTpDiSemester(tp, semester) ?? 0,
   }))
   hasil.nilaiAkhir = hitungNilaiAkhirMapel(perTp.map((x) => ({ nilai: x.nilai, bobot: x.bobot })))
-  const terisi = perTp.filter((x) => x.nilai != null && Number.isFinite(x.nilai))
-  if (terisi.length) {
-    const urut = [...terisi].sort((a, b) => Number(b.nilai) - Number(a.nilai))
-    const terbaik = urut[0]
-    const terendah = urut[urut.length - 1]
-    const lvBest = tentukanLevel(terbaik.nilai, terbaik.tp)
-    hasil.capaianTerbaik = lvBest?.deskripsi || ''
-    hasil.levelIndexTerbaik = lvBest?.index ?? null
-    if (terendah.tp.id !== terbaik.tp.id) {
-      hasil.capaianPerluBimbingan = tentukanLevel(terendah.nilai, terendah.tp)?.deskripsi || ''
-    }
-  }
+  const terisi = perTp
+    .filter((x) => x.nilai != null && Number.isFinite(x.nilai))
+    .map((x) => ({ tp: x.tp as TpUntukCapaian, nilai: Number(x.nilai) }))
+  isiCapaianDariTerisi(hasil, terisi)
   return hasil
 }
 
@@ -87,6 +79,52 @@ export function muatanMapel(nama: string): 'wajib' | 'yayasan' {
   return (MUATAN_YAYASAN as readonly string[]).includes(nama) ? 'yayasan' : 'wajib'
 }
 
+/** TP minimal untuk menyusun fragmen capaian (perlu namaTp sebagai cadangan). */
+export type TpUntukCapaian = TpRumus & Pick<TujuanPembelajaran, 'tipe' | 'levels' | 'namaTp'>
+
+/**
+ * Fragmen capaian dari satu TP + nilainya.
+ * Utama: deskripsi KKTP pada level yang cocok dengan nilai.
+ * Cadangan: nama TP (huruf awal kecil) agar baris capaian tetap muncul
+ * bila guru belum mengisi deskripsi level tersebut.
+ */
+export function fragmenDariTpNilai(
+  nilai: number,
+  tp: Pick<TujuanPembelajaran, 'tipe' | 'levels' | 'namaTp'>,
+): { deskripsi: string; levelIndex: number | null } {
+  const lv = tentukanLevel(nilai, tp)
+  const desk = String(lv?.deskripsi ?? '').trim()
+  if (desk) return { deskripsi: desk, levelIndex: lv?.index ?? null }
+  const nama = String(tp.namaTp ?? '').trim()
+  if (!nama) return { deskripsi: '', levelIndex: lv?.index ?? null }
+  return {
+    deskripsi: nama.charAt(0).toLowerCase() + nama.slice(1),
+    levelIndex: lv?.index ?? null,
+  }
+}
+
+/**
+ * Isi capaianTerbaik + capaianPerluBimbingan dari daftar TP yang punya nilai.
+ * - ≥1 TP terisi → selalu ada capaianTerbaik
+ * - ≥2 TP berbeda → selalu ada capaianPerluBimbingan (TP nilai terendah)
+ * Ini menjamin setiap mapel menampilkan dua baris bila ada diferensiasi TP.
+ */
+export function isiCapaianDariTerisi(
+  hasil: Pick<HasilStsMapel, 'capaianTerbaik' | 'capaianPerluBimbingan' | 'levelIndexTerbaik'>,
+  terisi: { tp: TpUntukCapaian; nilai: number }[],
+): void {
+  if (!terisi.length) return
+  const urut = [...terisi].sort((a, b) => Number(b.nilai) - Number(a.nilai))
+  const terbaik = urut[0]
+  const terendah = urut[urut.length - 1]
+  const best = fragmenDariTpNilai(terbaik.nilai, terbaik.tp)
+  hasil.capaianTerbaik = best.deskripsi
+  hasil.levelIndexTerbaik = best.levelIndex
+  if (terendah.tp.id !== terbaik.tp.id) {
+    hasil.capaianPerluBimbingan = fragmenDariTpNilai(terendah.nilai, terendah.tp).deskripsi
+  }
+}
+
 export interface HasilStsMapel {
   nilaiAkhir: number | null
   /** deskripsi KKTP TP bernilai tertinggi (tanpa awalan kalimat) */
@@ -105,32 +143,38 @@ export interface HasilStsMapel {
  * Nilai akhir STS + bahan kalimat capaian satu mapel untuk satu siswa. Dipakai Rapor STS satu siswa
  * dan seluruh kelas supaya hasilnya identik (ANTIREGRESI §21).
  */
+/**
+ * Nilai akhir STS + bahan kalimat capaian satu mapel untuk satu siswa.
+ *
+ * - Nilai akhir: hanya dari `tpCakupan` (TP yang masuk Setup Cakupan STS).
+ * - Capaian terbaik/terburuk: dari `tpUntukCapaian` bila diberikan, else `tpCakupan`.
+ *   Pool capaian memuat semua TP semester yang punya nilai STS siswa, supaya
+ *   diferensiasi dua baris tetap muncul meski cakupan STS belum lengkap.
+ * - Bila deskripsi KKTP level kosong, fragmen memakai nama TP (cadangan).
+ */
 export function hitungStsMapel(
-  tpCakupan: (TpRumus & Pick<TujuanPembelajaran, 'tipe' | 'levels'>)[],
+  tpCakupan: TpUntukCapaian[],
   sts: PerTp<{ nilai: number }>,
   siswaId: string,
   semester: string,
+  tpUntukCapaian?: TpUntukCapaian[],
 ): HasilStsMapel {
   const hasil: HasilStsMapel = { nilaiAkhir: null, capaianTerbaik: '', capaianPerluBimbingan: '', levelIndexTerbaik: null }
-  if (!tpCakupan.length) return hasil
-  const perTp = tpCakupan.map((tp) => ({
+  const perTpNilai = tpCakupan.map((tp) => ({
     tp,
     nilai: sts[tp.id]?.[siswaId]?.nilai ?? null,
     bobot: bobotUntukSts(tp, semester),
   }))
-  hasil.nilaiAkhir = hitungNilaiAkhirMapel(perTp.map((x) => ({ nilai: x.nilai, bobot: x.bobot })))
-  const terisi = perTp.filter((x) => x.nilai != null && Number.isFinite(x.nilai))
-  if (terisi.length) {
-    const urut = [...terisi].sort((a, b) => Number(b.nilai) - Number(a.nilai))
-    const terbaik = urut[0]
-    const terendah = urut[urut.length - 1]
-    const lvBest = tentukanLevel(terbaik.nilai, terbaik.tp)
-    hasil.capaianTerbaik = lvBest?.deskripsi || ''
-    hasil.levelIndexTerbaik = lvBest?.index ?? null
-    if (terendah.tp.id !== terbaik.tp.id) {
-      hasil.capaianPerluBimbingan = tentukanLevel(terendah.nilai, terendah.tp)?.deskripsi || ''
-    }
+  if (tpCakupan.length) {
+    hasil.nilaiAkhir = hitungNilaiAkhirMapel(perTpNilai.map((x) => ({ nilai: x.nilai, bobot: x.bobot })))
   }
+
+  const pool = tpUntukCapaian ?? tpCakupan
+  const terisi = pool
+    .map((tp) => ({ tp, nilai: sts[tp.id]?.[siswaId]?.nilai ?? null }))
+    .filter((x) => x.nilai != null && Number.isFinite(x.nilai))
+    .map((x) => ({ tp: x.tp, nilai: Number(x.nilai) }))
+  isiCapaianDariTerisi(hasil, terisi)
   return hasil
 }
 
