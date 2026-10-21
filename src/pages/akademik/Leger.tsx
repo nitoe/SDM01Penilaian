@@ -27,7 +27,7 @@ import {
   tingkatanDariKelas,
   tpMasukSemester,
 } from '../../lib/akademik'
-import { bobotUntukCakupan, hitungStsMapel } from '../../lib/asesmenRumus'
+import { hitungStsMapel } from '../../lib/asesmenRumus'
 import { getSeniKelas, labelSeniBudaya } from '../../lib/seniKelas'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import { getSiswaList } from '../../lib/tahsinData'
