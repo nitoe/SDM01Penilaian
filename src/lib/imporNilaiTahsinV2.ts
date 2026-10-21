@@ -8,8 +8,11 @@
 import {
   addDoc,
   collection,
+  getDocs,
+  query,
   serverTimestamp,
   Timestamp,
+  where,
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
 import { SURAH_LIST, hitungTotalAyat, type SurahInfo } from './quranSurah'
@@ -731,8 +734,7 @@ export async function jalankanImporV2(pra: HasilPraLihatImpor): Promise<{
 
 /** Muat semua siswa aktif (untuk matching). Admin boleh semua kelas. */
 export async function muatSiswaUntukImpor(): Promise<SiswaTahsin[]> {
-  const { getDocs, query, collection: col, where } = await import('firebase/firestore')
-  const q = query(col(db, 'siswa'), where('aktif', '==', true))
+  const q = query(collection(db, 'siswa'), where('aktif', '==', true))
   const snap = await getDocs(q)
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as SiswaTahsin)
 }
