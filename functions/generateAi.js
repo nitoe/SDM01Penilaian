@@ -566,10 +566,22 @@ Jika mode=aktivitas, field deskripsi boleh array kosong. Jika mode=deskripsi, ak
 export function normalisasiEkskul(json, mode) {
   let data = json
   if (typeof json === 'string') {
+    let raw = json.trim()
+    // Ambil blok JSON jika model membungkus markdown ```json ... ```
+    const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)
+    if (fence) raw = fence[1].trim()
+    const start = raw.indexOf('{')
+    const end = raw.lastIndexOf('}')
+    if (start >= 0 && end > start) raw = raw.slice(start, end + 1)
     try {
-      data = JSON.parse(json)
+      data = JSON.parse(raw)
     } catch {
-      data = {}
+      // Coba perbaiki trailing comma umum
+      try {
+        data = JSON.parse(raw.replace(/,\s*([}\]])/g, '$1'))
+      } catch {
+        data = {}
+      }
     }
   }
   if (!data || typeof data !== 'object') data = {}

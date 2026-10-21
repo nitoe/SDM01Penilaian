@@ -143,8 +143,19 @@ export async function simpanEkskulMaster(nama: string, aktif = true): Promise<vo
   await setDoc(doc(db, 'ekstrakurikuler', id), { nama: bersih, aktif, updatedAt: serverTimestamp() }, { merge: true })
 }
 
-export async function getEkskulSiswaKelas(kelas: string, p: PeriodeScope): Promise<EkskulSiswa[]> {
-  const s = await getDocs(query(collection(db, 'ekstrakurikuler_siswa'), ...filterPeriode(kelas, p)))
+/**
+ * Nilai ekskul per kelas × periode.
+ * Jika ekskulId diisi, query difilter — wajib untuk pengampu non-wali agar lolos rules
+ * (isPengampuEkskul mensyaratkan semua dokumen hasil punya ekskulId yang sama).
+ */
+export async function getEkskulSiswaKelas(
+  kelas: string,
+  p: PeriodeScope,
+  ekskulId?: string,
+): Promise<EkskulSiswa[]> {
+  const constraints = [...filterPeriode(kelas, p)]
+  if (ekskulId) constraints.push(where('ekskulId', '==', ekskulId))
+  const s = await getDocs(query(collection(db, 'ekstrakurikuler_siswa'), ...constraints))
   return s.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<EkskulSiswa, 'id'>) }))
 }
 
