@@ -8,8 +8,117 @@
  * Struktur normalisasi: halaman → baris → kata (suku kata Arab berharakat).
  */
 const CDN_BASE = 'https://cdn.jsdelivr.net/gh/dyazincahya/iqro-json/iqro/easyocr'
-const CACHE_PREFIX = 'tt_iqro_v1_'
+/** v2: normalisasi Latin + pelengkapan harakat OCR */
+const CACHE_PREFIX = 'tt_iqro_v2_'
 const BATAS_WAKTU_MS = 12000
+
+/* -------------------------------------------------------------------------- */
+/*  Normalisasi Latin & Arab (OCR sering ALL CAPS / harakat hilang)            */
+/* -------------------------------------------------------------------------- */
+
+/** Huruf Arab dasar (bukan tanda baca / harakat). */
+function isHurufArab(ch: string): boolean {
+  const c = ch.codePointAt(0) ?? 0
+  return (
+    (c >= 0x0621 && c <= 0x063a) ||
+    (c >= 0x0641 && c <= 0x064a) ||
+    c === 0x0671 || // اً variants start
+    (c >= 0x0670 && c <= 0x06d3)
+  )
+}
+
+/** Tanda harakat / tajwid combining yang umum. */
+function isHarakat(ch: string): boolean {
+  const c = ch.codePointAt(0) ?? 0
+  return (
+    (c >= 0x064b && c <= 0x065f) || // fathatan … superscript alef
+    c === 0x0670 || // dagger alef
+    (c >= 0x06d6 && c <= 0x06ed) ||
+    c === 0x08f0 ||
+    c === 0x08f1 ||
+    c === 0x08f2
+  )
+}
+
+const SUKUN = '\u0652'
+/** Alif (termasuk hamzah di atas/bawah) — jangan disisipi sukun otomatis (sering madd). */
+const ALIF = new Set(['ا', 'أ', 'إ', 'آ', 'ٱ'])
+
+/**
+ * OCR Iqro (terutama jilid 5–6) sering menghilangkan sukun di antara dua huruf
+ * konsonan. Jika dua huruf Arab berurutan tanpa harakat di antaranya, sisipkan
+ * sukun pada huruf pertama — kecuali alif (madd). Tidak mengubah teks yang
+ * sudah punya harakat lengkap.
+ */
+export function lengkapiHarakatOcr(teks: string): string {
+  if (!teks) return teks
+  const s = teks.normalize('NFC')
+  const out: string[] = []
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i]!
+    out.push(ch)
+    if (!isHurufArab(ch)) continue
+    let j = i + 1
+    let adaHarakat = false
+    while (j < s.length && isHarakat(s[j]!)) {
+      out.push(s[j]!)
+      adaHarakat = true
+      j++
+    }
+    if (adaHarakat) {
+      i = j - 1
+      continue
+    }
+    // Alif tanpa harakat diikuti huruf lain biasanya madd — jangan sukun
+    if (ALIF.has(ch)) {
+      i = j - 1
+      continue
+    }
+    if (j < s.length && isHurufArab(s[j]!)) {
+      out.push(SUKUN)
+    }
+    i = j - 1
+  }
+  return out.join('')
+}
+
+/**
+ * Latin dari OCR hampir selalu HURUF BESAR SEMUA.
+ * Ubah menjadi bentuk wajar: huruf kecil, huruf pertama tiap segmen (pisah spasi / -) kapital.
+ * Contoh: "HABBAN WANABAATAN" → "Habban wanabaatan"
+ *          "A BA" → "A ba" — untuk suku pendek Iqro 1, tetap terbaca.
+ */
+export function rapikanLatinIqro(raw: string): string {
+  const t = String(raw || '').trim()
+  if (!t) return ''
+  // Hanya rapikan jika dominan kapital (OCR)
+  const letters = t.replace(/[^A-Za-z]/g, '')
+  if (!letters) return t
+  const upper = letters.replace(/[^A-Z]/g, '').length
+  if (upper / letters.length < 0.6) return t // sudah campuran / normal
+
+  return t
+    .split(/(\s+|-+)/)
+    .map((seg) => {
+      if (/^\s+$/.test(seg) || /^-+$/.test(seg)) return seg
+      const low = seg.toLowerCase()
+      // Kapital hanya huruf pertama yang alfabet
+      const m = low.match(/^([^a-z]*)([a-z])([\s\S]*)$/)
+      if (!m) return low
+      return m[1] + m[2]!.toUpperCase() + m[3]
+    })
+    .join('')
+}
+
+/** Bersihkan artefak OCR (simbol akhir baris, spasi aneh) tanpa menghapus isi. */
+function bersihkanArab(teks: string): string {
+  return teks
+    .normalize('NFC')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[○◯ㅇ]/g, '') // penanda akhir baris OCR
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 
 /** Jumlah halaman per jilid (sesuai dataset easyocr). */
 export const IQRO_HALAMAN_MAX: Record<number, number> = {
@@ -51,6 +160,20 @@ function pecahKataArab(teks: string): string[] {
     .filter(Boolean)
 }
 
+/**
+ * Normalisasi satu baris dari OCR: bersihkan simbol, lengkapi sukun yang hilang,
+ * rapikan Latin (bukan ALL CAPS).
+ */
+export function normalisasiBarisIqro(arabMentah: string, latinMentah: string): {
+  teksArab: string
+  teksLatin: string
+  kata: string[]
+} {
+  const arab = lengkapiHarakatOcr(bersihkanArab(arabMentah))
+  const latin = rapikanLatinIqro(latinMentah)
+  return { teksArab: arab, teksLatin: latin, kata: pecahKataArab(arab) }
+}
+
 function parseHalamanMentah(buku: number, halaman: number, json: unknown): IqroHalaman {
   const d = json as Record<string, unknown>
   const topic = (d.topic as Record<string, unknown> | undefined) || {}
@@ -59,23 +182,29 @@ function parseHalamanMentah(buku: number, halaman: number, json: unknown): IqroH
   const baris: IqroBaris[] = content
     .map((c, i) => {
       const row = c as Record<string, unknown>
-      const arab = typeof row.arabic === 'string' ? row.arabic.trim() : ''
-      const latin = typeof row.latin === 'string' ? row.latin.trim() : ''
-      if (!arab) return null
+      const arabRaw = typeof row.arabic === 'string' ? row.arabic : ''
+      const latinRaw = typeof row.latin === 'string' ? row.latin : ''
+      if (!arabRaw.trim()) return null
+      const n = normalisasiBarisIqro(arabRaw, latinRaw)
+      if (!n.kata.length) return null
       return {
         no: Number(row.order_id) || i + 1,
-        teksArab: arab,
-        teksLatin: latin,
-        kata: pecahKataArab(arab),
+        teksArab: n.teksArab,
+        teksLatin: n.teksLatin,
+        kata: n.kata,
       }
     })
-    .filter((b): b is IqroBaris => b != null && b.kata.length > 0)
+    .filter((b): b is IqroBaris => b != null)
+
+  const topikArab =
+    typeof topic.arab === 'string' ? lengkapiHarakatOcr(bersihkanArab(topic.arab)) : ''
+  const topikLatin = typeof topic.latin === 'string' ? rapikanLatinIqro(topic.latin) : ''
 
   return {
     buku,
     halaman,
-    topikLatin: typeof topic.latin === 'string' ? topic.latin : '',
-    topikArab: typeof topic.arab === 'string' ? topic.arab : '',
+    topikLatin,
+    topikArab,
     instruksi: typeof d.instruction_id === 'string' ? d.instruction_id : '',
     baris,
   }
