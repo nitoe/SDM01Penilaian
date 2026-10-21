@@ -303,16 +303,6 @@ export async function cobaPulihkanQuran(arabOcr: string): Promise<string | null>
 /*  Parse & fetch halaman                                                     */
 /* -------------------------------------------------------------------------- */
 
-function normalisasiSinkron(arabMentah: string, latinMentah: string): {
-  teksArab: string
-  teksLatin: string
-  kata: string[]
-} {
-  const arab = lengkapiHarakatOcr(bersihkanArab(arabMentah))
-  const latin = rapikanLatinIqro(latinMentah)
-  return { teksArab: arab, teksLatin: latin, kata: pecahKataArab(arab) }
-}
-
 async function normalisasiBarisAsync(
   arabMentah: string,
   latinMentah: string,
