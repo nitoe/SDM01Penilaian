@@ -189,6 +189,17 @@ service cloud.firestore {
         && kelas in myProfile().waliKelas;
     }
 
+
+    // UID pemanggil terdaftar sebagai pengampu di master ekstrakurikuler.
+    function isPengampuEkskul(ekskulId) {
+      return isGuru()
+        && ekskulId is string
+        && ekskulId.size() > 0
+        && ekskulId.size() <= 80
+        && exists(/databases/$(database)/documents/ekstrakurikuler/$(ekskulId))
+        && request.auth.uid in get(/databases/$(database)/documents/ekstrakurikuler/$(ekskulId)).data.get('pengampuUids', []);
+    }
+
     // ---- users/{uid} -----------------------------------------------------
     // Guru/admin dibuat admin (Console atau halaman admin). Pendaftaran mandiri
     // HANYA sebagai orang tua berstatus pending, dengan daftar field terbatas.
@@ -370,27 +381,59 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Master kegiatan ekstrakurikuler: admin mengelola (master data), semua guru boleh membaca.
+    // Master kegiatan ekstrakurikuler: admin mengelola; semua guru membaca.
+    // Field lanjutan: pengampuUids[], aktivitas[], deskripsiCapaian[] (template C/B/A).
     match /ekstrakurikuler/{id} {
       allow read: if isGuru();
       allow write: if isAdmin();
     }
 
+    // Pengajuan guru menjadi pengampu (satu dokumen per ekskul × uid).
+    match /ekstrakurikuler_ajukan/{id} {
+      allow read: if isAdmin()
+                  || (isGuru() && resource.data.uid == request.auth.uid);
+      allow create: if isGuru()
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.keys().hasAll(
+                         ['ekskulId', 'ekskulNama', 'uid', 'namaGuru', 'status'])
+                    && request.resource.data.ekskulId is string
+                    && request.resource.data.ekskulId.size() > 0
+                    && request.resource.data.ekskulId.size() <= 80
+                    && request.resource.data.namaGuru is string
+                    && request.resource.data.namaGuru.size() <= 120;
+      allow update: if isAdmin()
+                    && request.resource.data.status in ['pending', 'disetujui', 'ditolak'];
+      allow delete: if isAdmin()
+                    || (isGuru()
+                        && resource.data.uid == request.auth.uid
+                        && resource.data.status == 'pending');
+    }
+
+    // Nilai ekskul per siswa: wali kelas ATAU pengampu kegiatan itu.
+    // Field opsional aktivitas / diisiOleh (kompatibel data lama tanpa field ini).
+    // hasOnly sengaja tidak dipakai agar field opsional tidak menolak tulis.
     match /ekstrakurikuler_siswa/{id} {
-      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
-      allow create: if waliKelasSendiri(request.resource.data.kelas)
-                    && request.resource.data.keys().hasOnly(
-                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'ekskulId', 'nama', 'level', 'deskripsi', 'updatedAt'])
+      allow read: if isAdmin()
+                  || waliKelasSendiri(resource.data.kelas)
+                  || isPengampuEkskul(resource.data.ekskulId);
+      allow create: if (waliKelasSendiri(request.resource.data.kelas)
+                        || isPengampuEkskul(request.resource.data.ekskulId))
+                    && request.resource.data.keys().hasAll(
+                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'ekskulId', 'nama', 'level', 'deskripsi'])
                     && request.resource.data.level in [1, 2, 3, 4]
-                    && request.resource.data.deskripsi is string && request.resource.data.deskripsi.size() <= 500;
-      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.deskripsi is string
+                    && request.resource.data.deskripsi.size() <= 500;
+      allow update: if (waliKelasSendiri(resource.data.kelas)
+                        || isPengampuEkskul(resource.data.ekskulId))
                     && request.resource.data.kelas == resource.data.kelas
                     && request.resource.data.siswaId == resource.data.siswaId
-                    && request.resource.data.keys().hasOnly(
-                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'ekskulId', 'nama', 'level', 'deskripsi', 'updatedAt'])
+                    && request.resource.data.ekskulId == resource.data.ekskulId
                     && request.resource.data.level in [1, 2, 3, 4]
-                    && request.resource.data.deskripsi is string && request.resource.data.deskripsi.size() <= 500;
-      allow delete: if waliKelasSendiri(resource.data.kelas);
+                    && request.resource.data.deskripsi is string
+                    && request.resource.data.deskripsi.size() <= 500;
+      allow delete: if waliKelasSendiri(resource.data.kelas)
+                    || isPengampuEkskul(resource.data.ekskulId);
     }
 
     match /kktp_tahsin_tahfizh/{jenjang} {

@@ -36,6 +36,7 @@ import NilaiStsSas from './pages/akademik/NilaiStsSas'
 import LaporanNilai from './pages/akademik/LaporanNilai'
 import Leger from './pages/akademik/Leger'
 import Rapor from './pages/akademik/Rapor'
+import InputEkskul from './pages/akademik/InputEkskul'
 
 /** Menjaga rute per role di sisi UI. Penegakan sebenarnya tetap di firestore.rules. */
 function RoleGate({ allow, to = '/' }: { allow: boolean; to?: string }) {
@@ -172,6 +173,8 @@ export default function App() {
             <Route path="/akademik/rapor" element={profile ? <Rapor profile={profile} /> : null} />
             <Route path="/akademik/rapor-sas" element={profile ? <Rapor profile={profile} jenis="sas" /> : null} />
             <Route path="/akademik/kelengkapan-rapor" element={profile ? <KelengkapanRapor profile={profile} /> : null} />
+            {/* Ekstrakurikuler: pengampu ekskul atau wali kelas */}
+            <Route path="/akademik/ekskul" element={profile ? <InputEkskul profile={profile} /> : null} />
             <Route path="/akademik/*" element={<Placeholder />} />
           </Route>
 
@@ -197,7 +200,10 @@ export default function App() {
               path="/admin/periode"
               element={profile ? <KelolaPeriode profile={profile} /> : null}
             />
-            <Route path="/admin/ekstrakurikuler" element={<KelolaEkstrakurikuler />} />
+            <Route
+              path="/admin/ekstrakurikuler"
+              element={profile ? <KelolaEkstrakurikuler profile={profile} /> : <KelolaEkstrakurikuler />}
+            />
             {/* Migrasi sementara penilaian-v2 → hapus setelah semua kelas selesai */}
             <Route
               path="/admin/impor-nilai-v2"

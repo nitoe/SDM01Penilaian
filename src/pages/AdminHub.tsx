@@ -50,7 +50,7 @@ const pengaturan: Item[] = [
   {
     to: '/admin/ekstrakurikuler',
     title: 'Ekstrakurikuler',
-    desc: 'Daftar kegiatan untuk rapor SAS',
+    desc: 'Master kegiatan, pengampu, template deskripsi capaian',
     icon: 'users',
     tone: 'green',
     ready: true,

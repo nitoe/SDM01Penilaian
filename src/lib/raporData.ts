@@ -27,8 +27,9 @@ import { BATAS_EKSKUL_DESKRIPSI, BATAS_KOKURIKULER } from '../types/raporData'
 import type { Semester } from '../types/akademik'
 
 /**
- * Lapisan Firestore data pelengkap Rapor SAS (ANTIREGRESI §23). Penulisan HANYA oleh wali kelas
- * (rules `waliKelasSendiri`); admin membaca dan mencetak. Semua query berfilter kelas + periode.
+ * Lapisan Firestore data pelengkap Rapor SAS (ANTIREGRESI §23).
+ * Absensi/kokurikuler: wali kelas. Ekskul siswa: wali kelas ATAU pengampu ekskul.
+ * Admin membaca dan mencetak. Semua query berfilter kelas + periode.
  */
 
 export interface PeriodeScope {
@@ -105,10 +106,33 @@ export async function simpanKokurikulerBanyak(
 
 // ── Ekstrakurikuler ──
 
+/** Master ringkas (nama + aktif). Untuk form yang hanya butuh daftar pilihan. */
 export async function getEkskulMaster(): Promise<Ekstrakurikuler[]> {
   const s = await getDocs(collection(db, 'ekstrakurikuler'))
   return s.docs
-    .map((d) => ({ id: d.id, nama: String(d.data().nama ?? d.id), aktif: d.data().aktif !== false }))
+    .map((d) => {
+      const data = d.data()
+      return {
+        id: d.id,
+        nama: String(data.nama ?? d.id),
+        aktif: data.aktif !== false,
+        pengampuUids: Array.isArray(data.pengampuUids)
+          ? data.pengampuUids.map((u: unknown) => String(u)).filter(Boolean)
+          : [],
+        aktivitas: Array.isArray(data.aktivitas)
+          ? data.aktivitas.map((a: unknown) => String(a ?? '').trim()).filter(Boolean)
+          : [],
+        deskripsiCapaian: Array.isArray(data.deskripsiCapaian)
+          ? data.deskripsiCapaian
+              .filter((x: unknown) => x && typeof x === 'object')
+              .map((x: { predikat?: string; teks?: string }) => ({
+                predikat: String(x.predikat ?? '').toUpperCase() as 'C' | 'B' | 'A',
+                teks: String(x.teks ?? '').trim(),
+              }))
+              .filter((t: { predikat: string; teks: string }) => ['C', 'B', 'A'].includes(t.predikat) && t.teks)
+          : [],
+      } as Ekstrakurikuler
+    })
     .sort((a, b) => a.nama.localeCompare(b.nama, 'id'))
 }
 
@@ -124,12 +148,24 @@ export async function getEkskulSiswaKelas(kelas: string, p: PeriodeScope): Promi
   return s.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<EkskulSiswa, 'id'>) }))
 }
 
+/**
+ * Upsert nilai ekskul satu siswa. Field aktivitas & diisiOleh opsional (kompatibel data lama).
+ * Penulis: wali kelas atau pengampu (ditegakkan di rules).
+ */
 export async function simpanEkskulSiswa(
   kelas: string,
   p: PeriodeScope,
-  e: { siswaId: string; ekskulId: string; nama: string; level: LevelEkskul; deskripsi: string },
+  e: {
+    siswaId: string
+    ekskulId: string
+    nama: string
+    level: LevelEkskul
+    deskripsi: string
+    aktivitas?: string
+    diisiOleh?: string
+  },
 ): Promise<void> {
-  await setDoc(doc(db, 'ekstrakurikuler_siswa', idEkskulSiswa(e.siswaId, e.ekskulId, p.tahunAjaran, p.semester)), {
+  const payload: Record<string, unknown> = {
     siswaId: e.siswaId,
     kelas,
     semester: p.semester,
@@ -139,7 +175,13 @@ export async function simpanEkskulSiswa(
     level: e.level,
     deskripsi: e.deskripsi.trim().slice(0, BATAS_EKSKUL_DESKRIPSI),
     updatedAt: serverTimestamp(),
-  })
+  }
+  if (e.aktivitas?.trim()) payload.aktivitas = e.aktivitas.trim().slice(0, 120)
+  if (e.diisiOleh) payload.diisiOleh = e.diisiOleh
+  await setDoc(
+    doc(db, 'ekstrakurikuler_siswa', idEkskulSiswa(e.siswaId, e.ekskulId, p.tahunAjaran, p.semester)),
+    payload,
+  )
 }
 
 export async function hapusEkskulSiswa(id: string): Promise<void> {

@@ -47,6 +47,14 @@ const inputNilai: Item[] = [
     tone: 'green',
     ready: true,
   },
+  {
+    to: '/akademik/ekskul',
+    title: 'Ekstrakurikuler',
+    desc: 'Predikat dan deskripsi capaian — pengampu atau wali kelas',
+    icon: 'bars',
+    tone: 'green',
+    ready: true,
+  },
 ]
 
 /** Laporan & rapor: Laporan Nilai (per mapel), Leger (seluruh mapel), Rapor, Kelengkapan. */
@@ -98,14 +106,6 @@ const segera: Item[] = [
     to: '/akademik/kokurikuler',
     title: 'Kokurikuler',
     desc: 'Proyek STEM, 7KAIH, dan deskripsi gabungan',
-    icon: 'bars',
-    tone: 'ink',
-    ready: false,
-  },
-  {
-    to: '/akademik/ekskul',
-    title: 'Ekstrakurikuler',
-    desc: 'Predikat dan deskripsi ekskul',
     icon: 'bars',
     tone: 'ink',
     ready: false,
@@ -164,6 +164,14 @@ const adminNilai: Item[] = [
     title: 'Daftar Nilai STS & SAS',
     desc: 'Lihat nilai tengah dan akhir semester per kelas',
     icon: 'clipboard',
+    tone: 'green',
+    ready: true,
+  },
+  {
+    to: '/akademik/ekskul',
+    title: 'Ekstrakurikuler',
+    desc: 'Lihat predikat dan deskripsi capaian yang diisi pengampu / wali',
+    icon: 'bars',
     tone: 'green',
     ready: true,
   },
