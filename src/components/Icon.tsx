@@ -35,10 +35,11 @@ const PATHS = {
   book: ['M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z', 'M4 21V5M8 7h7'],
   calendar: ['M4 6h16v15H4z', 'M4 10h16M8 3v5M16 3v5'],
   bars: ['M5 21V11M12 21V4M19 21v-7'],
-  bell: ['M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9', 'M10.3 21a1.94 1.94 0 0 0 3.4 0'],
+  bell: ['M6 8a6 6 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9', 'M10.3 21a1.94 1.94 0 0 0 3.4 0'],
   key: ['M15 9a4 4 0 1 1-8 0 4 4 0 0 1 8 0z', 'M11 13l-7 7M7 17l2 2'],
   arrow: ['M5 12h14', 'M13 6l6 6-6 6'],
   check: ['M5 12.5l4.5 4.5L19 7.5'],
+  download: ['M12 3v12', 'M8 11l4 4 4-4', 'M5 19h14'],
 } as const
 
 export type IconName = keyof typeof PATHS
