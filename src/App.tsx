@@ -14,6 +14,7 @@ import Notifikasi from './pages/Notifikasi'
 import KelengkapanRapor from './pages/akademik/KelengkapanRapor'
 import KelolaEkstrakurikuler from './pages/admin/KelolaEkstrakurikuler'
 import LaporanTahsin from './pages/tahsin/LaporanTahsin'
+import EksporNilai from './pages/tahsin/EksporNilai'
 import Home from './pages/Home'
 import TahsinHub from './pages/TahsinHub'
 import AkademikHub from './pages/AkademikHub'
@@ -137,6 +138,7 @@ export default function App() {
               element={profile ? <TargetHafalan profile={profile} /> : null}
             />
             <Route path="/tahsin/laporan" element={profile ? <LaporanTahsin profile={profile} /> : null} />
+            <Route path="/tahsin/ekspor" element={profile ? <EksporNilai profile={profile} /> : null} />
             <Route path="/tahsin/*" element={<Placeholder />} />
           </Route>
 

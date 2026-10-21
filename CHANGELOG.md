@@ -258,3 +258,12 @@
 - `src/lib/akademik.ts`: fungsi baru `salinTPKeKelas` — salin seluruh TP + levels (KKTP) dari satu kelas paralel ke kelas setingkat lain. Mode `tambah`/`ganti`. Opsi `termasukBobot` (default true) menyalin `bobotPerSemester` + field legacy. Nilai siswa tidak disalin. Kelas beda tingkatan otomatis ditolak.
 - `src/pages/akademik/SetupTp.tsx`: panel **Salin ke kelas lain** (hanya muncul bila ada kelas paralel setingkat di penugasan). Centang kelas tujuan, mode tambah/ganti, opsi sertakan bobot. Konfirmasi sebelum menulis.
 - Excel impor/ekspor template TP+KKTP sudah tersedia sebelumnya di Setup TP (template kosong, ekspor TP saat ini, unggah .xlsx/.json) untuk guru kelas maupun guru bidang studi — tidak diubah dalam patch ini.
+
+## Belum dirilis — Ekspor nilai Tahsin-Tahfizh
+
+- Halaman baru `/tahsin/ekspor`: unduh semua setoran dan catatan menulis satu kelas ke Excel (.xlsx).
+- **Guru Tahsin**: kelas ampu saja. **Admin**: memilih kelas yang akan diekspor.
+- File berisi sheet Setoran (periode aktif), sheet Menulis, dan sheet Info.
+- `src/lib/eksporNilaiTahsin.ts` (baru): penyusunan baris + pembuatan Excel. Hanya membaca Firestore.
+- Menu di TahsinHub; ikon `download` di `Icon.tsx`.
+

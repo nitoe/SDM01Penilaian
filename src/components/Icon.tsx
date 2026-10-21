@@ -39,6 +39,7 @@ const PATHS = {
   key: ['M15 9a4 4 0 1 1-8 0 4 4 0 0 1 8 0z', 'M11 13l-7 7M7 17l2 2'],
   arrow: ['M5 12h14', 'M13 6l6 6-6 6'],
   check: ['M5 12.5l4.5 4.5L19 7.5'],
+  download: ['M12 3v12', 'M8 11l4 4 4-4', 'M5 19h14'],
 } as const
 
 export type IconName = keyof typeof PATHS
