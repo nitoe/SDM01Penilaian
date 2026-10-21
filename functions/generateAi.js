@@ -286,19 +286,33 @@ export function normalisasiKktp(data) {
   return keluar
 }
 
-/** Model 2.5 memakai token "berpikir" yang ikut memakan maxOutputTokens → JSON bisa terpotong. Matikan untuk keluaran JSON. */
+/**
+ * Daftar model Gemini, urut prioritas. Model lama sudah dimatikan Google (404):
+ * gemini-1.5-flash (lama), gemini-2.0-flash (1 Jun 2026), gemini-2.5-flash (16 Okt 2026).
+ * Jangan memasukkan model yang sudah pensiun; cek https://ai.google.dev/gemini-api/docs/deprecations
+ */
+export const MODEL_GEMINI = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite']
+
+/** Model 2.5 dan 3.x memakai token "berpikir" yang ikut memakan maxOutputTokens → JSON bisa terpotong. Tekan untuk keluaran JSON. */
+function thinkingGemini(nama) {
+  if (/^gemini-2\.5-/.test(nama)) return { thinkingBudget: 0 }
+  if (/^gemini-3/.test(nama)) return { thinkingLevel: 'low' }
+  return undefined
+}
+
 function configGemini(nama) {
   const cfg = { temperature: 0.4, responseMimeType: 'application/json', maxOutputTokens: 8192 }
-  if (/^gemini-2\.5-/.test(nama)) cfg.thinkingConfig = { thinkingBudget: 0 }
+  const thinking = thinkingGemini(nama)
+  if (thinking) cfg.thinkingConfig = thinking
   return cfg
 }
 
 const tunggu = (ms) => new Promise((r) => setTimeout(r, ms))
 
 async function panggilGemini(apiKey, sistem, user) {
-  const model = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
+  const gagal = []
   let terakhir = 'Gemini tidak menjawab.'
-  for (const nama of model) {
+  for (const nama of MODEL_GEMINI) {
     // Beban/kuota sesaat (429/500/503): coba ulang sekali pada model yang sama, lalu lanjut ke model berikutnya.
     for (let percobaan = 0; percobaan < 2; percobaan++) {
       const res = await fetch(
@@ -316,9 +330,10 @@ async function panggilGemini(apiKey, sistem, user) {
       const json = await res.json().catch(() => ({}))
       if (!res.ok) {
         terakhir = `Gemini (${nama}) ${res.status}: ${json?.error?.message || 'gagal'}`
-        if (res.status === 404) break
+        if (res.status === 404) { gagal.push(`${nama} 404`); break }
         if ([429, 500, 503].includes(res.status)) {
           if (percobaan === 0) { await tunggu(1500); continue }
+          gagal.push(`${nama} ${res.status}`)
           break
         }
         throw new Error(terakhir)
@@ -327,16 +342,19 @@ async function panggilGemini(apiKey, sistem, user) {
       const teks = kandidat?.content?.parts?.map((p) => p.text || '').join('') || ''
       if (!teks) {
         terakhir = `Gemini (${nama}) mengembalikan jawaban kosong` + (kandidat?.finishReason ? ` (${kandidat.finishReason}).` : '.')
+        gagal.push(`${nama} kosong`)
         break
       }
       if (kandidat?.finishReason === 'MAX_TOKENS') {
         terakhir = `Gemini (${nama}) terpotong (MAX_TOKENS).`
+        gagal.push(`${nama} MAX_TOKENS`)
         break
       }
       return teks
     }
   }
-  throw new Error(terakhir)
+  // Pesan menyebut SEMUA model yang gagal, bukan hanya yang terakhir, supaya sebab sebenarnya tidak tertutup.
+  throw new Error(gagal.length > 1 ? `${terakhir} (percobaan: ${gagal.join(', ')})` : terakhir)
 }
 
 async function panggilOpenAi(apiKey, sistem, user) {
@@ -369,9 +387,8 @@ export async function mintaModel(provider, apiKey, sistem, user) {
 }
 
 async function panggilGeminiVision(apiKey, sistem, user, b64, mime) {
-  const model = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
   let terakhir = 'Gemini tidak menjawab.'
-  for (const nama of model) {
+  for (const nama of MODEL_GEMINI) {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${nama}:generateContent?key=${encodeURIComponent(apiKey)}`,
       {
@@ -386,7 +403,12 @@ async function panggilGeminiVision(apiKey, sistem, user, b64, mime) {
               { inlineData: { mimeType: mime, data: b64 } },
             ],
           }],
-          generationConfig: { temperature: 0.2, responseMimeType: 'application/json', maxOutputTokens: 2048 },
+          generationConfig: {
+            temperature: 0.2,
+            responseMimeType: 'application/json',
+            maxOutputTokens: 2048,
+            ...(thinkingGemini(nama) ? { thinkingConfig: thinkingGemini(nama) } : {}),
+          },
         }),
       },
     )

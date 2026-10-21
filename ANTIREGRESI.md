@@ -173,3 +173,11 @@
 14.4 Perhitungan nilai mapel (`hitungNilaiAkhirMapel`) memakai `bobotTpDiSemester(tp, semesterAktif)`, bukan `tp.bobotMapel` mentah.
 
 14.5 Pengecualian disengaja: `salinTPKeKelas` **boleh** menyalin `bobotPerSemester` (+ legacy) ke kelas paralel setingkat bila guru mencentang opsi tersebut. Ini aksi eksplisit menyamakan alokasi antar-rombel, bukan simpan form TP biasa. Kelas beda tingkatan wajib ditolak. Nilai siswa tidak ikut disalin.
+
+## §15. Model AI (Gemini)
+
+15.1 **Nama model Gemini sudah ada yang dipensiunkan Google dan dibalas 404** (1.5, 2.0 per 1 Jun 2026, 2.5 per 16 Okt 2026). Daftar model hanya ada di `MODEL_GEMINI` (`functions/generateAi.js`); jangan menulis nama model di tempat lain. Sebelum menambah atau mempertahankan model, cek halaman deprecations Gemini API. Jangan mengembalikan model yang sudah pensiun ke daftar.
+
+15.2 Model 3.x berpikir secara bawaan dan token berpikir memakan `maxOutputTokens`; keluaran JSON bisa terpotong. Selalu atur `thinkingConfig` lewat `thinkingGemini()` untuk jalur teks dan vision.
+
+15.3 Pesan galat `panggilGemini` harus menyebut semua model yang gagal, bukan hanya yang terakhir. Pesan "model terakhir 404" pernah menutupi bahwa tiga model sekaligus sudah mati (lihat CHANGELOG, 21 Okt 2026).

@@ -267,3 +267,10 @@
 - `src/lib/eksporNilaiTahsin.ts` (baru): penyusunan baris + pembuatan Excel. Hanya membaca Firestore.
 - Menu di TahsinHub; ikon `download` di `Icon.tsx`.
 
+
+## Belum dirilis — Perbaikan generate TP/KKTP (Gemini 404)
+
+- **Gejala (21 Okt 2026)**: generate TP dan KKTP gagal dengan pesan `Gemini (gemini-1.5-flash) 404: models/gemini-1.5-flash is not found ...`.
+- **Penyebab**: ketiga model di `functions/generateAi.js` sudah dimatikan Google — `gemini-1.5-flash` (lama), `gemini-2.0-flash` (1 Jun 2026), `gemini-2.5-flash` (16 Okt 2026). Semua balas 404. Pesan hanya menampilkan model TERAKHIR yang dicoba, sehingga tampak seolah hanya 1.5 yang bermasalah.
+- `functions/generateAi.js`: daftar model dipusatkan di `MODEL_GEMINI` = `gemini-3.6-flash` → `gemini-3.5-flash` → `gemini-3.1-flash-lite` (dipakai teks dan vision). Pengaturan berpikir: `thinkingBudget: 0` untuk 2.5, `thinkingLevel: 'low'` untuk 3.x (berpikir aktif secara bawaan di 3.x dan ikut memakan `maxOutputTokens`); jalur vision (generate aset) kini ikut memakainya. Pesan galat gabungan menyebut semua model yang gagal.
+- **Perlu di-deploy**: `firebase deploy --only functions`. Kunci `GEMINI_API_KEY` tidak berubah.
