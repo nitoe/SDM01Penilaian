@@ -47,6 +47,14 @@ const targetLaporan: Item[] = [
     tone: 'ink',
     ready: true,
   },
+  {
+    to: '/tahsin/ekspor',
+    title: 'Ekspor Nilai',
+    desc: 'Unduh semua setoran & menulis (Excel) per kelas',
+    icon: 'download',
+    tone: 'ink',
+    ready: true,
+  },
 ]
 
 function PanelItems({ items }: { items: Item[] }) {
