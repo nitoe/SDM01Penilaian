@@ -15,6 +15,7 @@ import KelengkapanRapor from './pages/akademik/KelengkapanRapor'
 import KelolaEkstrakurikuler from './pages/admin/KelolaEkstrakurikuler'
 import LaporanTahsin from './pages/tahsin/LaporanTahsin'
 import EksporNilai from './pages/tahsin/EksporNilai'
+import ImporNilaiV2 from './pages/tahsin/ImporNilaiV2'
 import Home from './pages/Home'
 import TahsinHub from './pages/TahsinHub'
 import AkademikHub from './pages/AkademikHub'
@@ -181,6 +182,11 @@ export default function App() {
               element={profile ? <KelolaPeriode profile={profile} /> : null}
             />
             <Route path="/admin/ekstrakurikuler" element={<KelolaEkstrakurikuler />} />
+            {/* Migrasi sementara penilaian-v2 → hapus setelah semua kelas selesai */}
+            <Route
+              path="/admin/impor-nilai-v2"
+              element={profile ? <ImporNilaiV2 profile={profile} /> : null}
+            />
             <Route path="/admin/*" element={<Placeholder />} />
           </Route>
         </Route>

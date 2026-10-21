@@ -73,6 +73,18 @@ const pengaturan: Item[] = [
   },
 ]
 
+/** Menu sementara migrasi nilai dari penilaian-v2. Hapus setelah migrasi selesai. */
+const migrasi: Item[] = [
+  {
+    to: '/admin/impor-nilai-v2',
+    title: 'Impor Nilai Tahsin (v2)',
+    desc: 'Migrasi setoran & menulis dari Excel ekspor penilaian-v2',
+    icon: 'download',
+    tone: 'ink',
+    ready: true,
+  },
+]
+
 function PanelItems({ items }: { items: Item[] }) {
   return (
     <>
@@ -105,6 +117,9 @@ export default function AdminHub() {
         </HubPanel>
         <HubPanel title="Pengaturan">
           <PanelItems items={pengaturan} />
+        </HubPanel>
+        <HubPanel title="Migrasi (sementara)">
+          <PanelItems items={migrasi} />
         </HubPanel>
       </div>
     </div>
