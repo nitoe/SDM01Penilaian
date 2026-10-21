@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import { namaDenganGelar } from '../../types/user'
 import { SEMUA_KELAS, type SiswaTahsin } from '../../types/tahsin'
@@ -25,10 +25,15 @@ import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
  * Rapor STS ("rapor bayangan" untuk orang tua, hanya dari hasil STS) dan Rapor SAS (rapor akhir lengkap:
  * nilai, kokurikuler, ekstrakurikuler, ketidakhadiran, catatan wali, keputusan) — satu halaman, dua mode.
  * Wali kelas: kelas yang diwalikan. Admin: semua kelas (hanya mencetak, tidak mengubah nilai).
- * Alur: pilih kelas → pilih siswa → pratinjau + cetak PDF, atau cetak seluruh kelas.
+ * Alur: pilih jenis (STS/SAS) → pilih kelas → pilih siswa → pratinjau + cetak PDF, atau cetak seluruh kelas.
  * Pengaturan disiplin Seni Budaya: Setup TP → Seni Budaya → tab Setup.
+ *
+ * Prop `jenis` dari rute lama (/rapor-sas) tetap dihormati; tanpa prop, toggle di UI + query ?jenis=.
  */
-export default function Rapor({ profile, jenis = 'sts' }: { profile: AppUser; jenis?: JenisRapor }) {
+export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser; jenis?: JenisRapor }) {
+  const [params, setParams] = useSearchParams()
+  const jenisDariQuery = params.get('jenis') === 'sas' ? 'sas' : params.get('jenis') === 'sts' ? 'sts' : null
+  const jenis: JenisRapor = jenisProp ?? jenisDariQuery ?? 'sts'
   const sas = jenis === 'sas'
   const NAMA = sas ? 'Rapor SAS' : 'Rapor STS'
   const admin = isAdminRole(profile.role)
@@ -48,6 +53,17 @@ export default function Rapor({ profile, jenis = 'sts' }: { profile: AppUser; je
   const [waliNama, setWaliNama] = useState(namaDenganGelar(profile))
   const [cetakKelas, setCetakKelas] = useState(false)
   const [tinggiPratinjau, setTinggiPratinjau] = useState(900)
+
+  function gantiJenis(next: JenisRapor) {
+    // Jangan ubah path jika dipaksa lewat prop rute lama (/rapor-sas)
+    if (jenisProp) return
+    const q = new URLSearchParams(params)
+    q.set('jenis', next)
+    setParams(q, { replace: true })
+    setSiswaId('')
+    setData(null)
+    setKelasData(null)
+  }
 
   /**
    * STS: tanggal penyerahan rapor STS (Admin → Periode Akademik), BUKAN tanggal rapor akhir semester.
@@ -258,6 +274,30 @@ export default function Rapor({ profile, jenis = 'sts' }: { profile: AppUser; je
           }
         />
       </div>
+
+      {/* Toggle STS / SAS — disembunyikan jika rute lama memaksa jenis (mis. /rapor-sas) */}
+      {!jenisProp && (
+        <div className="grid grid-cols-2 gap-2 sm:max-w-md print:hidden">
+          {(
+            [
+              { j: 'sts' as JenisRapor, judul: 'STS', sub: 'Ujian tengah semester' },
+              { j: 'sas' as JenisRapor, judul: 'SAS', sub: 'Ujian akhir semester' },
+            ] as const
+          ).map(({ j, judul, sub }) => (
+            <button
+              key={j}
+              type="button"
+              onClick={() => gantiJenis(j)}
+              className={`rounded-lg border-2 px-3 py-3 text-left transition ${
+                jenis === j ? 'border-muh-600 bg-muh-50' : 'border-border bg-white hover:border-muh-300'
+              }`}
+            >
+              <p className={`text-[14px] font-bold ${jenis === j ? 'text-muh-800' : 'text-slate-800'}`}>{judul}</p>
+              <p className="mt-0.5 text-[11px] text-muted">{sub}</p>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="card-soft grid gap-3 p-4 print:hidden sm:grid-cols-2">
         <label className="block">

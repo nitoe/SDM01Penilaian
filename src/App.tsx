@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useSearchParams } from 'react-router-dom'
 import type { User } from 'firebase/auth'
 import { subscribeAuth, logout } from './lib/auth'
 import { simpanNoticeLogin } from './lib/akunGuru'
@@ -33,12 +33,21 @@ import SetupTp from './pages/akademik/SetupTp'
 import BobotSemester from './pages/akademik/BobotSemester'
 import NilaiSlm from './pages/akademik/NilaiSlm'
 import NilaiStsSas from './pages/akademik/NilaiStsSas'
-import LaporanSlm from './pages/akademik/LaporanSlm'
+import LaporanNilai from './pages/akademik/LaporanNilai'
 import Rapor from './pages/akademik/Rapor'
 
 /** Menjaga rute per role di sisi UI. Penegakan sebenarnya tetap di firestore.rules. */
 function RoleGate({ allow, to = '/' }: { allow: boolean; to?: string }) {
   return allow ? <Outlet /> : <Navigate to={to} replace />
+}
+
+/** Alihkan /akademik/laporan-slm → /akademik/laporan?jenis=slm (bookmark lama). */
+function RedirectLaporanSlm() {
+  const [params] = useSearchParams()
+  const q = new URLSearchParams(params)
+  q.set('jenis', 'slm')
+  const s = q.toString()
+  return <Navigate to={s ? `/akademik/laporan?${s}` : '/akademik/laporan?jenis=slm'} replace />
 }
 
 function LoadingScreen() {
@@ -152,7 +161,11 @@ export default function App() {
             />
             <Route path="/akademik/nilai-slm" element={profile ? <NilaiSlm profile={profile} /> : null} />
             <Route path="/akademik/nilai-sts" element={profile ? <NilaiStsSas profile={profile} /> : null} />
-            <Route path="/akademik/laporan-slm" element={profile ? <LaporanSlm profile={profile} /> : null} />
+            {/* Laporan terpadu (tab SLM | STS | SAS) */}
+            <Route path="/akademik/laporan" element={profile ? <LaporanNilai profile={profile} /> : null} />
+            {/* Alias lama — jangan putus bookmark */}
+            <Route path="/akademik/laporan-slm" element={<RedirectLaporanSlm />} />
+            {/* Rapor terpadu: toggle STS/SAS di dalam halaman; /rapor-sas tetap jalan */}
             <Route path="/akademik/rapor" element={profile ? <Rapor profile={profile} /> : null} />
             <Route path="/akademik/rapor-sas" element={profile ? <Rapor profile={profile} jenis="sas" /> : null} />
             <Route path="/akademik/kelengkapan-rapor" element={profile ? <KelengkapanRapor profile={profile} /> : null} />

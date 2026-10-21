@@ -49,19 +49,20 @@ const inputNilai: Item[] = [
   },
 ]
 
+/** Laporan & rapor disatukan: satu menu Laporan (tab SLM/STS/SAS), satu menu Rapor (toggle STS/SAS). */
 const laporan: Item[] = [
   {
-    to: '/akademik/laporan-slm',
-    title: 'Laporan SLM',
-    desc: 'Rekap nilai SLM per kelas, siap dicetak',
+    to: '/akademik/laporan',
+    title: 'Laporan Nilai',
+    desc: 'Rekap SLM, STS, dan SAS per kelas — tab di dalam halaman',
     icon: 'printer',
     tone: 'green',
     ready: true,
   },
   {
     to: '/akademik/rapor',
-    title: 'Rapor STS',
-    desc: 'Pratinjau dan cetak rapor sumatif tengah semester',
+    title: 'Rapor',
+    desc: 'Pratinjau dan cetak rapor STS atau SAS',
     icon: 'printer',
     tone: 'green',
     ready: true,
@@ -71,14 +72,6 @@ const laporan: Item[] = [
     title: 'Kelengkapan Rapor SAS',
     desc: 'Ketidakhadiran, catatan wali, keputusan, kokurikuler, ekstrakurikuler',
     icon: 'pencil',
-    tone: 'green',
-    ready: true,
-  },
-  {
-    to: '/akademik/rapor-sas',
-    title: 'Rapor SAS',
-    desc: 'Pratinjau dan cetak rapor sumatif akhir semester',
-    icon: 'printer',
     tone: 'green',
     ready: true,
   },
@@ -170,17 +163,17 @@ const adminNilai: Item[] = [
 
 const adminLaporan: Item[] = [
   {
-    to: '/akademik/rapor',
-    title: 'Cetak Rapor STS',
-    desc: 'Laporan hasil belajar STS untuk orang tua, per siswa atau satu kelas',
+    to: '/akademik/laporan',
+    title: 'Rekap Nilai',
+    desc: 'Rekap SLM, STS, dan SAS per kelas — tab di dalam halaman',
     icon: 'printer',
     tone: 'green',
     ready: true,
   },
   {
-    to: '/akademik/rapor-sas',
-    title: 'Cetak Rapor SAS',
-    desc: 'Rapor akhir semester lengkap, per siswa atau satu kelas',
+    to: '/akademik/rapor',
+    title: 'Cetak Rapor',
+    desc: 'Pratinjau dan cetak rapor STS atau SAS, per siswa atau satu kelas',
     icon: 'printer',
     tone: 'green',
     ready: true,
@@ -190,14 +183,6 @@ const adminLaporan: Item[] = [
     title: 'Kelengkapan Rapor SAS',
     desc: 'Lihat ketidakhadiran, kokurikuler, dan ekstrakurikuler yang diisi wali kelas',
     icon: 'clipboard',
-    tone: 'green',
-    ready: true,
-  },
-  {
-    to: '/akademik/laporan-slm',
-    title: 'Rekap Nilai Harian',
-    desc: 'Rekap nilai per kelas dan mapel, siap dicetak',
-    icon: 'printer',
     tone: 'green',
     ready: true,
   },
