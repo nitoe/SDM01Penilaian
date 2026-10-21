@@ -123,26 +123,39 @@ export default function Leger({ profile }: { profile: AppUser }) {
   const jenis = parseJenis(params.get('jenis'))
   const kelasParam = (params.get('kelas') || '').toUpperCase()
   const admin = isAdminRole(profile.role)
-  const { wali } = kelasSaya(profile)
-  const kelasBoleh = useMemo<string[]>(
-    () => (admin ? [...SEMUA_KELAS] : wali),
-    [admin, wali],
-  )
+
+  /**
+   * Stabilkan daftar kelas: `kelasSaya()` selalu mengembalikan array baru,
+   * jadi jangan pakai referensi itu sebagai dependency useMemo/useEffect
+   * (akan memicu muat ulang tak berujung / flicker spinner).
+   */
+  const waliKey = (profile.waliKelas ?? []).join('|')
+  const kelasBoleh = useMemo<string[]>(() => {
+    if (admin) return [...SEMUA_KELAS]
+    return kelasSaya(profile).wali
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stabil lewat waliKey
+  }, [admin, waliKey])
 
   const periodeAk = usePeriodeAkademik()
-  const [kelas, setKelas] = useState(kelasParam || kelasBoleh[0] || '')
+  const [kelas, setKelas] = useState(() => kelasParam || kelasBoleh[0] || '')
   const [sumber, setSumber] = useState<SumberMapel[] | null>(null)
   const [siswa, setSiswa] = useState<SiswaTahsin[] | null>(null)
   const [galat, setGalat] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Sinkronkan kelas dari query / daftar boleh — jangan depend pada `kelas` agar tidak loop.
   useEffect(() => {
     if (kelasParam && kelasBoleh.includes(kelasParam)) {
-      setKelas(kelasParam)
+      setKelas((prev) => (prev === kelasParam ? prev : kelasParam))
+      return
+    }
+    if (kelasBoleh.length && !kelasBoleh.includes(kelas)) {
+      setKelas(kelasBoleh[0])
     } else if (!kelas && kelasBoleh.length) {
       setKelas(kelasBoleh[0])
     }
-  }, [kelasParam, kelasBoleh, kelas])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sengaja tidak memasukkan `kelas` agar setKelas tidak memicu ulang
+  }, [kelasParam, kelasBoleh])
 
   function setJenis(next: JenisLeger) {
     const q = new URLSearchParams(params)
@@ -238,14 +251,16 @@ export default function Leger({ profile }: { profile: AppUser }) {
   }, [
     kelas,
     jenis,
-    kelasBoleh,
+    // kelasBoleh stabil lewat waliKey; string join agar referensi array tidak memicu ulang
+    waliKey,
+    admin,
     profile.role,
     periodeAk.ready,
     periodeAk.semester,
     periodeAk.tahunAjaran,
   ])
 
-  if (!admin && !wali.length) {
+  if (!admin && !kelasBoleh.length) {
     return (
       <div className="space-y-4">
         <BackLink to="/akademik">Akademik & Rapor</BackLink>
@@ -397,7 +412,7 @@ export default function Leger({ profile }: { profile: AppUser }) {
                       className="px-1.5 py-2 text-center font-semibold"
                       title={src.mapel.nama}
                     >
-                      <span className="block max-w-[4.5rem] truncate mx-auto">{src.label}</span>
+                      <span className="mx-auto block max-w-[4.5rem] truncate">{src.label}</span>
                     </th>
                   ))}
                   <th className="px-2 py-2 text-center font-semibold">Total</th>
@@ -409,7 +424,7 @@ export default function Leger({ profile }: { profile: AppUser }) {
                 {barisUrut.map((b, idx) => (
                   <tr key={b.siswa.id} className="border-b border-border">
                     <td className="sticky left-0 z-10 bg-white px-2 py-1.5 text-muted">{idx + 1}</td>
-                    <td className="sticky left-8 z-10 bg-white px-2 py-1.5 font-medium text-slate-900 whitespace-nowrap">
+                    <td className="sticky left-8 z-10 whitespace-nowrap bg-white px-2 py-1.5 font-medium text-slate-900">
                       {b.siswa.nama}
                     </td>
                     {b.nilaiPerMapel.map((n, mi) => (
