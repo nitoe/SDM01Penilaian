@@ -89,11 +89,6 @@ export default function TahsinHub({ admin = false }: { admin?: boolean }) {
         }
       />
 
-      <div className="rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12px] leading-snug text-amber-900">
-        <span className="font-semibold">Belum dibuka untuk guru.</span> Jangan input setoran di sini
-        sebelum ada pengumuman pemindahan, agar data tidak terpisah di dua sistem.
-      </div>
-
       <div className="grid gap-4 lg:grid-cols-2">
         <HubPanel title={admin ? 'Riwayat' : 'Kerja harian'}>
           <PanelItems items={harianTampil} />
