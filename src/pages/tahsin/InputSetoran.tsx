@@ -21,12 +21,12 @@ import { SURAH_LIST, surahByNo, hitungTotalAyat } from '../../lib/quranSurah'
 import {
   bangunDetailAyat,
   bangunDetailIqro,
-  ketukKata,
   selaraskanRentang,
-  tandaKosong,
   type TandaPerAyat,
 } from '../../lib/bacaTandai'
-import { BacaTandai, KartuKataIqro } from '../../components/BacaTandai'
+import { BacaTandai } from '../../components/BacaTandai'
+import { BacaTandaiIqro } from '../../components/BacaTandaiIqro'
+import { maxHalamanIqro } from '../../lib/iqroText'
 import PanelSiswa from '../../components/PanelSiswa'
 import { PageHeader } from '../../components/ui'
 
@@ -140,6 +140,14 @@ export default function InputSetoran({ profile }: Props) {
   useEffect(() => {
     if (isIqroMurni) setJenis('tahsin')
   }, [isIqroMurni])
+
+  // Batasi halaman Iqro sesuai dataset
+  useEffect(() => {
+    const max = maxHalamanIqro(bukuIqro)
+    if (halMulai > max) setHalMulai(1)
+    if (halAkhir > max) setHalAkhir(max)
+    if (halAkhir < halMulai) setHalAkhir(halMulai)
+  }, [bukuIqro, halMulai, halAkhir])
 
   /** Baca & Tandai hanya untuk rentang dalam satu surah (sama dengan v2). */
   const bisaBacaTandai = bacaQuran && surahAwal === surahAkhir && ayatAkhir >= ayatMulai
@@ -562,6 +570,7 @@ export default function InputSetoran({ profile }: Props) {
                         id="hal-mulai"
                         type="number"
                         min={1}
+                        max={maxHalamanIqro(bukuIqro)}
                         value={halMulai}
                         onChange={(e) => setHalMulai(Number(e.target.value) || 1)}
                         className={kontrol}
@@ -575,6 +584,7 @@ export default function InputSetoran({ profile }: Props) {
                         id="hal-akhir"
                         type="number"
                         min={1}
+                        max={maxHalamanIqro(bukuIqro)}
                         value={halAkhir}
                         onChange={(e) => setHalAkhir(Number(e.target.value) || 1)}
                         className={kontrol}
@@ -608,18 +618,16 @@ export default function InputSetoran({ profile }: Props) {
                 ) : (
                   <>
                     <h2 className="mb-3 text-[14px] font-semibold text-slate-900">
-                      Latihan membaca <span className="font-normal text-muted">(opsional)</span>
+                      Baca &amp; Tandai Iqro
                     </h2>
-                    <KartuKataIqro
-                      teks={iqroTeks}
+                    <BacaTandaiIqro
+                      buku={bukuIqro}
+                      halamanMulai={halMulai}
+                      halamanAkhir={halAkhir}
                       kata={iqroKata}
-                      onBuat={(t) => {
-                        setIqroTeks(t)
-                        setIqroKata({})
-                      }}
-                      onKetuk={(i) => {
-                        const hasil = ketukKata({ ...tandaKosong(), kata: iqroKata }, i)
-                        setIqroKata(hasil.kata)
+                      onChange={(teks, kata) => {
+                        setIqroTeks(teks)
+                        setIqroKata(kata)
                       }}
                     />
                   </>
