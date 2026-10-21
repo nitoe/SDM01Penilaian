@@ -577,7 +577,7 @@ function PanelAi({
     setPratinjau(null)
     try {
       const panggil = httpsCallable<
-        { provider: ProviderAi; namaEkskul: string; mode: string; catatan?: string },
+        { provider: ProviderAi; namaEkskul: string; mode: string; catatan?: string; aktivitasAda?: string[] },
         { aktivitas?: string[]; deskripsi?: DeskripsiCapaianTemplate[] }
       >(getFunctions(app, 'asia-southeast2'), 'generateEkskulAi')
       const res = await panggil({
