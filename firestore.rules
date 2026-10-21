@@ -250,11 +250,19 @@ service cloud.firestore {
     // Entri baru harus mencantumkan createdBy = uid pembuatnya dan kelas yang memang diampu.
     // Sesuai v2 antiregresi §5: hanya PEMBUATNYA yang boleh mengubah (dan hanya field sederhana: jenis, status
     // hafalan, catatan; materi dan Baca & Tandai terkunci), pembuatnya atau admin boleh menghapus.
+    //
+    // Pengecualian SEMENTARA migrasi penilaian-v2 (sumber == 'impor-v2'):
+    // admin boleh create agar data historis bisa diimpor dari Excel. Setelah semua kelas
+    // selesai migrasi, hapus cabang isAdmin() + sumber == 'impor-v2' di allow create
+    // (kembalikan ke bolehKelas saja — ANTIREGRESI §17).
     match /setoran/{id} {
       allow get, list: if lihatKelas(resource.data.kelas)
                        || anakSaya(resource.data.siswaId);
-      allow create: if bolehKelas(request.resource.data.kelas)
-                    && request.resource.data.createdBy == request.auth.uid;
+      allow create: if (bolehKelas(request.resource.data.kelas)
+                        && request.resource.data.createdBy == request.auth.uid)
+                    || (isAdmin()
+                        && request.resource.data.createdBy == request.auth.uid
+                        && request.resource.data.get('sumber', '') == 'impor-v2');
       allow update: if akunAktif()
                     && resource.data.createdBy == request.auth.uid
                     && request.resource.data.diff(resource.data).affectedKeys()
@@ -267,8 +275,11 @@ service cloud.firestore {
     match /menulis_log/{id} {
       allow get, list: if lihatKelas(resource.data.kelas)
                        || anakSaya(resource.data.siswaId);
-      allow create: if bolehKelas(request.resource.data.kelas)
-                    && request.resource.data.createdBy == request.auth.uid;
+      allow create: if (bolehKelas(request.resource.data.kelas)
+                        && request.resource.data.createdBy == request.auth.uid)
+                    || (isAdmin()
+                        && request.resource.data.createdBy == request.auth.uid
+                        && request.resource.data.get('sumber', '') == 'impor-v2');
       allow update: if akunAktif()
                     && resource.data.createdBy == request.auth.uid
                     && !request.resource.data.diff(resource.data).affectedKeys()
