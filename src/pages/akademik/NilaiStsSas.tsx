@@ -79,6 +79,7 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
   const [siswa, setSiswa] = useState<SiswaTahsin[] | null>(null)
   const [cakupanId, setCakupanId] = useState<string | undefined>()
   const [pilihTp, setPilihTp] = useState<string[]>([])
+  const [tpBobot, setTpBobot] = useState<Record<string, number>>({})
   const [nilai, setNilai] = useState<Record<string, Record<string, NilaiAsesmenDoc>>>({})
   const [slm, setSlm] = useState<Record<string, Record<string, NilaiTpDoc>>>({})
   const [sts, setSts] = useState<Record<string, Record<string, NilaiAsesmenDoc>>>({})
@@ -117,8 +118,16 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
     // Default: semua TP semester dicentang jika belum pernah diatur
     if (cakupan?.tpIds?.length) {
       setPilihTp(cakupan.tpIds)
+      const bobot: Record<string, number> = {}
+      for (const id of cakupan.tpIds) {
+        const n = cakupan.tpBobot?.[id]
+        bobot[id] = n != null && Number.isFinite(n) && n > 0 ? Number(n) : 1
+      }
+      setTpBobot(bobot)
     } else {
-      setPilihTp(tampil.map((t) => t.id))
+      const ids = tampil.map((t) => t.id)
+      setPilihTp(ids)
+      setTpBobot(Object.fromEntries(ids.map((id) => [id, 1])))
     }
     setNilai(angka)
     if (jenis === 'sas') {
@@ -285,6 +294,8 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
       cakupanId={cakupanId}
       pilihTp={pilihTp}
       setPilihTp={setPilihTp}
+      tpBobot={tpBobot}
+      setTpBobot={setTpBobot}
       nilai={nilai}
       slm={slm}
       sts={sts}
@@ -310,6 +321,8 @@ function Detail(props: {
   cakupanId?: string
   pilihTp: string[]
   setPilihTp: (next: string[]) => void
+  tpBobot: Record<string, number>
+  setTpBobot: (next: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>)) => void
   nilai: Record<string, Record<string, NilaiAsesmenDoc>>
   slm: Record<string, Record<string, NilaiTpDoc>>
   sts: Record<string, Record<string, NilaiAsesmenDoc>>
@@ -437,6 +450,11 @@ function Detail(props: {
     }
     setBusyCakupan(true)
     try {
+      const bobot: Record<string, number> = {}
+      for (const id of props.pilihTp) {
+        const n = Number(props.tpBobot[id])
+        bobot[id] = Number.isFinite(n) && n > 0 ? n : 1
+      }
       await saveCakupanTP(
         {
           mapel,
@@ -446,6 +464,7 @@ function Detail(props: {
           tahunAjaran: config.tahunAjaran,
           jenis,
           tpIds: props.pilihTp,
+          tpBobot: bobot,
         },
         props.cakupanId,
       )
@@ -508,7 +527,22 @@ function Detail(props: {
   }
 
   function toggle(id: string) {
-    props.setPilihTp(props.pilihTp.includes(id) ? props.pilihTp.filter((x) => x !== id) : [...props.pilihTp, id])
+    if (props.pilihTp.includes(id)) {
+      props.setPilihTp(props.pilihTp.filter((x) => x !== id))
+    } else {
+      props.setPilihTp([...props.pilihTp, id])
+      if (props.tpBobot[id] == null) {
+        props.setTpBobot((prev) => ({ ...prev, [id]: 1 }))
+      }
+    }
+  }
+
+  function setBobotTp(id: string, value: string) {
+    const n = Number(String(value).replace(',', '.'))
+    props.setTpBobot((prev) => ({
+      ...prev,
+      [id]: Number.isFinite(n) && n > 0 ? n : 1,
+    }))
   }
 
   function setNilaiCell(tpId: string, siswaId: string, value: string) {
@@ -573,7 +607,7 @@ function Detail(props: {
         <div>
           <h2 className="text-[14px] font-bold text-slate-900">Materi diujikan</h2>
           <p className="mt-0.5 text-[12px] leading-snug text-muted">
-            Centang materi yang masuk soal {labelPendek(jenis)}. Kolom tabel mengikuti pilihan ini.
+            Centang materi + atur bobot relatif untuk rata-rata leger {labelPendek(jenis)} (bukan bobot semester). Default setara (1).
           </p>
         </div>
         <button
@@ -617,23 +651,42 @@ function Detail(props: {
               const checked = props.pilihTp.includes(t.id)
               return (
                 <li key={t.id}>
-                  <label
-                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-2.5 py-2 transition ${
+                  <div
+                    className={`rounded-xl border px-2.5 py-2 transition ${
                       checked ? 'border-muh-400 bg-muh-50' : 'border-slate-200 bg-white hover:border-slate-300'
-                    } ${!tulis ? 'cursor-default opacity-80' : ''}`}
+                    } ${!tulis ? 'opacity-80' : ''}`}
                   >
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-muh-600"
-                      checked={checked}
-                      disabled={!tulis}
-                      onChange={() => toggle(t.id)}
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-[13px] font-semibold text-slate-900">Materi {t.nomorTp}</span>
-                      <span className="mt-0.5 block text-[11.5px] leading-snug text-slate-600">{t.namaTp}</span>
-                    </span>
-                  </label>
+                    <label className={`flex items-start gap-2.5 ${tulis ? 'cursor-pointer' : 'cursor-default'}`}>
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-muh-600"
+                        checked={checked}
+                        disabled={!tulis}
+                        onChange={() => toggle(t.id)}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[13px] font-semibold text-slate-900">Materi {t.nomorTp}</span>
+                        <span className="mt-0.5 block text-[11.5px] leading-snug text-slate-600">{t.namaTp}</span>
+                      </span>
+                    </label>
+                    {checked && (
+                      <div className="mt-2 flex items-center gap-2 border-t border-muh-200/60 pt-2 pl-6">
+                        <label className="flex items-center gap-1.5 text-[11.5px] text-slate-600">
+                          <span className="shrink-0">Bobot</span>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            className="h-8 w-14 rounded-lg border border-border bg-white px-2 text-center text-[13px] font-semibold tabular-nums outline-none focus:border-muh-500"
+                            value={props.tpBobot[t.id] ?? 1}
+                            readOnly={!tulis}
+                            aria-label={`Bobot materi ${t.nomorTp} untuk ${labelPendek(jenis)}`}
+                            onChange={(e) => setBobotTp(t.id, e.target.value)}
+                          />
+                        </label>
+                        <span className="text-[10.5px] text-muted">relatif (1 = setara)</span>
+                      </div>
+                    )}
+                  </div>
                 </li>
               )
             })}

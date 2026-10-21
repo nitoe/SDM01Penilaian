@@ -706,6 +706,16 @@ export async function getCakupanTP(ctx: {
   if (snap.empty) return null
   const d = snap.docs[0]
   const data = d.data()
+  const tpBobotRaw = data.tpBobot
+  let tpBobot: Record<string, number> | undefined
+  if (tpBobotRaw && typeof tpBobotRaw === 'object' && !Array.isArray(tpBobotRaw)) {
+    tpBobot = {}
+    for (const [k, v] of Object.entries(tpBobotRaw as Record<string, unknown>)) {
+      const n = Number(v)
+      if (Number.isFinite(n) && n > 0) tpBobot[String(k)] = n
+    }
+    if (!Object.keys(tpBobot).length) tpBobot = undefined
+  }
   return {
     id: d.id,
     mapel: String(data.mapel ?? ctx.mapel),
@@ -715,10 +725,22 @@ export async function getCakupanTP(ctx: {
     tahunAjaran: String(data.tahunAjaran ?? ctx.tahunAjaran),
     jenis: data.jenis === 'sas' ? 'sas' : 'sts',
     tpIds: Array.isArray(data.tpIds) ? data.tpIds.map(String) : [],
+    ...(tpBobot ? { tpBobot } : {}),
   }
 }
 
 export async function saveCakupanTP(payload: Omit<AsesmenCakupan, 'id'>, existingId?: string): Promise<void> {
+  const tpBobot: Record<string, number> = {}
+  if (payload.tpBobot && typeof payload.tpBobot === 'object') {
+    for (const id of payload.tpIds) {
+      const n = Number(payload.tpBobot[id])
+      if (Number.isFinite(n) && n > 0) tpBobot[id] = n
+    }
+  }
+  // Default setara: setiap TP cakupan bobot 1 bila belum diisi
+  for (const id of payload.tpIds) {
+    if (tpBobot[id] == null) tpBobot[id] = 1
+  }
   const data = {
     mapel: payload.mapel,
     kelas: payload.kelas,
@@ -727,6 +749,7 @@ export async function saveCakupanTP(payload: Omit<AsesmenCakupan, 'id'>, existin
     tahunAjaran: payload.tahunAjaran,
     jenis: payload.jenis,
     tpIds: payload.tpIds,
+    tpBobot,
   }
   if (existingId) {
     await updateDoc(doc(db, 'asesmen_cakupan', existingId), {

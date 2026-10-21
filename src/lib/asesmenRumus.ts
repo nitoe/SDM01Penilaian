@@ -8,11 +8,30 @@ type TpRumus = Pick<TujuanPembelajaran, 'id' | 'semester' | 'bobotMapel' | 'bobo
 /** tpId → siswaId → entri */
 type PerTp<T> = Record<string, Record<string, T> | undefined>
 
-/** Bobot TP untuk STS: bobot semester bila > 0, lalu bobotMapel, lalu 1. Sama dengan Rapor STS (raporSts.ts). */
-export function bobotUntukSts(tp: Pick<TpRumus, 'semester' | 'bobotMapel' | 'bobotPerSemester'>, semester: string): number {
-  const b = bobotTpDiSemester(tp, semester)
-  if (b != null && b > 0) return b
-  return tp.bobotMapel != null && tp.bobotMapel > 0 ? Number(tp.bobotMapel) : 1
+/**
+ * Bobot TP untuk rata-rata leger/rapor STS (atau SAS).
+ * Prioritas: tpBobot cakupan (jika > 0) → 1 (setara).
+ * TIDAK memakai bobot semester — itu untuk nilai akhir mapel, bukan leger STS.
+ */
+export function bobotUntukCakupan(
+  tpId: string,
+  tpBobot?: Record<string, number> | null,
+): number {
+  const n = tpBobot?.[tpId]
+  if (n != null && Number.isFinite(n) && n > 0) return Number(n)
+  return 1
+}
+
+/**
+ * @deprecated Nama lama — dulu memakai bobot semester.
+ * Sekarang setara dengan bobotUntukCakupan tanpa peta (selalu 1).
+ * Tetap diekspor agar impor lama tidak putus; pemanggil sebaiknya pakai bobotUntukCakupan + tpBobot.
+ */
+export function bobotUntukSts(
+  _tp: Pick<TpRumus, 'semester' | 'bobotMapel' | 'bobotPerSemester'>,
+  _semester: string,
+): number {
+  return 1
 }
 
 type SumberSas = {
@@ -148,24 +167,20 @@ export interface HasilStsMapel {
 }
 
 /**
- * Nilai akhir STS + bahan kalimat capaian satu mapel untuk satu siswa. Dipakai Rapor STS satu siswa
- * dan seluruh kelas supaya hasilnya identik (ANTIREGRESI §21).
- */
-/**
  * Nilai akhir STS + bahan kalimat capaian satu mapel untuk satu siswa.
  *
  * - Nilai akhir: hanya dari `tpCakupan` (TP yang masuk Setup Cakupan STS).
+ * - Bobot: `tpBobot` dari dokumen cakupan (relatif antar TP STS). Default setara (1).
+ *   Tidak memakai bobot semester.
  * - Capaian terbaik/terburuk: dari `tpUntukCapaian` bila diberikan, else `tpCakupan`.
- *   Pool capaian memuat semua TP semester yang punya nilai STS siswa, supaya
- *   diferensiasi dua baris tetap muncul meski cakupan STS belum lengkap.
- * - Bila deskripsi KKTP level kosong, fragmen memakai nama TP (cadangan).
  */
 export function hitungStsMapel(
   tpCakupan: TpUntukCapaian[],
   sts: PerTp<{ nilai: number }>,
   siswaId: string,
-  semester: string,
+  _semester: string,
   tpUntukCapaian?: TpUntukCapaian[],
+  tpBobot?: Record<string, number> | null,
 ): HasilStsMapel {
   const hasil: HasilStsMapel = {
     nilaiAkhir: null,
@@ -180,7 +195,7 @@ export function hitungStsMapel(
     hitungNilaiAkhirMapel(
       daftar.map((tp) => ({
         nilai: sts[tp.id]?.[siswaId]?.nilai ?? null,
-        bobot: bobotUntukSts(tp, semester),
+        bobot: bobotUntukCakupan(tp.id, tpBobot),
       })),
     )
 

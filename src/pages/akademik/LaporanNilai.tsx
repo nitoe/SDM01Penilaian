@@ -29,7 +29,7 @@ import {
   tingkatanDariKelas,
   tpMasukSemester,
 } from '../../lib/akademik'
-import { bobotUntukSts } from '../../lib/asesmenRumus'
+import { bobotUntukCakupan } from '../../lib/asesmenRumus'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import { getSiswaList } from '../../lib/tahsinData'
 import { aksesMapelKelas } from '../../lib/aksesAkademik'
@@ -85,12 +85,12 @@ function rataAsesmen(
   siswaId: string,
   daftar: TujuanPembelajaran[],
   nilai: NilaiAsesmenKelas,
-  semester: string,
+  tpBobot?: Record<string, number> | null,
 ): number | null {
   return hitungNilaiAkhirMapel(
     daftar.map((tp) => ({
       nilai: nilai[tp.id]?.[siswaId]?.nilai ?? null,
-      bobot: bobotUntukSts(tp, semester),
+      bobot: bobotUntukCakupan(tp.id, tpBobot),
     })),
   )
 }
@@ -121,6 +121,7 @@ export default function LaporanNilai({ profile }: { profile: AppUser }) {
   const [nilaiSlm, setNilaiSlm] = useState<NilaiSlmKelas | null>(null)
   const [nilaiAsesmen, setNilaiAsesmen] = useState<NilaiAsesmenKelas | null>(null)
   const [galat, setGalat] = useState('')
+  const [tpBobot, setTpBobot] = useState<Record<string, number> | null>(null)
 
   useEffect(() => {
     let batal = false
@@ -144,6 +145,7 @@ export default function LaporanNilai({ profile }: { profile: AppUser }) {
     setSiswa(null)
     setNilaiSlm(null)
     setNilaiAsesmen(null)
+    setTpBobot(null)
     setGalat('')
     void (async () => {
       try {
@@ -177,6 +179,7 @@ export default function LaporanNilai({ profile }: { profile: AppUser }) {
           setSiswa(s)
           setNilaiAsesmen(angka)
           setNilaiSlm(null)
+          setTpBobot(cakupan?.tpBobot ?? null)
         }
       } catch (e) {
         console.error(e)
@@ -279,8 +282,8 @@ export default function LaporanNilai({ profile }: { profile: AppUser }) {
     jenis === 'slm'
       ? 'Angka rata-rata adalah SLM tertimbang per TP. STS dan SAS belum masuk. Level di bawah angka mengikuti KKTP TP itu, dihitung dari SLM saja.'
       : jenis === 'sts'
-        ? 'Nilai per materi yang masuk cakupan STS. Rata-rata memakai bobot TP semester. Ini leger STS — belum digabung dengan SLM/SAS.'
-        : 'Nilai per materi yang masuk cakupan SAS. Rata-rata memakai bobot TP semester. Nilai akhir rapor (SLM+STS+SAS) ada di menu Rapor.'
+        ? 'Nilai per materi yang masuk cakupan STS. Rata-rata memakai bobot cakupan STS (default setara antar TP). Bobot semester tidak dipakai di sini.'
+        : 'Nilai per materi yang masuk cakupan SAS. Rata-rata memakai bobot cakupan SAS (default setara). Nilai akhir rapor (SLM+STS+SAS) ada di menu Rapor.'
 
   return (
     <div className="space-y-5">
@@ -354,11 +357,12 @@ export default function LaporanNilai({ profile }: { profile: AppUser }) {
                         TP {tp.nomorTp}
                         <span className="mt-0.5 block font-medium normal-case tracking-normal text-slate-400">
                           {(() => {
-                            const b =
-                              jenis === 'slm'
-                                ? bobotTpDiSemester(tp, config.semesterAktif)
-                                : bobotUntukSts(tp, config.semesterAktif)
-                            return b == null || b <= 0 ? 'setara' : `${b}%`
+                            if (jenis === 'slm') {
+                              const b = bobotTpDiSemester(tp, config.semesterAktif)
+                              return b == null || b <= 0 ? 'setara' : `${b}%`
+                            }
+                            const b = bobotUntukCakupan(tp.id, tpBobot)
+                            return b === 1 ? 'setara' : String(b)
                           })()}
                         </span>
                       </th>
@@ -372,7 +376,7 @@ export default function LaporanNilai({ profile }: { profile: AppUser }) {
                       jenis === 'slm' && nilaiSlm
                         ? rataSlm(s.id, tpList, nilaiSlm, config.semesterAktif)
                         : nilaiAsesmen
-                          ? rataAsesmen(s.id, tpList, nilaiAsesmen, config.semesterAktif)
+                          ? rataAsesmen(s.id, tpList, nilaiAsesmen, tpBobot)
                           : null
                     return (
                       <tr key={s.id} className="border-b border-border">
@@ -447,7 +451,7 @@ export default function LaporanNilai({ profile }: { profile: AppUser }) {
                             jenis === 'slm' && nilaiSlm
                               ? rataSlm(s.id, tpList, nilaiSlm, config.semesterAktif)
                               : nilaiAsesmen
-                                ? rataAsesmen(s.id, tpList, nilaiAsesmen, config.semesterAktif)
+                                ? rataAsesmen(s.id, tpList, nilaiAsesmen, tpBobot)
                                 : null
                           if (r != null && Number.isFinite(r)) angka.push(r)
                         }

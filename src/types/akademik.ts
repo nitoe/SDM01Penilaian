@@ -88,7 +88,13 @@ export interface NilaiTpDoc {
 
 export type JenisAsesmen = 'sts' | 'sas'
 
-/** Dokumen `asesmen_cakupan/{id}` — TP yang diikutkan STS atau SAS. */
+/**
+ * Dokumen `asesmen_cakupan/{id}` — TP yang diikutkan STS atau SAS.
+ *
+ * `tpBobot` = bobot relatif antar TP **hanya untuk rata-rata leger/rapor STS (atau SAS)**.
+ * Tidak mempengaruhi rumus nilai akhir mapel (SLM/STS/SAS global di hitungNilaiAkhirTP).
+ * Bila kosong: tiap TP cakupan dianggap bobot 1 (setara).
+ */
 export interface AsesmenCakupan {
   id: string
   mapel: string
@@ -98,6 +104,8 @@ export interface AsesmenCakupan {
   tahunAjaran: string
   jenis: JenisAsesmen
   tpIds: string[]
+  /** Bobot relatif per tpId untuk rata-rata leger/rapor jenis ini saja. */
+  tpBobot?: Record<string, number>
 }
 
 /** Dokumen `nilai_sts` atau `nilai_sas`. */

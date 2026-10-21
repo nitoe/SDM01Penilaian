@@ -1,6 +1,6 @@
 /**
  * Data Rapor STS (Sumatif Tengah Semester) — "rapor bayangan" untuk orang tua: hanya nilai dan capaian dari STS.
- * Nilai akhir = rata tertimbang nilai STS murni dari TP yang masuk cakupan STS (asesmenRumus.ts).
+ * Nilai akhir = rata tertimbang nilai STS murni dari TP cakupan; bobot dari tpBobot cakupan (default setara), bukan bobot semester.
  * Mapel tanpa nilai tetap muncul dengan "—" agar cetak kosong tetap rapi.
  * HTML dan gaya cetak ada di raporHtml.ts (murni, diuji); form SAS lengkap dipertahankan di sana.
  */
@@ -55,6 +55,8 @@ interface SumberMapelSts {
   /** Semua TP mapel di semester ini — pool diferensiasi capaian terbaik/terburuk. */
   tpSemester: TujuanPembelajaran[]
   nilaiKelas: Awaited<ReturnType<typeof getNilaiAsesmenKelas>>
+  /** Bobot relatif antar TP cakupan (leger/rapor STS saja). */
+  tpBobot?: Record<string, number>
 }
 
 /** Query selalu memuat mapel + kelas (ANTIREGRESI §7.3). Tidak ada nilai yang ditulis. */
@@ -81,6 +83,7 @@ async function muatSumberSts(kelas: string, semester: Semester, tahunAjaran: str
         tpCakupan: tpSemester.filter((tp) => ids.has(tp.id)),
         tpSemester,
         nilaiKelas,
+        tpBobot: cakupan?.tpBobot,
       }
     }),
   )
@@ -88,7 +91,7 @@ async function muatSumberSts(kelas: string, semester: Semester, tahunAjaran: str
 
 function barisDariSumber(sumber: SumberMapelSts[], siswaId: string, semester: Semester): BarisRaporSts[] {
   return sumber.map((s) => {
-    const h = hitungStsMapel(s.tpCakupan, s.nilaiKelas, siswaId, semester, s.tpSemester)
+    const h = hitungStsMapel(s.tpCakupan, s.nilaiKelas, siswaId, semester, s.tpSemester, s.tpBobot)
     return {
       mapel: s.mapel.nama,
       labelMapel: s.labelMapel,
