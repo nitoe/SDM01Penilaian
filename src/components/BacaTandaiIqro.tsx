@@ -336,8 +336,7 @@ export function BacaTandaiIqro({
 
       {muat === 'ok' && (
         <p className="text-[10.5px] text-muted">
-          Teks latihan dari dataset komunitas Iqro (OCR). Bukan penerbit resmi — gunakan teks bebas
-          jika baris tidak sesuai buku fisik.
+          Teks dari dataset Iqro (OCR); jilid 4–6 yang cocok ayat diganti teks Uthmani (alquran.cloud). Jika masih salah, pakai Teks bebas.
         </p>
       )}
     </div>
