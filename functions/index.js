@@ -10,9 +10,11 @@ import {
   mintaModel,
   mintaModelVision,
   normalisasiAset,
+  normalisasiEkskul,
   normalisasiKktp,
   normalisasiTp,
   susunPromptAset,
+  susunPromptEkskul,
   susunPromptKktp,
   susunPromptTp,
 } from './generateAi.js'
@@ -162,5 +164,46 @@ export const generateAsetAi = onCall(opsiAi, async (request) => {
   } catch (err) {
     logger.error('generateAsetAi gagal', { pesan: err?.message })
     throw new HttpsError('internal', err?.message || 'Gagal menganalisis foto aset.')
+  }
+})
+
+
+/**
+ * Generate usulan aktivitas & deskripsi capaian ekstrakurikuler (C/B/A).
+ * Hanya administrator aktif (dicek di Firestore users/{uid}.role).
+ * CORS otomatis ditangani onCall — function HARUS di-deploy agar preflight lolos.
+ */
+export const generateEkskulAi = onCall(opsiAi, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Masuk dulu.')
+  }
+  const uid = request.auth.uid
+  const db = getFirestore()
+  const profil = await db.doc(`users/${uid}`).get()
+  const data = profil.exists ? profil.data() : null
+  if (!data || data.role !== 'admin' || data.aktif === false) {
+    logger.warn('generateEkskulAi ditolak: bukan admin', { uid })
+    throw new HttpsError('permission-denied', 'Fitur generate AI ekstrakurikuler hanya untuk administrator.')
+  }
+  const provider = request.data?.provider
+  if (provider !== 'gemini' && provider !== 'openai') {
+    throw new HttpsError('invalid-argument', 'Pilih Gemini atau OpenAI.')
+  }
+  const prompt = susunPromptEkskul(request.data || {})
+  if (!prompt.ok) throw new HttpsError('invalid-argument', prompt.pesan)
+  try {
+    const json = await mintaModel(provider, kunciProvider(provider), prompt.sistem, prompt.user)
+    const hasil = normalisasiEkskul(json, prompt.mode)
+    logger.info('generateEkskulAi', {
+      uid,
+      provider,
+      mode: prompt.mode,
+      aktivitas: hasil.aktivitas.length,
+      deskripsi: hasil.deskripsi.length,
+    })
+    return hasil
+  } catch (err) {
+    logger.error('generateEkskulAi gagal', { pesan: err?.message })
+    throw new HttpsError('internal', err?.message || 'Gagal menyusun usulan ekstrakurikuler.')
   }
 })
