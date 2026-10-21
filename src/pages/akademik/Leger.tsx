@@ -27,7 +27,7 @@ import {
   tingkatanDariKelas,
   tpMasukSemester,
 } from '../../lib/akademik'
-import { hitungStsMapel } from '../../lib/asesmenRumus'
+import { bobotUntukCakupan, hitungStsMapel } from '../../lib/asesmenRumus'
 import { getSeniKelas, labelSeniBudaya } from '../../lib/seniKelas'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import { getSiswaList } from '../../lib/tahsinData'
@@ -47,6 +47,7 @@ interface SumberMapel {
   mapel: Mapel
   label: string
   tpList: TujuanPembelajaran[]
+  /** SLM: nilai per TP; STS/SAS: nilai asesmen per TP */
   nilaiSlm?: NilaiSlmKelas
   nilaiAsesmen?: NilaiAsesmenKelas
   tpBobot?: Record<string, number> | null
@@ -69,6 +70,7 @@ function subJenis(j: JenisLeger): string {
   return 'Sumatif lingkup materi — rata-rata tertimbang TP per mapel'
 }
 
+/** Nilai satu mapel untuk satu siswa (SLM). */
 function nilaiSlmMapel(
   siswaId: string,
   tpList: TujuanPembelajaran[],
@@ -88,6 +90,7 @@ function nilaiSlmMapel(
   )
 }
 
+/** Nilai satu mapel untuk satu siswa (STS/SAS murni). */
 function nilaiAsesmenMapel(
   siswaId: string,
   tpList: TujuanPembelajaran[],
@@ -107,7 +110,9 @@ function hitungPeringkat(rataList: (number | null)[]): (number | null)[] {
   const out: (number | null)[] = rataList.map(() => null)
   let rank = 1
   for (let k = 0; k < indexed.length; k++) {
-    if (k > 0 && indexed[k].r < indexed[k - 1].r) rank = k + 1
+    if (k > 0 && indexed[k].r < indexed[k - 1].r) {
+      rank = k + 1
+    }
     out[indexed[k].i] = rank
   }
   return out
@@ -119,7 +124,10 @@ export default function Leger({ profile }: { profile: AppUser }) {
   const kelasParam = (params.get('kelas') || '').toUpperCase()
   const admin = isAdminRole(profile.role)
   const { wali } = kelasSaya(profile)
-  const kelasBoleh = useMemo<string[]>(() => (admin ? [...SEMUA_KELAS] : wali), [admin, wali])
+  const kelasBoleh = useMemo<string[]>(
+    () => (admin ? [...SEMUA_KELAS] : wali),
+    [admin, wali],
+  )
 
   const periodeAk = usePeriodeAkademik()
   const [kelas, setKelas] = useState(kelasParam || kelasBoleh[0] || '')
@@ -129,8 +137,11 @@ export default function Leger({ profile }: { profile: AppUser }) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (kelasParam && kelasBoleh.includes(kelasParam)) setKelas(kelasParam)
-    else if (!kelas && kelasBoleh.length) setKelas(kelasBoleh[0])
+    if (kelasParam && kelasBoleh.includes(kelasParam)) {
+      setKelas(kelasParam)
+    } else if (!kelas && kelasBoleh.length) {
+      setKelas(kelasBoleh[0])
+    }
   }, [kelasParam, kelasBoleh, kelas])
 
   function setJenis(next: JenisLeger) {
@@ -179,7 +190,8 @@ export default function Leger({ profile }: { profile: AppUser }) {
 
         const sumberMapel: SumberMapel[] = await Promise.all(
           mapelBerlaku.map(async (m) => {
-            const label = m.nama === 'Seni Budaya' ? labelSeniBudaya(disiplinAktif) : m.nama
+            const label =
+              m.nama === 'Seni Budaya' ? labelSeniBudaya(disiplinAktif) : m.nama
             if (jenis === 'slm') {
               const [tpList, nilai] = await Promise.all([
                 getTPList(m.nama, kelas),
@@ -223,7 +235,15 @@ export default function Leger({ profile }: { profile: AppUser }) {
     return () => {
       batal = true
     }
-  }, [kelas, jenis, kelasBoleh, profile.role, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran])
+  }, [
+    kelas,
+    jenis,
+    kelasBoleh,
+    profile.role,
+    periodeAk.ready,
+    periodeAk.semester,
+    periodeAk.tahunAjaran,
+  ])
 
   if (!admin && !wali.length) {
     return (
@@ -260,8 +280,16 @@ export default function Leger({ profile }: { profile: AppUser }) {
     sumber && siswa
       ? siswa.map((s) => {
           const nilaiPerMapel = sumber.map((src) => {
-            if (jenis === 'slm') return nilaiSlmMapel(s.id, src.tpList, src.nilaiSlm, semester)
-            return nilaiAsesmenMapel(s.id, src.tpList, src.nilaiAsesmen, src.tpBobot, semester)
+            if (jenis === 'slm') {
+              return nilaiSlmMapel(s.id, src.tpList, src.nilaiSlm, semester)
+            }
+            return nilaiAsesmenMapel(
+              s.id,
+              src.tpList,
+              src.nilaiAsesmen,
+              src.tpBobot,
+              semester,
+            )
           })
           const terisi = nilaiPerMapel.filter((n) => n != null && Number.isFinite(n)) as number[]
           const total = terisi.length ? terisi.reduce((a, b) => a + b, 0) : null
@@ -273,6 +301,8 @@ export default function Leger({ profile }: { profile: AppUser }) {
       : []
 
   const peringkat = hitungPeringkat(baris.map((b) => b.rata))
+
+  // Urutkan tampilan: peringkat naik, lalu nama
   const barisUrut = baris
     .map((b, i) => ({ ...b, peringkat: peringkat[i] }))
     .sort((a, b) => {
@@ -301,7 +331,12 @@ export default function Leger({ profile }: { profile: AppUser }) {
       </div>
 
       <div className="print:hidden">
-        <Tabs items={tabItems} aktif={jenis} onUbah={(id) => setJenis(id as JenisLeger)} ariaLabel="Jenis leger">
+        <Tabs
+          items={tabItems}
+          aktif={jenis}
+          onUbah={(id) => setJenis(id as JenisLeger)}
+          ariaLabel="Jenis leger"
+        >
           <p className="mb-3 text-[13px] text-slate-600">
             <span className="font-semibold text-muh-700">{labelJenis(jenis)}</span>
             {' — '}
@@ -313,7 +348,11 @@ export default function Leger({ profile }: { profile: AppUser }) {
       <div className="card-soft flex flex-wrap items-end gap-3 p-4 print:hidden">
         <label className="block min-w-[140px]">
           <span className="mb-1 block text-[11px] font-medium text-slate-600">Kelas</span>
-          <select className={inputCls} value={kelas} onChange={(e) => gantiKelas(e.target.value)}>
+          <select
+            className={inputCls}
+            value={kelas}
+            onChange={(e) => gantiKelas(e.target.value)}
+          >
             {kelasBoleh.map((k) => (
               <option key={k} value={k}>
                 Kelas {k}
@@ -353,8 +392,12 @@ export default function Leger({ profile }: { profile: AppUser }) {
                   <th className="sticky left-0 z-10 bg-slate-50 px-2 py-2 font-semibold">No</th>
                   <th className="sticky left-8 z-10 bg-slate-50 px-2 py-2 font-semibold">Nama</th>
                   {sumber.map((src) => (
-                    <th key={src.mapel.nama} className="px-1.5 py-2 text-center font-semibold" title={src.mapel.nama}>
-                      <span className="mx-auto block max-w-[4.5rem] truncate">{src.label}</span>
+                    <th
+                      key={src.mapel.nama}
+                      className="px-1.5 py-2 text-center font-semibold"
+                      title={src.mapel.nama}
+                    >
+                      <span className="block max-w-[4.5rem] truncate mx-auto">{src.label}</span>
                     </th>
                   ))}
                   <th className="px-2 py-2 text-center font-semibold">Total</th>
@@ -366,7 +409,7 @@ export default function Leger({ profile }: { profile: AppUser }) {
                 {barisUrut.map((b, idx) => (
                   <tr key={b.siswa.id} className="border-b border-border">
                     <td className="sticky left-0 z-10 bg-white px-2 py-1.5 text-muted">{idx + 1}</td>
-                    <td className="sticky left-8 z-10 whitespace-nowrap bg-white px-2 py-1.5 font-medium text-slate-900">
+                    <td className="sticky left-8 z-10 bg-white px-2 py-1.5 font-medium text-slate-900 whitespace-nowrap">
                       {b.siswa.nama}
                     </td>
                     {b.nilaiPerMapel.map((n, mi) => (

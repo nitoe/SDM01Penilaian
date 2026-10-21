@@ -77,6 +77,7 @@ export default function App() {
         setLoading(false)
         return
       }
+      // Profil dihapus dari Kelola Akun — Auth mungkin masih ada
       if (u && !p) {
         simpanNoticeLogin('Profil akun tidak ditemukan atau sudah dihapus. Hubungi administrator.')
         void logout()
@@ -95,14 +96,21 @@ export default function App() {
   if (loading) return <LoadingScreen />
 
   const isAuthenticated = Boolean(user && profile)
+
   const admin = profile ? isAdminRole(profile.role) : false
 
   return (
     <BrowserRouter>
       <PeriodeProvider isAdmin={admin}>
       <Routes>
-        <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
-        <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <Register />} />
+        <Route
+          path="/login"
+          element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
+        />
+        <Route
+          path="/register"
+          element={isAuthenticated ? <Navigate to="/" replace /> : <Register />}
+        />
 
         <Route
           element={
@@ -122,11 +130,24 @@ export default function App() {
 
           <Route element={<RoleGate allow={profile ? canTahsin(profile.role) : false} />}>
             <Route path="/tahsin" element={<TahsinHub admin={profile ? isAdminRole(profile.role) : false} />} />
-            <Route element={<RoleGate allow={profile ? isGuruTahsinRole(profile.role) : false} to="/tahsin" />}>
-              <Route path="/tahsin/input-setoran" element={profile ? <InputSetoran profile={profile} /> : null} />
+            <Route
+              element={
+                <RoleGate allow={profile ? isGuruTahsinRole(profile.role) : false} to="/tahsin" />
+              }
+            >
+              <Route
+                path="/tahsin/input-setoran"
+                element={profile ? <InputSetoran profile={profile} /> : null}
+              />
             </Route>
-            <Route path="/tahsin/riwayat" element={profile ? <RiwayatSiswa profile={profile} /> : null} />
-            <Route path="/tahsin/target" element={profile ? <TargetHafalan profile={profile} /> : null} />
+            <Route
+              path="/tahsin/riwayat"
+              element={profile ? <RiwayatSiswa profile={profile} /> : null}
+            />
+            <Route
+              path="/tahsin/target"
+              element={profile ? <TargetHafalan profile={profile} /> : null}
+            />
             <Route path="/tahsin/laporan" element={profile ? <LaporanTahsin profile={profile} /> : null} />
             <Route path="/tahsin/ekspor" element={profile ? <EksporNilai profile={profile} /> : null} />
             <Route path="/tahsin/*" element={<Placeholder />} />
@@ -135,12 +156,19 @@ export default function App() {
           <Route element={<RoleGate allow={profile ? canAkademik(profile.role) : false} />}>
             <Route path="/akademik" element={<AkademikHub admin={profile ? isAdminRole(profile.role) : false} />} />
             <Route path="/akademik/setup-tp" element={profile ? <SetupTp profile={profile} /> : null} />
-            <Route path="/akademik/bobot-semester" element={profile ? <BobotSemester profile={profile} /> : null} />
+            <Route
+              path="/akademik/bobot-semester"
+              element={profile ? <BobotSemester profile={profile} /> : null}
+            />
             <Route path="/akademik/nilai-slm" element={profile ? <NilaiSlm profile={profile} /> : null} />
             <Route path="/akademik/nilai-sts" element={profile ? <NilaiStsSas profile={profile} /> : null} />
+            {/* Laporan terpadu (tab SLM | STS | SAS) per mapel */}
             <Route path="/akademik/laporan" element={profile ? <LaporanNilai profile={profile} /> : null} />
+            {/* Alias lama — jangan putus bookmark */}
             <Route path="/akademik/laporan-slm" element={<RedirectLaporanSlm />} />
+            {/* Leger: seluruh siswa × seluruh mapel + total/rata-rata/peringkat */}
             <Route path="/akademik/leger" element={profile ? <Leger profile={profile} /> : null} />
+            {/* Rapor terpadu: toggle STS/SAS di dalam halaman; /rapor-sas tetap jalan */}
             <Route path="/akademik/rapor" element={profile ? <Rapor profile={profile} /> : null} />
             <Route path="/akademik/rapor-sas" element={profile ? <Rapor profile={profile} jenis="sas" /> : null} />
             <Route path="/akademik/kelengkapan-rapor" element={profile ? <KelengkapanRapor profile={profile} /> : null} />
@@ -149,18 +177,40 @@ export default function App() {
 
           <Route element={<RoleGate allow={profile ? isAdminRole(profile.role) : false} />}>
             <Route path="/admin" element={<AdminHub />} />
-            <Route path="/admin/siswa" element={profile ? <DataSiswa profile={profile} /> : null} />
-            <Route path="/admin/users" element={profile ? <KelolaAkun profile={profile} /> : null} />
-            <Route path="/admin/mapel" element={profile ? <SetupMapel profile={profile} /> : null} />
-            <Route path="/admin/tahun-ajaran" element={profile ? <TahunAjaran profile={profile} /> : null} />
-            <Route path="/admin/periode" element={profile ? <KelolaPeriode profile={profile} /> : null} />
+            <Route
+              path="/admin/siswa"
+              element={profile ? <DataSiswa profile={profile} /> : null}
+            />
+            <Route
+              path="/admin/users"
+              element={profile ? <KelolaAkun profile={profile} /> : null}
+            />
+            <Route
+              path="/admin/mapel"
+              element={profile ? <SetupMapel profile={profile} /> : null}
+            />
+            <Route
+              path="/admin/tahun-ajaran"
+              element={profile ? <TahunAjaran profile={profile} /> : null}
+            />
+            <Route
+              path="/admin/periode"
+              element={profile ? <KelolaPeriode profile={profile} /> : null}
+            />
             <Route path="/admin/ekstrakurikuler" element={<KelolaEkstrakurikuler />} />
-            <Route path="/admin/impor-nilai-v2" element={profile ? <ImporNilaiV2 profile={profile} /> : null} />
+            {/* Migrasi sementara penilaian-v2 → hapus setelah semua kelas selesai */}
+            <Route
+              path="/admin/impor-nilai-v2"
+              element={profile ? <ImporNilaiV2 profile={profile} /> : null}
+            />
             <Route path="/admin/*" element={<Placeholder />} />
           </Route>
         </Route>
 
-        <Route path="*" element={<Navigate to={isAuthenticated ? '/' : '/login'} replace />} />
+        <Route
+          path="*"
+          element={<Navigate to={isAuthenticated ? '/' : '/login'} replace />}
+        />
       </Routes>
       </PeriodeProvider>
     </BrowserRouter>

@@ -130,6 +130,7 @@ function PanelItems({ items }: { items: Item[] }) {
   )
 }
 
+/** Hub untuk administrator: hanya melihat. Nama menu mengikuti fungsi pemantauan, bukan pengisian. */
 const adminTujuan: Item[] = [
   {
     to: '/akademik/setup-tp',
