@@ -536,54 +536,52 @@ export function susunPromptEkskul(input) {
     ? input.aktivitasAda.map((s) => potong(s, 120)).filter(Boolean).slice(0, 12)
     : []
 
-  const sistem = `Anda asisten kurikulum SD Muhammadiyah di Indonesia.
-Tugas: menyusun aktivitas (konteks) dan deskripsi capaian ekstrakurikuler untuk rapor SAS.
-Bahasa Indonesia baku, singkat, positif, cocok siswa SD.
-PENTING:
-- Daftar aktivitas = KONTEKS kegiatan saja (bukan nilai per siswa).
-- Deskripsi C/B/A HARUS selaras dengan aktivitas tersebut: menggambarkan ketercapaian siswa terkait aktivitas itu, beda level (C=Layak, B=Cakap, A=Mahir).
-- Jangan sebut huruf predikat di dalam teks deskripsi.
-- Predikat tidak dicetak di rapor — hanya deskripsi.
-Jawab HANYA JSON valid tanpa markdown.`
+  const sistem = [
+    'Anda asisten kurikulum SD Muhammadiyah di Indonesia.',
+    'Tugas: menyusun aktivitas (konteks) dan deskripsi capaian ekstrakurikuler untuk rapor SAS.',
+    'Bahasa Indonesia baku, singkat, positif, cocok siswa SD.',
+    'PENTING:',
+    '- Daftar aktivitas = KONTEKS kegiatan saja (bukan nilai per siswa).',
+    '- Deskripsi C/B/A HARUS selaras dengan aktivitas tersebut: menggambarkan ketercapaian siswa terkait aktivitas itu, beda level (C=Layak, B=Cakap, A=Mahir).',
+    '- Jangan sebut huruf predikat di dalam teks deskripsi.',
+    '- Predikat tidak dicetak di rapor - hanya deskripsi.',
+    'Jawab HANYA JSON valid tanpa markdown.',
+  ].join('\n')
 
-  let user = `Kegiatan ekstrakurikuler: "${nama}".
-`
-  if (catatan) user += `Catatan admin: ${catatan}
-`
+  let user = 'Kegiatan ekstrakurikuler: "' + nama + '".\n'
+  if (catatan) user += 'Catatan admin: ' + catatan + '\n'
   if (aktivitasAda.length) {
-    user += `Aktivitas yang sudah ditetapkan admin (pakai sebagai konteks deskripsi):
-- ${aktivitasAda.join('
-- ')}
-`
+    user += 'Aktivitas yang sudah ditetapkan admin (pakai sebagai konteks deskripsi):\n- '
+    user += aktivitasAda.join('\n- ') + '\n'
   }
-  user += `Mode: ${mode}.
-`
+  user += 'Mode: ' + mode + '.\n'
   if (mode === 'aktivitas' || mode === 'keduanya') {
     if (aktivitasAda.length) {
-      user += `Boleh menyempurnakan/menambah aktivitas (4–8 item, frasa 3–10 kata) yang konsisten dengan konteks di atas.
-`
+      user += 'Boleh menyempurnakan/menambah aktivitas (4-8 item, frasa 3-10 kata) yang konsisten dengan konteks di atas.\n'
     } else {
-      user += `Hasilkan 4–8 aktivitas/kegiatan singkat (frasa 3–10 kata) yang umum di ekskul ini.
-`
+      user += 'Hasilkan 4-8 aktivitas/kegiatan singkat (frasa 3-10 kata) yang umum di ekskul ini.\n'
     }
   }
   if (mode === 'deskripsi' || mode === 'keduanya') {
-    user += `Hasilkan tepat 3 deskripsi capaian (C, B, A).
-Setiap deskripsi 1–2 kalimat (maks ~400 karakter), menggambarkan sikap/keterampilan terkait aktivitas di atas.
-Contoh gaya: "Menunjukkan antusiasme dan menguasai teknik dasar … serta aktif bekerja sama dalam tim."
-Pastikan C < B < A dalam kualitas ketercapaian, dan ketiganya mengacu ke aktivitas yang sama.
-`
+    user += [
+      'Hasilkan tepat 3 deskripsi capaian (C, B, A).',
+      'Setiap deskripsi 1-2 kalimat (maks ~400 karakter), menggambarkan sikap/keterampilan terkait aktivitas di atas.',
+      'Contoh gaya: "Menunjukkan antusiasme dan menguasai teknik dasar serta aktif bekerja sama dalam tim."',
+      'Pastikan C < B < A dalam kualitas ketercapaian, dan ketiganya mengacu ke aktivitas yang sama.',
+    ].join('\n') + '\n'
   }
-  user += `Format JSON:
-{
-  "aktivitas": ["...", "..."],
-  "deskripsi": [
-    { "predikat": "C", "teks": "..." },
-    { "predikat": "B", "teks": "..." },
-    { "predikat": "A", "teks": "..." }
-  ]
-}
-Jika mode=aktivitas, deskripsi boleh []. Jika mode=deskripsi, aktivitas boleh [] atau ulang aktivitas konteks.`
+  user += [
+    'Format JSON:',
+    '{',
+    '  "aktivitas": ["...", "..."],',
+    '  "deskripsi": [',
+    '    { "predikat": "C", "teks": "..." },',
+    '    { "predikat": "B", "teks": "..." },',
+    '    { "predikat": "A", "teks": "..." }',
+    '  ]',
+    '}',
+    'Jika mode=aktivitas, deskripsi boleh []. Jika mode=deskripsi, aktivitas boleh [] atau ulang aktivitas konteks.',
+  ].join('\n')
 
   return { ok: true, sistem, user, mode }
 }
@@ -592,7 +590,6 @@ export function normalisasiEkskul(json, mode) {
   let data = json
   if (typeof json === 'string') {
     let raw = json.trim()
-    // Ambil blok JSON jika model membungkus markdown ```json ... ```
     const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)
     if (fence) raw = fence[1].trim()
     const start = raw.indexOf('{')
@@ -601,7 +598,6 @@ export function normalisasiEkskul(json, mode) {
     try {
       data = JSON.parse(raw)
     } catch {
-      // Coba perbaiki trailing comma umum
       try {
         data = JSON.parse(raw.replace(/,\s*([}\]])/g, '$1'))
       } catch {
