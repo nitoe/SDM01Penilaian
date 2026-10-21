@@ -62,7 +62,6 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
   )
 
   const ampu = useMemo(() => (master ? ekskulSayaAmpu(master, profile.uid) : []), [master, profile.uid])
-  const bisaSemua = admin || wali.length > 0
   const daftarPilih = useMemo(() => {
     if (!master) return []
     if (admin) return master.filter((m) => m.aktif)
@@ -145,7 +144,6 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
         nama: ekskulAktif.nama,
         level,
         deskripsi,
-        // @ts-expect-error field opsional ditambahkan di patch raporData
         aktivitas: aktivitas || undefined,
         diisiOleh: profile.uid,
       })
