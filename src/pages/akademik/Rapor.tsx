@@ -26,7 +26,6 @@ import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
  * nilai, kokurikuler, ekstrakurikuler, ketidakhadiran, catatan wali, keputusan) — satu halaman, dua mode.
  * Wali kelas: kelas yang diwalikan. Admin: semua kelas (hanya mencetak, tidak mengubah nilai).
  * Alur: pilih jenis (STS/SAS) → pilih kelas → pilih siswa → pratinjau + cetak PDF, atau cetak seluruh kelas.
- * Pengaturan disiplin Seni Budaya: Setup TP → Seni Budaya → tab Setup.
  *
  * Prop `jenis` dari rute lama (/rapor-sas) tetap dihormati; tanpa prop, toggle di UI + query ?jenis=.
  */
@@ -45,7 +44,6 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
   const [siswaList, setSiswaList] = useState<SiswaTahsin[] | null>(null)
   const [siswaId, setSiswaId] = useState('')
   const [data, setData] = useState<DataRaporSts | null>(null)
-  /** Rapor SAS: seluruh siswa satu kelas dimuat sekali; pratinjau tinggal memilih siswa. */
   const [kelasData, setKelasData] = useState<DataRaporSts[] | null>(null)
   const [loadingSiswa, setLoadingSiswa] = useState(false)
   const [loadingRapor, setLoadingRapor] = useState(false)
@@ -55,7 +53,6 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
   const [tinggiPratinjau, setTinggiPratinjau] = useState(900)
 
   function gantiJenis(next: JenisRapor) {
-    // Jangan ubah path jika dipaksa lewat prop rute lama (/rapor-sas)
     if (jenisProp) return
     const q = new URLSearchParams(params)
     q.set('jenis', next)
@@ -65,11 +62,6 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
     setKelasData(null)
   }
 
-  /**
-   * STS: tanggal penyerahan rapor STS (Admin → Periode Akademik), BUKAN tanggal rapor akhir semester.
-   * SAS: tanggal rapor akhir (semester 1 semua kelas; semester 2 kelas 1–5 dan kelas 6 berbeda).
-   * Kosong → rapor memakai tanggal hari ini.
-   */
   function tanggalDariPeriode(): string | undefined {
     const p = periodeAk.periode
     if (!p) return undefined
@@ -83,7 +75,6 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
     if (!kelas && kelasWali.length) setKelas(kelasWali[0])
   }, [kelas, kelasWali])
 
-  // Nama wali kelas untuk tanda tangan: wali = dirinya; admin = wali kelas terdaftar untuk kelas itu.
   useEffect(() => {
     if (!admin) {
       setWaliNama(namaDenganGelar(profile))
@@ -129,7 +120,6 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
     }
   }, [kelas, profile.role])
 
-  // Rapor SAS: muat seluruh kelas sekali (nilai + absensi + kokurikuler + ekskul), bukan per siswa.
   useEffect(() => {
     if (!sas) return
     if (!kelas || !periodeAk.ready || !siswaList) {
@@ -275,7 +265,6 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
         />
       </div>
 
-      {/* Toggle STS / SAS — disembunyikan jika rute lama memaksa jenis (mis. /rapor-sas) */}
       {!jenisProp && (
         <div className="grid grid-cols-2 gap-2 sm:max-w-md print:hidden">
           {(
@@ -328,26 +317,13 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
         </label>
       </div>
 
-      {kelas && (
+      {kelas && sas && (
         <p className="text-[11.5px] text-muted print:hidden">
-          Pengaturan disiplin Seni Budaya ada di{' '}
-          <Link
-            to={`/akademik/setup-tp?mapel=${encodeURIComponent('Seni Budaya')}&kelas=${encodeURIComponent(kelas)}`}
-            className="font-medium text-muh-700 underline"
-          >
-            Setup TP → Seni Budaya
+          Data pelengkap (absensi, kokurikuler, ekskul) diisi di{' '}
+          <Link to="/akademik/kelengkapan-rapor" className="font-medium text-muh-700 underline">
+            Kelengkapan Rapor SAS
           </Link>
           .
-          {sas && (
-            <>
-              {' '}
-              Data pelengkap (absensi, kokurikuler, ekskul) diisi di{' '}
-              <Link to="/akademik/kelengkapan-rapor" className="font-medium text-muh-700 underline">
-                Kelengkapan Rapor SAS
-              </Link>
-              .
-            </>
-          )}
         </p>
       )}
 
