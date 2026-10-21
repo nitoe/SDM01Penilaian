@@ -39,6 +39,7 @@ function sectionTitle(pathname: string, admin: boolean): string {
   if (pathname.startsWith('/akademik')) return admin ? 'Pantauan Akademik' : 'Akademik & Rapor'
   if (pathname.startsWith('/notifikasi')) return admin ? 'Notifikasi' : 'Laporan ke Admin'
   if (pathname.startsWith('/admin')) return 'Administrasi'
+  if (pathname.startsWith('/profil')) return 'Pengaturan akun'
   return 'Beranda'
 }
 
@@ -146,7 +147,11 @@ export default function Layout({ profile }: LayoutProps) {
             ))}
           </nav>
 
-          <div className="hero-banner rounded-[var(--radius-card)] p-3.5 text-white">
+          <Link
+            to="/profil"
+            className="hero-banner block rounded-[var(--radius-card)] p-3.5 text-white no-underline transition hover:opacity-95"
+            title="Pengaturan akun — ubah nama & password"
+          >
             <p className="text-[11px] text-muh-100/85">Masuk sebagai</p>
             <p className="mt-0.5 truncate text-[13px] font-semibold">
               {profile.nama}
@@ -156,7 +161,11 @@ export default function Layout({ profile }: LayoutProps) {
               {ROLE_LABEL[profile.role]}
               {ringkasKelas(profile) ? ` · ${ringkasKelas(profile)}` : ''}
             </p>
-          </div>
+            <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-muh-100/90">
+              <Icon name="key" className="h-3.5 w-3.5" />
+              Pengaturan akun
+            </p>
+          </Link>
 
           <button
             type="button"
@@ -217,16 +226,25 @@ export default function Layout({ profile }: LayoutProps) {
                   )}
                 </Link>
               )}
-              <div className="hidden min-w-0 text-right sm:block">
-                <div className="truncate text-[13px] font-medium text-slate-800">
+              <Link
+                to="/profil"
+                className="hidden min-w-0 text-right no-underline sm:block"
+                title="Pengaturan akun"
+              >
+                <div className="truncate text-[13px] font-medium text-slate-800 hover:text-muh-800">
                   {profile.nama}
                   {profile.gelar ? `, ${profile.gelar}` : ''}
                 </div>
-                <div className="text-[11px] text-muted">{ROLE_LABEL[profile.role]}</div>
-              </div>
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muh-50 text-[12px] font-semibold text-muh-700">
+                <div className="text-[11px] text-muted">Pengaturan · {ROLE_LABEL[profile.role]}</div>
+              </Link>
+              <Link
+                to="/profil"
+                className="flex h-9 w-9 items-center justify-center rounded-lg bg-muh-50 text-[12px] font-semibold text-muh-700 no-underline transition hover:bg-muh-100"
+                title="Pengaturan akun"
+                aria-label="Pengaturan akun"
+              >
                 {initials}
-              </div>
+              </Link>
               <button
                 type="button"
                 onClick={handleLogout}
@@ -262,6 +280,16 @@ export default function Layout({ profile }: LayoutProps) {
             {i.short}
           </NavLink>
         ))}
+        <Link
+          to="/profil"
+          className={[
+            'flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium transition-colors',
+            pathname.startsWith('/profil') ? 'text-muh-700' : 'text-slate-500',
+          ].join(' ')}
+        >
+          <Icon name="key" className="h-5 w-5" />
+          Akun
+        </Link>
       </nav>
     </div>
   )
