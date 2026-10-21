@@ -16,7 +16,6 @@ import { SURAH_LIST, hitungTotalAyat, type SurahInfo } from './quranSurah'
 import type {
   JenisSetoran,
   MateriSetoran,
-  MenulisRecord,
   SetoranPayload,
   StatusHafalan,
   SiswaTahsin,

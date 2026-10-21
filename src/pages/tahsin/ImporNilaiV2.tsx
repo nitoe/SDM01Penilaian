@@ -7,7 +7,7 @@ import type { AppUser } from '../../types/user'
 import { isAdminRole } from '../../lib/roles'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import { PageHeader } from '../../components/ui'
-import { Notice, Spinner, btnPrimary, btnSecondary, selectCls, useToast } from '../akademik/shared'
+import { Notice, Spinner, btnPrimary, btnGhost, useToast } from '../akademik/shared'
 import {
   bacaExcelV2,
   jalankanImporV2,
@@ -235,7 +235,7 @@ export default function ImporNilaiV2({ profile }: { profile: AppUser }) {
             </button>
             <button
               type="button"
-              className={btnSecondary}
+              className={btnGhost}
               disabled={busy}
               onClick={() => {
                 setFase('upload')
@@ -265,7 +265,7 @@ export default function ImporNilaiV2({ profile }: { profile: AppUser }) {
           </p>
           <button
             type="button"
-            className={btnSecondary}
+            className={btnGhost}
             onClick={() => {
               setFase('upload')
               setPra(null)
@@ -302,6 +302,3 @@ function Ringkas({
     </div>
   )
 }
-
-// suppress unused if tree-shaken
-void selectCls
