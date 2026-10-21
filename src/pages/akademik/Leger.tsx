@@ -102,12 +102,13 @@ function nilaiAsesmenMapel(
   return hitungStsMapel(tpList, nilai, siswaId, semester, tpList, tpBobot).nilaiAkhir
 }
 
-function hitungPeringkat(rataList: (number | null)[]): (number | null)[] {
-  const indexed = rataList
+/** Peringkat dari skor (total). Nilai lebih tinggi = peringkat lebih baik. Seri = peringkat sama. */
+function hitungPeringkat(skorList: (number | null)[]): (number | null)[] {
+  const indexed = skorList
     .map((r, i) => ({ r, i }))
     .filter((x) => x.r != null && Number.isFinite(x.r as number)) as { r: number; i: number }[]
   indexed.sort((a, b) => b.r - a.r)
-  const out: (number | null)[] = rataList.map(() => null)
+  const out: (number | null)[] = skorList.map(() => null)
   let rank = 1
   for (let k = 0; k < indexed.length; k++) {
     if (k > 0 && indexed[k].r < indexed[k - 1].r) {
@@ -315,7 +316,8 @@ export default function Leger({ profile }: { profile: AppUser }) {
         })
       : []
 
-  const peringkat = hitungPeringkat(baris.map((b) => b.rata))
+  // Peringkat berdasarkan total (bukan rata-rata)
+  const peringkat = hitungPeringkat(baris.map((b) => b.total))
 
   // Urutkan tampilan: peringkat naik, lalu nama
   const barisUrut = baris
@@ -396,8 +398,8 @@ export default function Leger({ profile }: { profile: AppUser }) {
             </p>
             <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
               Total = jumlah nilai mapel yang terisi. Rata-rata = rata-rata mapel yang terisi.
-              Peringkat dihitung dari rata-rata (nilai lebih tinggi = peringkat lebih baik). Mapel
-              tanpa nilai ditandai “–” dan tidak masuk total/rata-rata.
+              Peringkat dihitung dari total (nilai lebih tinggi = peringkat lebih baik; total sama =
+              peringkat sama). Mapel tanpa nilai ditandai “–” dan tidak masuk total/rata-rata.
             </p>
           </header>
           <div className="overflow-x-auto">
