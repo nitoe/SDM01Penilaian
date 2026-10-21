@@ -70,6 +70,19 @@ function subJenis(j: JenisLeger): string {
   return 'Sumatif lingkup materi — rata-rata tertimbang TP per mapel'
 }
 
+/** Rata-rata dengan 2 digit desimal (mis. 87.25). */
+function rataDuaDigit(angka: number[]): number | null {
+  if (!angka.length) return null
+  const sum = angka.reduce((a, b) => a + b, 0)
+  return Math.round((sum / angka.length) * 100) / 100
+}
+
+/** Tampilkan angka rata-rata: selalu 2 digit di belakang koma. */
+function fmtRata(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return '–'
+  return n.toFixed(2)
+}
+
 /** Nilai satu mapel untuk satu siswa (SLM). */
 function nilaiSlmMapel(
   siswaId: string,
@@ -309,9 +322,7 @@ export default function Leger({ profile }: { profile: AppUser }) {
           })
           const terisi = nilaiPerMapel.filter((n) => n != null && Number.isFinite(n)) as number[]
           const total = terisi.length ? terisi.reduce((a, b) => a + b, 0) : null
-          const rata = terisi.length
-            ? Math.round(terisi.reduce((a, b) => a + b, 0) / terisi.length)
-            : null
+          const rata = rataDuaDigit(terisi)
           return { siswa: s, nilaiPerMapel, total, rata }
         })
       : []
@@ -397,9 +408,10 @@ export default function Leger({ profile }: { profile: AppUser }) {
               Kelas {kelas} · Semester {periodeAk.semester} · Tahun ajaran {periodeAk.tahunAjaran}
             </p>
             <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
-              Total = jumlah nilai mapel yang terisi. Rata-rata = rata-rata mapel yang terisi.
-              Peringkat dihitung dari total (nilai lebih tinggi = peringkat lebih baik; total sama =
-              peringkat sama). Mapel tanpa nilai ditandai “–” dan tidak masuk total/rata-rata.
+              Total = jumlah nilai mapel yang terisi. Rata-rata = rata-rata mapel yang terisi (2
+              digit desimal). Peringkat dihitung dari total (nilai lebih tinggi = peringkat lebih
+              baik; total sama = peringkat sama). Mapel tanpa nilai ditandai “–” dan tidak masuk
+              total/rata-rata.
             </p>
           </header>
           <div className="overflow-x-auto">
@@ -438,7 +450,7 @@ export default function Leger({ profile }: { profile: AppUser }) {
                       {b.total == null ? '–' : b.total}
                     </td>
                     <td className="px-2 py-1.5 text-center text-[13px] font-bold text-muh-800">
-                      {b.rata == null ? '–' : b.rata}
+                      {fmtRata(b.rata)}
                     </td>
                     <td className="px-2 py-1.5 text-center text-[13px] font-bold text-muh-800">
                       {b.peringkat == null ? '–' : b.peringkat}
@@ -457,13 +469,9 @@ export default function Leger({ profile }: { profile: AppUser }) {
                     const angka = baris
                       .map((b) => b.nilaiPerMapel[mi])
                       .filter((n): n is number => n != null && Number.isFinite(n))
-                    const avg =
-                      angka.length > 0
-                        ? Math.round(angka.reduce((a, b) => a + b, 0) / angka.length)
-                        : null
                     return (
                       <td key={src.mapel.nama} className="px-1.5 py-2 text-center font-semibold text-slate-700">
-                        {avg ?? '–'}
+                        {fmtRata(rataDuaDigit(angka))}
                       </td>
                     )
                   })}
@@ -478,14 +486,13 @@ export default function Leger({ profile }: { profile: AppUser }) {
                     })()}
                   </td>
                   <td className="px-2 py-2 text-center text-[13px] font-bold text-muh-800">
-                    {(() => {
-                      const angka = baris
-                        .map((b) => b.rata)
-                        .filter((n): n is number => n != null && Number.isFinite(n))
-                      return angka.length
-                        ? Math.round(angka.reduce((a, b) => a + b, 0) / angka.length)
-                        : '–'
-                    })()}
+                    {fmtRata(
+                      rataDuaDigit(
+                        baris
+                          .map((b) => b.rata)
+                          .filter((n): n is number => n != null && Number.isFinite(n)),
+                      ),
+                    )}
                   </td>
                   <td className="px-2 py-2" />
                 </tr>
