@@ -1,7 +1,10 @@
 import {
+  EmailAuthProvider,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   signInWithEmailAndPassword,
   signOut,
+  updatePassword,
   type User,
 } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
@@ -82,4 +85,54 @@ export function subscribeAuth(
       callback(user, null)
     }
   })
+}
+
+/**
+ * Ubah password akun yang sedang login.
+ * Wajib re-autentikasi dengan password lama (syarat Firebase untuk sesi yang sudah lama).
+ * Hanya untuk staf (admin, guru akademik, tahsin-tahfizh, bidang studi) yang login sendiri.
+ */
+export async function ubahPasswordSendiri(
+  passwordLama: string,
+  passwordBaru: string,
+): Promise<void> {
+  if (!isFirebaseConfigured) {
+    throw new Error('Firebase belum dikonfigurasi.')
+  }
+  const user = auth.currentUser
+  if (!user || !user.email) {
+    throw new Error('Sesi login tidak ditemukan. Masuk ulang lalu coba lagi.')
+  }
+  const baru = passwordBaru.trim()
+  if (baru.length < 8) {
+    throw Object.assign(new Error('Password baru minimal 8 karakter.'), {
+      code: 'auth/weak-password',
+    })
+  }
+  if (baru === passwordLama) {
+    throw new Error('Password baru harus berbeda dari password lama.')
+  }
+  const credential = EmailAuthProvider.credential(user.email, passwordLama)
+  await reauthenticateWithCredential(user, credential)
+  await updatePassword(user, baru)
+}
+
+/** Pesan galat yang ramah untuk form ubah password. */
+export function pesanGalatUbahPassword(err: unknown): string {
+  const code =
+    err && typeof err === 'object' && 'code' in err ? String((err as { code: unknown }).code) : ''
+  if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+    return 'Password lama salah.'
+  }
+  if (code === 'auth/weak-password') {
+    return 'Password baru terlalu lemah. Gunakan minimal 8 karakter.'
+  }
+  if (code === 'auth/requires-recent-login') {
+    return 'Sesi sudah lama. Keluar, masuk lagi, lalu ubah password.'
+  }
+  if (code === 'auth/too-many-requests') {
+    return 'Terlalu banyak percobaan. Coba lagi beberapa menit kemudian.'
+  }
+  if (err instanceof Error && err.message) return err.message
+  return 'Gagal mengubah password.'
 }
