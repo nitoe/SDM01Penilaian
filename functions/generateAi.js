@@ -532,22 +532,47 @@ export function susunPromptEkskul(input) {
     return { ok: false, pesan: 'Mode harus deskripsi, aktivitas, atau keduanya.' }
   }
   const catatan = potong(input.catatan, 500)
+  const aktivitasAda = Array.isArray(input.aktivitasAda)
+    ? input.aktivitasAda.map((s) => potong(s, 120)).filter(Boolean).slice(0, 12)
+    : []
+
   const sistem = `Anda asisten kurikulum SD Muhammadiyah di Indonesia.
-Tugas: menyusun usulan aktivitas dan/atau deskripsi capaian ekstrakurikuler untuk rapor SAS Kurikulum Merdeka.
-Bahasa Indonesia baku, singkat, positif, cocok untuk siswa SD.
-Predikat internal: C = Layak, B = Cakap, A = Mahir. Predikat TIDAK dicetak di rapor — hanya deskripsi.
+Tugas: menyusun aktivitas (konteks) dan deskripsi capaian ekstrakurikuler untuk rapor SAS.
+Bahasa Indonesia baku, singkat, positif, cocok siswa SD.
+PENTING:
+- Daftar aktivitas = KONTEKS kegiatan saja (bukan nilai per siswa).
+- Deskripsi C/B/A HARUS selaras dengan aktivitas tersebut: menggambarkan ketercapaian siswa terkait aktivitas itu, beda level (C=Layak, B=Cakap, A=Mahir).
+- Jangan sebut huruf predikat di dalam teks deskripsi.
+- Predikat tidak dicetak di rapor — hanya deskripsi.
 Jawab HANYA JSON valid tanpa markdown.`
 
-  let user = `Kegiatan ekstrakurikuler: "${nama}".\n`
-  if (catatan) user += `Catatan tambahan dari admin: ${catatan}\n`
-  user += `Mode: ${mode}.\n`
+  let user = `Kegiatan ekstrakurikuler: "${nama}".
+`
+  if (catatan) user += `Catatan admin: ${catatan}
+`
+  if (aktivitasAda.length) {
+    user += `Aktivitas yang sudah ditetapkan admin (pakai sebagai konteks deskripsi):
+- ${aktivitasAda.join('
+- ')}
+`
+  }
+  user += `Mode: ${mode}.
+`
   if (mode === 'aktivitas' || mode === 'keduanya') {
-    user += `Hasilkan 4–8 aktivitas/kegiatan singkat (frasa 3–10 kata) yang umum dilakukan di ekskul ini.\n`
+    if (aktivitasAda.length) {
+      user += `Boleh menyempurnakan/menambah aktivitas (4–8 item, frasa 3–10 kata) yang konsisten dengan konteks di atas.
+`
+    } else {
+      user += `Hasilkan 4–8 aktivitas/kegiatan singkat (frasa 3–10 kata) yang umum di ekskul ini.
+`
+    }
   }
   if (mode === 'deskripsi' || mode === 'keduanya') {
-    user += `Hasilkan tepat 3 deskripsi capaian (satu untuk predikat C, B, dan A).
-Setiap deskripsi 1–2 kalimat (maks ~400 karakter), menggambarkan sikap/keterampilan siswa.
-Contoh gaya: "Menunjukkan antusiasme dan keterampilan dasar dalam …"\n`
+    user += `Hasilkan tepat 3 deskripsi capaian (C, B, A).
+Setiap deskripsi 1–2 kalimat (maks ~400 karakter), menggambarkan sikap/keterampilan terkait aktivitas di atas.
+Contoh gaya: "Menunjukkan antusiasme dan menguasai teknik dasar … serta aktif bekerja sama dalam tim."
+Pastikan C < B < A dalam kualitas ketercapaian, dan ketiganya mengacu ke aktivitas yang sama.
+`
   }
   user += `Format JSON:
 {
@@ -558,7 +583,7 @@ Contoh gaya: "Menunjukkan antusiasme dan keterampilan dasar dalam …"\n`
     { "predikat": "A", "teks": "..." }
   ]
 }
-Jika mode=aktivitas, field deskripsi boleh array kosong. Jika mode=deskripsi, aktivitas boleh [].`
+Jika mode=aktivitas, deskripsi boleh []. Jika mode=deskripsi, aktivitas boleh [] atau ulang aktivitas konteks.`
 
   return { ok: true, sistem, user, mode }
 }

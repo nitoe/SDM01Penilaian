@@ -27,8 +27,10 @@ import {
 import { Notice, Spinner, btnPrimary, inputCls, selectCls, useToast } from './shared'
 
 /**
- * Input nilai ekstrakurikuler oleh pengampu ekskul atau wali kelas.
- * Query nilai selalu menyertakan ekskulId bila dipilih — agar pengampu non-wali lolos rules.
+ * Input nilai ekstrakurikuler oleh pengampu atau wali kelas.
+ * - Predikat → deskripsi terisi otomatis dari template admin.
+ * - Mode manual untuk capaian unik per siswa.
+ * - Aktivitas hanya konteks di master (bukan pilihan di form ini).
  */
 export default function InputEkskul({ profile }: { profile: AppUser }) {
   const admin = isAdminRole(profile.role)
@@ -37,7 +39,7 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
   const toast = useToast()
 
   const [master, setMaster] = useState<Ekstrakurikuler[] | null>(null)
-  const [pengajuanSaya, setPengajuanSaya] = useState<string[]>([]) // pending
+  const [pengajuanSaya, setPengajuanSaya] = useState<string[]>([])
   const [pengajuanStatus, setPengajuanStatus] = useState<Record<string, string>>({})
   const [ekskulId, setEkskulId] = useState('')
   const [kelas, setKelas] = useState('')
@@ -48,8 +50,7 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
   const [galatNilai, setGalatNilai] = useState('')
 
   const [siswaId, setSiswaId] = useState('')
-  const [aktivitas, setAktivitas] = useState('')
-  const [predikat, setPredikat] = useState<PredikatEkskul | ''>('B')
+  const [predikat, setPredikat] = useState<PredikatEkskul>('B')
   const [deskripsi, setDeskripsi] = useState('')
   const [manual, setManual] = useState(false)
   const [sibuk, setSibuk] = useState(false)
@@ -63,7 +64,6 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
   const isPengampu = ampu.length > 0
   const isWali = wali.length > 0
 
-  /** Kegiatan yang boleh dipilih: yang diampu, atau semua jika wali/admin. */
   const daftarPilih = useMemo(() => {
     if (!master) return []
     if (admin || isWali) return master.filter((m) => m.aktif)
@@ -85,7 +85,6 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
     }
   }, [kelas, kelasBoleh])
 
-  // Auto-pilih ekskul pertama yang diampu
   useEffect(() => {
     if (!ekskulId && daftarPilih.length === 1) setEkskulId(daftarPilih[0].id)
   }, [ekskulId, daftarPilih])
@@ -97,8 +96,7 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
         getPengajuanSaya(profile.uid).catch(() => []),
       ])
       setMaster(m)
-      const pending = aj.filter((a) => a.status === 'pending').map((a) => a.ekskulId)
-      setPengajuanSaya(pending)
+      setPengajuanSaya(aj.filter((a) => a.status === 'pending').map((a) => a.ekskulId))
       const status: Record<string, string> = {}
       for (const a of aj) status[a.ekskulId] = a.status
       setPengajuanStatus(status)
@@ -111,11 +109,10 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
     void muatMaster()
   }, [muatMaster])
 
-  /** Muat roster siswa (koleksi siswa — semua guru boleh list). */
   const muatSiswa = useCallback(async () => {
     if (!kelas) return
     try {
-      const s = await getSiswaList(kelas, { role: profile.role, kelasAmpu: SEMUA_KELAS as unknown as string[] })
+      const s = await getSiswaList(kelas, { role: profile.role, kelasAmpu: [...SEMUA_KELAS] })
       setSiswa(s)
     } catch (err) {
       console.error(err)
@@ -124,13 +121,8 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
     }
   }, [kelas, profile.role])
 
-  /**
-   * Muat nilai ekskul. WAJIB filter ekskulId untuk pengampu non-wali
-   * agar query lolos isPengampuEkskul di rules.
-   */
   const muatNilai = useCallback(async () => {
     if (!kelas || !periode) return
-    // Tanpa kegiatan dipilih: jangan query (hindari permission error)
     if (!ekskulId && !admin && !isWali) {
       setEkskulSiswa([])
       setGalatNilai('')
@@ -139,14 +131,12 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
     setMemuat(true)
     setGalatNilai('')
     try {
-      // Admin/wali tanpa filter ekskul: semua di kelas. Pengampu: selalu filter ekskulId.
-      const filterId = ekskulId || undefined
       const mustFilter = isPengampu && !admin && !isWali
-      if (mustFilter && !filterId) {
+      if (mustFilter && !ekskulId) {
         setEkskulSiswa([])
         return
       }
-      const e = await getEkskulSiswaKelas(kelas, periode, mustFilter ? filterId : filterId)
+      const e = await getEkskulSiswaKelas(kelas, periode, ekskulId || undefined)
       setEkskulSiswa(e)
     } catch (err) {
       console.error(err)
@@ -166,18 +156,27 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
     void muatNilai()
   }, [muatNilai])
 
+  /** Predikat → deskripsi otomatis (kecuali mode manual). */
   useEffect(() => {
-    if (manual || !ekskulAktif || !predikat) return
+    if (manual || !ekskulAktif) return
     const t = (ekskulAktif.deskripsiCapaian ?? []).find((x) => x.predikat === predikat)
-    if (t) setDeskripsi(t.teks)
+    setDeskripsi(t?.teks ?? '')
   }, [predikat, ekskulAktif, manual])
+
+  useEffect(() => {
+    setManual(false)
+  }, [ekskulId])
 
   async function simpan() {
     if (!periode || !ekskulAktif || !siswaId) {
       toast.show('Pilih kegiatan, kelas, dan siswa.', true)
       return
     }
-    const level: LevelEkskul = predikat ? predikatKeLevel(predikat) : 2
+    if (!deskripsi.trim()) {
+      toast.show('Deskripsi capaian masih kosong. Pilih predikat atau tulis manual.', true)
+      return
+    }
+    const level: LevelEkskul = predikatKeLevel(predikat)
     setSibuk(true)
     try {
       await simpanEkskulSiswa(kelas, periode, {
@@ -185,13 +184,10 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
         ekskulId: ekskulAktif.id,
         nama: ekskulAktif.nama,
         level,
-        deskripsi,
-        aktivitas: aktivitas || undefined,
+        deskripsi: deskripsi.trim(),
         diisiOleh: profile.uid,
       })
       toast.show('Nilai ekstrakurikuler tersimpan.')
-      setDeskripsi('')
-      setAktivitas('')
       await muatNilai()
     } catch (e) {
       console.error(e)
@@ -225,7 +221,8 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
       toast.show('Pengajuan terkirim. Menunggu persetujuan admin.')
       await muatMaster()
     } catch (err) {
-      toast.show(err instanceof Error ? err.message : 'Gagal mengajukan.', true)
+      console.error(err)
+      toast.show(err instanceof Error ? err.message : 'Gagal mengajukan. Periksa rules (deploy rules terbaru).', true)
     } finally {
       setSibuk(false)
     }
@@ -237,12 +234,9 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
     return ekskulSiswa.filter((e) => e.ekskulId === ekskulId)
   }, [ekskulSiswa, ekskulId])
 
-  /** Kegiatan yang belum diampu — untuk panel ajukan. */
   const bisaDiajukan = useMemo(() => {
     if (!master) return []
-    return master.filter(
-      (m) => m.aktif && !(m.pengampuUids ?? []).includes(profile.uid),
-    )
+    return master.filter((m) => m.aktif && !(m.pengampuUids ?? []).includes(profile.uid))
   }, [master, profile.uid])
 
   return (
@@ -254,21 +248,20 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
           admin
             ? 'Mode pantauan. Pengampu dan wali kelas mengisi nilai.'
             : isPengampu || isWali
-              ? 'Isi predikat dan deskripsi capaian. Hanya deskripsi yang dicetak di rapor.'
-              : 'Ajukan diri sebagai pengampu kegiatan. Setelah disetujui admin, Anda dapat menginput nilai.'
+              ? 'Pilih predikat — deskripsi capaian terisi otomatis. Hanya deskripsi yang dicetak di rapor.'
+              : 'Ajukan diri sebagai pengampu. Setelah disetujui admin, Anda dapat menginput nilai.'
         }
       />
 
       {galat && <Notice tone="error">{galat}</Notice>}
       {master === null && <Spinner />}
 
-      {/* ── Panel ajukan (selalu tampil jika ada yang bisa diajukan) ── */}
       {!admin && master && bisaDiajukan.length > 0 && (
         <section className="card-soft space-y-3 p-4">
           <div>
             <h3 className="text-[14px] font-semibold text-slate-900">Ajukan sebagai pengampu</h3>
             <p className="mt-0.5 text-[12px] text-muted">
-              Pilih kegiatan yang Anda ampu. Admin akan menyetujui sebelum Anda dapat menginput nilai.
+              Pilih kegiatan yang Anda ampu. Admin menyetujui sebelum Anda dapat menginput nilai.
             </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -307,7 +300,6 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
         </section>
       )}
 
-      {/* Belum pengampu & bukan wali */}
       {!bisaInput && master && (
         <Notice>
           Anda belum terdaftar sebagai pengampu atau wali kelas. Ajukan kegiatan di atas, atau minta admin
@@ -315,7 +307,6 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
         </Notice>
       )}
 
-      {/* ── Form input ── */}
       {bisaInput && (
         <>
           <div className="card-soft flex flex-wrap items-end gap-3 p-4">
@@ -326,7 +317,6 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
                 value={ekskulId}
                 onChange={(e) => {
                   setEkskulId(e.target.value)
-                  setManual(false)
                   setSiswaId('')
                 }}
               >
@@ -353,15 +343,19 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
             </p>
           </div>
 
-          {!ekskulId && (
-            <Notice tone="warn">Pilih kegiatan terlebih dahulu untuk memuat dan mengisi nilai.</Notice>
-          )}
-
+          {!ekskulId && <Notice tone="warn">Pilih kegiatan terlebih dahulu untuk memuat dan mengisi nilai.</Notice>}
           {galatNilai && <Notice tone="error">{galatNilai}</Notice>}
           {memuat && <Spinner />}
 
+          {ekskulAktif && (ekskulAktif.aktivitas ?? []).length > 0 && (
+            <p className="text-[12px] text-muted">
+              <span className="font-medium text-slate-600">Konteks aktivitas:</span>{' '}
+              {(ekskulAktif.aktivitas ?? []).join(' · ')}
+            </p>
+          )}
+
           {!admin && ekskulAktif && periode && siswa && (
-            <div className="card-soft grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="card-soft grid gap-3 p-4 sm:grid-cols-2">
               <label className="block text-[11px] font-medium text-slate-600">
                 Siswa
                 <select className={`${selectCls} mt-1`} value={siswaId} onChange={(e) => setSiswaId(e.target.value)}>
@@ -374,37 +368,15 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
                 </select>
               </label>
 
-              {(ekskulAktif.aktivitas ?? []).length > 0 ? (
-                <label className="block text-[11px] font-medium text-slate-600">
-                  Aktivitas
-                  <select className={`${selectCls} mt-1`} value={aktivitas} onChange={(e) => setAktivitas(e.target.value)}>
-                    <option value="">— Opsional —</option>
-                    {(ekskulAktif.aktivitas ?? []).map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : (
-                <label className="block text-[11px] font-medium text-slate-600">
-                  Aktivitas (opsional)
-                  <input
-                    className={`${inputCls} mt-1`}
-                    maxLength={120}
-                    value={aktivitas}
-                    onChange={(e) => setAktivitas(e.target.value)}
-                    placeholder="Mis. Latihan rutin Sabtu"
-                  />
-                </label>
-              )}
-
               <label className="block text-[11px] font-medium text-slate-600">
-                Predikat (internal)
+                Predikat
                 <select
                   className={`${selectCls} mt-1`}
                   value={predikat}
-                  onChange={(e) => setPredikat(e.target.value as PredikatEkskul | '')}
+                  onChange={(e) => {
+                    setPredikat(e.target.value as PredikatEkskul)
+                    if (manual) setManual(false)
+                  }}
                   disabled={manual}
                 >
                   {PREDIKAT_EKSKUL.map((p) => (
@@ -415,7 +387,7 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
                 </select>
               </label>
 
-              <label className="block text-[11px] font-medium text-slate-600 sm:col-span-2 lg:col-span-3">
+              <label className="block text-[11px] font-medium text-slate-600 sm:col-span-2">
                 <span className="flex flex-wrap items-center justify-between gap-2">
                   Deskripsi capaian (dicetak di rapor)
                   <button
@@ -423,47 +395,45 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
                     className="text-[11px] font-medium text-muh-700 hover:underline"
                     onClick={() => setManual((v) => !v)}
                   >
-                    {manual ? 'Pakai template predikat' : 'Tulis manual (unik per siswa)'}
+                    {manual ? 'Kembali ke template predikat' : 'Tulis manual (unik per siswa)'}
                   </button>
                 </span>
-                {!manual && (ekskulAktif.deskripsiCapaian ?? []).length > 0 && (
-                  <select
-                    className={`${selectCls} mt-1 mb-1`}
-                    value={deskripsi}
-                    onChange={(e) => setDeskripsi(e.target.value)}
-                  >
-                    <option value="">— Pilih dari template —</option>
-                    {(ekskulAktif.deskripsiCapaian ?? []).map((t) => (
-                      <option key={t.predikat} value={t.teks}>
-                        [{t.predikat}] {t.teks.slice(0, 80)}
-                        {t.teks.length > 80 ? '…' : ''}
-                      </option>
-                    ))}
-                  </select>
-                )}
                 <textarea
                   rows={3}
                   maxLength={BATAS_EKSKUL_DESKRIPSI}
                   className={`${inputCls} mt-1 font-normal`}
                   value={deskripsi}
-                  onChange={(e) => {
-                    setDeskripsi(e.target.value)
-                    if (!manual) setManual(true)
-                  }}
-                  placeholder="Deskripsi capaian yang akan muncul di rapor…"
+                  readOnly={!manual}
+                  onChange={(e) => setDeskripsi(e.target.value)}
+                  placeholder={
+                    manual
+                      ? 'Tulis deskripsi capaian unik untuk siswa ini…'
+                      : (ekskulAktif.deskripsiCapaian ?? []).length === 0
+                        ? 'Belum ada template. Minta admin mengisi Deskripsi C/B/A di Administrasi → Ekstrakurikuler.'
+                        : 'Otomatis dari predikat'
+                  }
                 />
+                {!manual && (ekskulAktif.deskripsiCapaian ?? []).length === 0 && (
+                  <span className="mt-1 block text-[11px] text-amber-700">
+                    Template deskripsi belum diisi admin untuk kegiatan ini.
+                  </span>
+                )}
               </label>
 
-              <div className="sm:col-span-2 lg:col-span-3">
-                <button type="button" className={btnPrimary} disabled={sibuk || !siswaId} onClick={() => void simpan()}>
+              <div className="sm:col-span-2">
+                <button
+                  type="button"
+                  className={btnPrimary}
+                  disabled={sibuk || !siswaId || !deskripsi.trim()}
+                  onClick={() => void simpan()}
+                >
                   {sibuk ? 'Menyimpan…' : 'Simpan'}
                 </button>
-                <span className="ml-3 text-[11px] text-muted">Predikat tidak dicetak di rapor.</span>
+                <span className="ml-3 text-[11px] text-muted">Hanya deskripsi yang dicetak di rapor.</span>
               </div>
             </div>
           )}
 
-          {/* Daftar nilai */}
           {!memuat && siswa && periode && ekskulId && (
             <ul className="space-y-2">
               {siswa.map((s) => {
@@ -479,7 +449,6 @@ export default function InputEkskul({ profile }: { profile: AppUser }) {
                             <span className="font-medium">{e.nama}</span>
                             {' · '}
                             {EKS_LEVEL_LABEL[e.level - 1] ?? e.level}
-                            {e.aktivitas ? <span className="text-muted"> · {e.aktivitas}</span> : null}
                             {e.deskripsi ? <span className="block text-muted">{e.deskripsi}</span> : null}
                           </span>
                           {!admin && (

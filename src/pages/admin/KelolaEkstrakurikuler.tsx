@@ -471,7 +471,7 @@ function PanelAktivitas({
 
   return (
     <div className="space-y-3">
-      <p className="text-[12px] text-muted">Satu baris per aktivitas. Guru dapat memilih dari daftar ini saat menginput nilai.</p>
+      <p className="text-[12px] text-muted">Satu baris per aktivitas. Ini hanya KONTEKS untuk menyusun deskripsi capaian (bukan pilihan nilai oleh guru).</p>
       <textarea
         rows={8}
         className={`${inputCls} font-normal`}
@@ -530,7 +530,7 @@ function PanelDeskripsi({
   return (
     <div className="space-y-3">
       <p className="text-[12px] text-muted">
-        Predikat C/B/A tidak dicetak di rapor. Guru memilih template ini atau menulis deskripsi manual per siswa.
+        Predikat C/B/A tidak dicetak di rapor. Deskripsi harus selaras dengan daftar aktivitas di atas. Guru hanya memilih predikat; deskripsi terisi otomatis.
       </p>
       {PREDIKAT_EKSKUL.map((p) => (
         <label key={p} className="block text-[11px] font-medium text-slate-600">
@@ -585,6 +585,7 @@ function PanelAi({
         namaEkskul: item.nama,
         mode,
         catatan: promptExtra.trim() || undefined,
+        aktivitasAda: item.aktivitas ?? [],
       })
       setPratinjau(res.data)
     } catch (e) {

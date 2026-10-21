@@ -389,8 +389,11 @@ service cloud.firestore {
     }
 
     // Pengajuan guru menjadi pengampu (satu dokumen per ekskul × uid).
+    // get: isGuru boleh (termasuk dokumen belum ada — resource null tidak dibaca).
+    // create: pengajuan pertama. update: admin setujui/tolak ATAU guru ajukan ulang setelah ditolak.
     match /ekstrakurikuler_ajukan/{id} {
-      allow read: if isAdmin()
+      allow get: if isAdmin() || isGuru();
+      allow list: if isAdmin()
                   || (isGuru() && resource.data.uid == request.auth.uid);
       allow create: if isGuru()
                     && request.resource.data.uid == request.auth.uid
@@ -402,8 +405,14 @@ service cloud.firestore {
                     && request.resource.data.ekskulId.size() <= 80
                     && request.resource.data.namaGuru is string
                     && request.resource.data.namaGuru.size() <= 120;
-      allow update: if isAdmin()
-                    && request.resource.data.status in ['pending', 'disetujui', 'ditolak'];
+      allow update: if (isAdmin()
+                        && request.resource.data.status in ['pending', 'disetujui', 'ditolak'])
+                    || (isGuru()
+                        && resource.data.uid == request.auth.uid
+                        && request.resource.data.uid == request.auth.uid
+                        && request.resource.data.status == 'pending'
+                        && resource.data.status in ['pending', 'ditolak']
+                        && request.resource.data.ekskulId == resource.data.ekskulId);
       allow delete: if isAdmin()
                     || (isGuru()
                         && resource.data.uid == request.auth.uid
