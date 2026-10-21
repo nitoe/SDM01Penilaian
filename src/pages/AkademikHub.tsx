@@ -49,13 +49,21 @@ const inputNilai: Item[] = [
   },
 ]
 
-/** Laporan & rapor disatukan: satu menu Laporan (tab SLM/STS/SAS), satu menu Rapor (toggle STS/SAS). */
+/** Laporan & rapor: Laporan Nilai (per mapel), Leger (seluruh mapel), Rapor, Kelengkapan. */
 const laporan: Item[] = [
   {
     to: '/akademik/laporan',
     title: 'Laporan Nilai',
-    desc: 'Rekap SLM, STS, dan SAS per kelas — tab di dalam halaman',
+    desc: 'Rekap SLM, STS, dan SAS per mapel × kelas — tab di dalam halaman',
     icon: 'printer',
+    tone: 'green',
+    ready: true,
+  },
+  {
+    to: '/akademik/leger',
+    title: 'Leger Nilai',
+    desc: 'Tabel seluruh siswa × seluruh mapel (SLM/STS/SAS) + total, rata-rata, peringkat',
+    icon: 'bars',
     tone: 'green',
     ready: true,
   },
@@ -122,7 +130,6 @@ function PanelItems({ items }: { items: Item[] }) {
   )
 }
 
-/** Hub untuk administrator: hanya melihat. Nama menu mengikuti fungsi pemantauan, bukan pengisian. */
 const adminTujuan: Item[] = [
   {
     to: '/akademik/setup-tp',
@@ -165,8 +172,16 @@ const adminLaporan: Item[] = [
   {
     to: '/akademik/laporan',
     title: 'Rekap Nilai',
-    desc: 'Rekap SLM, STS, dan SAS per kelas — tab di dalam halaman',
+    desc: 'Rekap SLM, STS, dan SAS per mapel × kelas — tab di dalam halaman',
     icon: 'printer',
+    tone: 'green',
+    ready: true,
+  },
+  {
+    to: '/akademik/leger',
+    title: 'Leger Nilai',
+    desc: 'Tabel seluruh siswa × seluruh mapel (SLM/STS/SAS) + total, rata-rata, peringkat',
+    icon: 'bars',
     tone: 'green',
     ready: true,
   },
