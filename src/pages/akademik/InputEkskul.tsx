@@ -24,7 +24,7 @@ import {
   PREDIKAT_EKSKUL,
   predikatKeLevel,
 } from '../../types/raporData'
-import { BackLink, Notice, Spinner, btnGhost, btnPrimary, inputCls, selectCls, useToast } from './shared'
+import { Notice, Spinner, btnPrimary, inputCls, selectCls, useToast } from './shared'
 
 /**
  * Input nilai ekstrakurikuler oleh pengampu ekskul atau wali kelas.
