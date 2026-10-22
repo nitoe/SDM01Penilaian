@@ -207,3 +207,5 @@
 17.4 `catatan` dan `dplId` pada dokumen `g7kaih` lama harus tetap tersimpan ulang apa adanya (data pengguna). UI tidak lagi mengisinya.
 
 17.5 Penyimpanan 7KAIH hanya menulis baris siswa yang berubah (`simpanG7kaihBanyak`, batch). Jangan menulis seluruh kelas pada setiap simpan.
+
+17.6 Aksi massal per kolom 7KAIH ("Atur semua") harus **menimpa** seluruh kolom dan menyediakan "Kosongkan". Jangan kembali ke perilaku "hanya isi sel kosong": pilihan itu tidak berefek bila kolom sudah terisi penuh dan tidak ada jalan menghapus massal. Perubahan baru tersimpan setelah tombol Simpan.

@@ -1833,9 +1833,12 @@ function Tab7Kaih({
     setUbah((prev) => new Set(prev).add(siswaId))
   }
 
-  /** Isi hanya sel yang masih kosong pada satu kebiasaan; sel yang sudah diisi tidak diubah. */
-  function isiKosong(kebiasaanId: string, v: LevelDpl) {
-    const target = (siswa || []).filter((s) => ambil(s.id, kebiasaanId) === null)
+  /**
+   * Atur seluruh kolom satu kebiasaan: v = level (menimpa isian yang ada) atau null (kosongkan).
+   * Hanya siswa yang nilainya benar-benar berubah yang ditandai berubah.
+   */
+  function aturKolom(kebiasaanId: string, v: LevelDpl | null) {
+    const target = (siswa || []).filter((s) => ambil(s.id, kebiasaanId) !== v)
     if (!target.length) return
     setLevel((prev) => {
       const next = { ...prev }
@@ -1891,7 +1894,8 @@ function Tab7Kaih({
       <p className="text-[12px] text-muted">
         Observasi ringkas sekali per semester ({labelPeriode}), bukan jurnal harian. Pembiasaan dinilai
         dengan 4 level, tidak dikaitkan dengan DPL. Bangun Pagi, Makan Sehat, dan Tidur Cepat sulit
-        diverifikasi sehingga boleh dikosongkan.
+        diverifikasi sehingga boleh dikosongkan. Menu "Atur semua" di atas tiap kolom menimpa seluruh
+        isian kolom itu (atau mengosongkannya); perubahan baru tersimpan setelah tombol Simpan.
       </p>
       <p className="text-[11.5px] text-slate-600">
         {DPL_LEVEL_LABEL.map((lab, i) => `${i + 1} = ${lab}`).join(' · ')}
@@ -1904,35 +1908,47 @@ function Tab7Kaih({
           <table className="min-w-full text-left text-[12px]">
             <thead className="bg-slate-50 text-[11px] font-semibold text-slate-600">
               <tr>
-                <th className="sticky left-0 z-10 min-w-[140px] bg-slate-50 px-2 py-2">Siswa</th>
+                <th className="sticky left-0 z-10 min-w-[150px] bg-slate-50 px-2 py-2 align-bottom">
+                  Siswa
+                </th>
                 {DAFTAR_KEBIASAAN_7KAIH.map((k) => {
                   const sulit = (KEBIASAAN_SULIT_VERIFIKASI_7KAIH as readonly string[]).includes(k.id)
                   return (
-                    <th key={k.id} className="px-1.5 py-2 align-top">
-                      <span className="block whitespace-nowrap">{k.label}</span>
-                      {sulit && <span className="block text-[10px] font-normal text-muted">boleh kosong</span>}
+                    <th key={k.id} className="w-[7.5rem] min-w-[7.5rem] px-2 py-2 align-top text-center">
+                      {/* Tinggi label dan baris keterangan dibuat tetap agar kontrol di bawahnya sejajar. */}
+                      <span className="flex min-h-[2rem] items-end justify-center text-[11.5px] leading-tight">
+                        {k.label}
+                      </span>
+                      <span className="block h-4 text-[10px] font-normal leading-4 text-muted">
+                        {sulit ? 'boleh kosong' : '\u00A0'}
+                      </span>
                       {bisaTulis && (
-                        <select
-                          className={`${selectCls} mt-1 text-[10.5px] font-normal`}
-                          value=""
-                          aria-label={`Isi sel kosong ${k.label}`}
-                          onChange={(e) => {
-                            const v = Number(e.target.value)
-                            if (v >= 1 && v <= 4) isiKosong(k.id, v as LevelDpl)
-                          }}
-                        >
-                          <option value="">isi kosong…</option>
-                          {DPL_LEVEL_LABEL.map((lab, i) => (
-                            <option key={lab} value={i + 1}>
-                              semua {i + 1}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="mx-auto w-[5.5rem]">
+                          <select
+                            className={`${selectCls} text-center text-[11px] font-normal`}
+                            value=""
+                            aria-label={`Atur seluruh kolom ${k.label}`}
+                            title="Atur seluruh kolom (menimpa isian yang ada)"
+                            onChange={(e) => {
+                              const val = e.target.value
+                              if (val === 'kosong') aturKolom(k.id, null)
+                              else if (['1', '2', '3', '4'].includes(val)) aturKolom(k.id, Number(val) as LevelDpl)
+                            }}
+                          >
+                            <option value="">Atur semua…</option>
+                            {DPL_LEVEL_LABEL.map((lab, i) => (
+                              <option key={lab} value={i + 1}>
+                                Semua {i + 1}
+                              </option>
+                            ))}
+                            <option value="kosong">Kosongkan</option>
+                          </select>
+                        </div>
                       )}
                     </th>
                   )
                 })}
-                <th className="px-2 py-2">Terisi</th>
+                <th className="px-2 py-2 text-center align-bottom">Terisi</th>
               </tr>
             </thead>
             <tbody>
@@ -1947,8 +1963,8 @@ function Tab7Kaih({
                     {DAFTAR_KEBIASAAN_7KAIH.map((k) => {
                       const v = ambil(sw.id, k.id)
                       return (
-                        <td key={k.id} className="px-1.5 py-1">
-                          <div className="w-[4.5rem]">
+                        <td key={k.id} className="px-2 py-1 text-center">
+                          <div className="mx-auto w-[5.5rem]">
                             <select
                               className={`${selectCls} text-center ${v ? WARNA_LEVEL_7KAIH[v] : ''}`}
                               value={v ?? ''}
@@ -1971,7 +1987,7 @@ function Tab7Kaih({
                         </td>
                       )
                     })}
-                    <td className="whitespace-nowrap px-2 py-1.5 text-slate-600">
+                    <td className="whitespace-nowrap px-2 py-1.5 text-center text-slate-600">
                       {terisi}/{totalKebiasaan}
                     </td>
                   </tr>

@@ -295,3 +295,10 @@
 - `src/pages/akademik/Kokurikuler.tsx` (tab 7KAIH): diganti tabel — baris siswa, kolom 7 kebiasaan, sel pilihan level 1–4 (kosong diperbolehkan; Bangun Pagi, Makan Sehat, Tidur Cepat ditandai boleh kosong). Ada "isi kosong…" per kolom (hanya mengisi sel yang masih kosong), penanda baris berubah, hitungan terisi per siswa, dan satu tombol simpan yang hanya menulis baris yang berubah. Tab tidak lagi bergantung pada DPL. Admin tetap hanya melihat.
 - Tidak ada perubahan `firestore.rules` (isi `kebiasaan` tidak divalidasi di rules). Dokumen lama tetap terbaca; levelnya kosong sampai diisi.
 - **Perlu di-deploy**: hosting saja (`npm run deploy`).
+
+
+## Belum dirilis — Perbaikan tampilan tabel 7KAIH
+
+- `src/pages/akademik/Kokurikuler.tsx` (tab 7KAIH): kontrol di header kolom sebelumnya tidak sejajar (kolom bertanda "boleh kosong" turun satu baris) dan lebarnya tidak seragam. Kini tiap kolom berlebar tetap, label diberi tinggi tetap, baris keterangan selalu ada, dan kontrol serta sel isian dipusatkan pada sumbu yang sama.
+- Menu header diganti dari "isi kosong…" menjadi "Atur semua…": **Semua 1–4 menimpa seluruh isian kolom**, dan **Kosongkan** menghapus seluruh isian kolom. Sebelumnya hanya sel kosong yang terisi, sehingga bila semua sel sudah terisi, pilihan apa pun tidak mengubah apa-apa dan tidak ada cara menghapus massal. Hanya siswa yang nilainya berubah yang ditandai berubah; "Batalkan perubahan" mengembalikan ke data tersimpan.
+- Perlu di-deploy: hosting saja.
