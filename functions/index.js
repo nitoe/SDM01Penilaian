@@ -12,10 +12,12 @@ import {
   normalisasiAset,
   normalisasiEkskul,
   normalisasiKktp,
+  normalisasiStem,
   normalisasiTp,
   susunPromptAset,
   susunPromptEkskul,
   susunPromptKktp,
+  susunPromptStem,
   susunPromptTp,
 } from './generateAi.js'
 
@@ -207,3 +209,39 @@ export const generateEkskulAi = onCall(opsiAi, async (request) => {
     throw new HttpsError('internal', err?.message || 'Gagal menyusun usulan ekstrakurikuler.')
   }
 })
+
+/** Rancang Proyek STEM dari ide singkat: pilih TP & 3 DPL dari katalog, scaffolding, daftar nilai. */
+export const generateStemAi = onCall(opsiAi, async (request) => {
+  const provider = pastikanAi(request)
+  const prompt = susunPromptStem(request.data || {})
+  if (!prompt.ok) throw new HttpsError('invalid-argument', prompt.pesan)
+  try {
+    const json = await mintaModel(provider, kunciProvider(provider), prompt.sistem, prompt.user)
+    const hasil = normalisasiStem(json, {
+      tpIdsSah: prompt.tpIdsSah,
+      dplIdsSah: prompt.dplIdsSah,
+      tpById: prompt.tpById,
+    })
+    if (!hasil.judul) {
+      throw new Error('Model tidak menghasilkan judul proyek yang valid.')
+    }
+    if (hasil.mapelTerlibat.length < 2) {
+      throw new Error('Model tidak memilih minimal 2 mapel/TP dari katalog. Coba perjelas ide atau lengkapi TP kelas.')
+    }
+    if (hasil.dplId.length < 3) {
+      throw new Error('Model tidak memilih 3 DPL dari katalog. Aktifkan DPL relevan lalu coba lagi.')
+    }
+    logger.info('generateStemAi', {
+      uid: request.auth.uid,
+      provider,
+      mapel: hasil.mapelTerlibat.length,
+      dpl: hasil.dplId.length,
+      pertemuan: hasil.jumlahPertemuan,
+    })
+    return hasil
+  } catch (err) {
+    logger.error('generateStemAi gagal', { pesan: err?.message })
+    throw new HttpsError('internal', err?.message || 'Gagal merancang Proyek STEM.')
+  }
+})
+

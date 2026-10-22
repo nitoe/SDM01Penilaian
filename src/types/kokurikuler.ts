@@ -58,12 +58,18 @@ export interface ProyekStem {
   semester: Semester
   tahunAjaran: string
   judul: string
+  /** Ringkasan tujuan & konteks proyek (boleh diisi AI). */
+  deskripsi?: string
   mapelTerlibat: MapelTerlibatStem[]
-  /** 2–4 id DPL aktif yang diamati. */
+  /** 2–4 id DPL aktif yang diamati (AI biasanya mengisi 3). */
   dplId: string[]
   tanggalMulai: string
   tanggalSelesai: string
   jumlahPertemuan: number
+  /** Langkah per pertemuan (scaffolding). */
+  scaffolding?: string[]
+  /** Aspek observasi/penilaian yang dapat diisi guru (bukan nilai mapel). */
+  daftarNilai?: string[]
 }
 
 /**

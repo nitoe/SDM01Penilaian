@@ -633,3 +633,175 @@ export function normalisasiEkskul(json, mode) {
 
   return { aktivitas, deskripsi }
 }
+
+
+/** Prompt rancang Proyek STEM dari ide singkat + katalog TP & DPL kelas. */
+export function susunPromptStem(input) {
+  const ide = potong(input.ide, 1500)
+  if (!ide || ide.length < 10) {
+    return { ok: false, pesan: 'Tulis ringkasan ide proyek STEM (minimal ~10 karakter).' }
+  }
+  const kelas = potong(input.kelas, 10)
+  if (!kelas) return { ok: false, pesan: 'Kelas wajib.' }
+
+  const katalogTp = Array.isArray(input.katalogTp) ? input.katalogTp : []
+  const katalogDpl = Array.isArray(input.katalogDpl) ? input.katalogDpl : []
+  if (katalogTp.length < 2) {
+    return { ok: false, pesan: 'Katalog TP kelas kurang. Pastikan minimal 2 TP tersimpan untuk kelas ini.' }
+  }
+  if (katalogDpl.length < 3) {
+    return { ok: false, pesan: 'Aktifkan minimal 3 DPL di kelas ini sebelum memakai AI.' }
+  }
+
+  // Batasi payload agar token aman
+  const tpRingkas = katalogTp.slice(0, 80).map((t) => ({
+    id: potong(t.id, 80),
+    mapel: potong(t.mapel, 60),
+    namaTp: potong(t.namaTp, 160),
+  })).filter((t) => t.id && t.mapel)
+
+  const dplRingkas = katalogDpl.slice(0, 12).map((d) => ({
+    id: potong(d.id, 80),
+    nama: potong(d.nama, 80),
+  })).filter((d) => d.id && d.nama)
+
+  const daftarTp = tpRingkas
+    .map((t) => `- id="${t.id}" | mapel="${t.mapel}" | ${t.namaTp}`)
+    .join('\n')
+  const daftarDpl = dplRingkas
+    .map((d) => `- id="${d.id}" | ${d.nama}`)
+    .join('\n')
+
+  const sistem = [
+    'Anda asisten kurikulum SD Muhammadiyah (Kurikulum Merdeka) untuk merancang Proyek STEM.',
+    'STEM = Science, Technology, Engineering, Mathematics terintegrasi; proyek nyata, kontekstual, cocok siswa SD.',
+    'ATURAN KERAS:',
+    '1) Pilih TP HANYA dari katalog yang diberikan (pakai id persis). Minimal 2 mapel berbeda.',
+    '2) Pilih tepat 3 DPL HANYA dari katalog (pakai id persis) yang paling relevan dengan proyek.',
+    '3) Jangan menulis atau mengubah nilai mapel/SLM — TP hanya dokumentasi keterkaitan proyek.',
+    '4) Bahasa Indonesia baku, jelas untuk wali kelas SD.',
+    '5) Jawab HANYA JSON valid tanpa markdown dan tanpa komentar.',
+  ].join('\n')
+
+  const user = [
+    'Kelas: ' + kelas + '.',
+    'Ide/ringkasan dari guru:',
+    ide,
+    '',
+    'Katalog TP kelas (pilih yang paling cocok, ≥2 mapel berbeda):',
+    daftarTp,
+    '',
+    'Katalog DPL aktif (pilih tepat 3):',
+    daftarDpl,
+    '',
+    'Hasilkan JSON dengan bentuk:',
+    '{',
+    '  "judul": "judul proyek singkat dan menarik (maks 120 karakter)",',
+    '  "deskripsi": "1-3 paragraf tujuan, konteks, dan hasil yang diharapkan (maks 1200 karakter)",',
+    '  "jumlahPertemuan": 4,',
+    '  "scaffolding": ["pertemuan 1: ...", "pertemuan 2: ..."],',
+    '  "mapelTerlibat": [',
+    '    { "tpId": "id-dari-katalog", "mapel": "nama mapel", "namaTp": "ringkas", "jenisNilai": "SLM" }',
+    '  ],',
+    '  "dplId": ["id-dpl-1", "id-dpl-2", "id-dpl-3"],',
+    '  "daftarNilai": ["aspek observasi/penilaian 1", "aspek 2", "..."]',
+    '}',
+    '',
+    'Catatan:',
+    '- jumlahPertemuan bilangan bulat 3–12 (sesuaikan kompleksitas).',
+    '- scaffolding: satu langkah per pertemuan, urut, konkret (apa yang siswa kerjakan).',
+    '- jenisNilai hanya "SLM" atau "SAS" (pilih yang paling masuk akal untuk TP itu).',
+    '- daftarNilai: 4–8 aspek yang dapat diisi/diamati guru (produk, proses, presentasi, kolaborasi, dsb.), bukan angka.',
+    '- Jangan mengarang tpId atau dplId di luar katalog.',
+  ].join('\n')
+
+  return {
+    ok: true,
+    sistem,
+    user,
+    tpIdsSah: new Set(tpRingkas.map((t) => t.id)),
+    dplIdsSah: new Set(dplRingkas.map((d) => d.id)),
+    tpById: Object.fromEntries(tpRingkas.map((t) => [t.id, t])),
+  }
+}
+
+export function normalisasiStem(json, meta) {
+  let data = json
+  if (typeof json === 'string') {
+    try {
+      data = JSON.parse(json)
+    } catch {
+      data = {}
+    }
+  }
+  if (!data || typeof data !== 'object') data = {}
+
+  const judul = potong(data.judul, 200)
+  const deskripsi = potong(data.deskripsi, 2000)
+  let jumlahPertemuan = Math.floor(Number(data.jumlahPertemuan) || 0)
+  if (jumlahPertemuan < 3) jumlahPertemuan = 3
+  if (jumlahPertemuan > 12) jumlahPertemuan = 12
+
+  let scaffolding = []
+  if (Array.isArray(data.scaffolding)) {
+    scaffolding = data.scaffolding
+      .map((s) => potong(s, 300))
+      .filter(Boolean)
+      .slice(0, 12)
+  }
+
+  const tpIdsSah = meta?.tpIdsSah instanceof Set ? meta.tpIdsSah : new Set()
+  const dplIdsSah = meta?.dplIdsSah instanceof Set ? meta.dplIdsSah : new Set()
+  const tpById = meta?.tpById || {}
+
+  const mapelTerlibat = []
+  const mapelSeen = new Set()
+  if (Array.isArray(data.mapelTerlibat)) {
+    for (const item of data.mapelTerlibat) {
+      if (!item || typeof item !== 'object') continue
+      const tpId = potong(item.tpId, 80)
+      if (!tpId || !tpIdsSah.has(tpId)) continue
+      const dariKatalog = tpById[tpId] || {}
+      const mapel = potong(item.mapel || dariKatalog.mapel, 80)
+      if (!mapel) continue
+      // Satu TP per mapel
+      if (mapelSeen.has(mapel)) continue
+      mapelSeen.add(mapel)
+      const jenis = String(item.jenisNilai || 'SLM').toUpperCase() === 'SAS' ? 'SAS' : 'SLM'
+      mapelTerlibat.push({
+        tpId,
+        mapel,
+        namaTp: potong(item.namaTp || dariKatalog.namaTp, 200) || undefined,
+        jenisNilai: jenis,
+      })
+      if (mapelTerlibat.length >= 6) break
+    }
+  }
+
+  let dplId = []
+  if (Array.isArray(data.dplId)) {
+    for (const id of data.dplId) {
+      const clean = potong(id, 80)
+      if (clean && dplIdsSah.has(clean) && !dplId.includes(clean)) dplId.push(clean)
+      if (dplId.length >= 3) break
+    }
+  }
+
+  let daftarNilai = []
+  if (Array.isArray(data.daftarNilai)) {
+    daftarNilai = data.daftarNilai
+      .map((s) => potong(s, 200))
+      .filter(Boolean)
+      .slice(0, 10)
+  }
+
+  return {
+    judul,
+    deskripsi,
+    jumlahPertemuan,
+    scaffolding,
+    mapelTerlibat,
+    dplId,
+    daftarNilai,
+  }
+}

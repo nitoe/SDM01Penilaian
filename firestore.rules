@@ -445,6 +445,63 @@ service cloud.firestore {
                     || isPengampuEkskul(resource.data.ekskulId);
     }
 
+
+    // ---- Kokurikuler: DPL, Proyek STEM, nilai DPL (`kokurikuler`), 7KAIH ----
+    // Wali kelas menulis; admin membaca. Tidak menyentuh nilai_tp / SLM.
+
+    match /dpl/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(['kelas', 'tingkatan', 'nama', 'urutan', 'aktif', 'levelDeskripsi'])
+                    && request.resource.data.nama is string
+                    && request.resource.data.nama.size() > 0
+                    && request.resource.data.nama.size() <= 80;
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas;
+      allow delete: if waliKelasSendiri(resource.data.kelas);
+    }
+
+    match /proyek_stem/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['kelas', 'tingkatan', 'semester', 'tahunAjaran', 'judul', 'mapelTerlibat', 'dplId'])
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 200;
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas;
+      allow delete: if waliKelasSendiri(resource.data.kelas);
+    }
+
+    match /kokurikuler/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['siswaId', 'dplId', 'kelas', 'semester', 'tahunAjaran', 'proyekStemId', 'level'])
+                    && request.resource.data.level in [1, 2, 3, 4]
+                    && (!('deskripsi' in request.resource.data)
+                        || (request.resource.data.deskripsi is string
+                            && request.resource.data.deskripsi.size() <= 500));
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.siswaId == resource.data.siswaId
+                    && request.resource.data.proyekStemId == resource.data.proyekStemId
+                    && request.resource.data.level in [1, 2, 3, 4];
+      allow delete: if waliKelasSendiri(resource.data.kelas);
+    }
+
+    match /g7kaih/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'kebiasaan']);
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.siswaId == resource.data.siswaId;
+      allow delete: if waliKelasSendiri(resource.data.kelas);
+    }
+
     match /kktp_tahsin_tahfizh/{jenjang} {
       allow read: if isGuru();
       allow write: if isAdmin();
