@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { PageHeader } from '../../components/ui'
 import { kelasSaya } from '../../lib/kelasSaya'
 import { getSiswaList } from '../../lib/tahsinData'
@@ -7,7 +7,6 @@ import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import { isAdminRole } from '../../lib/roles'
 import {
   getDplByKelas,
-  getNilaiDplByProyek,
   getNilaiProyekByProyek,
   getProyekStemById,
   simpanNilaiDpl,
@@ -15,7 +14,7 @@ import {
 } from '../../lib/kokurikuler'
 import type { AppUser } from '../../types/user'
 import type { SiswaTahsin } from '../../types/tahsin'
-import type { Dpl, LevelDpl, ProyekStem, RubrikAspekStem } from '../../types/kokurikuler'
+import type { Dpl, ProyekStem, RubrikAspekStem } from '../../types/kokurikuler'
 import {
   DPL_LEVEL_LABEL,
   STEM_NILAI_RANGE,
@@ -29,7 +28,6 @@ import {
   btnGhost,
   btnPrimary,
   inputSempitCls,
-  selectCls,
   useToast,
 } from './shared'
 
@@ -39,7 +37,6 @@ import {
  */
 export default function ProyekStemDetail({ profile }: { profile: AppUser }) {
   const { proyekId = '' } = useParams<{ proyekId: string }>()
-  const navigate = useNavigate()
   const admin = isAdminRole(profile.role)
   const periodeAk = usePeriodeAkademik()
   const { wali } = kelasSaya(profile)
