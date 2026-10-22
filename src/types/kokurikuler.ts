@@ -155,9 +155,21 @@ export const KEBIASAAN_SULIT_VERIFIKASI_7KAIH: readonly Kebiasaan7KaihId[] = [
   'makanSehat',
 ]
 
+/**
+ * Skala 7KAIH: 4 level yang sama dengan observasi DPL (Belum Terlihat … Sangat Berkembang).
+ * Pembiasaan TIDAK ditautkan ke DPL dan TIDAK memakai skala 0–100 (itu khusus proyek STEM).
+ */
+export const LEVEL_7KAIH_LABEL = DPL_LEVEL_LABEL
+
 export interface CatatanKebiasaan {
-  catatan: string
-  dplId: string
+  /** 1–4 (index+1 dari LEVEL_7KAIH_LABEL); null = belum diisi / tidak teramati. */
+  level: LevelDpl | null
+  /**
+   * Legacy (versi lama): catatan teks dan tautan DPL. UI tidak lagi mengisinya, tetapi nilainya
+   * dipertahankan saat menyimpan agar data lama tidak hilang.
+   */
+  catatan?: string
+  dplId?: string
 }
 
 /** Koleksi `g7kaih` — satu dokumen per siswa × semester. */

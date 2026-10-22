@@ -285,3 +285,13 @@
 - `src/pages/akademik/Kokurikuler.tsx`: AI tidak lagi mensyaratkan DPL aktif. Hasil AI mengisi rubrik berdeskripsi. Saat proyek disimpan, DPL terpilih otomatis diaktifkan dan level yang kosong diisi dari usulan AI (level yang sudah terisi tidak ditimpa). Pilihan DPL di tab Tujuan menampilkan DPL aktif dan DPL terpilih yang belum aktif. Proyek baru dibuka di tab AI. Pesan TP kurang menyebut mapel yang belum punya TP.
 - Akses AI tidak berubah: tetap hanya UID `v4fQXsqCzYUtHrqcDM0u48sxIfn1` + email `arif.azwar79@gmail.com`.
 - **Perlu di-deploy**: `npm run deploy:functions` dan `npm run deploy` (hosting). Tidak ada perubahan `firestore.rules`.
+
+
+## Belum dirilis — Kokurikuler: 7KAIH menjadi daftar nilai 4 level, tanpa DPL
+
+- **Masalah**: 7KAIH dibuat per siswa dengan catatan teks dan wajib menautkan tiap kebiasaan ke satu DPL (dan tab diblokir bila belum ada DPL aktif). Tautan itu tidak bermakna (mis. tidur cepat tidak mewakili dimensi profil mana pun) dan isiannya lambat.
+- `src/types/kokurikuler.ts`: `CatatanKebiasaan` kini `{ level: 1–4 | null }`; `catatan` dan `dplId` jadi opsional (data lama). Konstanta `LEVEL_7KAIH_LABEL` (= 4 label skala DPL: Belum Terlihat, Mulai Terlihat, Berkembang Sesuai Harapan, Sangat Berkembang).
+- `src/lib/kokurikuler.ts`: `normalisasiKebiasaan` membaca `level`; `catatan`/`dplId` lama dipertahankan bila ada. `simpanG7kaihBanyak` (baru): simpan banyak siswa sekaligus dalam batch.
+- `src/pages/akademik/Kokurikuler.tsx` (tab 7KAIH): diganti tabel — baris siswa, kolom 7 kebiasaan, sel pilihan level 1–4 (kosong diperbolehkan; Bangun Pagi, Makan Sehat, Tidur Cepat ditandai boleh kosong). Ada "isi kosong…" per kolom (hanya mengisi sel yang masih kosong), penanda baris berubah, hitungan terisi per siswa, dan satu tombol simpan yang hanya menulis baris yang berubah. Tab tidak lagi bergantung pada DPL. Admin tetap hanya melihat.
+- Tidak ada perubahan `firestore.rules` (isi `kebiasaan` tidak divalidasi di rules). Dokumen lama tetap terbaca; levelnya kosong sampai diisi.
+- **Perlu di-deploy**: hosting saja (`npm run deploy`).

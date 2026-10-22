@@ -375,6 +375,12 @@ export function idG7kaih(siswaId: string, tahunAjaran: string, semester: Semeste
   return `${siswaId}_${tahunAjaran}_${semester}`.replace(/[/\\]/g, '_')
 }
 
+function normalisasiLevel7kaih(raw: unknown): LevelDpl | null {
+  if (raw === null || raw === undefined || raw === '') return null
+  const n = Math.round(Number(raw))
+  return n >= 1 && n <= 4 ? (n as LevelDpl) : null
+}
+
 function normalisasiKebiasaan(raw: unknown): Record<string, CatatanKebiasaan> {
   const out: Record<string, CatatanKebiasaan> = {}
   const src = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
@@ -382,12 +388,16 @@ function normalisasiKebiasaan(raw: unknown): Record<string, CatatanKebiasaan> {
     const item = src[k.id]
     if (item && typeof item === 'object') {
       const o = item as Record<string, unknown>
+      // catatan/dplId adalah data lama: dipertahankan bila ada, tidak pernah dibuat baru oleh UI.
+      const catatan = potong(String(o.catatan ?? ''), BATAS_7KAIH_CATATAN)
+      const dplId = String(o.dplId ?? '')
       out[k.id] = {
-        catatan: potong(String(o.catatan ?? ''), BATAS_7KAIH_CATATAN),
-        dplId: String(o.dplId ?? ''),
+        level: normalisasiLevel7kaih(o.level),
+        ...(catatan ? { catatan } : {}),
+        ...(dplId ? { dplId } : {}),
       }
     } else {
-      out[k.id] = { catatan: '', dplId: '' }
+      out[k.id] = { level: null }
     }
   }
   return out
@@ -440,6 +450,31 @@ export async function simpanG7kaih(input: {
     kebiasaan: normalisasiKebiasaan(input.kebiasaan),
     updatedAt: serverTimestamp(),
   })
+}
+
+/** Simpan 7KAIH banyak siswa sekaligus (batch). Dipakai tabel isian: hanya baris yang berubah. */
+export async function simpanG7kaihBanyak(input: {
+  kelas: string
+  semester: Semester
+  tahunAjaran: string
+  items: { siswaId: string; kebiasaan: Record<string, CatatanKebiasaan> }[]
+}): Promise<void> {
+  const tingkatan = tingkatanDariKelas(input.kelas)
+  for (let i = 0; i < input.items.length; i += 400) {
+    const batch = writeBatch(db)
+    for (const it of input.items.slice(i, i + 400)) {
+      batch.set(doc(db, 'g7kaih', idG7kaih(it.siswaId, input.tahunAjaran, input.semester)), {
+        siswaId: it.siswaId,
+        kelas: input.kelas,
+        tingkatan,
+        semester: input.semester,
+        tahunAjaran: input.tahunAjaran,
+        kebiasaan: normalisasiKebiasaan(it.kebiasaan),
+        updatedAt: serverTimestamp(),
+      })
+    }
+    await batch.commit()
+  }
 }
 
 

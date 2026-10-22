@@ -195,3 +195,15 @@
 16.5 Fitur AI tetap dibatasi pada UID + email di `bolehPemanggilAi` (lihat §15 dan `src/lib/generateAi.ts`). Pemeriksaan di klien hanya kosmetik; yang menjaga adalah Cloud Function.
 
 16.6 Prompt materi ajar tidak boleh menghasilkan judul bergaya julukan, slogan, atau persona (mis. "detektif", "petualang", "agen").
+
+## §17. 7KAIH
+
+17.1 7KAIH **tidak ditautkan ke DPL**. Jangan mengembalikan pilihan DPL per kebiasaan atau syarat "DPL aktif" pada tab 7KAIH. Bila deskripsi rapor perlu menyebut DPL, itu urusan penyusun deskripsi akhir, bukan data 7KAIH.
+
+17.2 Skala 7KAIH adalah 4 level (`LEVEL_7KAIH_LABEL`), **bukan 0–100**. Skala 0–100 khusus Proyek STEM karena berkaitan dengan mapel (`STEM_NILAI_RANGE`).
+
+17.3 `level: null` berarti belum diisi/tidak teramati dan bukan level terendah. Jangan menafsirkan kosong sebagai 1 saat menyusun rapor.
+
+17.4 `catatan` dan `dplId` pada dokumen `g7kaih` lama harus tetap tersimpan ulang apa adanya (data pengguna). UI tidak lagi mengisinya.
+
+17.5 Penyimpanan 7KAIH hanya menulis baris siswa yang berubah (`simpanG7kaihBanyak`, batch). Jangan menulis seluruh kelas pada setiap simpan.

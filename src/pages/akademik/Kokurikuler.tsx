@@ -22,7 +22,7 @@ import {
   hapusProyekStem,
   pastikanDplBaku,
   simpanDpl,
-  simpanG7kaih,
+  simpanG7kaihBanyak,
   simpanNilaiDpl,
   simpanNilaiProyek,
   simpanProyekStem,
@@ -1758,6 +1758,20 @@ function SiswaNilaiDplCard({
 
 // ── Tab 7KAIH ────────────────────────────────────────────────────────────────
 
+/** Warna latar sel agar level mudah dipindai; hanya penanda, bukan satu-satunya penanda (ada angka). */
+const WARNA_LEVEL_7KAIH: Record<number, string> = {
+  1: 'bg-rose-50',
+  2: 'bg-amber-50',
+  3: 'bg-emerald-50',
+  4: 'bg-sky-50',
+}
+
+type LevelSiswa = Record<string, Record<string, LevelDpl | null>>
+
+/**
+ * 7KAIH — daftar nilai: baris = siswa, kolom = 7 kebiasaan, isi = level 1–4 (skala DPL).
+ * Tidak ditautkan ke DPL. Observasi ringkas sekali per semester, bukan jurnal harian.
+ */
 function Tab7Kaih({
   kelas,
   periode,
@@ -1773,30 +1787,32 @@ function Tab7Kaih({
   profile: AppUser
   toast: { show: (m: string, err?: boolean) => void }
 }) {
-  const [dpl, setDpl] = useState<Dpl[]>([])
   const [siswa, setSiswa] = useState<SiswaTahsin[] | null>(null)
-  const [g7, setG7] = useState<Record<string, { id: string; kebiasaan: Record<string, CatatanKebiasaan> }>>(
-    {},
-  )
+  // Data dari database (termasuk catatan/dplId lama, dipertahankan saat menyimpan).
+  const [tersimpan, setTersimpan] = useState<Record<string, Record<string, CatatanKebiasaan>>>({})
+  const [level, setLevel] = useState<LevelSiswa>({})
+  const [ubah, setUbah] = useState<Set<string>>(new Set())
   const [galat, setGalat] = useState('')
-  const [openIdx, setOpenIdx] = useState<number | null>(null)
   const [sibuk, setSibuk] = useState(false)
 
   const muat = useCallback(async () => {
     setGalat('')
     try {
-      const [d, s, g] = await Promise.all([
-        getDplByKelas(kelas, { hanyaAktif: true }),
+      const [s, g] = await Promise.all([
         getSiswaList(kelas, { role: profile.role, kelasAmpu: [kelas] }),
         getG7kaihByKelas(kelas, periode),
       ])
-      setDpl(d)
-      setSiswa(s)
-      const map: Record<string, { id: string; kebiasaan: Record<string, CatatanKebiasaan> }> = {}
+      const simpanan: Record<string, Record<string, CatatanKebiasaan>> = {}
+      const lv: LevelSiswa = {}
       for (const [sid, dok] of Object.entries(g)) {
-        map[sid] = { id: dok.id, kebiasaan: dok.kebiasaan }
+        simpanan[sid] = dok.kebiasaan
+        lv[sid] = {}
+        for (const k of DAFTAR_KEBIASAAN_7KAIH) lv[sid][k.id] = dok.kebiasaan[k.id]?.level ?? null
       }
-      setG7(map)
+      setSiswa(s)
+      setTersimpan(simpanan)
+      setLevel(lv)
+      setUbah(new Set())
     } catch (e) {
       console.error(e)
       setGalat('Gagal memuat 7KAIH. Pastikan rules g7kaih sudah di-deploy.')
@@ -1808,17 +1824,52 @@ function Tab7Kaih({
     void muat()
   }, [muat])
 
-  async function simpanSiswa(siswaId: string, kebiasaan: Record<string, CatatanKebiasaan>) {
+  function ambil(siswaId: string, kebiasaanId: string): LevelDpl | null {
+    return level[siswaId]?.[kebiasaanId] ?? null
+  }
+
+  function setNilai(siswaId: string, kebiasaanId: string, v: LevelDpl | null) {
+    setLevel((prev) => ({ ...prev, [siswaId]: { ...(prev[siswaId] || {}), [kebiasaanId]: v } }))
+    setUbah((prev) => new Set(prev).add(siswaId))
+  }
+
+  /** Isi hanya sel yang masih kosong pada satu kebiasaan; sel yang sudah diisi tidak diubah. */
+  function isiKosong(kebiasaanId: string, v: LevelDpl) {
+    const target = (siswa || []).filter((s) => ambil(s.id, kebiasaanId) === null)
+    if (!target.length) return
+    setLevel((prev) => {
+      const next = { ...prev }
+      for (const s of target) next[s.id] = { ...(next[s.id] || {}), [kebiasaanId]: v }
+      return next
+    })
+    setUbah((prev) => {
+      const next = new Set(prev)
+      for (const s of target) next.add(s.id)
+      return next
+    })
+  }
+
+  async function simpan() {
+    const daftar = (siswa || []).filter((s) => ubah.has(s.id))
+    if (!daftar.length) {
+      toast.show('Belum ada perubahan untuk disimpan.')
+      return
+    }
     setSibuk(true)
     try {
-      await simpanG7kaih({
-        siswaId,
+      await simpanG7kaihBanyak({
         kelas,
         semester: periode.semester,
         tahunAjaran: periode.tahunAjaran,
-        kebiasaan,
+        items: daftar.map((s) => {
+          const kebiasaan: Record<string, CatatanKebiasaan> = {}
+          for (const k of DAFTAR_KEBIASAAN_7KAIH) {
+            kebiasaan[k.id] = { ...(tersimpan[s.id]?.[k.id] || {}), level: ambil(s.id, k.id) }
+          }
+          return { siswaId: s.id, kebiasaan }
+        }),
       })
-      toast.show('7KAIH tersimpan.')
+      toast.show(`7KAIH tersimpan untuk ${daftar.length} siswa.`)
       await muat()
     } catch (e) {
       console.error(e)
@@ -1830,132 +1881,123 @@ function Tab7Kaih({
 
   if (siswa === null) return <Spinner />
   if (galat) return <Notice tone="error">{galat}</Notice>
-  if (dpl.length === 0) {
-    return (
-      <Notice tone="warn">
-        Kelas ini belum punya DPL aktif. Aktifkan DPL di tab Proyek STEM (panel Dimensi Profil
-        Lulusan) terlebih dahulu — 7KAIH menautkan tiap kebiasaan ke satu DPL.
-      </Notice>
-    )
-  }
+
+  const totalKebiasaan = DAFTAR_KEBIASAAN_7KAIH.length
+  const jumlahTerisi = (siswaId: string) =>
+    DAFTAR_KEBIASAAN_7KAIH.filter((k) => ambil(siswaId, k.id) !== null).length
 
   return (
     <div className="space-y-3">
       <p className="text-[12px] text-muted">
-        Observasi ringkas sekali per semester ({labelPeriode}), bukan jurnal harian. Bangun Pagi, Tidur
-        Cepat, dan Makan Sehat boleh dikosongkan.
+        Observasi ringkas sekali per semester ({labelPeriode}), bukan jurnal harian. Pembiasaan dinilai
+        dengan 4 level, tidak dikaitkan dengan DPL. Bangun Pagi, Makan Sehat, dan Tidur Cepat sulit
+        diverifikasi sehingga boleh dikosongkan.
       </p>
-      <ul className="space-y-2">
-        {siswa.map((sw, i) => {
-          const dok = g7[sw.id]
-          const terisi = DAFTAR_KEBIASAAN_7KAIH.filter((k) => dok?.kebiasaan?.[k.id]?.catatan).length
-          return (
-            <li key={sw.id} className="card-soft overflow-hidden">
-              <button
-                type="button"
-                className="flex w-full items-center justify-between px-3.5 py-3 text-left"
-                onClick={() => setOpenIdx(openIdx === i ? null : i)}
-              >
-                <div>
-                  <p className="text-[13px] font-semibold text-slate-900">{sw.nama}</p>
-                  <p className="text-[11px] text-muted">
-                    {terisi}/{DAFTAR_KEBIASAAN_7KAIH.length} kebiasaan ada catatan
-                  </p>
-                </div>
-                <span className="text-[12px] text-muh-700">{openIdx === i ? 'Tutup' : 'Isi'}</span>
-              </button>
-              {openIdx === i && (
-                <Form7KaihSiswa
-                  existing={dok?.kebiasaan}
-                  dpl={dpl}
-                  bisaTulis={bisaTulis}
-                  sibuk={sibuk}
-                  onSimpan={(keb) => void simpanSiswa(sw.id, keb)}
-                />
-              )}
-            </li>
-          )
-        })}
-      </ul>
-    </div>
-  )
-}
+      <p className="text-[11.5px] text-slate-600">
+        {DPL_LEVEL_LABEL.map((lab, i) => `${i + 1} = ${lab}`).join(' · ')}
+      </p>
 
-function Form7KaihSiswa({
-  existing,
-  dpl,
-  bisaTulis,
-  sibuk,
-  onSimpan,
-}: {
-  existing?: Record<string, CatatanKebiasaan>
-  dpl: Dpl[]
-  bisaTulis: boolean
-  sibuk: boolean
-  onSimpan: (kebiasaan: Record<string, CatatanKebiasaan>) => void
-}) {
-  const [keb, setKeb] = useState<Record<string, CatatanKebiasaan>>({})
+      {siswa.length === 0 ? (
+        <Notice tone="info">Belum ada data siswa di kelas ini.</Notice>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-border bg-white">
+          <table className="min-w-full text-left text-[12px]">
+            <thead className="bg-slate-50 text-[11px] font-semibold text-slate-600">
+              <tr>
+                <th className="sticky left-0 z-10 min-w-[140px] bg-slate-50 px-2 py-2">Siswa</th>
+                {DAFTAR_KEBIASAAN_7KAIH.map((k) => {
+                  const sulit = (KEBIASAAN_SULIT_VERIFIKASI_7KAIH as readonly string[]).includes(k.id)
+                  return (
+                    <th key={k.id} className="px-1.5 py-2 align-top">
+                      <span className="block whitespace-nowrap">{k.label}</span>
+                      {sulit && <span className="block text-[10px] font-normal text-muted">boleh kosong</span>}
+                      {bisaTulis && (
+                        <select
+                          className={`${selectCls} mt-1 text-[10.5px] font-normal`}
+                          value=""
+                          aria-label={`Isi sel kosong ${k.label}`}
+                          onChange={(e) => {
+                            const v = Number(e.target.value)
+                            if (v >= 1 && v <= 4) isiKosong(k.id, v as LevelDpl)
+                          }}
+                        >
+                          <option value="">isi kosong…</option>
+                          {DPL_LEVEL_LABEL.map((lab, i) => (
+                            <option key={lab} value={i + 1}>
+                              semua {i + 1}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </th>
+                  )
+                })}
+                <th className="px-2 py-2">Terisi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {siswa.map((sw) => {
+                const terisi = jumlahTerisi(sw.id)
+                return (
+                  <tr key={sw.id} className="border-t border-border">
+                    <td className="sticky left-0 z-10 bg-white px-2 py-1.5 font-medium text-slate-800">
+                      {sw.nama}
+                      {ubah.has(sw.id) && <span className="ml-1 text-[10px] text-amber-700">●</span>}
+                    </td>
+                    {DAFTAR_KEBIASAAN_7KAIH.map((k) => {
+                      const v = ambil(sw.id, k.id)
+                      return (
+                        <td key={k.id} className="px-1.5 py-1">
+                          <div className="w-[4.5rem]">
+                            <select
+                              className={`${selectCls} text-center ${v ? WARNA_LEVEL_7KAIH[v] : ''}`}
+                              value={v ?? ''}
+                              disabled={!bisaTulis}
+                              aria-label={`${k.label} — ${sw.nama}`}
+                              title={v ? DPL_LEVEL_LABEL[v - 1] : 'Belum diisi'}
+                              onChange={(e) => {
+                                const n = Number(e.target.value)
+                                setNilai(sw.id, k.id, n >= 1 && n <= 4 ? (n as LevelDpl) : null)
+                              }}
+                            >
+                              <option value="">—</option>
+                              {DPL_LEVEL_LABEL.map((lab, i) => (
+                                <option key={lab} value={i + 1}>
+                                  {i + 1}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </td>
+                      )
+                    })}
+                    <td className="whitespace-nowrap px-2 py-1.5 text-slate-600">
+                      {terisi}/{totalKebiasaan}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-  useEffect(() => {
-    const init: Record<string, CatatanKebiasaan> = {}
-    for (const k of DAFTAR_KEBIASAAN_7KAIH) {
-      init[k.id] = {
-        catatan: existing?.[k.id]?.catatan || '',
-        dplId: existing?.[k.id]?.dplId || '',
-      }
-    }
-    setKeb(init)
-  }, [existing])
-
-  return (
-    <div className="space-y-2 border-t border-border px-3.5 py-3">
-      {DAFTAR_KEBIASAAN_7KAIH.map((k) => {
-        const sulit = (KEBIASAAN_SULIT_VERIFIKASI_7KAIH as readonly string[]).includes(k.id)
-        return (
-          <div key={k.id} className="rounded-lg bg-slate-50 p-2.5">
-            <p className="text-[12.5px] font-semibold text-slate-800">{k.label}</p>
-            {sulit && (
-              <p className="mb-1 text-[10.5px] text-muted">
-                Sulit diverifikasi langsung — boleh dikosongkan jika belum teramati.
-              </p>
-            )}
-            <textarea
-              className={`${inputCls} mt-1 min-h-[44px]`}
-              value={keb[k.id]?.catatan ?? ''}
-              disabled={!bisaTulis}
-              placeholder="Catatan singkat…"
-              onChange={(e) =>
-                setKeb((prev) => ({
-                  ...prev,
-                  [k.id]: { ...prev[k.id], catatan: e.target.value, dplId: prev[k.id]?.dplId || '' },
-                }))
-              }
-            />
-            <select
-              className={`${selectCls} mt-1.5 w-full`}
-              value={keb[k.id]?.dplId ?? ''}
-              disabled={!bisaTulis}
-              onChange={(e) =>
-                setKeb((prev) => ({
-                  ...prev,
-                  [k.id]: { ...prev[k.id], dplId: e.target.value, catatan: prev[k.id]?.catatan || '' },
-                }))
-              }
-            >
-              <option value="">— pilih DPL —</option>
-              {dpl.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.nama}
-                </option>
-              ))}
-            </select>
-          </div>
-        )
-      })}
-      {bisaTulis && (
-        <button type="button" className={btnPrimary} disabled={sibuk} onClick={() => onSimpan(keb)}>
-          {sibuk ? 'Menyimpan…' : 'Simpan 7KAIH Siswa Ini'}
-        </button>
+      {bisaTulis && siswa.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className={btnPrimary}
+            disabled={sibuk || ubah.size === 0}
+            onClick={() => void simpan()}
+          >
+            {sibuk ? 'Menyimpan…' : `Simpan 7KAIH${ubah.size ? ` (${ubah.size} siswa berubah)` : ''}`}
+          </button>
+          {ubah.size > 0 && (
+            <button type="button" className={btnGhost} disabled={sibuk} onClick={() => void muat()}>
+              Batalkan perubahan
+            </button>
+          )}
+        </div>
       )}
     </div>
   )
