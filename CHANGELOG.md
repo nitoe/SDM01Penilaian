@@ -274,3 +274,14 @@
 - **Penyebab**: ketiga model di `functions/generateAi.js` sudah dimatikan Google — `gemini-1.5-flash` (lama), `gemini-2.0-flash` (1 Jun 2026), `gemini-2.5-flash` (16 Okt 2026). Semua balas 404. Pesan hanya menampilkan model TERAKHIR yang dicoba, sehingga tampak seolah hanya 1.5 yang bermasalah.
 - `functions/generateAi.js`: daftar model dipusatkan di `MODEL_GEMINI` = `gemini-3.6-flash` → `gemini-3.5-flash` → `gemini-3.1-flash-lite` (dipakai teks dan vision). Pengaturan berpikir: `thinkingBudget: 0` untuk 2.5, `thinkingLevel: 'low'` untuk 3.x (berpikir aktif secara bawaan di 3.x dan ikut memakan `maxOutputTokens`); jalur vision (generate aset) kini ikut memakainya. Pesan galat gabungan menyebut semua model yang gagal.
 - **Perlu di-deploy**: `firebase deploy --only functions`. Kunci `GEMINI_API_KEY` tidak berubah.
+
+
+## Belum dirilis — Kokurikuler: AI merancang proyek STEM hanya dari keterangan aktivitas
+
+- **Masalah**: tab AI di Proyek STEM menolak berjalan bila kurang dari 3 DPL berstatus aktif, dan DPL baku (`pastikanDplBaku`) dibuat nonaktif dengan deskripsi level kosong, sehingga wali kelas harus menyiapkan DPL lebih dulu. Rubrik hasil AI hanya berisi nama aspek; deskripsi 4 rentang nilai kosong.
+- `functions/generateAi.js` (`susunPromptStem`, `normalisasiStem`): AI memilih 3 DPL dari SEMUA DPL kelas (aktif atau belum), mapel+TP dari katalog kelas (minimal 2 mapel berbeda, kini sampai 200 TP), dan menyusun `rubrik` (4–6 aspek, masing-masing dengan 4 deskripsi untuk rentang 0–60, 61–75, 76–85, 86–100). Untuk DPL terpilih yang bank deskripsi levelnya kosong, AI mengusulkan `dplLevel` (4 kalimat umum, bukan topik proyek). Prompt melarang judul bergaya julukan/slogan/persona. Semua id tetap divalidasi terhadap katalog; `dplLevel` dibuang bila DPL tidak terpilih atau bank-nya sudah terisi; `mapel` rubrik yang bukan mapel terlibat dikosongkan.
+- `functions/index.js`: meneruskan `dplKosongIds` ke normalisasi, pesan galat diperbarui, log mencatat jumlah rubrik dan dplLevel.
+- `src/lib/generateAi.ts`: tipe `KatalogDplStem.levelDeskripsi`, `RubrikAiStem`, `DplLevelAiStem`, dan `HasilStemAi.rubrik/dplLevel`.
+- `src/pages/akademik/Kokurikuler.tsx`: AI tidak lagi mensyaratkan DPL aktif. Hasil AI mengisi rubrik berdeskripsi. Saat proyek disimpan, DPL terpilih otomatis diaktifkan dan level yang kosong diisi dari usulan AI (level yang sudah terisi tidak ditimpa). Pilihan DPL di tab Tujuan menampilkan DPL aktif dan DPL terpilih yang belum aktif. Proyek baru dibuka di tab AI. Pesan TP kurang menyebut mapel yang belum punya TP.
+- Akses AI tidak berubah: tetap hanya UID `v4fQXsqCzYUtHrqcDM0u48sxIfn1` + email `arif.azwar79@gmail.com`.
+- **Perlu di-deploy**: `npm run deploy:functions` dan `npm run deploy` (hosting). Tidak ada perubahan `firestore.rules`.

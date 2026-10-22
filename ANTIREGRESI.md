@@ -181,3 +181,17 @@
 15.2 Model 3.x berpikir secara bawaan dan token berpikir memakan `maxOutputTokens`; keluaran JSON bisa terpotong. Selalu atur `thinkingConfig` lewat `thinkingGemini()` untuk jalur teks dan vision.
 
 15.3 Pesan galat `panggilGemini` harus menyebut semua model yang gagal, bukan hanya yang terakhir. Pesan "model terakhir 404" pernah menutupi bahwa tiga model sekaligus sudah mati (lihat CHANGELOG, 21 Okt 2026).
+
+## §16. AI Proyek STEM (kokurikuler)
+
+16.1 AI Proyek STEM harus berjalan hanya dari keterangan aktivitas. Jangan menambah kembali syarat "minimal 3 DPL aktif" atau syarat lain yang memaksa guru menyiapkan DPL/TP lebih dulu, selain katalog TP minimal 2 mapel berbeda (AI tidak boleh mengarang TP).
+
+16.2 `tpId` dan `dplId` hasil AI wajib divalidasi terhadap katalog yang dikirim klien (`tpIdsSah`, `dplIdsSah`). Jangan menerima id di luar katalog.
+
+16.3 `dplLevel` dari AI hanya boleh mengisi level DPL yang masih kosong; jangan menimpa deskripsi level yang sudah ditulis wali kelas. DPL baru diaktifkan dan diperbarui saat proyek DISIMPAN, bukan saat AI dijalankan, supaya hasil AI bisa diperiksa dulu.
+
+16.4 Rubrik STEM tetap 4 rentang sesuai `STEM_NILAI_RANGE` (0–60, 61–75, 76–85, 86–100). Jangan mengubah urutan atau batasnya tanpa mengubah rumus akademik.
+
+16.5 Fitur AI tetap dibatasi pada UID + email di `bolehPemanggilAi` (lihat §15 dan `src/lib/generateAi.ts`). Pemeriksaan di klien hanya kosmetik; yang menjaga adalah Cloud Function.
+
+16.6 Prompt materi ajar tidak boleh menghasilkan judul bergaya julukan, slogan, atau persona (mis. "detektif", "petualang", "agen").

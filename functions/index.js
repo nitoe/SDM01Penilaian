@@ -210,7 +210,7 @@ export const generateEkskulAi = onCall(opsiAi, async (request) => {
   }
 })
 
-/** Rancang Proyek STEM dari ide singkat: pilih TP & 3 DPL dari katalog, scaffolding, daftar nilai. */
+/** Rancang Proyek STEM dari keterangan aktivitas: pilih mapel/TP & 3 DPL dari katalog, scaffolding, rubrik berdeskripsi. */
 export const generateStemAi = onCall(opsiAi, async (request) => {
   const provider = pastikanAi(request)
   const prompt = susunPromptStem(request.data || {})
@@ -220,6 +220,7 @@ export const generateStemAi = onCall(opsiAi, async (request) => {
     const hasil = normalisasiStem(json, {
       tpIdsSah: prompt.tpIdsSah,
       dplIdsSah: prompt.dplIdsSah,
+      dplKosongIds: prompt.dplKosongIds,
       tpById: prompt.tpById,
     })
     if (!hasil.judul) {
@@ -229,13 +230,15 @@ export const generateStemAi = onCall(opsiAi, async (request) => {
       throw new Error('Model tidak memilih minimal 2 mapel/TP dari katalog. Coba perjelas ide atau lengkapi TP kelas.')
     }
     if (hasil.dplId.length < 3) {
-      throw new Error('Model tidak memilih 3 DPL dari katalog. Aktifkan DPL relevan lalu coba lagi.')
+      throw new Error('Model tidak memilih 3 DPL dari katalog. Coba lagi atau perjelas keterangan aktivitas.')
     }
     logger.info('generateStemAi', {
       uid: request.auth.uid,
       provider,
       mapel: hasil.mapelTerlibat.length,
       dpl: hasil.dplId.length,
+      rubrik: hasil.rubrik.length,
+      dplLevel: hasil.dplLevel.length,
       pertemuan: hasil.jumlahPertemuan,
     })
     return hasil

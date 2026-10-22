@@ -238,6 +238,8 @@ function TabStem({
   const [dplPilih, setDplPilih] = useState<string[]>([])
   const [rubrik, setRubrik] = useState<RubrikAspekStem[]>([])
   const [ideAi, setIdeAi] = useState('')
+  // Usulan deskripsi level DPL dari AI (hanya untuk DPL yang bank-nya kosong); disimpan bersama proyek.
+  const [dplLevelAi, setDplLevelAi] = useState<Record<string, [string, string, string, string]>>({})
   const [providerAi, setProviderAi] = useState<ProviderAi>('gemini')
   const [sibukAi, setSibukAi] = useState(false)
   const [tpCache, setTpCache] = useState<Record<string, TujuanPembelajaran[]>>({})
@@ -295,6 +297,7 @@ function TabStem({
     setDplPilih([])
     setRubrik([])
     setIdeAi('')
+    setDplLevelAi({})
     setTMulai('')
     setTSelesai('')
     setJPertemuan('6')
@@ -303,6 +306,8 @@ function TabStem({
 
   function bukaFormBaru() {
     resetForm()
+    // Proyek baru dimulai dari tab AI: cukup tulis keterangan aktivitas.
+    if (bolehAi) setSubTab('ai')
     setFormBuka(true)
     setIsiNilaiId(null)
   }
@@ -321,6 +326,7 @@ function TabStem({
     setDplPilih([...p.dplId])
     setRubrik([...(p.rubrik || [])])
     setIdeAi('')
+    setDplLevelAi({})
     setSubTab('identitas')
     setFormBuka(true)
     setIsiNilaiId(null)
@@ -335,9 +341,10 @@ function TabStem({
       toast.show('Tulis ringkasan ide proyek (minimal ~10 karakter).', true)
       return
     }
-    const dplUntukAi = (dpl || []).filter((x) => x.aktif)
+    // AI memilih dari SEMUA DPL kelas (aktif atau belum); yang terpilih diaktifkan saat proyek disimpan.
+    const dplUntukAi = dpl || []
     if (dplUntukAi.length < 3) {
-      toast.show('Aktifkan minimal 3 DPL di panel Dimensi Profil Lulusan dulu.', true)
+      toast.show('Kelas ini punya kurang dari 3 DPL. Tambahkan di panel Dimensi Profil Lulusan.', true)
       return
     }
     setSibukAi(true)
@@ -357,8 +364,16 @@ function TabStem({
           katalogTp.push({ id: tp.id, mapel: nama, namaTp: tp.namaTp || tp.id })
         }
       }
-      if (katalogTp.length < 2) {
-        toast.show('Belum ada cukup TP di kelas ini. Susun TP di Setup TP dulu.', true)
+      const mapelBerTp = new Set(katalogTp.map((t) => t.mapel))
+      if (katalogTp.length < 2 || mapelBerTp.size < 2) {
+        const tanpaTp = mapelNama.filter((n) => !mapelBerTp.has(n))
+        toast.show(
+          'TP kelas ini baru ada di ' +
+            mapelBerTp.size +
+            ' mapel; dibutuhkan minimal 2 mapel. Susun TP di Setup TP' +
+            (tanpaTp.length ? ` — mapel belum punya TP: ${tanpaTp.slice(0, 6).join(', ')}${tanpaTp.length > 6 ? ', …' : ''}.` : '.'),
+          true,
+        )
         return
       }
       const hasil = await generateStemAi({
@@ -366,7 +381,7 @@ function TabStem({
         ide: ideAi.trim(),
         kelas,
         katalogTp,
-        katalogDpl: dplUntukAi.map((d) => ({ id: d.id, nama: d.nama })),
+        katalogDpl: dplUntukAi.map((d) => ({ id: d.id, nama: d.nama, levelDeskripsi: d.levelDeskripsi })),
       })
       setJudul(hasil.judul || '')
       setDeskripsi(hasil.deskripsi || '')
@@ -381,18 +396,37 @@ function TabStem({
       }))
       setBarisMapel(baris)
       for (const m of baris) void loadTp(m.mapel)
-      if (hasil.daftarNilai?.length) {
+      const stamp = Date.now()
+      const empat = (a: string[] | undefined): [string, string, string, string] => [
+        a?.[0] || '',
+        a?.[1] || '',
+        a?.[2] || '',
+        a?.[3] || '',
+      ]
+      if (hasil.rubrik?.length) {
+        setRubrik(
+          hasil.rubrik.map((a, i) => ({
+            id: `ai_${stamp}_${i}`,
+            nama: a.nama,
+            mapel: a.mapel || undefined,
+            deskripsiRentang: empat(a.deskripsiRentang),
+          })),
+        )
+      } else if (hasil.daftarNilai?.length) {
         setRubrik(
           hasil.daftarNilai.map((nama, i) => ({
-            id: `ai_${Date.now()}_${i}`,
+            id: `ai_${stamp}_${i}`,
             nama,
             deskripsiRentang: ['', '', '', ''] as [string, string, string, string],
           })),
         )
       }
+      const levelBaru: Record<string, [string, string, string, string]> = {}
+      for (const l of hasil.dplLevel || []) levelBaru[l.dplId] = empat(l.levelDeskripsi)
+      setDplLevelAi(levelBaru)
       setSubTab('identitas')
       toast.show(
-        `AI mengisi proyek: ${baris.length} tautan TP, ${hasil.dplId?.length || 0} DPL. Periksa tiap tab lalu simpan.`,
+        `AI mengisi proyek: ${baris.length} mapel/TP, ${hasil.dplId?.length || 0} DPL, ${hasil.rubrik?.length || 0} aspek rubrik. Isi tanggal, periksa tiap tab, lalu simpan.`,
       )
     } catch (e) {
       console.error(e)
@@ -432,6 +466,29 @@ function TabStem({
     }
     setSibuk(true)
     try {
+      // DPL terpilih otomatis diaktifkan. Deskripsi level dari AI hanya mengisi level yang masih kosong.
+      for (const dplTerpilih of dplPilih) {
+        const d = (dpl || []).find((x) => x.id === dplTerpilih)
+        if (!d) continue
+        const dariAi = dplLevelAi[d.id]
+        const level = d.levelDeskripsi.map((t, i) => t || dariAi?.[i] || '') as [
+          string,
+          string,
+          string,
+          string,
+        ]
+        const levelBerubah = level.some((t, i) => t !== d.levelDeskripsi[i])
+        if (!d.aktif || levelBerubah) {
+          await simpanDpl({
+            id: d.id,
+            kelas: d.kelas,
+            nama: d.nama,
+            urutan: d.urutan,
+            aktif: true,
+            levelDeskripsi: level,
+          })
+        }
+      }
       const id = await simpanProyekStem({
         id: editId || undefined,
         kelas,
@@ -478,7 +535,8 @@ function TabStem({
     }
   }
 
-  const dplAktif = (dpl || []).filter((d) => d.aktif)
+  // Pilihan DPL: yang aktif, ditambah DPL nonaktif yang sudah terpilih (mis. oleh AI) — diaktifkan saat simpan.
+  const dplTampil = (dpl || []).filter((d) => d.aktif || dplPilih.includes(d.id))
 
   if (dpl === null || proyek === null) return <Spinner />
   if (galat) return <Notice tone="error">{galat}</Notice>
@@ -851,7 +909,7 @@ function TabStem({
                     DPL yang diamati (2–4)
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {dplAktif.map((d) => {
+                    {dplTampil.map((d) => {
                       const on = dplPilih.includes(d.id)
                       return (
                         <button
@@ -871,11 +929,14 @@ function TabStem({
                           }}
                         >
                           {d.nama}
+                          {d.aktif ? '' : ' · diaktifkan saat disimpan'}
                         </button>
                       )
                     })}
-                    {dplAktif.length === 0 && (
-                      <p className="text-[12px] text-muted">Aktifkan DPL di panel atas terlebih dahulu.</p>
+                    {dplTampil.length === 0 && (
+                      <p className="text-[12px] text-muted">
+                        Belum ada DPL aktif. Isi lewat tab AI, atau aktifkan DPL di panel atas.
+                      </p>
                     )}
                   </div>
                 </div>
@@ -900,9 +961,11 @@ function TabStem({
               <div className="space-y-3">
                 <p className="text-[12.5px] font-semibold text-muh-900">Generate Proyek STEM dengan AI</p>
                 <p className="text-[11.5px] text-muted">
-                  Tulis ide proyek. AI memilih TP dari database kelas, 3 DPL aktif, menyusun judul,
-                  deskripsi, scaffolding, dan aspek penilaian. Hasil mengisi tab Identitas & Tujuan —
-                  tidak menulis nilai mapel.
+                  Cukup tulis keterangan aktivitas proyek. AI memilih mata pelajaran dan TP dari database
+                  kelas, 3 DPL yang paling sesuai (aktif atau belum), lalu menyusun judul, deskripsi,
+                  scaffolding, dan rubrik penilaian lengkap dengan deskripsi tiap rentang nilai. Tanggal
+                  pelaksanaan diisi sendiri. Hasil mengisi tab Identitas, Tujuan, dan Instrumen — tidak
+                  menulis nilai mapel. Periksa sebelum menyimpan.
                 </p>
                 <textarea
                   className={`${inputCls} min-h-[100px]`}

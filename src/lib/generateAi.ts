@@ -101,6 +101,21 @@ export interface KatalogTpStem {
 export interface KatalogDplStem {
   id: string
   nama: string
+  /** Bank deskripsi level kelas (4 kalimat); kosong bila belum diisi wali kelas. */
+  levelDeskripsi?: string[]
+}
+
+/** Satu aspek rubrik hasil AI: 4 deskripsi untuk rentang 0–60, 61–75, 76–85, 86–100. */
+export interface RubrikAiStem {
+  nama: string
+  mapel?: string
+  deskripsiRentang: string[]
+}
+
+/** Usulan 4 deskripsi level untuk DPL terpilih yang bank-nya masih kosong. */
+export interface DplLevelAiStem {
+  dplId: string
+  levelDeskripsi: string[]
 }
 
 export interface HasilStemAi {
@@ -116,11 +131,14 @@ export interface HasilStemAi {
   }[]
   dplId: string[]
   daftarNilai: string[]
+  rubrik: RubrikAiStem[]
+  dplLevel: DplLevelAiStem[]
 }
 
 /**
- * Rancang Proyek STEM dari ide singkat.
- * Server memilih TP & 3 DPL HANYA dari katalog yang dikirim (bukan mengarang id).
+ * Rancang Proyek STEM dari keterangan aktivitas saja.
+ * Server memilih mapel/TP & 3 DPL HANYA dari katalog yang dikirim (bukan mengarang id), lalu
+ * menyusun rubrik berdeskripsi. Katalog DPL berisi SEMUA DPL kelas, aktif maupun belum.
  * Hanya akun UID_GENERATE_AI + EMAIL_GENERATE_AI.
  */
 export async function generateStemAi(input: {

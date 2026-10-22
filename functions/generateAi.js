@@ -635,68 +635,92 @@ export function normalisasiEkskul(json, mode) {
 }
 
 
-/** Prompt rancang Proyek STEM dari ide singkat + katalog TP & DPL kelas. */
+/**
+ * Prompt rancang Proyek STEM dari ide aktivitas saja.
+ * AI menentukan sendiri: mapel+TP (dari katalog kelas), 3 DPL (dari SEMUA DPL kelas, aktif atau belum),
+ * judul, deskripsi, scaffolding, dan rubrik penilaian lengkap dengan deskripsi 4 rentang nilai.
+ * Untuk DPL terpilih yang bank deskripsi levelnya masih kosong, AI juga mengusulkan 4 deskripsi level.
+ */
 export function susunPromptStem(input) {
   const ide = potong(input.ide, 1500)
   if (!ide || ide.length < 10) {
-    return { ok: false, pesan: 'Tulis ringkasan ide proyek STEM (minimal ~10 karakter).' }
+    return { ok: false, pesan: 'Tulis keterangan aktivitas proyek (minimal ~10 karakter).' }
   }
   const kelas = potong(input.kelas, 10)
   if (!kelas) return { ok: false, pesan: 'Kelas wajib.' }
 
   const katalogTp = Array.isArray(input.katalogTp) ? input.katalogTp : []
   const katalogDpl = Array.isArray(input.katalogDpl) ? input.katalogDpl : []
-  if (katalogTp.length < 2) {
-    return { ok: false, pesan: 'Katalog TP kelas kurang. Pastikan minimal 2 TP tersimpan untuk kelas ini.' }
-  }
-  if (katalogDpl.length < 3) {
-    return { ok: false, pesan: 'Aktifkan minimal 3 DPL di kelas ini sebelum memakai AI.' }
-  }
 
   // Batasi payload agar token aman
-  const tpRingkas = katalogTp.slice(0, 80).map((t) => ({
+  const tpRingkas = katalogTp.slice(0, 200).map((t) => ({
     id: potong(t.id, 80),
     mapel: potong(t.mapel, 60),
-    namaTp: potong(t.namaTp, 160),
+    namaTp: potong(t.namaTp, 140),
   })).filter((t) => t.id && t.mapel)
 
-  const dplRingkas = katalogDpl.slice(0, 12).map((d) => ({
-    id: potong(d.id, 80),
-    nama: potong(d.nama, 80),
-  })).filter((d) => d.id && d.nama)
+  if (tpRingkas.length < 2 || new Set(tpRingkas.map((t) => t.mapel)).size < 2) {
+    return {
+      ok: false,
+      pesan: 'Katalog TP kelas kurang: dibutuhkan TP dari minimal 2 mata pelajaran berbeda. Susun TP di Setup TP dulu.',
+    }
+  }
+
+  const dplRingkas = katalogDpl.slice(0, 12).map((d) => {
+    const lv = Array.isArray(d.levelDeskripsi) ? d.levelDeskripsi : []
+    const level = [0, 1, 2, 3].map((i) => potong(lv[i], 300))
+    return { id: potong(d.id, 80), nama: potong(d.nama, 80), level, punyaBank: level.some(Boolean) }
+  }).filter((d) => d.id && d.nama)
+
+  if (dplRingkas.length < 3) {
+    return { ok: false, pesan: 'Kelas ini memiliki kurang dari 3 DPL. Tambahkan DPL di panel Dimensi Profil Lulusan.' }
+  }
 
   const daftarTp = tpRingkas
     .map((t) => `- id="${t.id}" | mapel="${t.mapel}" | ${t.namaTp}`)
     .join('\n')
   const daftarDpl = dplRingkas
-    .map((d) => `- id="${d.id}" | ${d.nama}`)
+    .map((d) => {
+      const baris = [`- id="${d.id}" | ${d.nama}`]
+      if (d.punyaBank) {
+        d.level.forEach((t, i) => { if (t) baris.push(`    level ${i + 1}: ${t}`) })
+      }
+      return baris.join('\n')
+    })
     .join('\n')
+  const dplKosong = dplRingkas.filter((d) => !d.punyaBank)
 
   const sistem = [
-    'Anda asisten kurikulum SD Muhammadiyah (Kurikulum Merdeka) untuk merancang Proyek STEM.',
+    'Anda asisten kurikulum SD Muhammadiyah (Kurikulum Merdeka) untuk merancang Proyek STEM kokurikuler.',
     'STEM = Science, Technology, Engineering, Mathematics terintegrasi; proyek nyata, kontekstual, cocok siswa SD.',
+    'Guru HANYA memberi keterangan aktivitas. Semua keputusan lain ditentukan Anda dari keterangan itu.',
     'ATURAN KERAS:',
-    '1) Pilih TP HANYA dari katalog yang diberikan (pakai id persis). Minimal 2 mapel berbeda.',
-    '2) Pilih tepat 3 DPL HANYA dari katalog (pakai id persis) yang paling relevan dengan proyek.',
+    '1) Pilih TP HANYA dari katalog yang diberikan (pakai id persis). Minimal 2 mapel berbeda, satu TP per mapel, maksimal 5 mapel.',
+    '2) Pilih tepat 3 DPL dari katalog (pakai id persis) yang paling relevan dengan aktivitas. Semua DPL di katalog boleh dipilih.',
     '3) Jangan menulis atau mengubah nilai mapel/SLM — TP hanya dokumentasi keterkaitan proyek.',
-    '4) Bahasa Indonesia baku, jelas untuk wali kelas SD.',
-    '5) Jawab HANYA JSON valid tanpa markdown dan tanpa komentar.',
+    '4) Judul proyek lugas dan deskriptif (apa yang dikerjakan siswa). DILARANG memakai julukan, slogan, tagline, atau persona seperti "detektif", "petualang", "agen", "pahlawan", "penjelajah".',
+    '5) Bahasa Indonesia baku, jelas untuk wali kelas SD. Hindari jargon kosong.',
+    '6) Jawab HANYA JSON valid tanpa markdown dan tanpa komentar.',
   ].join('\n')
 
   const user = [
     'Kelas: ' + kelas + '.',
-    'Ide/ringkasan dari guru:',
+    'Keterangan aktivitas dari guru:',
     ide,
     '',
     'Katalog TP kelas (pilih yang paling cocok, ≥2 mapel berbeda):',
     daftarTp,
     '',
-    'Katalog DPL aktif (pilih tepat 3):',
+    'Katalog DPL kelas (pilih tepat 3; deskripsi level, bila ada, adalah acuan kelas):',
     daftarDpl,
+    '',
+    dplKosong.length
+      ? 'DPL tanpa deskripsi level (isi dplLevel BILA terpilih): ' + dplKosong.map((d) => d.id).join(', ')
+      : 'Semua DPL sudah punya deskripsi level: dplLevel dikosongkan ([]).',
     '',
     'Hasilkan JSON dengan bentuk:',
     '{',
-    '  "judul": "judul proyek singkat dan menarik (maks 120 karakter)",',
+    '  "judul": "judul proyek lugas (maks 120 karakter)",',
     '  "deskripsi": "1-3 paragraf tujuan, konteks, dan hasil yang diharapkan (maks 1200 karakter)",',
     '  "jumlahPertemuan": 4,',
     '  "scaffolding": ["pertemuan 1: ...", "pertemuan 2: ..."],',
@@ -704,14 +728,24 @@ export function susunPromptStem(input) {
     '    { "tpId": "id-dari-katalog", "mapel": "nama mapel", "namaTp": "ringkas", "jenisNilai": "SLM" }',
     '  ],',
     '  "dplId": ["id-dpl-1", "id-dpl-2", "id-dpl-3"],',
-    '  "daftarNilai": ["aspek observasi/penilaian 1", "aspek 2", "..."]',
+    '  "rubrik": [',
+    '    { "nama": "aspek penilaian", "mapel": "mapel terkait atau kosong", "rentang": ["...", "...", "...", "..."] }',
+    '  ],',
+    '  "dplLevel": [',
+    '    { "dplId": "id-dpl", "levelDeskripsi": ["...", "...", "...", "..."] }',
+    '  ]',
     '}',
     '',
     'Catatan:',
     '- jumlahPertemuan bilangan bulat 3–12 (sesuaikan kompleksitas).',
     '- scaffolding: satu langkah per pertemuan, urut, konkret (apa yang siswa kerjakan).',
     '- jenisNilai hanya "SLM" atau "SAS" (pilih yang paling masuk akal untuk TP itu).',
-    '- daftarNilai: 4–8 aspek yang dapat diisi/diamati guru (produk, proses, presentasi, kolaborasi, dsb.), bukan angka.',
+    '- rubrik: 4–6 aspek yang dapat diamati guru (proses dan produk, mis. ketepatan pengukuran, kerja sama, presentasi), bukan angka.',
+    '  "mapel" di rubrik harus salah satu mapel di mapelTerlibat, atau string kosong untuk aspek lintas mapel.',
+    '  "rentang" berisi TEPAT 4 deskripsi capaian berurutan untuk skor 0–60 (Perlu Bimbingan), 61–75 (Cukup), 76–85 (Baik), 86–100 (Sangat Baik).',
+    '  Tiap deskripsi 1 kalimat singkat (maks 200 karakter), konkret dan teramati, tanpa subjek "siswa/murid", tanpa awalan angka atau label rentang, naik bertahap antar level (bukan loncatan).',
+    '- dplLevel: hanya untuk DPL TERPILIH yang ada dalam daftar "DPL tanpa deskripsi level". Isi 4 kalimat berurutan: Belum Terlihat, Mulai Terlihat, Berkembang Sesuai Harapan, Sangat Berkembang.',
+    '  Deskripsi ini disimpan sebagai bank kelas dan dipakai ulang di proyek lain, jadi harus umum (perilaku DPL itu), JANGAN menyebut topik proyek ini.',
     '- Jangan mengarang tpId atau dplId di luar katalog.',
   ].join('\n')
 
@@ -721,6 +755,7 @@ export function susunPromptStem(input) {
     user,
     tpIdsSah: new Set(tpRingkas.map((t) => t.id)),
     dplIdsSah: new Set(dplRingkas.map((d) => d.id)),
+    dplKosongIds: new Set(dplKosong.map((d) => d.id)),
     tpById: Object.fromEntries(tpRingkas.map((t) => [t.id, t])),
   }
 }
@@ -752,6 +787,7 @@ export function normalisasiStem(json, meta) {
 
   const tpIdsSah = meta?.tpIdsSah instanceof Set ? meta.tpIdsSah : new Set()
   const dplIdsSah = meta?.dplIdsSah instanceof Set ? meta.dplIdsSah : new Set()
+  const dplKosongIds = meta?.dplKosongIds instanceof Set ? meta.dplKosongIds : new Set()
   const tpById = meta?.tpById || {}
 
   const mapelTerlibat = []
@@ -778,7 +814,7 @@ export function normalisasiStem(json, meta) {
     }
   }
 
-  let dplId = []
+  const dplId = []
   if (Array.isArray(data.dplId)) {
     for (const id of data.dplId) {
       const clean = potong(id, 80)
@@ -787,12 +823,52 @@ export function normalisasiStem(json, meta) {
     }
   }
 
-  let daftarNilai = []
-  if (Array.isArray(data.daftarNilai)) {
-    daftarNilai = data.daftarNilai
-      .map((s) => potong(s, 200))
+  // Rubrik: aspek + 4 deskripsi rentang (0–60, 61–75, 76–85, 86–100).
+  const mapelSah = new Set(mapelTerlibat.map((m) => m.mapel))
+  let rubrik = []
+  if (Array.isArray(data.rubrik)) {
+    for (const item of data.rubrik) {
+      if (!item || typeof item !== 'object') continue
+      const nama = potong(item.nama, 120)
+      if (!nama) continue
+      const r = Array.isArray(item.rentang)
+        ? item.rentang
+        : Array.isArray(item.deskripsiRentang)
+          ? item.deskripsiRentang
+          : []
+      const deskripsiRentang = [0, 1, 2, 3].map((i) => potong(r[i], 400))
+      const mapelItem = potong(item.mapel, 80)
+      rubrik.push({
+        nama,
+        mapel: mapelSah.has(mapelItem) ? mapelItem : undefined,
+        deskripsiRentang,
+      })
+      if (rubrik.length >= 8) break
+    }
+  }
+  // Cadangan: model hanya mengirim daftar nama aspek (format lama).
+  if (!rubrik.length && Array.isArray(data.daftarNilai)) {
+    rubrik = data.daftarNilai
+      .map((s) => potong(s, 120))
       .filter(Boolean)
-      .slice(0, 10)
+      .slice(0, 8)
+      .map((nama) => ({ nama, mapel: undefined, deskripsiRentang: ['', '', '', ''] }))
+  }
+  const daftarNilai = rubrik.map((a) => a.nama)
+
+  // Deskripsi level hanya untuk DPL terpilih yang bank-nya masih kosong.
+  const dplLevel = []
+  if (Array.isArray(data.dplLevel)) {
+    for (const item of data.dplLevel) {
+      if (!item || typeof item !== 'object') continue
+      const id = potong(item.dplId, 80)
+      if (!id || !dplId.includes(id) || !dplKosongIds.has(id)) continue
+      if (dplLevel.some((x) => x.dplId === id)) continue
+      const lv = Array.isArray(item.levelDeskripsi) ? item.levelDeskripsi : []
+      const levelDeskripsi = [0, 1, 2, 3].map((i) => potong(lv[i], 500))
+      if (!levelDeskripsi.some(Boolean)) continue
+      dplLevel.push({ dplId: id, levelDeskripsi })
+    }
   }
 
   return {
@@ -803,5 +879,7 @@ export function normalisasiStem(json, meta) {
     mapelTerlibat,
     dplId,
     daftarNilai,
+    rubrik,
+    dplLevel,
   }
 }
