@@ -89,3 +89,56 @@ export async function generateKktpAi(input: {
     throw new Error(pesan(e))
   }
 }
+
+
+/** Katalog TP ringkas untuk pemilihan AI (id harus ada di Firestore). */
+export interface KatalogTpStem {
+  id: string
+  mapel: string
+  namaTp: string
+}
+
+export interface KatalogDplStem {
+  id: string
+  nama: string
+}
+
+export interface HasilStemAi {
+  judul: string
+  deskripsi: string
+  jumlahPertemuan: number
+  scaffolding: string[]
+  mapelTerlibat: {
+    tpId: string
+    mapel: string
+    namaTp?: string
+    jenisNilai: 'SLM' | 'SAS'
+  }[]
+  dplId: string[]
+  daftarNilai: string[]
+}
+
+/**
+ * Rancang Proyek STEM dari ide singkat.
+ * Server memilih TP & 3 DPL HANYA dari katalog yang dikirim (bukan mengarang id).
+ * Hanya akun UID_GENERATE_AI + EMAIL_GENERATE_AI.
+ */
+export async function generateStemAi(input: {
+  provider: ProviderAi
+  ide: string
+  kelas: string
+  katalogTp: KatalogTpStem[]
+  katalogDpl: KatalogDplStem[]
+}): Promise<HasilStemAi> {
+  pastikanBerhak()
+  const panggil = httpsCallable<typeof input, HasilStemAi>(
+    getFunctions(app, REGION_FUNGSI),
+    'generateStemAi',
+  )
+  try {
+    const res = await panggil(input)
+    return res.data
+  } catch (e) {
+    throw new Error(pesan(e))
+  }
+}
