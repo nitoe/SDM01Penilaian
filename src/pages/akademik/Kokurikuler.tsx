@@ -570,111 +570,190 @@ function TabStem({
     ...(bolehAi ? [{ id: 'ai', label: 'AI' }] : []),
   ]
 
+  const jmlDplAktif = (dpl || []).filter((d) => d.aktif).length
+  const jmlProyek = (proyek || []).length
+
   return (
-    <div className="space-y-4">
-      <p className="text-[12px] text-muted">
-        Semester {labelPeriode}. Observasi DPL & skor proyek terikat ke STEM — bukan nilai mapel/SLM.
+    <div className="space-y-6">
+      {/* Ringkasan singkat — satu baris, tidak mengulang subtitle halaman */}
+      <p className="text-[12.5px] leading-relaxed text-slate-600">
+        Periode <span className="font-medium text-slate-800">{labelPeriode}</span>
+        <span className="text-slate-300"> · </span>
+        Nilai di sini untuk observasi STEM & DPL, bukan nilai mapel/SLM.
       </p>
 
-      {/* Panel DPL */}
-      <section className="card-soft overflow-hidden">
-        <button
-          type="button"
-          className="flex w-full items-center justify-between px-4 py-3 text-left"
-          onClick={() => setPanelDpl((v) => !v)}
-        >
-          <div>
-            <h3 className="text-[13.5px] font-semibold text-slate-900">Dimensi Profil Lulusan (DPL)</h3>
-            <p className="text-[11.5px] text-muted">
-              {(dpl || []).filter((d) => d.aktif).length} aktif dari {(dpl || []).length} · dipakai saat
-              merancang proyek
-            </p>
-          </div>
-          <span className="text-[12px] font-medium text-muh-700">{panelDpl ? 'Tutup' : 'Kelola'}</span>
-        </button>
-        {panelDpl && (
-          <div className="space-y-2 border-t border-border px-4 py-3">
-            <PanelDpl dpl={dpl} bisaTulis={bisaTulis} onRefresh={muat} toast={toast} />
-          </div>
-        )}
-      </section>
-
-      {/* Daftar proyek */}
+      {/* Daftar proyek — fokus utama */}
       {!formBuka && (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-[13.5px] font-semibold text-slate-900">Daftar Proyek STEM</h3>
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-[15px] font-semibold tracking-tight text-slate-900">
+                Proyek STEM
+              </h3>
+              <p className="mt-0.5 text-[12px] text-muted">
+                {jmlProyek === 0
+                  ? 'Belum ada proyek di periode ini'
+                  : `${jmlProyek} proyek · klik judul atau Nilai Proyek untuk mengisi skor instrumen`}
+              </p>
+            </div>
             {bisaTulis && (
-              <button type="button" className={btnPrimarySm} onClick={bukaFormBaru}>
+              <button type="button" className={btnPrimary} onClick={bukaFormBaru}>
                 + Rancang proyek
               </button>
             )}
           </div>
-          {(proyek || []).length === 0 && (
-            <Notice tone="info">Belum ada proyek STEM untuk periode ini.</Notice>
+
+          {jmlProyek === 0 && (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-10 text-center">
+              <p className="text-[14px] font-medium text-slate-800">Belum ada proyek STEM</p>
+              <p className="mx-auto mt-1 max-w-sm text-[12.5px] leading-relaxed text-muted">
+                Rancang proyek lintas mapel terlebih dahulu. Setelah itu isi nilai instrumen per siswa;
+                level DPL terisi otomatis dari rata-rata skor.
+              </p>
+              {bisaTulis && (
+                <button type="button" className={`${btnPrimary} mt-4`} onClick={bukaFormBaru}>
+                  + Rancang proyek pertama
+                </button>
+              )}
+            </div>
           )}
-          <ul className="space-y-3">
-            {(proyek || []).map((p) => (
-              <li key={p.id} className="card-soft space-y-2 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-[14px] font-semibold text-slate-900">
+
+          <ul className="space-y-4">
+            {(proyek || []).map((p) => {
+              const nScaffold = p.scaffolding?.length ?? 0
+              const nRubrik = p.rubrik?.length ?? p.daftarNilai?.length ?? 0
+              const nMapel = new Set(p.mapelTerlibat.map((m) => m.mapel)).size
+              const nDpl = p.dplId?.length ?? 0
+              return (
+                <li
+                  key={p.id}
+                  className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
+                >
+                  <div className="space-y-4 p-5 sm:p-6">
+                    {/* Judul + meta */}
+                    <div>
                       <Link
                         to={`/akademik/kokurikuler/proyek/${p.id}?kelas=${encodeURIComponent(kelas)}`}
-                        className="text-muh-800 hover:text-muh-600 hover:underline"
+                        className="block text-[16px] font-semibold leading-snug text-slate-900 hover:text-muh-700"
                       >
                         {p.judul}
                       </Link>
-                    </h4>
-                    <p className="text-[11.5px] text-muted">
-                      {p.jumlahPertemuan || '—'} pertemuan
-                      {p.tanggalMulai ? ` · ${p.tanggalMulai}` : ''}
-                      {p.tanggalSelesai ? ` – ${p.tanggalSelesai}` : ''}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {bisaTulis && (
-                      <button type="button" className={btnGhostSm} onClick={() => bukaFormEdit(p)}>
-                        Edit
-                      </button>
+                      <p className="mt-1.5 text-[12.5px] text-slate-500">
+                        <span className="font-medium text-slate-700">
+                          {p.jumlahPertemuan || '—'} pertemuan
+                        </span>
+                        {p.tanggalMulai ? (
+                          <>
+                            <span className="mx-1.5 text-slate-300">·</span>
+                            {p.tanggalMulai}
+                            {p.tanggalSelesai ? ` – ${p.tanggalSelesai}` : ''}
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+
+                    {p.deskripsi ? (
+                      <p className="text-[13px] leading-relaxed text-slate-600 line-clamp-3">
+                        {p.deskripsi}
+                      </p>
+                    ) : null}
+
+                    {/* Statistik ringkas */}
+                    <div className="flex flex-wrap gap-2">
+                      <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-[11.5px] font-medium text-slate-700">
+                        {nScaffold} langkah
+                      </span>
+                      <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-[11.5px] font-medium text-slate-700">
+                        {nRubrik} aspek penilaian
+                      </span>
+                      <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-[11.5px] font-medium text-slate-700">
+                        {nMapel} mapel
+                      </span>
+                      <span className="inline-flex items-center rounded-lg bg-muh-50 px-2.5 py-1 text-[11.5px] font-medium text-muh-800">
+                        {nDpl} DPL diamati
+                      </span>
+                    </div>
+
+                    {/* Mapel terlibat */}
+                    {p.mapelTerlibat.length > 0 && (
+                      <div>
+                        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                          Mapel terlibat
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {p.mapelTerlibat.map((m, i) => (
+                            <span
+                              key={`${m.mapel}-${m.tpId}-${i}`}
+                              className="rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11.5px] text-slate-700"
+                            >
+                              {m.mapel}
+                              {m.jenisNilai ? (
+                                <span className="text-slate-400"> · {m.jenisNilai}</span>
+                              ) : null}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     )}
-                    <Link to={`/akademik/kokurikuler/proyek/${p.id}?kelas=${encodeURIComponent(kelas)}`} className={btnPrimarySm}>
+                  </div>
+
+                  {/* Aksi — bar terpisah, hierarki jelas */}
+                  <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/90 px-5 py-3 sm:px-6">
+                    <Link
+                      to={`/akademik/kokurikuler/proyek/${p.id}?kelas=${encodeURIComponent(kelas)}`}
+                      className={`${btnPrimary} !px-4 !py-2 text-[13px]`}
+                    >
                       Nilai Proyek
                     </Link>
                     {bisaTulis && (
-                      <button type="button" className={btnDangerGhostSm} onClick={() => void hapus(p.id)}>
-                        Hapus
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className={`${btnGhost} !px-3 !py-2 text-[13px]`}
+                          onClick={() => bukaFormEdit(p)}
+                        >
+                          Edit rancangan
+                        </button>
+                        <button
+                          type="button"
+                          className="ml-auto text-[12.5px] font-medium text-red-600 hover:underline"
+                          onClick={() => void hapus(p.id)}
+                        >
+                          Hapus
+                        </button>
+                      </>
                     )}
                   </div>
-                </div>
-                {(p.deskripsi || (p.scaffolding && p.scaffolding.length) || (p.rubrik && p.rubrik.length)) && (
-                  <div className="space-y-1 text-[11.5px] text-slate-600">
-                    {p.deskripsi ? <p className="line-clamp-2">{p.deskripsi}</p> : null}
-                    {p.scaffolding && p.scaffolding.length > 0 ? (
-                      <p className="text-muted">{p.scaffolding.length} langkah scaffolding</p>
-                    ) : null}
-                    {p.rubrik && p.rubrik.length > 0 ? (
-                      <p className="text-muted">{p.rubrik.length} aspek rubrik penilaian</p>
-                    ) : null}
-                  </div>
-                )}
-                <div className="flex flex-wrap gap-1.5">
-                  {p.mapelTerlibat.map((m, i) => (
-                    <span
-                      key={`${m.mapel}-${m.tpId}-${i}`}
-                      className="rounded-full bg-slate-100 px-2 py-0.5 text-[10.5px] font-medium text-slate-700"
-                    >
-                      {m.mapel}
-                      {m.jenisNilai ? ` · ${m.jenisNilai}` : ''}
-                    </span>
-                  ))}
-                </div>
-              </li>
-            ))}
+                </li>
+              )
+            })}
           </ul>
-        </>
+        </section>
       )}
+
+      {/* DPL — sekunder, di bawah daftar agar tidak menggeser fokus utama */}
+      <section className="rounded-2xl border border-border bg-white">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-3 px-5 py-3.5 text-left"
+          onClick={() => setPanelDpl((v) => !v)}
+        >
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold text-slate-800">Dimensi Profil Lulusan (DPL)</p>
+            <p className="mt-0.5 text-[12px] text-muted">
+              {jmlDplAktif} aktif dari {(dpl || []).length} · dipilih saat merancang proyek
+            </p>
+          </div>
+          <span className="shrink-0 text-[12.5px] font-medium text-muh-700">
+            {panelDpl ? 'Tutup' : 'Kelola DPL'}
+          </span>
+        </button>
+        {panelDpl && (
+          <div className="space-y-2 border-t border-border px-5 py-4">
+            <PanelDpl dpl={dpl} bisaTulis={bisaTulis} onRefresh={muat} toast={toast} />
+          </div>
+        )}
+      </section>
 
       {/* Form editor dengan sub-tab */}
       {formBuka && bisaTulis && (
