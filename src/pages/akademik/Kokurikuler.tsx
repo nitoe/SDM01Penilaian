@@ -988,7 +988,7 @@ function InstrumenPenilaianPanel({
     let batal = false
     ;(async () => {
       try {
-        const list = await getSiswaList(kelas)
+        const list = await getSiswaList(kelas, { role: 'guru_akademik', kelasAmpu: [kelas] })
         if (!batal) setSiswa(list)
       } catch {
         if (!batal) setSiswa([])

@@ -24,7 +24,9 @@ import type {
   LevelDpl,
   MapelTerlibatStem,
   NilaiDplStem,
+  NilaiProyekStem,
   ProyekStem,
+  RubrikAspekStem,
 } from '../types/kokurikuler'
 import {
   BATAS_7KAIH_CATATAN,
