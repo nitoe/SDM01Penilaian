@@ -248,10 +248,32 @@ export async function getProyekStemByKelas(
     .sort((a, b) => (b.tanggalMulai || '').localeCompare(a.tanggalMulai || ''))
 }
 
-export async function getProyekStemById(id: string): Promise<ProyekStem | null> {
-  const d = await getDoc(doc(db, 'proyek_stem', id))
-  if (!d.exists()) return null
-  return dariDocProyek(d.id, d.data() as Record<string, unknown>)
+/**
+ * Baca satu proyek by ID.
+ * Fallback: bila getDoc ditolak rules (jarang) tapi kelas diketahui, query by kelas lalu cari id.
+ */
+export async function getProyekStemById(
+  id: string,
+  opts?: { kelas?: string; periode?: PeriodeScope },
+): Promise<ProyekStem | null> {
+  try {
+    const d = await getDoc(doc(db, 'proyek_stem', id))
+    if (d.exists()) return dariDocProyek(d.id, d.data() as Record<string, unknown>)
+  } catch (e) {
+    // Permission / network — coba lewat query kelas bila tersedia
+    console.warn('getProyekStemById getDoc gagal, coba query kelas', e)
+  }
+  if (opts?.kelas && opts?.periode) {
+    const list = await getProyekStemByKelas(opts.kelas, opts.periode)
+    return list.find((p) => p.id === id) ?? null
+  }
+  if (opts?.kelas) {
+    // Tanpa periode: scan semua proyek kelas (masih diizinkan rules selama wali kelas)
+    const s = await getDocs(query(collection(db, 'proyek_stem'), where('kelas', '==', opts.kelas)))
+    const found = s.docs.find((d) => d.id === id)
+    return found ? dariDocProyek(found.id, found.data() as Record<string, unknown>) : null
+  }
+  return null
 }
 
 export async function simpanProyekStem(input: {
@@ -514,7 +536,20 @@ function dariDocNilaiProyek(id: string, data: Record<string, unknown>): NilaiPro
   }
 }
 
-export async function getNilaiProyekByProyek(proyekStemId: string): Promise<NilaiProyekStem[]> {
+export async function getNilaiProyekByProyek(
+  proyekStemId: string,
+  kelas?: string,
+): Promise<NilaiProyekStem[]> {
+  // Prefer filter kelas agar list lolos rules (waliKelasSendiri(resource.data.kelas)).
+  // Query hanya by kelas (tanpa composite index), lalu saring proyekStemId di klien.
+  if (kelas) {
+    const s = await getDocs(
+      query(collection(db, 'nilai_proyek_stem'), where('kelas', '==', kelas)),
+    )
+    return s.docs
+      .map((d) => dariDocNilaiProyek(d.id, d.data() as Record<string, unknown>))
+      .filter((n) => n.proyekStemId === proyekStemId)
+  }
   const s = await getDocs(
     query(collection(db, 'nilai_proyek_stem'), where('proyekStemId', '==', proyekStemId)),
   )

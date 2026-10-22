@@ -553,7 +553,7 @@ function TabStem({
           Input nilai proyek (instrumen) dan DPL otomatis kini di halaman terpisah agar tidak
           terjepit di daftar.
         </Notice>
-        <Link to={`/akademik/kokurikuler/proyek/${p.id}`} className={btnPrimary}>
+        <Link to={`/akademik/kokurikuler/proyek/${p.id}?kelas=${encodeURIComponent(kelas)}`} className={btnPrimary}>
           Buka nilai proyek: {p.judul}
         </Link>
         <button type="button" className={btnGhost} onClick={() => setIsiNilaiId(null)}>
@@ -620,7 +620,7 @@ function TabStem({
                   <div className="min-w-0 flex-1">
                     <h4 className="text-[14px] font-semibold text-slate-900">
                       <Link
-                        to={`/akademik/kokurikuler/proyek/${p.id}`}
+                        to={`/akademik/kokurikuler/proyek/${p.id}?kelas=${encodeURIComponent(kelas)}`}
                         className="text-muh-800 hover:text-muh-600 hover:underline"
                       >
                         {p.judul}
@@ -638,7 +638,7 @@ function TabStem({
                         Edit
                       </button>
                     )}
-                    <Link to={`/akademik/kokurikuler/proyek/${p.id}`} className={btnPrimarySm}>
+                    <Link to={`/akademik/kokurikuler/proyek/${p.id}?kelas=${encodeURIComponent(kelas)}`} className={btnPrimarySm}>
                       Nilai Proyek
                     </Link>
                     {bisaTulis && (
@@ -1076,7 +1076,7 @@ function InstrumenPenilaianPanel({
     let batal = false
     ;(async () => {
       try {
-        const list = await getNilaiProyekByProyek(editId)
+        const list = await getNilaiProyekByProyek(editId, kelas)
         if (batal) return
         const m: Record<string, Record<string, number | null>> = {}
         for (const n of list) m[n.siswaId] = { ...n.nilai }

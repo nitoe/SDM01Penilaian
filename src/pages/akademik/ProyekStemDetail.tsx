@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../../components/ui'
 import { kelasSaya } from '../../lib/kelasSaya'
 import { getSiswaList } from '../../lib/tahsinData'
@@ -37,6 +37,8 @@ import {
  */
 export default function ProyekStemDetail({ profile }: { profile: AppUser }) {
   const { proyekId = '' } = useParams<{ proyekId: string }>()
+  const [searchParams] = useSearchParams()
+  const kelasParam = (searchParams.get('kelas') || '').trim()
   const admin = isAdminRole(profile.role)
   const periodeAk = usePeriodeAkademik()
   const { wali } = kelasSaya(profile)
@@ -81,13 +83,28 @@ export default function ProyekStemDetail({ profile }: { profile: AppUser }) {
     if (!proyekId) return
     setGalat('')
     try {
-      const p = await getProyekStemById(proyekId)
+      const periodeOpts =
+        periodeAk.ready
+          ? { tahunAjaran: periodeAk.tahunAjaran, semester: periodeAk.semester as '1' | '2' }
+          : undefined
+      // Sertakan kelas agar fallback query lolos rules (waliKelasSendiri)
+      const p = await getProyekStemById(proyekId, {
+        kelas: kelasParam || undefined,
+        periode: periodeOpts,
+      })
       setProyek(p)
-      if (!p) return
+      if (!p) {
+        setGalat(
+          kelasParam
+            ? 'Proyek tidak ditemukan di kelas ini. Kembali ke daftar lalu buka ulang.'
+            : 'Proyek tidak ditemukan atau tidak ada izin baca. Buka dari daftar proyek (bukan URL langsung).',
+        )
+        return
+      }
       const [dpl, s, np] = await Promise.all([
         getDplByKelas(p.kelas),
         getSiswaList(p.kelas, { role: profile.role, kelasAmpu: [p.kelas] }),
-        getNilaiProyekByProyek(p.id),
+        getNilaiProyekByProyek(p.id, p.kelas),
       ])
       setDplList(dpl)
       setSiswa(s)
@@ -100,10 +117,16 @@ export default function ProyekStemDetail({ profile }: { profile: AppUser }) {
       setUbah(new Set())
     } catch (e) {
       console.error(e)
-      setGalat('Gagal memuat proyek. Pastikan rules proyek_stem / nilai_proyek_stem sudah di-deploy.')
+      const msg = e instanceof Error ? e.message : String(e)
+      const izin = /permission|insufficient|Missing or insufficient/i.test(msg)
+      setGalat(
+        izin
+          ? 'Tidak ada izin membaca data proyek. Pastikan Anda wali kelas proyek ini, dan firestore.rules sudah di-deploy (proyek_stem, nilai_proyek_stem, dpl).'
+          : 'Gagal memuat proyek. Periksa koneksi dan rules Firestore.',
+      )
       setProyek(null)
     }
-  }, [proyekId, profile.role])
+  }, [proyekId, kelasParam, profile.role, periodeAk.ready, periodeAk.tahunAjaran, periodeAk.semester])
 
   useEffect(() => {
     void muat()
@@ -192,9 +215,11 @@ export default function ProyekStemDetail({ profile }: { profile: AppUser }) {
       <div className="space-y-5">
         <PageHeader
           back={{ to: '/akademik/kokurikuler', label: 'Kokurikuler' }}
-          title="Proyek tidak ditemukan"
+          title="Proyek tidak dapat dibuka"
         />
-        <Notice tone="error">Proyek STEM tidak ada atau sudah dihapus.</Notice>
+        <Notice tone="error">
+          {galat || 'Proyek STEM tidak ada, sudah dihapus, atau tidak ada izin baca.'}
+        </Notice>
         <Link to="/akademik/kokurikuler" className="text-[13px] font-medium text-muh-700 hover:underline">
           ← Kembali ke daftar proyek
         </Link>
