@@ -16,6 +16,7 @@ import {
   getDplByKelas,
   getG7kaihByKelas,
   getNilaiDplByProyek,
+  getNilaiProyekByProyek,
   getProyekStemByKelas,
   hapusDpl,
   hapusProyekStem,
@@ -23,6 +24,7 @@ import {
   simpanDpl,
   simpanG7kaih,
   simpanNilaiDpl,
+  simpanNilaiProyek,
   simpanProyekStem,
 } from '../../lib/kokurikuler'
 import type { TujuanPembelajaran } from '../../types/akademik'
@@ -34,11 +36,14 @@ import type {
   LevelDpl,
   MapelTerlibatStem,
   ProyekStem,
+  RubrikAspekStem,
 } from '../../types/kokurikuler'
 import {
   DAFTAR_KEBIASAAN_7KAIH,
   DPL_LEVEL_LABEL,
   KEBIASAAN_SULIT_VERIFIKASI_7KAIH,
+  STEM_NILAI_RANGE,
+  predikatDariNilaiStem,
 } from '../../types/kokurikuler'
 import {
   Notice,
@@ -190,6 +195,10 @@ export default function Kokurikuler({ profile }: { profile: AppUser }) {
 
 // ── Tab Proyek STEM (+ panel DPL) ────────────────────────────────────────────
 
+// ── Tab Proyek STEM (+ panel DPL) ────────────────────────────────────────────
+
+type StemSubTab = 'identitas' | 'tujuan' | 'instrumen' | 'ai'
+
 function TabStem({
   kelas,
   periode,
@@ -216,6 +225,7 @@ function TabStem({
   const [editId, setEditId] = useState<string | null>(null)
   const [isiNilaiId, setIsiNilaiId] = useState<string | null>(null)
   const [sibuk, setSibuk] = useState(false)
+  const [subTab, setSubTab] = useState<StemSubTab>('identitas')
 
   // Form state
   const [judul, setJudul] = useState('')
@@ -224,14 +234,12 @@ function TabStem({
   const [jPertemuan, setJPertemuan] = useState('6')
   const [deskripsi, setDeskripsi] = useState('')
   const [scaffolding, setScaffolding] = useState<string[]>([])
-  const [daftarNilai, setDaftarNilai] = useState<string[]>([])
+  const [barisMapel, setBarisMapel] = useState<MapelTerlibatStem[]>([])
+  const [dplPilih, setDplPilih] = useState<string[]>([])
+  const [rubrik, setRubrik] = useState<RubrikAspekStem[]>([])
   const [ideAi, setIdeAi] = useState('')
   const [providerAi, setProviderAi] = useState<ProviderAi>('gemini')
   const [sibukAi, setSibukAi] = useState(false)
-  const [mapelPilih, setMapelPilih] = useState<Record<string, { tpId: string; jenis: 'SLM' | 'SAS' }>>(
-    {},
-  )
-  const [dplPilih, setDplPilih] = useState<string[]>([])
   const [tpCache, setTpCache] = useState<Record<string, TujuanPembelajaran[]>>({})
 
   const muat = useCallback(async () => {
@@ -256,7 +264,9 @@ function TabStem({
       )
     } catch (e) {
       console.error(e)
-      setGalat('Gagal memuat data. Pastikan firestore.rules sudah di-deploy (dpl, proyek_stem, kokurikuler).')
+      setGalat(
+        'Gagal memuat data. Pastikan firestore.rules sudah di-deploy (dpl, proyek_stem, kokurikuler, nilai_proyek_stem).',
+      )
       setDpl([])
       setProyek([])
     }
@@ -276,18 +286,23 @@ function TabStem({
     }
   }
 
-  function bukaFormBaru() {
+  function resetForm() {
     setEditId(null)
     setJudul('')
     setDeskripsi('')
     setScaffolding([])
-    setDaftarNilai([])
+    setBarisMapel([])
+    setDplPilih([])
+    setRubrik([])
     setIdeAi('')
     setTMulai('')
     setTSelesai('')
     setJPertemuan('6')
-    setMapelPilih({})
-    setDplPilih([])
+    setSubTab('identitas')
+  }
+
+  function bukaFormBaru() {
+    resetForm()
     setFormBuka(true)
     setIsiNilaiId(null)
   }
@@ -297,22 +312,19 @@ function TabStem({
     setJudul(p.judul)
     setDeskripsi(p.deskripsi || '')
     setScaffolding([...(p.scaffolding || [])])
-    setDaftarNilai([...(p.daftarNilai || [])])
-    setIdeAi('')
     setTMulai(p.tanggalMulai)
     setTSelesai(p.tanggalSelesai)
     setJPertemuan(String(p.jumlahPertemuan || ''))
-    const mp: Record<string, { tpId: string; jenis: 'SLM' | 'SAS' }> = {}
-    for (const m of p.mapelTerlibat) {
-      mp[m.mapel] = { tpId: m.tpId, jenis: m.jenisNilai }
-      void loadTp(m.mapel)
-    }
-    setMapelPilih(mp)
+    const baris = p.mapelTerlibat.map((m) => ({ ...m }))
+    setBarisMapel(baris)
+    for (const m of baris) void loadTp(m.mapel)
     setDplPilih([...p.dplId])
+    setRubrik([...(p.rubrik || [])])
+    setIdeAi('')
+    setSubTab('identitas')
     setFormBuka(true)
     setIsiNilaiId(null)
   }
-
 
   async function jalankanAi() {
     if (!bolehAi) {
@@ -330,7 +342,6 @@ function TabStem({
     }
     setSibukAi(true)
     try {
-      // Muat TP semua mapel kelas (katalog untuk AI)
       const katalogTp: { id: string; mapel: string; namaTp: string }[] = []
       for (const nama of mapelNama) {
         let list = tpCache[nama]
@@ -343,11 +354,7 @@ function TabStem({
           }
         }
         for (const tp of list || []) {
-          katalogTp.push({
-            id: tp.id,
-            mapel: nama,
-            namaTp: tp.namaTp || tp.id,
-          })
+          katalogTp.push({ id: tp.id, mapel: nama, namaTp: tp.namaTp || tp.id })
         }
       }
       if (katalogTp.length < 2) {
@@ -365,16 +372,27 @@ function TabStem({
       setDeskripsi(hasil.deskripsi || '')
       setJPertemuan(String(hasil.jumlahPertemuan || 6))
       setScaffolding(hasil.scaffolding || [])
-      setDaftarNilai(hasil.daftarNilai || [])
       setDplPilih((hasil.dplId || []).slice(0, 4))
-      const mp: Record<string, { tpId: string; jenis: 'SLM' | 'SAS' }> = {}
-      for (const m of hasil.mapelTerlibat || []) {
-        mp[m.mapel] = { tpId: m.tpId, jenis: m.jenisNilai }
-        void loadTp(m.mapel)
+      const baris: MapelTerlibatStem[] = (hasil.mapelTerlibat || []).map((m) => ({
+        mapel: m.mapel,
+        tpId: m.tpId,
+        namaTp: m.namaTp,
+        jenisNilai: m.jenisNilai,
+      }))
+      setBarisMapel(baris)
+      for (const m of baris) void loadTp(m.mapel)
+      if (hasil.daftarNilai?.length) {
+        setRubrik(
+          hasil.daftarNilai.map((nama, i) => ({
+            id: `ai_${Date.now()}_${i}`,
+            nama,
+            deskripsiRentang: ['', '', '', ''] as [string, string, string, string],
+          })),
+        )
       }
-      setMapelPilih(mp)
+      setSubTab('identitas')
       toast.show(
-        `AI mengisi proyek: ${hasil.mapelTerlibat?.length || 0} mapel, ${hasil.dplId?.length || 0} DPL. Periksa lalu simpan.`,
+        `AI mengisi proyek: ${baris.length} tautan TP, ${hasil.dplId?.length || 0} DPL. Periksa tiap tab lalu simpan.`,
       )
     } catch (e) {
       console.error(e)
@@ -386,31 +404,35 @@ function TabStem({
 
   async function simpanForm() {
     if (!judul.trim()) {
-      toast.show('Judul proyek wajib diisi.', true)
+      toast.show('Judul proyek wajib diisi (tab Identitas).', true)
+      setSubTab('identitas')
       return
     }
-    const mapelTerlibat: MapelTerlibatStem[] = Object.entries(mapelPilih)
-      .filter(([, v]) => v.tpId)
-      .map(([mapel, v]) => {
-        const tp = (tpCache[mapel] || []).find((t) => t.id === v.tpId)
+    const mapelTerlibat: MapelTerlibatStem[] = barisMapel
+      .filter((b) => b.mapel && b.tpId)
+      .map((b) => {
+        const tp = (tpCache[b.mapel] || []).find((t) => t.id === b.tpId)
         return {
-          mapel,
-          tpId: v.tpId,
-          namaTp: tp?.namaTp || undefined,
-          jenisNilai: v.jenis,
+          mapel: b.mapel,
+          tpId: b.tpId,
+          namaTp: tp?.namaTp || b.namaTp || undefined,
+          jenisNilai: b.jenisNilai || 'SLM',
         }
       })
-    if (mapelTerlibat.length < 2) {
-      toast.show('Pilih minimal 2 mapel dan tautkan masing-masing ke satu TP.', true)
+    const mapelUnik = new Set(mapelTerlibat.map((m) => m.mapel))
+    if (mapelUnik.size < 2) {
+      toast.show('Pilih minimal 2 mapel berbeda dan tautkan TP (tab Tujuan).', true)
+      setSubTab('tujuan')
       return
     }
     if (dplPilih.length < 2 || dplPilih.length > 4) {
-      toast.show('Pilih 2–4 DPL aktif yang diamati.', true)
+      toast.show('Pilih 2–4 DPL aktif yang diamati (tab Tujuan).', true)
+      setSubTab('tujuan')
       return
     }
     setSibuk(true)
     try {
-      await simpanProyekStem({
+      const id = await simpanProyekStem({
         id: editId || undefined,
         kelas,
         semester: periode.semester,
@@ -423,10 +445,11 @@ function TabStem({
         tanggalSelesai: tSelesai,
         jumlahPertemuan: Number(jPertemuan) || 0,
         scaffolding,
-        daftarNilai,
+        daftarNilai: rubrik.map((r) => r.nama),
+        rubrik,
       })
+      setEditId(id)
       toast.show('Proyek STEM tersimpan.')
-      setFormBuka(false)
       await muat()
     } catch (e) {
       console.error(e)
@@ -437,12 +460,16 @@ function TabStem({
   }
 
   async function hapus(id: string) {
-    if (!confirm('Hapus proyek STEM ini? Nilai DPL siswa yang terikat tetap ada di database.')) return
+    if (!confirm('Hapus proyek STEM ini? Nilai DPL / skor proyek yang terikat tetap di database.')) return
     setSibuk(true)
     try {
       await hapusProyekStem(id)
       toast.show('Proyek dihapus.')
       if (isiNilaiId === id) setIsiNilaiId(null)
+      if (editId === id) {
+        setFormBuka(false)
+        resetForm()
+      }
       await muat()
     } catch {
       toast.show('Gagal menghapus.', true)
@@ -475,10 +502,17 @@ function TabStem({
     )
   }
 
+  const subItems = [
+    { id: 'identitas', label: 'Identitas' },
+    { id: 'tujuan', label: 'Tujuan' },
+    { id: 'instrumen', label: 'Instrumen' },
+    ...(bolehAi ? [{ id: 'ai', label: 'AI' }] : []),
+  ]
+
   return (
     <div className="space-y-4">
       <p className="text-[12px] text-muted">
-        Semester {labelPeriode}. Observasi DPL terikat ke proyek STEM — bukan nilai mapel.
+        Semester {labelPeriode}. Observasi DPL & skor proyek terikat ke STEM — bukan nilai mapel/SLM.
       </p>
 
       {/* Panel DPL */}
@@ -491,385 +525,794 @@ function TabStem({
           <div>
             <h3 className="text-[13.5px] font-semibold text-slate-900">Dimensi Profil Lulusan (DPL)</h3>
             <p className="text-[11.5px] text-muted">
-              {(dpl || []).filter((d) => d.aktif).length} aktif dari {(dpl || []).length} · dipakai
-              saat merancang proyek
+              {(dpl || []).filter((d) => d.aktif).length} aktif dari {(dpl || []).length} · dipakai saat
+              merancang proyek
             </p>
           </div>
           <span className="text-[12px] font-medium text-muh-700">{panelDpl ? 'Tutup' : 'Kelola'}</span>
         </button>
         {panelDpl && (
           <div className="space-y-2 border-t border-border px-4 py-3">
-            <PanelDpl
-              dpl={dpl}
-              bisaTulis={bisaTulis}
-              onRefresh={muat}
-              toast={toast}
-            />
+            <PanelDpl dpl={dpl} bisaTulis={bisaTulis} onRefresh={muat} toast={toast} />
           </div>
         )}
       </section>
 
+      {/* Daftar proyek */}
+      {!formBuka && (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-[13.5px] font-semibold text-slate-900">Daftar Proyek STEM</h3>
+            {bisaTulis && (
+              <button type="button" className={btnPrimarySm} onClick={bukaFormBaru}>
+                + Rancang proyek
+              </button>
+            )}
+          </div>
+          {(proyek || []).length === 0 && (
+            <Notice tone="info">Belum ada proyek STEM untuk periode ini.</Notice>
+          )}
+          <ul className="space-y-3">
+            {(proyek || []).map((p) => (
+              <li key={p.id} className="card-soft space-y-2 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h4 className="text-[14px] font-semibold text-slate-900">{p.judul}</h4>
+                    <p className="text-[11.5px] text-muted">
+                      {p.jumlahPertemuan || '—'} pertemuan
+                      {p.tanggalMulai ? ` · ${p.tanggalMulai}` : ''}
+                      {p.tanggalSelesai ? ` – ${p.tanggalSelesai}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {bisaTulis && (
+                      <button type="button" className={btnGhostSm} onClick={() => bukaFormEdit(p)}>
+                        Edit
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className={btnPrimarySm}
+                      onClick={() => setIsiNilaiId(p.id)}
+                    >
+                      Nilai DPL
+                    </button>
+                    {bisaTulis && (
+                      <button type="button" className={btnDangerGhostSm} onClick={() => void hapus(p.id)}>
+                        Hapus
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {(p.deskripsi || (p.scaffolding && p.scaffolding.length) || (p.rubrik && p.rubrik.length)) && (
+                  <div className="space-y-1 text-[11.5px] text-slate-600">
+                    {p.deskripsi ? <p className="line-clamp-2">{p.deskripsi}</p> : null}
+                    {p.scaffolding && p.scaffolding.length > 0 ? (
+                      <p className="text-muted">{p.scaffolding.length} langkah scaffolding</p>
+                    ) : null}
+                    {p.rubrik && p.rubrik.length > 0 ? (
+                      <p className="text-muted">{p.rubrik.length} aspek rubrik penilaian</p>
+                    ) : null}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-1.5">
+                  {p.mapelTerlibat.map((m, i) => (
+                    <span
+                      key={`${m.mapel}-${m.tpId}-${i}`}
+                      className="rounded-full bg-slate-100 px-2 py-0.5 text-[10.5px] font-medium text-slate-700"
+                    >
+                      {m.mapel}
+                      {m.jenisNilai ? ` · ${m.jenisNilai}` : ''}
+                    </span>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {/* Form editor dengan sub-tab */}
       {formBuka && bisaTulis && (
         <div className="card-soft space-y-3 border border-muh-200 p-4">
-          <h3 className="text-[14px] font-semibold text-slate-900">
-            {editId ? 'Edit Proyek STEM' : 'Rancang Proyek STEM Baru'}
-          </h3>
-          <label className="block text-[11px] font-medium text-slate-600">
-            Judul proyek
-            <textarea
-              className={`${inputCls} mt-1 min-h-[48px]`}
-              value={judul}
-              onChange={(e) => setJudul(e.target.value)}
-              placeholder="mis. Membuat Alat Penjernih Air Sederhana"
-            />
-          </label>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-[14px] font-semibold text-slate-900">
+              {editId ? 'Edit Proyek STEM' : 'Rancang Proyek STEM Baru'}
+            </h3>
+            <button
+              type="button"
+              className={btnGhostSm}
+              onClick={() => {
+                setFormBuka(false)
+                resetForm()
+              }}
+            >
+              Tutup
+            </button>
+          </div>
 
-          {bolehAi && (
-            <div className="rounded-xl border border-dashed border-muh-300 bg-muh-50/60 p-3 space-y-2">
-              <p className="text-[12.5px] font-semibold text-muh-900">Bantuan AI — rancang dari ide singkat</p>
-              <p className="text-[11px] text-muted">
-                Tulis ide proyek. AI memilih TP dari database kelas, 3 DPL aktif, menyusun judul, deskripsi,
-                scaffolding, dan daftar aspek penilaian. Hasil bisa disunting sebelum disimpan. Tidak menulis nilai mapel.
-              </p>
-              <textarea
-                className={`${inputCls} min-h-[72px]`}
-                value={ideAi}
-                onChange={(e) => setIdeAi(e.target.value)}
-                placeholder="Contoh: siswa meneliti kualitas air sumur di sekitar sekolah, merancang filter sederhana, lalu mempresentasikan hasilnya…"
-                disabled={sibukAi}
-              />
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  className={selectCls}
-                  value={providerAi}
-                  disabled={sibukAi}
-                  onChange={(e) => setProviderAi(e.target.value as ProviderAi)}
-                >
-                  <option value="gemini">Gemini</option>
-                  <option value="openai">OpenAI</option>
-                </select>
-                <button
-                  type="button"
-                  className={btnPrimarySm}
-                  disabled={sibukAi || !ideAi.trim()}
-                  onClick={() => void jalankanAi()}
-                >
-                  {sibukAi ? 'AI menyusun…' : 'Isi dengan AI'}
-                </button>
+          <Tabs
+            items={subItems}
+            aktif={subTab}
+            onUbah={(id) => setSubTab(id as StemSubTab)}
+            ariaLabel="Bagian rancang proyek STEM"
+          >
+            {subTab === 'identitas' && (
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg border border-border bg-slate-50 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Kelas</p>
+                    <p className="text-[13px] font-medium text-slate-900">{kelas}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-slate-50 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                      Tahun pelajaran
+                    </p>
+                    <p className="text-[13px] font-medium text-slate-900">{periode.tahunAjaran}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-slate-50 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                      Semester
+                    </p>
+                    <p className="text-[13px] font-medium text-slate-900">{periode.semester}</p>
+                  </div>
+                </div>
+
+                <label className="block text-[11px] font-medium text-slate-600">
+                  Judul proyek
+                  <textarea
+                    className={`${inputCls} mt-1 min-h-[48px]`}
+                    value={judul}
+                    onChange={(e) => setJudul(e.target.value)}
+                    placeholder="mis. Membuat Alat Penjernih Air Sederhana"
+                  />
+                </label>
+
+                <label className="block text-[11px] font-medium text-slate-600">
+                  Deskripsi proyek
+                  <textarea
+                    className={`${inputCls} mt-1 min-h-[88px]`}
+                    value={deskripsi}
+                    onChange={(e) => setDeskripsi(e.target.value)}
+                    placeholder="Tujuan, konteks, dan hasil yang diharapkan…"
+                  />
+                </label>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <label className="block text-[11px] font-medium text-slate-600">
+                    Tanggal mulai
+                    <input
+                      type="date"
+                      className={`${inputCls} mt-1`}
+                      value={tMulai}
+                      onChange={(e) => setTMulai(e.target.value)}
+                    />
+                  </label>
+                  <label className="block text-[11px] font-medium text-slate-600">
+                    Tanggal selesai
+                    <input
+                      type="date"
+                      className={`${inputCls} mt-1`}
+                      value={tSelesai}
+                      onChange={(e) => setTSelesai(e.target.value)}
+                    />
+                  </label>
+                  <label className="block text-[11px] font-medium text-slate-600">
+                    Jumlah pertemuan
+                    <input
+                      type="number"
+                      min={1}
+                      max={24}
+                      className={`${inputCls} mt-1`}
+                      value={jPertemuan}
+                      onChange={(e) => setJPertemuan(e.target.value)}
+                    />
+                  </label>
+                </div>
+
+                {scaffolding.length > 0 && (
+                  <div className="rounded-lg border border-border bg-white p-3">
+                    <p className="mb-1.5 text-[11px] font-semibold text-slate-700">
+                      Scaffolding (per pertemuan)
+                    </p>
+                    <ol className="list-decimal space-y-1 pl-4 text-[12px] text-slate-700">
+                      {scaffolding.map((s, i) => (
+                        <li key={i}>{s}</li>
+                      ))}
+                    </ol>
+                    <button
+                      type="button"
+                      className="mt-2 text-[11px] font-medium text-muh-700 hover:underline"
+                      onClick={() => {
+                        const next = prompt(
+                          'Edit scaffolding (satu baris per pertemuan):',
+                          scaffolding.join('\n'),
+                        )
+                        if (next != null) {
+                          setScaffolding(
+                            next
+                              .split('\n')
+                              .map((x) => x.trim())
+                              .filter(Boolean),
+                          )
+                        }
+                      }}
+                    >
+                      Sunting
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )}
 
-          <label className="block text-[11px] font-medium text-slate-600">
-            Deskripsi proyek
-            <textarea
-              className={`${inputCls} mt-1 min-h-[72px]`}
-              value={deskripsi}
-              onChange={(e) => setDeskripsi(e.target.value)}
-              placeholder="Tujuan, konteks, dan hasil yang diharapkan…"
-            />
-          </label>
-
-          <div>
-            <p className="mb-1.5 text-[11px] font-medium text-slate-600">
-              Mata pelajaran terlibat (minimal 2, tiap mapel tautkan ke satu TP)
-            </p>
-            <p className="mb-2 text-[11px] text-muted">
-              Keterkaitan mapel/TP hanya dokumentasi proyek. Tidak menulis ke nilai SLM/SAS mapel.
-            </p>
-            <div className="space-y-2">
-              {mapelNama.map((nama) => {
-                const on = !!mapelPilih[nama]
-                return (
-                  <div key={nama} className="rounded-lg border border-border bg-white p-2.5">
-                    <label className="flex items-center gap-2 text-[13px] font-medium text-slate-800">
-                      <input
-                        type="checkbox"
-                        checked={on}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setMapelPilih((m) => ({ ...m, [nama]: { tpId: '', jenis: 'SLM' } }))
-                            void loadTp(nama)
-                          } else {
-                            setMapelPilih((m) => {
-                              const n = { ...m }
-                              delete n[nama]
-                              return n
-                            })
-                          }
-                        }}
-                      />
-                      {nama}
-                    </label>
-                    {on && (
-                      <div className="mt-2 flex flex-wrap gap-2">
+            {subTab === 'tujuan' && (
+              <div className="space-y-4">
+                <div>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[12.5px] font-semibold text-slate-800">
+                      Mata pelajaran & Tujuan Pembelajaran
+                    </p>
+                    <button
+                      type="button"
+                      className={btnGhostSm}
+                      onClick={() =>
+                        setBarisMapel((b) => [
+                          ...b,
+                          { mapel: mapelNama[0] || '', tpId: '', jenisNilai: 'SLM' },
+                        ])
+                      }
+                    >
+                      + Tambah mapel/TP
+                    </button>
+                  </div>
+                  <p className="mb-2 text-[11px] text-muted">
+                    Minimal 2 mapel berbeda. Satu mapel boleh punya lebih dari satu TP. Keterkaitan hanya
+                    dokumentasi — tidak menulis nilai SLM.
+                  </p>
+                  <ul className="space-y-2">
+                    {barisMapel.map((b, idx) => (
+                      <li
+                        key={idx}
+                        className="grid gap-2 rounded-lg border border-border bg-white p-2.5 sm:grid-cols-[1fr_1.4fr_auto_auto]"
+                      >
                         <select
-                          className={`${selectCls} min-w-[12rem] flex-1`}
-                          value={mapelPilih[nama]?.tpId || ''}
-                          onChange={(e) =>
-                            setMapelPilih((m) => ({
-                              ...m,
-                              [nama]: { ...m[nama], tpId: e.target.value },
-                            }))
-                          }
+                          className={selectCls}
+                          value={b.mapel}
+                          onChange={(e) => {
+                            const mapel = e.target.value
+                            void loadTp(mapel)
+                            setBarisMapel((list) =>
+                              list.map((x, i) =>
+                                i === idx ? { ...x, mapel, tpId: '', namaTp: undefined } : x,
+                              ),
+                            )
+                          }}
                         >
-                          <option value="">— pilih TP —</option>
-                          {(tpCache[nama] || []).map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {(t.namaTp || t.id).slice(0, 80)}
+                          <option value="">Pilih mapel</option>
+                          {mapelNama.map((n) => (
+                            <option key={n} value={n}>
+                              {n}
                             </option>
                           ))}
                         </select>
-                        <div className="flex gap-1">
-                          {(['SLM', 'SAS'] as const).map((j) => (
-                            <button
-                              key={j}
-                              type="button"
-                              className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold ${
-                                mapelPilih[nama]?.jenis === j
-                                  ? j === 'SLM'
-                                    ? 'bg-sky-600 text-white'
-                                    : 'bg-amber-700 text-white'
-                                  : 'border border-border bg-white text-slate-600'
-                              }`}
-                              onClick={() =>
-                                setMapelPilih((m) => ({
-                                  ...m,
-                                  [nama]: { ...m[nama], jenis: j },
-                                }))
-                              }
-                            >
-                              {j}
-                            </button>
+                        <select
+                          className={selectCls}
+                          value={b.tpId}
+                          onFocus={() => b.mapel && void loadTp(b.mapel)}
+                          onChange={(e) => {
+                            const tpId = e.target.value
+                            const tp = (tpCache[b.mapel] || []).find((t) => t.id === tpId)
+                            setBarisMapel((list) =>
+                              list.map((x, i) =>
+                                i === idx
+                                  ? { ...x, tpId, namaTp: tp?.namaTp || undefined }
+                                  : x,
+                              ),
+                            )
+                          }}
+                        >
+                          <option value="">Pilih TP</option>
+                          {(tpCache[b.mapel] || []).map((tp) => (
+                            <option key={tp.id} value={tp.id}>
+                              {tp.namaTp || tp.id}
+                            </option>
                           ))}
-                        </div>
-                      </div>
+                        </select>
+                        <select
+                          className={selectCls}
+                          value={b.jenisNilai}
+                          onChange={(e) => {
+                            const jenisNilai = e.target.value as 'SLM' | 'SAS'
+                            setBarisMapel((list) =>
+                              list.map((x, i) => (i === idx ? { ...x, jenisNilai } : x)),
+                            )
+                          }}
+                        >
+                          <option value="SLM">SLM</option>
+                          <option value="SAS">SAS</option>
+                        </select>
+                        <button
+                          type="button"
+                          className={btnDangerGhostSm}
+                          onClick={() => setBarisMapel((list) => list.filter((_, i) => i !== idx))}
+                        >
+                          Hapus
+                        </button>
+                      </li>
+                    ))}
+                    {barisMapel.length === 0 && (
+                      <li className="text-[12px] text-muted">Belum ada tautan mapel–TP.</li>
+                    )}
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="mb-1.5 text-[12.5px] font-semibold text-slate-800">
+                    DPL yang diamati (2–4)
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {dplAktif.map((d) => {
+                      const on = dplPilih.includes(d.id)
+                      return (
+                        <button
+                          key={d.id}
+                          type="button"
+                          className={`rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition-colors ${
+                            on
+                              ? 'border-muh-600 bg-muh-50 text-muh-900'
+                              : 'border-border bg-white text-slate-600 hover:border-slate-300'
+                          }`}
+                          onClick={() => {
+                            setDplPilih((prev) => {
+                              if (prev.includes(d.id)) return prev.filter((x) => x !== d.id)
+                              if (prev.length >= 4) return prev
+                              return [...prev, d.id]
+                            })
+                          }}
+                        >
+                          {d.nama}
+                        </button>
+                      )
+                    })}
+                    {dplAktif.length === 0 && (
+                      <p className="text-[12px] text-muted">Aktifkan DPL di panel atas terlebih dahulu.</p>
                     )}
                   </div>
-                )
-              })}
-            </div>
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-[11px] font-medium text-slate-600">
-              DPL yang diamati (pilih 2–4 yang aktif)
-            </p>
-            {dplAktif.length < 2 && (
-              <Notice tone="warn">
-                Aktifkan minimal 2 DPL di panel Dimensi Profil Lulusan sebelum merancang proyek.
-              </Notice>
+                </div>
+              </div>
             )}
-            <div className="mt-2 flex flex-wrap gap-2">
-              {dplAktif.map((d) => {
-                const on = dplPilih.includes(d.id)
-                return (
-                  <button
-                    key={d.id}
-                    type="button"
-                    className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
-                      on ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-300' : 'bg-slate-100 text-slate-600'
-                    }`}
-                    onClick={() => {
-                      setDplPilih((prev) => {
-                        if (on) return prev.filter((x) => x !== d.id)
-                        if (prev.length >= 4) return prev
-                        return [...prev, d.id]
-                      })
-                    }}
+
+            {subTab === 'instrumen' && (
+              <InstrumenPenilaianPanel
+                rubrik={rubrik}
+                setRubrik={setRubrik}
+                mapelNama={mapelNama}
+                editId={editId}
+                judul={judul}
+                kelas={kelas}
+                periode={periode}
+                bisaTulis={bisaTulis}
+                toast={toast}
+              />
+            )}
+
+            {subTab === 'ai' && bolehAi && (
+              <div className="space-y-3">
+                <p className="text-[12.5px] font-semibold text-muh-900">Generate Proyek STEM dengan AI</p>
+                <p className="text-[11.5px] text-muted">
+                  Tulis ide proyek. AI memilih TP dari database kelas, 3 DPL aktif, menyusun judul,
+                  deskripsi, scaffolding, dan aspek penilaian. Hasil mengisi tab Identitas & Tujuan —
+                  tidak menulis nilai mapel.
+                </p>
+                <textarea
+                  className={`${inputCls} min-h-[100px]`}
+                  value={ideAi}
+                  onChange={(e) => setIdeAi(e.target.value)}
+                  placeholder="Contoh: siswa meneliti kualitas air sumur di sekitar sekolah, merancang filter sederhana, lalu mempresentasikan hasilnya…"
+                  disabled={sibukAi}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    className={selectCls}
+                    value={providerAi}
+                    disabled={sibukAi}
+                    onChange={(e) => setProviderAi(e.target.value as ProviderAi)}
                   >
-                    {d.nama}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="block text-[11px] font-medium text-slate-600">
-              Tanggal mulai
-              <input
-                type="date"
-                className={`${inputCls} mt-1`}
-                value={tMulai}
-                onChange={(e) => setTMulai(e.target.value)}
-              />
-            </label>
-            <label className="block text-[11px] font-medium text-slate-600">
-              Tanggal selesai
-              <input
-                type="date"
-                className={`${inputCls} mt-1`}
-                value={tSelesai}
-                onChange={(e) => setTSelesai(e.target.value)}
-              />
-            </label>
-            <label className="block text-[11px] font-medium text-slate-600">
-              Jumlah pertemuan
-              <input
-                type="number"
-                min={1}
-                className={`${inputCls} mt-1`}
-                value={jPertemuan}
-                onChange={(e) => setJPertemuan(e.target.value)}
-              />
-            </label>
-          </div>
-
-
-          {(scaffolding.length > 0 || daftarNilai.length > 0) && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {scaffolding.length > 0 && (
-                <div className="rounded-lg border border-border bg-white p-3">
-                  <p className="mb-1.5 text-[11px] font-semibold text-slate-700">Scaffolding (per pertemuan)</p>
-                  <ol className="list-decimal space-y-1 pl-4 text-[12px] text-slate-700">
-                    {scaffolding.map((s, i) => (
-                      <li key={i}>{s}</li>
-                    ))}
-                  </ol>
+                    <option value="gemini">Gemini</option>
+                    <option value="openai">OpenAI</option>
+                  </select>
                   <button
                     type="button"
-                    className="mt-2 text-[11px] font-medium text-muh-700 hover:underline"
-                    onClick={() => {
-                      const teks = scaffolding.join('\n')
-                      const next = prompt('Edit scaffolding (satu baris per pertemuan):', teks)
-                      if (next != null) {
-                        setScaffolding(
-                          next
-                            .split('\n')
-                            .map((x) => x.trim())
-                            .filter(Boolean),
-                        )
-                      }
-                    }}
+                    className={btnPrimarySm}
+                    disabled={sibukAi || !ideAi.trim()}
+                    onClick={() => void jalankanAi()}
                   >
-                    Sunting
+                    {sibukAi ? 'AI menyusun…' : 'Isi formulir dengan AI'}
                   </button>
                 </div>
-              )}
-              {daftarNilai.length > 0 && (
-                <div className="rounded-lg border border-border bg-white p-3">
-                  <p className="mb-1.5 text-[11px] font-semibold text-slate-700">Aspek penilaian yang dapat diisi guru</p>
-                  <ul className="list-disc space-y-1 pl-4 text-[12px] text-slate-700">
-                    {daftarNilai.map((s, i) => (
-                      <li key={i}>{s}</li>
-                    ))}
-                  </ul>
-                  <button
-                    type="button"
-                    className="mt-2 text-[11px] font-medium text-muh-700 hover:underline"
-                    onClick={() => {
-                      const teks = daftarNilai.join('\n')
-                      const next = prompt('Edit daftar aspek (satu baris per aspek):', teks)
-                      if (next != null) {
-                        setDaftarNilai(
-                          next
-                            .split('\n')
-                            .map((x) => x.trim())
-                            .filter(Boolean),
-                        )
-                      }
-                    }}
-                  >
-                    Sunting
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </Tabs>
 
-          <div className="flex gap-2">
-            <button type="button" className={btnGhost} onClick={() => setFormBuka(false)}>
-              Batal
-            </button>
+          <div className="flex flex-wrap gap-2 border-t border-border pt-3">
             <button type="button" className={btnPrimary} disabled={sibuk} onClick={() => void simpanForm()}>
-              {sibuk ? 'Menyimpan…' : 'Simpan Proyek'}
+              {sibuk ? 'Menyimpan…' : 'Simpan proyek'}
+            </button>
+            <button
+              type="button"
+              className={btnGhost}
+              disabled={sibuk}
+              onClick={() => {
+                setFormBuka(false)
+                resetForm()
+              }}
+            >
+              Batal
             </button>
           </div>
         </div>
       )}
-
-      {bisaTulis && !formBuka && (
-        <button type="button" className={`${btnPrimary} w-full sm:w-auto`} onClick={bukaFormBaru}>
-          + Rancang Proyek STEM Baru
-        </button>
-      )}
-
-      <ul className="space-y-2">
-        {proyek.length === 0 && (
-          <li className="text-[12.5px] text-muted">Belum ada proyek STEM untuk kelas ini semester ini.</li>
-        )}
-        {proyek.map((p) => (
-          <li key={p.id} className="card-soft space-y-2 p-4">
-            <p className="text-[14px] font-semibold text-slate-900">{p.judul}</p>
-            <p className="text-[11.5px] text-muted">
-              {p.tanggalMulai || '—'} s/d {p.tanggalSelesai || '—'} · {p.jumlahPertemuan || 0}× pertemuan
-            </p>
-
-            {(p.deskripsi || (p.scaffolding && p.scaffolding.length) || (p.daftarNilai && p.daftarNilai.length)) && (
-              <div className="space-y-1 text-[11.5px] text-slate-600">
-                {p.deskripsi ? <p className="line-clamp-3">{p.deskripsi}</p> : null}
-                {p.scaffolding && p.scaffolding.length > 0 ? (
-                  <p className="text-muted">{p.scaffolding.length} langkah scaffolding</p>
-                ) : null}
-                {p.daftarNilai && p.daftarNilai.length > 0 ? (
-                  <p className="text-muted">{p.daftarNilai.length} aspek penilaian</p>
-                ) : null}
-              </div>
-            )}
-            <div className="flex flex-wrap gap-1.5">
-              {p.mapelTerlibat.map((m, i) => (
-                <span
-                  key={i}
-                  className="rounded-full bg-sky-50 px-2.5 py-0.5 text-[10.5px] font-bold text-sky-800"
-                >
-                  {m.mapel} · {(m.namaTp || m.tpId || 'TP').slice(0, 40)} ({m.jenisNilai})
-                </span>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {p.dplId.map((id) => {
-                const d = dpl.find((x) => x.id === id)
-                return (
-                  <span
-                    key={id}
-                    className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[10.5px] font-bold text-amber-900"
-                  >
-                    {d?.nama || '(DPL tidak aktif)'}
-                  </span>
-                )
-              })}
-            </div>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <button
-                type="button"
-                className={btnPrimarySm}
-                onClick={() => setIsiNilaiId(p.id)}
-              >
-                Isi Nilai DPL
-              </button>
-              {bisaTulis && (
-                <>
-                  <button type="button" className={btnGhostSm} onClick={() => bukaFormEdit(p)}>
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    className={btnDangerGhostSm}
-                    disabled={sibuk}
-                    onClick={() => void hapus(p.id)}
-                  >
-                    Hapus
-                  </button>
-                </>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
     </div>
   )
 }
+
+/** Panel rubrik + tabel input nilai 0–100 dengan rubrik samping (toggle). */
+function InstrumenPenilaianPanel({
+  rubrik,
+  setRubrik,
+  mapelNama,
+  editId,
+  judul,
+  kelas,
+  periode,
+  bisaTulis,
+  toast,
+}: {
+  rubrik: RubrikAspekStem[]
+  setRubrik: (v: RubrikAspekStem[] | ((prev: RubrikAspekStem[]) => RubrikAspekStem[])) => void
+  mapelNama: string[]
+  editId: string | null
+  judul: string
+  kelas: string
+  periode: { tahunAjaran: string; semester: '1' | '2' }
+  bisaTulis: boolean
+  toast: { show: (m: string, err?: boolean) => void }
+}) {
+  const [siswa, setSiswa] = useState<SiswaTahsin[] | null>(null)
+  const [nilaiMap, setNilaiMap] = useState<Record<string, Record<string, number | null>>>({})
+  const [tampilRubrik, setTampilRubrik] = useState(true)
+  const [sibukNilai, setSibukNilai] = useState(false)
+  const [editAspekId, setEditAspekId] = useState<string | null>(null)
+
+  useEffect(() => {
+    let batal = false
+    ;(async () => {
+      try {
+        const list = await getSiswaList(kelas)
+        if (!batal) setSiswa(list)
+      } catch {
+        if (!batal) setSiswa([])
+      }
+    })()
+    return () => {
+      batal = true
+    }
+  }, [kelas])
+
+  useEffect(() => {
+    if (!editId) {
+      setNilaiMap({})
+      return
+    }
+    let batal = false
+    ;(async () => {
+      try {
+        const list = await getNilaiProyekByProyek(editId)
+        if (batal) return
+        const m: Record<string, Record<string, number | null>> = {}
+        for (const n of list) m[n.siswaId] = { ...n.nilai }
+        setNilaiMap(m)
+      } catch {
+        if (!batal) setNilaiMap({})
+      }
+    })()
+    return () => {
+      batal = true
+    }
+  }, [editId])
+
+  function tambahAspek() {
+    const id = `r_${Date.now()}`
+    setRubrik((r) => [
+      ...r,
+      {
+        id,
+        nama: `Aspek ${r.length + 1}`,
+        deskripsiRentang: ['', '', '', ''],
+      },
+    ])
+    setEditAspekId(id)
+  }
+
+  async function simpanSemuaNilai() {
+    if (!editId) {
+      toast.show('Simpan proyek dulu (tab Identitas/Tujuan) sebelum mengisi skor.', true)
+      return
+    }
+    if (!rubrik.length) {
+      toast.show('Tambah minimal satu aspek rubrik.', true)
+      return
+    }
+    setSibukNilai(true)
+    try {
+      const list = siswa || []
+      for (const s of list) {
+        const nilai = nilaiMap[s.id] || {}
+        await simpanNilaiProyek({
+          proyekStemId: editId,
+          siswaId: s.id,
+          kelas,
+          semester: periode.semester,
+          tahunAjaran: periode.tahunAjaran,
+          nilai,
+        })
+      }
+      toast.show('Skor proyek tersimpan.')
+    } catch (e) {
+      console.error(e)
+      toast.show(e instanceof Error ? e.message : 'Gagal menyimpan skor.', true)
+    } finally {
+      setSibukNilai(false)
+    }
+  }
+
+  function setNilaiSiswa(siswaId: string, aspekId: string, raw: string) {
+    const trimmed = raw.trim()
+    let v: number | null = null
+    if (trimmed !== '') {
+      const n = Math.round(Number(trimmed))
+      if (Number.isFinite(n)) v = Math.max(0, Math.min(100, n))
+    }
+    setNilaiMap((m) => ({
+      ...m,
+      [siswaId]: { ...(m[siswaId] || {}), [aspekId]: v },
+    }))
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[12.5px] font-semibold text-slate-800">Rubrik penilaian proyek</p>
+          {bisaTulis && (
+            <button type="button" className={btnGhostSm} onClick={tambahAspek}>
+              + Aspek
+            </button>
+          )}
+        </div>
+        <p className="mb-2 text-[11px] text-muted">
+          Skala 0–100 mengikuti rentang akademik:{' '}
+          {STEM_NILAI_RANGE.map((r) => `${r.min}–${r.maks} ${r.label}`).join(' · ')}.
+        </p>
+        <ul className="space-y-2">
+          {rubrik.map((a) => (
+            <li key={a.id} className="rounded-lg border border-border bg-white p-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  className={`${inputCls} min-w-[140px] flex-1`}
+                  value={a.nama}
+                  disabled={!bisaTulis}
+                  onChange={(e) =>
+                    setRubrik((list) =>
+                      list.map((x) => (x.id === a.id ? { ...x, nama: e.target.value } : x)),
+                    )
+                  }
+                />
+                <select
+                  className={selectCls}
+                  value={a.mapel || ''}
+                  disabled={!bisaTulis}
+                  onChange={(e) =>
+                    setRubrik((list) =>
+                      list.map((x) =>
+                        x.id === a.id ? { ...x, mapel: e.target.value || undefined } : x,
+                      ),
+                    )
+                  }
+                >
+                  <option value="">— Mapel (opsional)</option>
+                  {mapelNama.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className={btnGhostSm}
+                  onClick={() => setEditAspekId(editAspekId === a.id ? null : a.id)}
+                >
+                  {editAspekId === a.id ? 'Tutup deskripsi' : 'Deskripsi rentang'}
+                </button>
+                {bisaTulis && (
+                  <button
+                    type="button"
+                    className={btnDangerGhostSm}
+                    onClick={() => setRubrik((list) => list.filter((x) => x.id !== a.id))}
+                  >
+                    Hapus
+                  </button>
+                )}
+              </div>
+              {editAspekId === a.id && (
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {STEM_NILAI_RANGE.map((r, i) => (
+                    <label key={r.label} className="block text-[10.5px] font-medium text-slate-600">
+                      {r.min}–{r.maks} · {r.label}
+                      <textarea
+                        className={`${inputCls} mt-0.5 min-h-[52px] text-[12px]`}
+                        value={a.deskripsiRentang[i] || ''}
+                        disabled={!bisaTulis}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          setRubrik((list) =>
+                            list.map((x) => {
+                              if (x.id !== a.id) return x
+                              const dr: [string, string, string, string] = [...x.deskripsiRentang]
+                              dr[i] = val
+                              return { ...x, deskripsiRentang: dr }
+                            }),
+                          )
+                        }}
+                        placeholder={`Deskripsi capaian level ${r.label}…`}
+                      />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </li>
+          ))}
+          {rubrik.length === 0 && (
+            <li className="text-[12px] text-muted">Belum ada aspek. Tambah atau isi lewat tab AI.</li>
+          )}
+        </ul>
+      </div>
+
+      {/* Tabel nilai + rubrik samping */}
+      <div>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[12.5px] font-semibold text-slate-800">
+            Input skor proyek {judul ? `· ${judul}` : ''}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={btnGhostSm}
+              onClick={() => setTampilRubrik((v) => !v)}
+            >
+              {tampilRubrik ? 'Sembunyikan rubrik' : 'Tampilkan rubrik'}
+            </button>
+            {bisaTulis && editId && (
+              <button
+                type="button"
+                className={btnPrimarySm}
+                disabled={sibukNilai || !rubrik.length}
+                onClick={() => void simpanSemuaNilai()}
+              >
+                {sibukNilai ? 'Menyimpan…' : 'Simpan skor'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {!editId && (
+          <Notice tone="warn">
+            Simpan proyek terlebih dahulu agar skor per siswa dapat disimpan.
+          </Notice>
+        )}
+
+        {editId && rubrik.length > 0 && (
+          <div className={`grid gap-3 ${tampilRubrik ? 'lg:grid-cols-[1fr_280px]' : ''}`}>
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="min-w-full text-left text-[12px]">
+                <thead className="bg-slate-50 text-[11px] font-semibold text-slate-600">
+                  <tr>
+                    <th className="sticky left-0 bg-slate-50 px-2 py-2">Siswa</th>
+                    {rubrik.map((a) => (
+                      <th key={a.id} className="whitespace-nowrap px-2 py-2">
+                        {a.nama}
+                        {a.mapel ? (
+                          <span className="block text-[10px] font-normal text-muted">{a.mapel}</span>
+                        ) : null}
+                      </th>
+                    ))}
+                    <th className="px-2 py-2">Rata-rata</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(siswa || []).map((s) => {
+                    const row = nilaiMap[s.id] || {}
+                    const nums = rubrik
+                      .map((a) => row[a.id])
+                      .filter((v): v is number => typeof v === 'number')
+                    const avg =
+                      nums.length > 0
+                        ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length)
+                        : null
+                    return (
+                      <tr key={s.id} className="border-t border-border">
+                        <td className="sticky left-0 bg-white px-2 py-1.5 font-medium text-slate-800">
+                          {s.nama}
+                        </td>
+                        {rubrik.map((a) => (
+                          <td key={a.id} className="px-1 py-1">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              className={`${inputCls} w-16 px-1.5 py-1 text-center`}
+                              value={row[a.id] ?? ''}
+                              disabled={!bisaTulis}
+                              onChange={(e) => setNilaiSiswa(s.id, a.id, e.target.value)}
+                              title={predikatDariNilaiStem(row[a.id]) || ''}
+                            />
+                          </td>
+                        ))}
+                        <td className="px-2 py-1.5 text-slate-600">
+                          {avg != null ? (
+                            <span>
+                              {avg}
+                              <span className="ml-1 text-[10px] text-muted">
+                                {predikatDariNilaiStem(avg)}
+                              </span>
+                            </span>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {siswa && siswa.length === 0 && (
+                    <tr>
+                      <td colSpan={rubrik.length + 2} className="px-2 py-3 text-muted">
+                        Belum ada data siswa di kelas ini.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {tampilRubrik && (
+              <aside className="max-h-[480px] space-y-2 overflow-y-auto rounded-lg border border-muh-200 bg-muh-50/40 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muh-800">
+                  Rubrik cepat
+                </p>
+                {rubrik.map((a) => (
+                  <div key={a.id} className="rounded-md border border-border bg-white p-2">
+                    <p className="text-[12px] font-semibold text-slate-800">{a.nama}</p>
+                    <ul className="mt-1 space-y-1 text-[10.5px] text-slate-600">
+                      {STEM_NILAI_RANGE.map((r, i) => (
+                        <li key={r.label}>
+                          <span className="font-semibold text-slate-700">
+                            {r.min}–{r.maks} {r.label}:
+                          </span>{' '}
+                          {a.deskripsiRentang[i] || '—'}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </aside>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 
 function PanelDpl({
   dpl,

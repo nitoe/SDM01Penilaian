@@ -167,7 +167,48 @@ function normalisasiDaftarNilai(raw: unknown): string[] {
   return raw.map((s) => potong(String(s ?? ''), 200)).filter(Boolean).slice(0, 10)
 }
 
+function normalisasiRubrik(raw: unknown): RubrikAspekStem[] {
+  if (!Array.isArray(raw)) return []
+  const out: RubrikAspekStem[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const o = item as Record<string, unknown>
+    const id = potong(String(o.id ?? ''), 40)
+    const nama = potong(String(o.nama ?? ''), 120)
+    if (!id || !nama) continue
+    const dr = Array.isArray(o.deskripsiRentang) ? o.deskripsiRentang : []
+    const deskripsiRentang: [string, string, string, string] = [
+      potong(String(dr[0] ?? ''), 400),
+      potong(String(dr[1] ?? ''), 400),
+      potong(String(dr[2] ?? ''), 400),
+      potong(String(dr[3] ?? ''), 400),
+    ]
+    out.push({
+      id,
+      nama,
+      mapel: potong(String(o.mapel ?? ''), 80) || undefined,
+      deskripsiRentang,
+    })
+    if (out.length >= 12) break
+  }
+  return out
+}
+
+/** Bangun rubrik dari daftarNilai legacy jika rubrik kosong. */
+function rubrikDariLegacy(daftar: string[]): RubrikAspekStem[] {
+  return daftar.slice(0, 10).map((nama, i) => ({
+    id: `legacy_${i + 1}`,
+    nama,
+    deskripsiRentang: ['', '', '', ''] as [string, string, string, string],
+  }))
+}
+
 function dariDocProyek(id: string, data: Record<string, unknown>): ProyekStem {
+  const daftarNilai = normalisasiDaftarNilai(data.daftarNilai)
+  let rubrik = normalisasiRubrik(data.rubrik)
+  if (!rubrik.length && daftarNilai.length) {
+    rubrik = rubrikDariLegacy(daftarNilai)
+  }
   return {
     id,
     kelas: String(data.kelas ?? ''),
@@ -182,7 +223,8 @@ function dariDocProyek(id: string, data: Record<string, unknown>): ProyekStem {
     tanggalSelesai: String(data.tanggalSelesai ?? ''),
     jumlahPertemuan: Number(data.jumlahPertemuan) || 0,
     scaffolding: normalisasiScaffolding(data.scaffolding),
-    daftarNilai: normalisasiDaftarNilai(data.daftarNilai),
+    daftarNilai,
+    rubrik,
   }
 }
 
@@ -217,13 +259,19 @@ export async function simpanProyekStem(input: {
   jumlahPertemuan: number
   scaffolding?: string[]
   daftarNilai?: string[]
+  rubrik?: RubrikAspekStem[]
 }): Promise<string> {
+  const mapelUnik = new Set(input.mapelTerlibat.map((m) => m.mapel))
+  if (mapelUnik.size < 2) {
+    throw new Error('Proyek STEM wajib melibatkan minimal 2 mata pelajaran berbeda.')
+  }
   if (input.mapelTerlibat.length < 2) {
-    throw new Error('Proyek STEM wajib melibatkan minimal 2 mata pelajaran.')
+    throw new Error('Pilih minimal 2 tautan mapel–TP.')
   }
   if (input.dplId.length < 2 || input.dplId.length > 4) {
     throw new Error('Pilih 2–4 DPL yang diamati lewat proyek ini.')
   }
+  const rubrik = normalisasiRubrik(input.rubrik)
   const data = {
     kelas: input.kelas,
     tingkatan: tingkatanDariKelas(input.kelas),
@@ -238,6 +286,7 @@ export async function simpanProyekStem(input: {
     jumlahPertemuan: Math.max(0, Math.floor(Number(input.jumlahPertemuan) || 0)),
     scaffolding: normalisasiScaffolding(input.scaffolding),
     daftarNilai: normalisasiDaftarNilai(input.daftarNilai),
+    rubrik,
     updatedAt: serverTimestamp(),
   }
   if (input.id) {
@@ -389,4 +438,75 @@ export async function simpanG7kaih(input: {
     kebiasaan: normalisasiKebiasaan(input.kebiasaan),
     updatedAt: serverTimestamp(),
   })
+}
+
+
+// ── Nilai proyek STEM (skor 0–100 per aspek rubrik) ─────────────────────────
+
+function idNilaiProyek(proyekStemId: string, siswaId: string): string {
+  return `${proyekStemId}_${siswaId}`
+}
+
+function dariDocNilaiProyek(id: string, data: Record<string, unknown>): NilaiProyekStem {
+  const raw = data.nilai && typeof data.nilai === 'object' ? (data.nilai as Record<string, unknown>) : {}
+  const nilai: Record<string, number | null> = {}
+  for (const [k, v] of Object.entries(raw)) {
+    if (v === null || v === undefined || v === '') {
+      nilai[k] = null
+    } else {
+      const n = Math.round(Number(v))
+      if (Number.isFinite(n)) nilai[k] = Math.max(0, Math.min(100, n))
+    }
+  }
+  return {
+    id,
+    proyekStemId: String(data.proyekStemId ?? ''),
+    siswaId: String(data.siswaId ?? ''),
+    kelas: String(data.kelas ?? ''),
+    tingkatan: String(data.tingkatan ?? ''),
+    semester: String(data.semester ?? '1') as Semester,
+    tahunAjaran: String(data.tahunAjaran ?? ''),
+    nilai,
+  }
+}
+
+export async function getNilaiProyekByProyek(proyekStemId: string): Promise<NilaiProyekStem[]> {
+  const s = await getDocs(
+    query(collection(db, 'nilai_proyek_stem'), where('proyekStemId', '==', proyekStemId)),
+  )
+  return s.docs.map((d) => dariDocNilaiProyek(d.id, d.data() as Record<string, unknown>))
+}
+
+export async function simpanNilaiProyek(input: {
+  proyekStemId: string
+  siswaId: string
+  kelas: string
+  semester: Semester
+  tahunAjaran: string
+  nilai: Record<string, number | null>
+}): Promise<void> {
+  const id = idNilaiProyek(input.proyekStemId, input.siswaId)
+  const bersih: Record<string, number | null> = {}
+  for (const [k, v] of Object.entries(input.nilai)) {
+    if (v === null || v === undefined || (typeof v === 'number' && Number.isNaN(v))) {
+      bersih[k] = null
+    } else {
+      const n = Math.round(Number(v))
+      if (Number.isFinite(n)) bersih[k] = Math.max(0, Math.min(100, n))
+    }
+  }
+  await setDoc(
+    doc(db, 'nilai_proyek_stem', id),
+    {
+      proyekStemId: input.proyekStemId,
+      siswaId: input.siswaId,
+      kelas: input.kelas,
+      tingkatan: tingkatanDariKelas(input.kelas),
+      semester: input.semester,
+      tahunAjaran: input.tahunAjaran,
+      nilai: bersih,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  )
 }

@@ -491,7 +491,20 @@ service cloud.firestore {
       allow delete: if waliKelasSendiri(resource.data.kelas);
     }
 
-    match /g7kaih/{id} {
+    
+    match /nilai_proyek_stem/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['proyekStemId', 'siswaId', 'kelas', 'semester', 'tahunAjaran', 'nilai']);
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.siswaId == resource.data.siswaId
+                    && request.resource.data.proyekStemId == resource.data.proyekStemId;
+      allow delete: if waliKelasSendiri(resource.data.kelas);
+    }
+
+match /g7kaih/{id} {
       allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
       allow create: if waliKelasSendiri(request.resource.data.kelas)
                     && request.resource.data.keys().hasAll(

@@ -43,11 +43,36 @@ export interface Dpl {
 /** Keterkaitan mapel di proyek STEM (metadata saja; tidak menulis nilai_tp). */
 export type JenisNilaiProyek = 'SLM' | 'SAS'
 
+/**
+ * Satu baris mapel+TP. Mapel yang sama boleh muncul beberapa kali
+ * (lebih dari satu TP per mapel).
+ */
 export interface MapelTerlibatStem {
   mapel: string
   tpId: string
   namaTp?: string
   jenisNilai: JenisNilaiProyek
+}
+
+/**
+ * Rentang angka 0–100 selaras LEVEL_RANGE_DEFAULT akademik (pengetahuan).
+ * Index 0 = 0–60, 1 = 61–75, 2 = 76–85, 3 = 86–100.
+ */
+export const STEM_NILAI_RANGE = [
+  { min: 0, maks: 60, label: 'Perlu Bimbingan' },
+  { min: 61, maks: 75, label: 'Cukup' },
+  { min: 76, maks: 85, label: 'Baik' },
+  { min: 86, maks: 100, label: 'Sangat Baik' },
+] as const
+
+/** Aspek rubrik penilaian produk/proses proyek (bukan DPL, bukan nilai_tp). */
+export interface RubrikAspekStem {
+  id: string
+  nama: string
+  /** Opsional: taut ke mapel terlibat. */
+  mapel?: string
+  /** Empat deskripsi sesuai STEM_NILAI_RANGE. */
+  deskripsiRentang: [string, string, string, string]
 }
 
 /** Koleksi `proyek_stem` — hanya wali kelas. */
@@ -68,8 +93,13 @@ export interface ProyekStem {
   jumlahPertemuan: number
   /** Langkah per pertemuan (scaffolding). */
   scaffolding?: string[]
-  /** Aspek observasi/penilaian yang dapat diisi guru (bukan nilai mapel). */
+  /**
+   * Legacy: daftar nama aspek singkat.
+   * Prefer `rubrik` jika ada.
+   */
   daftarNilai?: string[]
+  /** Rubrik terstruktur untuk instrumen penilaian 0–100. */
+  rubrik?: RubrikAspekStem[]
 }
 
 /**
@@ -87,6 +117,22 @@ export interface NilaiDplStem {
   proyekStemId: string
   level: LevelDpl
   deskripsi: string
+}
+
+/**
+ * Koleksi `nilai_proyek_stem` — skor 0–100 per aspek rubrik × siswa.
+ * Doc id: {proyekStemId}_{siswaId}. Tidak menyentuh nilai_tp.
+ */
+export interface NilaiProyekStem {
+  id: string
+  proyekStemId: string
+  siswaId: string
+  kelas: string
+  tingkatan: string
+  semester: Semester
+  tahunAjaran: string
+  /** aspekId → 0–100 (atau null jika belum diisi). */
+  nilai: Record<string, number | null>
 }
 
 /** 7 kebiasaan resmi 7KAIH (urutan tetap). */
@@ -129,3 +175,13 @@ export const BATAS_DPL_DESKRIPSI = 500
 export const BATAS_STEM_JUDUL = 200
 export const BATAS_7KAIH_CATATAN = 500
 export const BATAS_NILAI_DPL_DESKRIPSI = 500
+
+/** Label predikat dari angka 0–100 (selaras STEM_NILAI_RANGE). */
+export function predikatDariNilaiStem(n: number | null | undefined): string | null {
+  if (n == null || Number.isNaN(n)) return null
+  const v = Math.max(0, Math.min(100, Math.round(n)))
+  for (const r of STEM_NILAI_RANGE) {
+    if (v >= r.min && v <= r.maks) return r.label
+  }
+  return STEM_NILAI_RANGE[STEM_NILAI_RANGE.length - 1].label
+}
