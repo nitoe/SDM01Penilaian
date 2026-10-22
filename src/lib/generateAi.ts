@@ -160,3 +160,43 @@ export async function generateStemAi(input: {
     throw new Error(pesan(e))
   }
 }
+
+/** Predikat huruf untuk isi otomatis nilai instrumen proyek STEM. */
+export const PREDIKAT_NILAI_PROYEK = [
+  'D',
+  'D+',
+  'C-',
+  'C',
+  'C+',
+  'B-',
+  'B',
+  'B+',
+  'A-',
+  'A',
+  'A+',
+] as const
+
+export type PredikatNilaiProyek = (typeof PREDIKAT_NILAI_PROYEK)[number]
+
+/**
+ * Isi skor 0–100 per aspek rubrik untuk satu siswa, selaras predikat huruf.
+ * Hanya UID_GENERATE_AI + EMAIL_GENERATE_AI.
+ */
+export async function generateNilaiProyekAi(input: {
+  provider: ProviderAi
+  predikat: PredikatNilaiProyek | string
+  namaSiswa: string
+  aspek: { id: string; nama: string; mapel?: string }[]
+}): Promise<{ nilai: Record<string, number> }> {
+  pastikanBerhak()
+  const panggil = httpsCallable<typeof input, { nilai: Record<string, number> }>(
+    getFunctions(app, REGION_FUNGSI),
+    'generateNilaiProyekAi',
+  )
+  try {
+    const res = await panggil(input)
+    return res.data
+  } catch (e) {
+    throw new Error(pesan(e))
+  }
+}

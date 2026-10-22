@@ -22,12 +22,15 @@ import {
   predikatDariNilaiStem,
   rataNilaiProyek,
 } from '../../types/kokurikuler'
+import { bolehGenerateAi, generateNilaiProyekAi, PREDIKAT_NILAI_PROYEK, type ProviderAi } from '../../lib/generateAi'
 import {
   Notice,
   Spinner,
   btnGhost,
+  btnGhostSm,
   btnPrimary,
   inputSempitCls,
+  selectCls,
   useToast,
 } from './shared'
 
@@ -52,6 +55,10 @@ export default function ProyekStemDetail({ profile }: { profile: AppUser }) {
   const [ubah, setUbah] = useState<Set<string>>(new Set())
   const [galat, setGalat] = useState('')
   const [sibuk, setSibuk] = useState(false)
+  /** Predikat per siswa untuk isi AI (D…A+). */
+  const [predikatAi, setPredikatAi] = useState<Record<string, string>>({})
+  const [sibukAi, setSibukAi] = useState<string | null>(null)
+  const bolehAi = bolehGenerateAi(profile.uid)
 
   const periode = useMemo(
     () =>
@@ -197,6 +204,49 @@ export default function ProyekStemDetail({ profile }: { profile: AppUser }) {
     }
   }
 
+
+  async function isiNilaiAi(siswaId: string, namaSiswa: string, provider: ProviderAi) {
+    if (!bolehAi || !bisaTulis) {
+      toast.show('Fitur AI tidak tersedia untuk akun Anda.', true)
+      return
+    }
+    const predikat = (predikatAi[siswaId] || '').trim()
+    if (!predikat) {
+      toast.show('Pilih predikat (D … A+) dulu untuk siswa ini.', true)
+      return
+    }
+    if (!rubrik.length) {
+      toast.show('Proyek belum punya aspek rubrik.', true)
+      return
+    }
+    setSibukAi(`${siswaId}:${provider}`)
+    try {
+      const hasil = await generateNilaiProyekAi({
+        provider,
+        predikat,
+        namaSiswa,
+        aspek: rubrik.map((r) => ({ id: r.id, nama: r.nama, mapel: r.mapel })),
+      })
+      setSkor((prev) => {
+        const row = { ...(prev[siswaId] || {}) }
+        for (const r of rubrik) {
+          const n = hasil.nilai[r.id]
+          if (typeof n === 'number' && Number.isFinite(n)) {
+            row[r.id] = Math.max(0, Math.min(100, Math.round(n)))
+          }
+        }
+        return { ...prev, [siswaId]: row }
+      })
+      setUbah((prev) => new Set(prev).add(siswaId))
+      toast.show(`Nilai ${namaSiswa} diisi AI (${provider}, predikat ${predikat}). Simpan untuk menerapkan.`)
+    } catch (e) {
+      console.error(e)
+      toast.show(e instanceof Error ? e.message : 'Gagal mengisi nilai lewat AI.', true)
+    } finally {
+      setSibukAi(null)
+    }
+  }
+
   if (proyek === undefined) {
     return (
       <div className="space-y-5">
@@ -329,6 +379,14 @@ export default function ProyekStemDetail({ profile }: { profile: AppUser }) {
                   <th className="min-w-[7rem] border-b border-border px-2 py-2.5 text-center">
                     DPL otomatis
                   </th>
+                  {bolehAi && bisaTulis && (
+                    <th className="min-w-[11rem] border-b border-border px-2 py-2.5 text-center">
+                      <span className="block">Isi AI</span>
+                      <span className="mt-0.5 block text-[10px] font-normal text-muted">
+                        predikat → skor
+                      </span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -382,6 +440,48 @@ export default function ProyekStemDetail({ profile }: { profile: AppUser }) {
                           <span className="text-muted">Belum diisi</span>
                         )}
                       </td>
+                      {bolehAi && bisaTulis && (
+                        <td className="border-b border-border/60 px-2 py-1.5">
+                          <div className="flex flex-col items-stretch gap-1 min-w-[10rem]">
+                            <select
+                              className={`${selectCls} w-full py-1 text-center text-[11.5px]`}
+                              value={predikatAi[sw.id] ?? ''}
+                              disabled={sibukAi != null}
+                              aria-label={`Predikat AI — ${sw.nama}`}
+                              onChange={(e) =>
+                                setPredikatAi((prev) => ({ ...prev, [sw.id]: e.target.value }))
+                              }
+                            >
+                              <option value="">Predikat…</option>
+                              {PREDIKAT_NILAI_PROYEK.map((p) => (
+                                <option key={p} value={p}>
+                                  {p}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                className={`${btnGhostSm} flex-1 !px-1.5 !py-1 text-[10.5px]`}
+                                disabled={sibukAi != null || !(predikatAi[sw.id] || '').trim()}
+                                title="Isi skor aspek lewat Gemini"
+                                onClick={() => void isiNilaiAi(sw.id, sw.nama, 'gemini')}
+                              >
+                                {sibukAi === `${sw.id}:gemini` ? '…' : 'Gemini'}
+                              </button>
+                              <button
+                                type="button"
+                                className={`${btnGhostSm} flex-1 !px-1.5 !py-1 text-[10.5px]`}
+                                disabled={sibukAi != null || !(predikatAi[sw.id] || '').trim()}
+                                title="Isi skor aspek lewat OpenAI"
+                                onClick={() => void isiNilaiAi(sw.id, sw.nama, 'openai')}
+                              >
+                                {sibukAi === `${sw.id}:openai` ? '…' : 'OpenAI'}
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   )
                 })}
@@ -413,6 +513,9 @@ export default function ProyekStemDetail({ profile }: { profile: AppUser }) {
               )}
               <p className="text-[11.5px] text-muted">
                 Menyimpan juga mengisi level DPL terkait proyek dari rata-rata skor instrumen.
+                {bolehAi
+                  ? ' Kolom Isi AI: pilih predikat lalu Gemini/OpenAI mengisi skor aspek (masih perlu Simpan).'
+                  : ''}
               </p>
             </div>
           )}

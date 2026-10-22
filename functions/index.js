@@ -12,11 +12,13 @@ import {
   normalisasiAset,
   normalisasiEkskul,
   normalisasiKktp,
+  normalisasiNilaiProyek,
   normalisasiStem,
   normalisasiTp,
   susunPromptAset,
   susunPromptEkskul,
   susunPromptKktp,
+  susunPromptNilaiProyek,
   susunPromptStem,
   susunPromptTp,
 } from './generateAi.js'
@@ -248,3 +250,27 @@ export const generateStemAi = onCall(opsiAi, async (request) => {
   }
 })
 
+/** Isi skor aspek rubrik proyek STEM dari predikat huruf (D…A+). Hanya akun AI terdaftar. */
+export const generateNilaiProyekAi = onCall(opsiAi, async (request) => {
+  const provider = pastikanAi(request)
+  const prompt = susunPromptNilaiProyek(request.data || {})
+  if (!prompt.ok) throw new HttpsError('invalid-argument', prompt.pesan)
+  try {
+    const json = await mintaModel(provider, kunciProvider(provider), prompt.sistem, prompt.user)
+    const hasil = normalisasiNilaiProyek(json, {
+      aspekIdsSah: prompt.aspekIdsSah,
+      min: prompt.min,
+      max: prompt.max,
+    })
+    logger.info('generateNilaiProyekAi', {
+      uid: request.auth.uid,
+      provider,
+      predikat: prompt.predikat,
+      aspek: prompt.aspekIdsSah.size,
+    })
+    return hasil
+  } catch (err) {
+    logger.error('generateNilaiProyekAi gagal', { pesan: err?.message })
+    throw new HttpsError('internal', err?.message || 'Gagal mengisi nilai proyek lewat AI.')
+  }
+})

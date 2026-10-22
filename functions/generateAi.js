@@ -883,3 +883,104 @@ export function normalisasiStem(json, meta) {
     dplLevel,
   }
 }
+
+
+/** Predikat huruf → rentang skor 0–100 (skala rapor umum). */
+const RENTANG_PREDIKAT_NILAI = {
+  D: [0, 45],
+  'D+': [46, 50],
+  'C-': [51, 55],
+  C: [56, 60],
+  'C+': [61, 65],
+  'B-': [66, 70],
+  B: [71, 75],
+  'B+': [76, 80],
+  'A-': [81, 85],
+  A: [86, 90],
+  'A+': [91, 100],
+}
+
+/**
+ * Isi skor aspek rubrik proyek STEM dari predikat huruf (satu siswa).
+ * Hanya akun UID_AI + EMAIL_AI.
+ */
+export function susunPromptNilaiProyek(input) {
+  const predikat = potong(input.predikat, 4).toUpperCase()
+  const rentang = RENTANG_PREDIKAT_NILAI[predikat]
+  if (!rentang) {
+    return {
+      ok: false,
+      pesan: 'Predikat tidak valid. Pilih D, D+, C-, C, C+, B-, B, B+, A-, A, atau A+.',
+    }
+  }
+  const namaSiswa = potong(input.namaSiswa, 80) || 'Siswa'
+  const aspekRaw = Array.isArray(input.aspek) ? input.aspek : []
+  const aspek = []
+  const aspekIdsSah = new Set()
+  for (const a of aspekRaw) {
+    if (!a || typeof a !== 'object') continue
+    const id = potong(a.id, 40)
+    const nama = potong(a.nama, 120)
+    if (!id || !nama || aspekIdsSah.has(id)) continue
+    aspekIdsSah.add(id)
+    aspek.push({ id, nama: nama, mapel: potong(a.mapel, 80) || undefined })
+    if (aspek.length >= 12) break
+  }
+  if (aspek.length < 1) {
+    return { ok: false, pesan: 'Proyek belum punya aspek rubrik penilaian.' }
+  }
+
+  const daftarAspek = aspek
+    .map((a, i) => `${i + 1}. id="${a.id}" nama="${a.nama}"${a.mapel ? ` mapel="${a.mapel}"` : ''}`)
+    .join('\n')
+
+  const sistem = `Anda asisten penilaian proyek STEM sekolah dasar/menengah di Indonesia.
+Tugas: mengisi skor 0–100 per aspek rubrik untuk SATU siswa, selaras predikat huruf yang diminta.
+Aturan ketat:
+- Semua skor HARUS bilangan bulat dalam rentang predikat yang diminta (inklusif).
+- Skor boleh sedikit berbeda antar aspek (variasi wajar 0–6 poin), mencerminkan kekuatan/kelemahan relatif, tetapi tetap dalam rentang predikat.
+- Jangan keluar dari rentang. Jangan menambah aspek di luar daftar id yang diberikan.
+- Jawab HANYA JSON valid tanpa markdown.`
+
+  const user = `Siswa: ${namaSiswa}
+Predikat target: ${predikat} (skor setiap aspek harus antara ${rentang[0]} dan ${rentang[1]} inklusif)
+
+Aspek rubrik (isi skor untuk setiap id):
+${daftarAspek}
+
+Format JSON wajib:
+{"nilai":{"<aspekId>":<skor_integer>,...}}
+Contoh kunci nilai memakai id aspek persis seperti di daftar.`
+
+  return {
+    ok: true,
+    sistem,
+    user,
+    aspekIdsSah,
+    predikat,
+    min: rentang[0],
+    max: rentang[1],
+  }
+}
+
+/** Normalisasi hasil model → Record aspekId → skor 0–100 dalam rentang predikat. */
+export function normalisasiNilaiProyek(data, { aspekIdsSah, min, max }) {
+  const src =
+    data && typeof data === 'object' && data.nilai && typeof data.nilai === 'object'
+      ? data.nilai
+      : data && typeof data === 'object'
+        ? data
+        : {}
+  const nilai = {}
+  for (const id of aspekIdsSah) {
+    const raw = src[id]
+    let n = Math.round(Number(raw))
+    if (!Number.isFinite(n)) {
+      // fallback tengah rentang bila model melewatkan satu aspek
+      n = Math.round((min + max) / 2)
+    }
+    n = Math.max(min, Math.min(max, Math.max(0, Math.min(100, n))))
+    nilai[id] = n
+  }
+  return { nilai }
+}
