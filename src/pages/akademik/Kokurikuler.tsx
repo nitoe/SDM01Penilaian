@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { PageHeader } from '../../components/ui'
 import Tabs from '../../components/Tabs'
 import { kelasSaya } from '../../lib/kelasSaya'
@@ -541,22 +542,26 @@ function TabStem({
   if (dpl === null || proyek === null) return <Spinner />
   if (galat) return <Notice tone="error">{galat}</Notice>
 
+  // Input nilai proyek dipindah ke halaman khusus /akademik/kokurikuler/proyek/:id
   if (isiNilaiId) {
-    const p = proyek.find((x) => x.id === isiNilaiId)
+    const p = (proyek || []).find((x) => x.id === isiNilaiId)
     if (!p) {
       setIsiNilaiId(null)
       return null
     }
     return (
-      <IsiNilaiDpl
-        proyek={p}
-        dplList={dpl}
-        kelas={kelas}
-        periode={periode}
-        bisaTulis={bisaTulis}
-        onKembali={() => setIsiNilaiId(null)}
-        toast={toast}
-      />
+      <div className="space-y-3">
+        <Notice>
+          Input nilai proyek (instrumen) dan DPL otomatis kini di halaman terpisah agar tidak
+          terjepit di daftar.
+        </Notice>
+        <Link to={`/akademik/kokurikuler/proyek/${p.id}`} className={btnPrimary}>
+          Buka nilai proyek: {p.judul}
+        </Link>
+        <button type="button" className={btnGhost} onClick={() => setIsiNilaiId(null)}>
+          Kembali ke daftar
+        </button>
+      </div>
     )
   }
 
@@ -614,8 +619,15 @@ function TabStem({
             {(proyek || []).map((p) => (
               <li key={p.id} className="card-soft space-y-2 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <h4 className="text-[14px] font-semibold text-slate-900">{p.judul}</h4>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-[14px] font-semibold text-slate-900">
+                      <Link
+                        to={`/akademik/kokurikuler/proyek/${p.id}`}
+                        className="text-muh-800 hover:text-muh-600 hover:underline"
+                      >
+                        {p.judul}
+                      </Link>
+                    </h4>
                     <p className="text-[11.5px] text-muted">
                       {p.jumlahPertemuan || '—'} pertemuan
                       {p.tanggalMulai ? ` · ${p.tanggalMulai}` : ''}
@@ -628,13 +640,9 @@ function TabStem({
                         Edit
                       </button>
                     )}
-                    <button
-                      type="button"
-                      className={btnPrimarySm}
-                      onClick={() => setIsiNilaiId(p.id)}
-                    >
-                      Nilai DPL
-                    </button>
+                    <Link to={`/akademik/kokurikuler/proyek/${p.id}`} className={btnPrimarySm}>
+                      Nilai Proyek
+                    </Link>
                     {bisaTulis && (
                       <button type="button" className={btnDangerGhostSm} onClick={() => void hapus(p.id)}>
                         Hapus
