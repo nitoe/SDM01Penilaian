@@ -7,7 +7,6 @@ import {
   getMapelList,
   getNilaiTPKelas,
   getTPList,
-  hitungNilaiAkhirMapel,
   hitungNilaiAkhirTP,
   saveNilaiTPBatch,
   tentukanLevel,
@@ -46,6 +45,12 @@ function parseNilai(t: string | undefined): number | null {
   if (t === undefined || t.trim() === '') return null
   const n = Number(t.replace(',', '.'))
   return Number.isFinite(n) ? n : NaN
+}
+
+/** Tampilkan angka nilai dengan 2 desimal (atau em dash). */
+function fmtNilai(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—'
+  return (Math.round(n * 100) / 100).toFixed(2)
 }
 
 function nilaiSlmEfektif(
@@ -88,16 +93,18 @@ function rataSlm(
   draf: Record<string, Record<string, string>>,
   semester: string,
 ): number | null {
-  return hitungNilaiAkhirMapel(
-    daftar.map((tp) => {
-      const slm = nilaiSlmEfektif(siswaId, tp, nilai, draf)
-      const bobot = bobotTpDiSemester(tp, semester)
-      return {
-        nilai: slm == null ? null : hitungNilaiAkhirTP(slm, null, tp),
-        bobot: bobot == null ? 0 : bobot,
-      }
-    }),
-  )
+  // Hitung lokal dengan 2 desimal (bukan Math.round bulat dari hitungNilaiAkhirMapel)
+  const entries = daftar.map((tp) => {
+    const slm = nilaiSlmEfektif(siswaId, tp, nilai, draf)
+    const bobot = bobotTpDiSemester(tp, semester)
+    const nilaiAkhir = slm == null ? null : hitungNilaiAkhirTP(slm, null, tp)
+    return { nilai: nilaiAkhir, bobot: bobot == null ? 0 : bobot }
+  })
+  const valid = entries.filter((e) => e.nilai != null && e.bobot > 0)
+  if (!valid.length) return null
+  const totalBobot = valid.reduce((a, e) => a + e.bobot, 0)
+  const total = valid.reduce((a, e) => a + Number(e.nilai) * e.bobot, 0)
+  return Math.round((total / totalBobot) * 100) / 100
 }
 
 export default function NilaiSlm({ profile }: { profile: AppUser }) {
@@ -468,7 +475,7 @@ function Detail({
     const sum = rates.reduce((a, b) => a + b, 0)
     return {
       punya: rates.length,
-      rataKelas: Math.round(sum / rates.length),
+      rataKelas: Math.round((sum / rates.length) * 100) / 100,
       max: Math.max(...rates),
       min: Math.min(...rates),
     }
@@ -777,19 +784,19 @@ function Detail({
                   <div className="card-soft px-3 py-2.5">
                     <p className="text-[11px] font-medium text-muted">Rata-rata kelas</p>
                     <p className="mt-0.5 text-[20px] font-bold tabular-nums text-slate-900">
-                      {ringkasanMapel.rataKelas ?? '—'}
+                      {fmtNilai(ringkasanMapel.rataKelas)}
                     </p>
                   </div>
                   <div className="card-soft px-3 py-2.5">
                     <p className="text-[11px] font-medium text-muted">Nilai tertinggi</p>
                     <p className="mt-0.5 text-[20px] font-bold tabular-nums text-muh-700">
-                      {ringkasanMapel.max ?? '—'}
+                      {fmtNilai(ringkasanMapel.max)}
                     </p>
                   </div>
                   <div className="card-soft px-3 py-2.5">
                     <p className="text-[11px] font-medium text-muted">Nilai terendah</p>
                     <p className="mt-0.5 text-[20px] font-bold tabular-nums text-slate-700">
-                      {ringkasanMapel.min ?? '—'}
+                      {fmtNilai(ringkasanMapel.min)}
                     </p>
                   </div>
                   <div className="card-soft px-3 py-2.5">
@@ -876,10 +883,10 @@ function Detail({
                                 )
                               })}
                               <td className="px-2 py-2 text-center text-[13px] font-semibold tabular-nums text-slate-600 sm:px-3">
-                                {totalSlm(s.id, tampil, nilai, draf) ?? '—'}
+                                {fmtNilai(totalSlm(s.id, tampil, nilai, draf))}
                               </td>
                               <td className="px-2 py-2 text-center text-[13px] font-semibold tabular-nums text-slate-700 sm:px-3">
-                                {rata ?? '—'}
+                                {fmtNilai(rata)}
                               </td>
                             </tr>
                           )

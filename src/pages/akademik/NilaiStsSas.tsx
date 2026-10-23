@@ -56,6 +56,12 @@ function parseNilai(t: string | undefined): number | null {
   return Number.isFinite(n) ? n : NaN
 }
 
+/** Tampilkan angka nilai dengan 2 desimal (atau em dash). */
+function fmtNilai(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—'
+  return (Math.round(n * 100) / 100).toFixed(2)
+}
+
 /** Nilai efektif (draf mengalahkan server) untuk satu sel asesmen. */
 function nilaiAsesmenEfektif(
   siswaId: string,
@@ -88,7 +94,7 @@ function totalDanRataAsesmen(
     n++
   }
   if (n === 0) return { total: null, rata: null }
-  return { total: Math.round(sum * 10) / 10, rata: Math.round(sum / n) }
+  return { total: Math.round(sum * 100) / 100, rata: Math.round((sum / n) * 100) / 100 }
 }
 
 export default function NilaiStsSas({ profile }: { profile: AppUser }) {
@@ -477,7 +483,7 @@ function Detail(props: {
     const sum = rates.reduce((a, b) => a + b, 0)
     return {
       punya: rates.length,
-      rataKelas: Math.round(sum / rates.length),
+      rataKelas: Math.round((sum / rates.length) * 100) / 100,
       max: Math.max(...rates),
       min: Math.min(...rates),
     }
@@ -853,19 +859,19 @@ function Detail(props: {
                   <div className="card-soft px-3 py-2.5">
                     <p className="text-[11px] font-medium text-muted">Rata-rata kelas</p>
                     <p className="mt-0.5 text-[20px] font-bold tabular-nums text-slate-900">
-                      {ringkasanMapel.rataKelas ?? '—'}
+                      {fmtNilai(ringkasanMapel.rataKelas)}
                     </p>
                   </div>
                   <div className="card-soft px-3 py-2.5">
                     <p className="text-[11px] font-medium text-muted">Nilai tertinggi</p>
                     <p className="mt-0.5 text-[20px] font-bold tabular-nums text-muh-700">
-                      {ringkasanMapel.max ?? '—'}
+                      {fmtNilai(ringkasanMapel.max)}
                     </p>
                   </div>
                   <div className="card-soft px-3 py-2.5">
                     <p className="text-[11px] font-medium text-muted">Nilai terendah</p>
                     <p className="mt-0.5 text-[20px] font-bold tabular-nums text-slate-700">
-                      {ringkasanMapel.min ?? '—'}
+                      {fmtNilai(ringkasanMapel.min)}
                     </p>
                   </div>
                   <div className="card-soft px-3 py-2.5">
@@ -956,10 +962,10 @@ function Detail(props: {
                               )
                             })}
                             <td className="px-2 py-2 text-center text-[13px] font-semibold tabular-nums text-slate-600 sm:px-3">
-                              {tr.total ?? '—'}
+                              {fmtNilai(tr.total)}
                             </td>
                             <td className="px-2 py-2 text-center text-[13px] font-semibold tabular-nums text-slate-700 sm:px-3">
-                              {tr.rata ?? '—'}
+                              {fmtNilai(tr.rata)}
                             </td>
                           </tr>
                           )
