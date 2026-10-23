@@ -314,3 +314,13 @@
 - `scripts/cek-menulis.mts` (baru). `docs/DATA_MODEL.md` dan `docs/PARITAS_FITUR.md` diperbarui.
 - Tidak ada perubahan `firestore.rules` maupun indeks: rules `menulis_log` tidak membatasi daftar field. Perlu di-deploy: hosting saja (`npm run deploy`).
 - Catatan: `scripts/cek-laporan-cetak.mjs` sudah memiliki 3 uji GAGAL terkait bobot STS (`bobot STS: pakai bobot semester`, `bobot STS: legacy bobotMapel`, `STS mapel tertimbang 60/40 = 74`) sebelum perubahan ini; tidak diubah di sini.
+
+
+## Belum dirilis (basis: package.json 0.1.0) — Laporan Tahsin-Tahfizh: bagian Menulis selaras dengan Catat Menulis
+
+- **Masalah**: narasi dan "Capaian Terakhir" memakai skor dari SATU catatan terbaru, padahal kalimatnya menyebut "rata-rata penilaian menulis". Rincian per aspek dan kesalahan umum dari Catat Menulis juga belum tampil di laporan.
+- `src/lib/tahsinLaporanRumus.ts`: `susunLaporanSiswa` kini menghitung rata-rata seluruh catatan menulis dalam rentang tanggal laporan (`ringkasMenulis`). `narasiMenulis` memakai rata-rata itu (posisi menulis tetap dari catatan terbaru) dan menambahkan satu kalimat tren (lebih baik / sedikit di bawah sebelumnya). Fungsi baru `kalimatLatihan` ("Bagian yang perlu terus dilatih: …", maksimal dua kesalahan umum terbanyak). `LaporanSiswa.menulis` bertambah `aspek[]`, `rata`, `latihan`.
+- `src/lib/tahsinLaporanHtml.ts`: bagian 3 menampilkan empat kotak (Rata-rata Periode + tiga aspek inti) menggantikan "Capaian Terakhir" dan "Kali Diperiksa" (jumlah pemeriksaan tetap disebut di narasi), sehingga tinggi halaman tidak bertambah. Tanpa skor (mis. catatan v2 tanpa penilaian) tampilan lama dipertahankan. Judul siswa Iqro menjadi "3. Menulis (Iqro)", siswa Al-Qur'an tetap "3. Menulis Al-Qur'an".
+- `src/lib/menulis.ts`: perbaikan tren. Selisih rata-rata sekarang dibulatkan satu desimal sebelum dibandingkan dengan ambang 0,3 (sebelumnya 3,3 vs 3,0 terhitung 0,2999… dan dibaca "tetap").
+- Uji: `scripts/cek-laporan-cetak.mjs` (10 uji baru: rata-rata rentang bukan catatan terakhir, level, tren, aspek, kalimat latihan, log, HTML, judul Iqro, tampilan tanpa skor) dan `scripts/cek-menulis.mts` (uji ambang tren). Tiga uji GAGAL bobot STS yang sudah ada sebelumnya tidak diubah.
+- Tampilan cetak A4 diperiksa lewat wkhtmltoimage (mesin lama), bukan peramban sungguhan: sebaiknya cetak satu laporan penuh dari situs untuk memastikan tetap satu halaman. Perlu di-deploy: hosting saja.

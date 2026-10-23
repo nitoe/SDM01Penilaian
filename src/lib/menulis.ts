@@ -199,7 +199,8 @@ export function ringkasMenulis(
   const ratarata = dipakai.map((r) => rataInti(r.penilaian)).filter((x): x is number => x != null)
   let tren: RingkasanMenulis['tren'] = null
   if (ratarata.length >= 2) {
-    const selisih = ratarata[0]! - ratarata[1]!
+    // Dibulatkan satu desimal: 3.3 - 3 = 0.2999… di floating point, padahal selisih sebenarnya 0.3.
+    const selisih = bulat1(ratarata[0]! - ratarata[1]!)
     tren = selisih >= 0.3 ? 'naik' : selisih <= -0.3 ? 'turun' : 'tetap'
   }
 

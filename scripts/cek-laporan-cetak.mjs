@@ -145,6 +145,26 @@ cek('menulis: rata-rata tiga aspek inti 3.7 (Kerapian tidak ikut)', rataMenulis(
 cek('menulis: posisi label Al-Qur\'an', posisiMenulis(km.a[0]) === 'Al-Baqarah 1-5')
 const lap2 = susunLaporanSiswa({ nama: 'Ahmad', jenjang: 'quran' }, [], km.a)
 cek('menulis: narasi level sangat baik', lap2.menulis.narasi.includes('sangat baik') && lap2.menulis.narasi.includes('3.7/4') && lap2.menulis.nilaiTerakhir === '3.7/4')
+// Menulis: skor laporan = rata-rata SEMUA catatan dalam rentang (bukan catatan terakhir), dengan rincian aspek dan kesalahan umum
+const mn3 = [
+  { id: 'n1', siswaId: 'a', kelas: '5A', materi: { tipe: 'quran', label: 'Al-Baqarah 6-10' }, jenisTugas: 'dikte', penilaian: { hurufSambungan: 4, harakat: 4, keutuhanTeks: 4 }, kesalahan: ['harakat-hilang'], tanggalPeriksa: '2026-10-10' },
+  { id: 'n2', siswaId: 'a', kelas: '5A', materi: { tipe: 'quran', label: 'Al-Baqarah 1-5' }, jenisTugas: 'salin', penilaian: { hurufSambungan: 2, harakat: 2, keutuhanTeks: 2 }, kesalahan: ['harakat-hilang', 'huruf-mirip'], tanggalPeriksa: '2026-09-01' },
+]
+const lap3 = susunLaporanSiswa({ nama: 'Ahmad', jenjang: 'quran' }, [], kelompokkanMenulis(mn3).a)
+cek('menulis laporan: skor = rata-rata rentang (3/4), bukan catatan terakhir (4/4)', lap3.menulis.rata === 3 && lap3.menulis.nilaiTerakhir === '3/4' && lap3.menulis.narasi.includes('(skor 3/4)'))
+cek('menulis laporan: level dari rata-rata rentang', lap3.menulis.narasi.includes('level baik') && !lap3.menulis.narasi.includes('sangat baik'))
+cek('menulis laporan: tren naik disebut', lap3.menulis.narasi.includes('lebih baik dibanding sebelumnya'))
+cek('menulis laporan: tiga aspek berisi rata-rata rentang', lap3.menulis.aspek.length === 3 && lap3.menulis.aspek.every((x) => x.nilai === 3))
+cek('menulis laporan: kalimat kesalahan umum', lap3.menulis.latihan === 'Bagian yang perlu terus dilatih: harakat hilang / salah dan huruf mirip / titik.')
+cek('menulis laporan: log memuat jenis tugas', lap3.menulis.log[0].meta.startsWith('Dikte'))
+const lapKosong = susunLaporanSiswa({ nama: 'Ahmad', jenjang: 'quran' }, [], [])
+cek('menulis laporan: tanpa catatan tidak ada aspek/kalimat latihan', lapKosong.menulis.aspek.length === 0 && lapKosong.menulis.latihan === '' && lapKosong.menulis.rata === null)
+const htmlM = bangunHalamanTahsin({ sekolah: 'S', labelPeriode: 'P', rentang: 'a – b', siswa: { nama: 'A', nomor: '1', kelas: '5A', jenjang: 'quran' }, guruNama: 'G', laporan: lap3, target: null, kota: 'Depok', tanggal: '1 Januari 2027', namaKepsek: 'K' })
+cek('HTML menulis: rata-rata, tiga aspek, dan kalimat latihan tampil', ['Rata-rata Periode', 'Huruf &amp; Sambungan', 'Harakat &amp; Tanda Baca', 'Kelengkapan Teks', 'perlu terus dilatih'].every((x) => htmlM.includes(x)))
+const htmlIqro = bangunHalamanTahsin({ sekolah: 'S', labelPeriode: 'P', rentang: 'a – b', siswa: { nama: 'A', nomor: '1', kelas: '1A', jenjang: 'iqro' }, guruNama: 'G', laporan: lap3, target: null, kota: 'Depok', tanggal: '1 Januari 2027', namaKepsek: 'K' })
+cek('HTML menulis: judul untuk siswa Iqro tidak menyebut Al-Qur\'an', htmlIqro.includes('3. Menulis (Iqro)') && !htmlIqro.includes("3. Menulis Al-Qur'an"))
+const htmlTanpaSkor = bangunHalamanTahsin({ sekolah: 'S', labelPeriode: 'P', rentang: 'a – b', siswa: { nama: 'A', nomor: '1', kelas: '5A', jenjang: 'quran' }, guruNama: 'G', laporan: lap, target: null, kota: 'Depok', tanggal: '1 Januari 2027', namaKepsek: 'K' })
+cek('HTML menulis: tanpa skor tetap memakai Capaian Terakhir dan Kali Diperiksa', htmlTanpaSkor.includes('Capaian Terakhir') && htmlTanpaSkor.includes('Kali Diperiksa') && !htmlTanpaSkor.includes('Rata-rata Periode'))
 cek('rentang semester ganjil', rentangSemester('2026/2027', '1').dari === '2026-07-01' && rentangSemester('2026/2027', '1').sampai === '2026-12-31')
 cek('rentang semester genap pakai tahun kedua', rentangSemester('2026/2027', '2').dari === '2027-01-01' && rentangSemester('2026/2027', '2').sampai === '2027-06-30')
 cek('dalam rentang: batas akhir hari termasuk', dalamRentang('2026-12-31T20:00:00', '2026-07-01', '2026-12-31') && !dalamRentang('2027-01-01T00:00:00', '2026-07-01', '2026-12-31'))

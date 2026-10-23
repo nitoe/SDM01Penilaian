@@ -116,9 +116,13 @@ export function bangunHalamanTahsin(d: HalamanTahsin): string {
 ${target}
 
 <div class="lpr-section">
-  <h2>3. Menulis Al-Qur'an</h2>
-  <div class="lpr-stat-row">${stat(l.menulis.nilaiTerakhir, 'Capaian Terakhir')}${stat(l.menulis.total, 'Kali Diperiksa')}</div>
-  <p class="lpr-narasi">${esc(l.menulis.narasi)}</p>
+  <h2>${iqro ? '3. Menulis (Iqro)' : "3. Menulis Al-Qur'an"}</h2>
+  <div class="lpr-stat-row">${
+    l.menulis.aspek.length
+      ? `${stat(l.menulis.rata != null ? `${l.menulis.rata}/4` : '-', 'Rata-rata Periode')}${l.menulis.aspek.map((x) => stat(x.nilai, x.label)).join('')}`
+      : `${stat(l.menulis.nilaiTerakhir, 'Capaian Terakhir')}${stat(l.menulis.total, 'Kali Diperiksa')}`
+  }</div>
+  <p class="lpr-narasi">${esc(l.menulis.narasi)}${l.menulis.latihan ? ` ${esc(l.menulis.latihan)}` : ''}</p>
   ${daftarLog(l.menulis.log, 'Belum ada catatan pemeriksaan menulis pada periode ini.')}
 </div>
 

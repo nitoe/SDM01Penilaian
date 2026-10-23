@@ -221,3 +221,7 @@
 18.4 Catat Menulis hanya untuk guru Tahsin (`isGuruTahsinRole`); admin memantau (§17). Setiap catatan menyimpan `tahunAjaran` dan `semester` periode aktif; ringkasan per periode tidak menghitung catatan tanpa periode.
 
 18.5 Tanggal pemeriksaan (`tanggalPeriksa`, yyyy-mm-dd) tidak boleh di masa depan. Semua aspek diawali 3 ("Baik") di UI; jangan mengubah nilai awal menjadi kosong sehingga guru wajib mengisi tiap aspek.
+
+18.6 **Skor menulis di laporan orang tua = rata-rata seluruh catatan dalam rentang laporan** (`ringkasMenulis`), bukan catatan terakhir. Posisi menulis ("hingga …") boleh dari catatan terbaru, tetapi angka skor dan kata "rata-rata" tidak. Rincian aspek di bagian 3 laporan memakai kotak (tanpa menambah tinggi) agar laporan tetap satu halaman A4; jangan menambah blok baru di bagian ini tanpa memeriksa cetaknya.
+
+18.7 Pembandingan selisih rata-rata (tren) wajib dibulatkan satu desimal dulu; jangan membandingkan hasil pengurangan floating point langsung dengan ambang.

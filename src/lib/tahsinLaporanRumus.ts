@@ -1,6 +1,6 @@
 import type { MenulisRecord, SetoranRecord } from '../types/tahsin.ts'
 import { JENIS_TUGAS_MENULIS_LABEL } from '../types/tahsin.ts'
-import { rataInti } from './menulis.ts'
+import { ASPEK_INTI, rataInti, ringkasMenulis, type RingkasanMenulis } from './menulis.ts'
 
 // Rumus murni laporan perkembangan Tahsin-Tahfizh per siswa (untuk orang tua), mengikuti
 // tahsin-tahfizh/cetak-laporan.html di penilaian-v2. Tanpa Firebase agar bisa diuji:
@@ -136,22 +136,43 @@ export function rataMenulis(rec: MenulisRecord | undefined): number | null {
   return rec ? rataInti(longgar(rec).penilaian) : null
 }
 
-export function narasiMenulis(terakhir: MenulisRecord | undefined, total: number, nama: string): string {
+/**
+ * Narasi menulis untuk orang tua. Skor memakai rata-rata SELURUH catatan dalam rentang laporan (`ringkas`),
+ * bukan catatan terakhir saja; posisi menulis memakai catatan terbaru. Tanpa `ringkas`, dihitung dari catatan
+ * terakhir (perilaku lama, untuk pemanggil yang hanya punya satu catatan).
+ */
+export function narasiMenulis(
+  terakhir: MenulisRecord | undefined,
+  total: number,
+  nama: string,
+  ringkas?: RingkasanMenulis,
+): string {
   if (!terakhir) return `Belum ada catatan pemeriksaan menulis untuk ${nama} pada periode ini.`
   const posisi = posisiMenulis(terakhir)
-  const rata = rataMenulis(terakhir)
-  if (rata != null) {
-    const kualitas =
-      rata >= 3.5
-        ? 'sangat baik'
-        : rata >= 2.5
-          ? 'baik'
-          : rata >= 1.5
-            ? 'cukup, dengan beberapa aspek yang masih perlu dibimbing'
-            : 'masih memerlukan bimbingan intensif, terutama pada kebenaran huruf dan kelengkapan harakat'
-    return `${nama} telah menulis hingga ${posisi}, dengan ${total} kali pemeriksaan oleh guru selama periode ini. Rata-rata penilaian menulis (kebenaran huruf & sambungan, kelengkapan harakat & tanda baca, serta kelengkapan teks) berada pada level ${kualitas} (skor ${rata}/4).`
-  }
-  return `${nama} telah menulis hingga ${posisi}, dengan ${total} kali pemeriksaan oleh guru selama periode ini.`
+  const awal = `${nama} telah menulis hingga ${posisi}, dengan ${total} kali pemeriksaan oleh guru selama periode ini.`
+  const rata = ringkas ? ringkas.rata : rataMenulis(terakhir)
+  if (rata == null) return awal
+  const kualitas =
+    rata >= 3.5
+      ? 'sangat baik'
+      : rata >= 2.5
+        ? 'baik'
+        : rata >= 1.5
+          ? 'cukup, dengan beberapa aspek yang masih perlu dibimbing'
+          : 'masih memerlukan bimbingan intensif, terutama pada kebenaran huruf dan kelengkapan harakat'
+  const tren =
+    ringkas?.tren === 'naik'
+      ? ' Hasil pemeriksaan terbaru lebih baik dibanding sebelumnya.'
+      : ringkas?.tren === 'turun'
+        ? ' Hasil pemeriksaan terbaru sedikit di bawah sebelumnya dan perlu didampingi.'
+        : ''
+  return `${awal} Rata-rata penilaian menulis (kebenaran huruf & sambungan, kelengkapan harakat & tanda baca, serta kelengkapan teks) berada pada level ${kualitas} (skor ${rata}/4).${tren}`
+}
+
+/** Kalimat "bagian yang perlu dilatih" dari kesalahan umum yang paling sering ditandai guru; kosong bila tidak ada. */
+export function kalimatLatihan(ringkas: RingkasanMenulis): string {
+  const atas = ringkas.kesalahanTerbanyak.slice(0, 2).map((k) => k.label.toLowerCase())
+  return atas.length ? `Bagian yang perlu terus dilatih: ${atas.join(' dan ')}.` : ''
 }
 
 export interface LaporanSiswa {
@@ -159,7 +180,18 @@ export interface LaporanSiswa {
   iqro: boolean
   membaca: { ayatDinilai: number; tajwid: number; makhroj: number; akurasi: Akurasi | null; narasi: string; log: ItemLog[] }
   hafalan: { totalSesi: number; ziyadahLulus: number; murojaah: number; narasi: string; log: ItemLog[] }
-  menulis: { total: number; nilaiTerakhir: string; narasi: string; log: ItemLog[] }
+  menulis: {
+    total: number
+    nilaiTerakhir: string
+    narasi: string
+    log: ItemLog[]
+    /** Rata-rata tiap aspek inti pada rentang laporan (kosong bila belum ada skor). */
+    aspek: { label: string; nilai: number }[]
+    /** Rata-rata tiga aspek inti pada rentang laporan. */
+    rata: number | null
+    /** Kalimat kesalahan umum yang sering muncul; kosong bila tidak ada. */
+    latihan: string
+  }
 }
 
 /**
@@ -234,7 +266,9 @@ export function susunLaporanSiswa(
       dot: 'green',
     }
   })
-  const rataTerakhir = rataMenulis(terakhirMenulis)
+  // Ringkasan seluruh catatan pada rentang laporan (sudah disaring tanggal oleh pemanggil), bukan per periode akademik.
+  const ringkasTulis = ringkasMenulis(menulis)
+  const rataTulis = ringkasTulis.rata ?? rataMenulis(terakhirMenulis)
 
   return {
     namaDepan,
@@ -257,12 +291,18 @@ export function susunLaporanSiswa(
     menulis: {
       total: menulis.length,
       nilaiTerakhir: terakhirMenulis
-        ? rataTerakhir != null
-          ? `${rataTerakhir}/4`
+        ? rataTulis != null
+          ? `${rataTulis}/4`
           : posisiMenulis(terakhirMenulis)
         : '-',
-      narasi: narasiMenulis(terakhirMenulis, menulis.length, namaDepan),
+      narasi: narasiMenulis(terakhirMenulis, menulis.length, namaDepan, ringkasTulis),
       log: logMenulis,
+      aspek: ASPEK_INTI.flatMap((a) => {
+        const v = ringkasTulis.perAspek[a.key]
+        return v == null ? [] : [{ label: a.label, nilai: v }]
+      }),
+      rata: rataTulis,
+      latihan: kalimatLatihan(ringkasTulis),
     },
   }
 }

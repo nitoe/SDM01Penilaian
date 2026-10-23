@@ -51,4 +51,16 @@ const kosong = ringkasMenulis([], { tahunAjaran: '2026/2027', semester: '1' })
 assert.equal(kosong.jumlah, 0); assert.equal(kosong.rata, null); assert.equal(kosong.tren, null)
 assert.equal(ringkasMenulis([data[0]!], { tahunAjaran: '2026/2027', semester: '1' }).tren, null) // satu catatan: tak ada tren
 
+// tren: ambang tepat 0.3 tidak boleh meleset karena floating point (3.3 vs 3.0)
+const dua = (a: number, b: number) => [
+  m('x', '2026-10-02', { hurufSambungan: a, harakat: a, keutuhanTeks: a }),
+  m('y', '2026-10-01', { hurufSambungan: b, harakat: b, keutuhanTeks: b }),
+]
+assert.equal(ringkasMenulis([
+  m('x', '2026-10-02', { hurufSambungan: 4, harakat: 3, keutuhanTeks: 3 }),
+  m('y', '2026-10-01', { hurufSambungan: 3, harakat: 3, keutuhanTeks: 3 }),
+]).tren, 'naik') // 3.3 vs 3
+assert.equal(ringkasMenulis(dua(3, 3)).tren, 'tetap')
+assert.equal(ringkasMenulis(dua(2, 3)).tren, 'turun')
+
 console.log('SEMUA UJI LULUS')
