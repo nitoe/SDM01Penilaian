@@ -11,7 +11,7 @@ import {
   type GuruAkademikProgress,
 } from '../lib/dashboardStats'
 import { kelasSaya } from '../lib/kelasSaya'
-import { canAkademik, canTahsin, isAdminRole, isGuruAkademikRole, isStaff } from '../lib/roles'
+import { canAkademik, isAdminRole, isGuruAkademikRole, isStaff } from '../lib/roles'
 import { SEMUA_KELAS } from '../types/tahsin'
 import type { AppUser } from '../types/user'
 import { ROLE_LABEL } from '../types/user'
@@ -126,7 +126,6 @@ export default function Home({ profile }: HomeProps) {
   const staff = isStaff(profile.role)
   const admin = isAdminRole(profile.role)
   const adaAkademik = canAkademik(profile.role)
-  const adaTahsin = canTahsin(profile.role)
   const guruMapel = isGuruAkademikRole(profile.role)
   const guruTahsinOnly =
     profile.role === 'guru_tahsin_tahfizh' ||
