@@ -16,6 +16,7 @@ import { auth, db } from './firebase'
 import type {
   AuthScope,
   JenisSetoran,
+  MenulisPayload,
   MenulisRecord,
   SetoranPayload,
   SetoranRecord,
@@ -211,6 +212,24 @@ export async function saveTargetHafalan(
     updatedBy: auth.currentUser?.uid || null,
     updatedAt: serverTimestamp(),
   })
+}
+
+/**
+ * Simpan satu penilaian menulis (Catat Menulis). Rules `menulis_log`: guru Tahsin yang mengampu kelas itu,
+ * dengan createdBy = uid. Hanya kolom yang dikenal yang ditulis.
+ */
+export async function saveMenulis(payload: MenulisPayload) {
+  const docRef = await addDoc(collection(db, 'menulis_log'), {
+    ...payload,
+    createdBy: auth.currentUser?.uid || null,
+    createdAt: serverTimestamp(),
+  })
+  return { id: docRef.id, ...payload }
+}
+
+/** Hapus satu catatan menulis. Rules: pembuatnya sendiri (admin tidak menghapus catatan guru, ANTIREGRESI §17). */
+export async function deleteMenulis(id: string) {
+  await deleteDoc(doc(db, 'menulis_log', id))
 }
 
 /** Semua catatan menulis satu kelas (untuk laporan cetak); penyaringan tanggal dilakukan pemanggil. */

@@ -8,6 +8,8 @@ import type {
 } from '../../types/tahsin'
 import {
   JENIS_LABEL,
+  JENIS_TUGAS_MENULIS_LABEL,
+  KESALAHAN_MENULIS_LABEL,
   SEMUA_KELAS,
   STATUS_LABEL,
   type JenisSetoran,
@@ -35,6 +37,14 @@ import {
   type TargetHafalan,
 } from '../../lib/target'
 import { surahByNo } from '../../lib/quranSurah'
+import {
+  ASPEK_INTI,
+  LEVEL_MENULIS_LABEL,
+  bangunKesalahan,
+  levelDariRata,
+  rataInti,
+  ringkasMenulis,
+} from '../../lib/menulis'
 
 interface Props {
   profile: AppUser
@@ -575,23 +585,7 @@ export default function RiwayatSiswa({ profile }: Props) {
                 menulis.length === 0 ? (
                   <Empty note="Belum ada catatan menulis." />
                 ) : (
-                  menulis.map((m) => (
-                    <div key={m.id} className="card-soft border border-border/80 p-3.5">
-                      <div className="flex justify-between gap-2">
-                        <p className="text-[13px] font-semibold text-slate-900">
-                          {(m.materi as { label?: string })?.label ||
-                            m.tanggalPeriksa ||
-                            'Catatan menulis'}
-                        </p>
-                        <span className="shrink-0 text-[11px] text-muted">
-                          {formatTanggal(m.createdAt)}
-                        </span>
-                      </div>
-                      {m.catatan ? (
-                        <p className="mt-1 text-[12px] text-muted">{String(m.catatan)}</p>
-                      ) : null}
-                    </div>
-                  ))
+                  menulis.map((m) => <KartuMenulis key={m.id} m={m} />)
                 )
               ) : (
                 <Ringkasan
@@ -600,6 +594,11 @@ export default function RiwayatSiswa({ profile }: Props) {
                   menulis={menulis}
                   stats={stats}
                   target={target}
+                  periode={
+                    periodeAk.ready
+                      ? { tahunAjaran: periodeAk.tahunAjaran, semester: periodeAk.semester }
+                      : null
+                  }
                 />
               )}
             </div>
@@ -624,12 +623,14 @@ function Ringkasan({
   menulis,
   stats,
   target,
+  periode,
 }: {
   selected: SiswaTahsin
   setoran: SetoranRecord[]
   menulis: MenulisRecord[]
   stats: { total: number; d30: number; ziyadahLulus: number; last: string }
   target: TargetHafalan | null
+  periode: { tahunAjaran: string; semester: string } | null
 }) {
   const kualitas = ringkasKualitasBacaan(setoran)
   const isIqro = selected.jenjang === 'iqro'
@@ -705,6 +706,9 @@ function Ringkasan({
         )}
       </section>
 
+      {/* Menulis: rata-rata tiga aspek inti pada periode ini */}
+      <RingkasMenulis menulis={menulis} periode={periode} />
+
       {/* Target hafalan kelas */}
       <section className="rounded-xl border border-border p-3.5">
         <div className="flex items-baseline justify-between gap-2">
@@ -772,5 +776,128 @@ function Ringkasan({
         )}
       </section>
     </div>
+  )
+}
+const POLA_SKOR = 'rounded-full px-2 py-0.5 text-[10.5px] font-semibold'
+
+function KartuMenulis({ m }: { m: MenulisRecord }) {
+  const rata = rataInti(m.penilaian)
+  const kesalahan = bangunKesalahan(m.kesalahan ?? [])
+  const kerapian = typeof m.penilaian?.kerapian === 'number' ? m.penilaian.kerapian : null
+  return (
+    <div className="card-soft border border-border/80 p-3.5">
+      <div className="flex justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {m.jenisTugas && JENIS_TUGAS_MENULIS_LABEL[m.jenisTugas] && (
+              <span className={`${POLA_SKOR} bg-violet-50 text-violet-700`}>
+                {JENIS_TUGAS_MENULIS_LABEL[m.jenisTugas]}
+              </span>
+            )}
+            {rata != null && (
+              <span className={`${POLA_SKOR} bg-muh-50 text-muh-700`}>
+                Rata-rata {rata}/4 · {levelDariRata(rata)}
+              </span>
+            )}
+          </div>
+          <p className="mt-1.5 text-[13px] font-semibold text-slate-900">
+            {(m.materi as { label?: string } | undefined)?.label || m.tanggalPeriksa || 'Catatan menulis'}
+          </p>
+        </div>
+        <span className="shrink-0 text-[11px] text-muted">{m.tanggalPeriksa || formatTanggal(m.createdAt)}</span>
+      </div>
+      {rata != null && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {ASPEK_INTI.map((a) => {
+            const v = m.penilaian?.[a.key]
+            return typeof v === 'number' ? (
+              <span key={a.key} className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                {a.label}: {v}
+              </span>
+            ) : null
+          })}
+          {kerapian != null && (
+            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+              Kerapian: {kerapian}
+            </span>
+          )}
+        </div>
+      )}
+      {kesalahan.length > 0 && (
+        <p className="mt-1.5 text-[11.5px] text-amber-800">
+          Perlu dilatih: {kesalahan.map((k) => KESALAHAN_MENULIS_LABEL[k]).join(', ')}
+        </p>
+      )}
+      {m.catatan ? <p className="mt-1 text-[12px] text-muted">{String(m.catatan)}</p> : null}
+    </div>
+  )
+}
+
+function RingkasMenulis({
+  menulis,
+  periode,
+}: {
+  menulis: MenulisRecord[]
+  periode: { tahunAjaran: string; semester: string } | null
+}) {
+  const r = ringkasMenulis(menulis, periode)
+  return (
+    <section className="rounded-xl border border-border p-3.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-[12.5px] font-semibold text-slate-800">
+          Menulis <span className="font-normal text-muted">(periode ini)</span>
+        </h3>
+        <Link to="/tahsin/menulis" className="text-[11.5px] font-medium text-muh-700 hover:underline">
+          Catat menulis
+        </Link>
+      </div>
+      {r.jumlah === 0 || r.rata == null ? (
+        <p className="mt-1.5 text-[12px] text-muted">Belum ada penilaian menulis pada periode ini.</p>
+      ) : (
+        <>
+          <p className="mt-1 text-[12px] text-muted">
+            {r.jumlah} penilaian · rata-rata{' '}
+            <strong className="text-slate-800">
+              {r.rata}/4 ({levelDariRata(r.rata)})
+            </strong>
+            {r.tren && r.tren !== 'tetap' ? ` · ${r.tren === 'naik' ? 'naik' : 'turun'} dari sebelumnya` : ''}
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {ASPEK_INTI.map((a) => {
+              const v = r.perAspek[a.key]
+              if (v == null) return null
+              const persen = Math.round(((v - 1) / 3) * 100)
+              return (
+                <li key={a.key} className="flex items-center gap-3 text-[12px]">
+                  <span className="w-40 shrink-0 truncate font-medium text-slate-800">{a.label}</span>
+                  <span
+                    className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100"
+                    role="progressbar"
+                    aria-valuenow={v}
+                    aria-valuemin={1}
+                    aria-valuemax={4}
+                    aria-label={`Rata-rata ${a.label}`}
+                  >
+                    <span className="block h-full rounded-full bg-muh-600" style={{ width: `${persen}%` }} />
+                  </span>
+                  <span className="w-28 shrink-0 text-right text-muted">
+                    {v}/4 · {LEVEL_MENULIS_LABEL[Math.min(4, Math.max(1, Math.round(v))) as 1 | 2 | 3 | 4]}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+          {r.kesalahanTerbanyak.length > 0 && (
+            <p className="mt-2 text-[11.5px] text-amber-800">
+              Kesalahan yang sering muncul:{' '}
+              {r.kesalahanTerbanyak
+                .slice(0, 3)
+                .map((k) => `${k.label} (${k.jumlah}×)`)
+                .join(', ')}
+            </p>
+          )}
+        </>
+      )}
+    </section>
   )
 }

@@ -209,3 +209,15 @@
 17.5 Penyimpanan 7KAIH hanya menulis baris siswa yang berubah (`simpanG7kaihBanyak`, batch). Jangan menulis seluruh kelas pada setiap simpan.
 
 17.6 Aksi massal per kolom 7KAIH ("Atur semua") harus **menimpa** seluruh kolom dan menyediakan "Kosongkan". Jangan kembali ke perilaku "hanya isi sel kosong": pilihan itu tidak berefek bila kolom sudah terisi penuh dan tidak ada jalan menghapus massal. Perubahan baru tersimpan setelah tombol Simpan.
+
+## §18. Catat Menulis (Tahsin-Tahfizh)
+
+18.1 **Rata-rata menulis = tiga aspek inti saja** (`hurufSambungan`, `harakat`, `keutuhanTeks`), dihitung hanya di `rataInti` (`src/lib/menulis.ts`). Jangan memasukkan `kerapian` ke rata-rata dan jangan menghitung ulang di halaman. Ini koreksi atas rata-rata empat aspek di v2 (aturan lama tidak dihapus; yang berlaku adalah aturan ini). Uji: `npx tsx scripts/cek-menulis.mts` dan `node --experimental-strip-types scripts/cek-laporan-cetak.mjs`.
+
+18.2 Kunci `penilaian` tetap `hurufSambungan`, `harakat`, `keutuhanTeks`, `kerapian` agar data impor v2 terbaca. `kerapian` boleh `null` (tidak dinilai); `null` berarti belum dinilai, bukan level terendah. Skor sah hanya bilangan bulat 1-4.
+
+18.3 `jenisTugas` (`salin` | `dikte` | `hafalan`) dan `kesalahan[]` opsional pada catatan impor v2. Pembaca wajib menoleransi keduanya kosong. Jangan menambah aspek skor baru tanpa keputusan eksplisit pemilik proyek: rancangan sengaja ramping agar tidak membebani guru.
+
+18.4 Catat Menulis hanya untuk guru Tahsin (`isGuruTahsinRole`); admin memantau (§17). Setiap catatan menyimpan `tahunAjaran` dan `semester` periode aktif; ringkasan per periode tidak menghitung catatan tanpa periode.
+
+18.5 Tanggal pemeriksaan (`tanggalPeriksa`, yyyy-mm-dd) tidak boleh di masa depan. Semua aspek diawali 3 ("Baik") di UI; jangan mengubah nilai awal menjadi kosong sehingga guru wajib mengisi tiap aspek.

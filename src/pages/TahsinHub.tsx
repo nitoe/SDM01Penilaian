@@ -21,6 +21,14 @@ const harian: Item[] = [
     ready: true,
   },
   {
+    to: '/tahsin/menulis',
+    title: 'Catat Menulis',
+    desc: 'Nilai tulisan siswa: huruf, harakat, dan kelengkapan',
+    icon: 'clipboard',
+    tone: 'green',
+    ready: true,
+  },
+  {
     to: '/tahsin/riwayat',
     title: 'Riwayat Siswa',
     desc: 'Progres membaca, hafalan, menulis, dan ringkasan',
@@ -76,7 +84,9 @@ function PanelItems({ items }: { items: Item[] }) {
 }
 
 export default function TahsinHub({ admin = false }: { admin?: boolean }) {
-  const harianTampil = admin ? harian.filter((i) => i.to !== '/tahsin/input-setoran') : harian
+  // Administrator hanya memantau: menu tulis (setoran dan penilaian menulis) milik guru (ANTIREGRESI §17).
+  const menuGuruSaja = ['/tahsin/input-setoran', '/tahsin/menulis']
+  const harianTampil = admin ? harian.filter((i) => !menuGuruSaja.includes(i.to)) : harian
   const targetTampil = admin ? targetLaporan.filter((i) => i.ready) : targetLaporan
   return (
     <div className="space-y-5">

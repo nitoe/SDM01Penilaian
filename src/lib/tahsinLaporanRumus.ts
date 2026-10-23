@@ -1,4 +1,6 @@
 import type { MenulisRecord, SetoranRecord } from '../types/tahsin.ts'
+import { JENIS_TUGAS_MENULIS_LABEL } from '../types/tahsin.ts'
+import { rataInti } from './menulis.ts'
 
 // Rumus murni laporan perkembangan Tahsin-Tahfizh per siswa (untuk orang tua), mengikuti
 // tahsin-tahfizh/cetak-laporan.html di penilaian-v2. Tanpa Firebase agar bisa diuji:
@@ -108,6 +110,7 @@ export function narasiHafalan(
 interface MenulisLonggar {
   materi?: { label?: string; tipe?: string; buku?: number; jilidIqro?: number; halamanMulai?: number; halamanAkhir?: number }
   penilaian?: Record<string, unknown>
+  jenisTugas?: keyof typeof JENIS_TUGAS_MENULIS_LABEL
   jilidIqro?: number
   halamanMulai?: number
   halamanAkhir?: number
@@ -124,21 +127,20 @@ export function posisiMenulis(rec: MenulisRecord | undefined): string {
   return `${r.jilidIqro ? `Iqro ${r.jilidIqro} — ` : ''}Halaman ${rentang(r.halamanMulai, r.halamanAkhir)}`
 }
 
-/** Rata-rata empat aspek menulis (skala 1–4), satu desimal; null bila tidak ada penilaian. */
+/**
+ * Rata-rata tiga aspek inti menulis (Huruf & Sambungan, Harakat, Kelengkapan Teks; skala 1–4), satu desimal.
+ * Kerapian tidak ikut (ANTIREGRESI §18). Null bila tidak ada penilaian. Catatan v2 yang memuat empat aspek
+ * dihitung dari tiga aspek inti saja.
+ */
 export function rataMenulis(rec: MenulisRecord | undefined): number | null {
-  const p = rec ? longgar(rec).penilaian : undefined
-  if (!p) return null
-  const v = ['hurufSambungan', 'harakat', 'keutuhanTeks', 'kerapian']
-    .map((k) => p[k])
-    .filter((x): x is number => typeof x === 'number')
-  return v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : null
+  return rec ? rataInti(longgar(rec).penilaian) : null
 }
 
 export function narasiMenulis(terakhir: MenulisRecord | undefined, total: number, nama: string): string {
-  if (!terakhir) return `Belum ada catatan pemeriksaan buku salinan Al-Qur'an untuk ${nama} pada periode ini.`
+  if (!terakhir) return `Belum ada catatan pemeriksaan menulis untuk ${nama} pada periode ini.`
   const posisi = posisiMenulis(terakhir)
   const rata = rataMenulis(terakhir)
-  if (longgar(terakhir).materi?.tipe === 'quran' && rata != null) {
+  if (rata != null) {
     const kualitas =
       rata >= 3.5
         ? 'sangat baik'
@@ -147,9 +149,9 @@ export function narasiMenulis(terakhir: MenulisRecord | undefined, total: number
           : rata >= 1.5
             ? 'cukup, dengan beberapa aspek yang masih perlu dibimbing'
             : 'masih memerlukan bimbingan intensif, terutama pada kebenaran huruf dan kelengkapan harakat'
-    return `${nama} telah menyalin hingga ${posisi}, dengan ${total} kali pemeriksaan oleh guru selama periode ini. Rata-rata penilaian menulis (kebenaran huruf & sambungan, kelengkapan harakat, keutuhan teks, serta kerapian & keterbacaan) berada pada level ${kualitas} (skor ${rata}/4).`
+    return `${nama} telah menulis hingga ${posisi}, dengan ${total} kali pemeriksaan oleh guru selama periode ini. Rata-rata penilaian menulis (kebenaran huruf & sambungan, kelengkapan harakat & tanda baca, serta kelengkapan teks) berada pada level ${kualitas} (skor ${rata}/4).`
   }
-  return `${nama} telah menyalin hingga ${posisi}, dengan ${total} kali pemeriksaan oleh guru selama periode ini.`
+  return `${nama} telah menulis hingga ${posisi}, dengan ${total} kali pemeriksaan oleh guru selama periode ini.`
 }
 
 export interface LaporanSiswa {
@@ -223,7 +225,12 @@ export function susunLaporanSiswa(
     return {
       tanggal: keMs((r.tanggalPeriksa as Waktu) || r.createdAt),
       materi: posisiMenulis(r),
-      meta: rata != null ? `Rata-rata ${rata}/4` : '',
+      meta: [
+        longgar(r).jenisTugas ? JENIS_TUGAS_MENULIS_LABEL[longgar(r).jenisTugas!] : '',
+        rata != null ? `Rata-rata ${rata}/4` : '',
+      ]
+        .filter(Boolean)
+        .join(' • '),
       dot: 'green',
     }
   })
@@ -250,7 +257,7 @@ export function susunLaporanSiswa(
     menulis: {
       total: menulis.length,
       nilaiTerakhir: terakhirMenulis
-        ? longgar(terakhirMenulis).materi?.tipe === 'quran' && rataTerakhir != null
+        ? rataTerakhir != null
           ? `${rataTerakhir}/4`
           : posisiMenulis(terakhirMenulis)
         : '-',

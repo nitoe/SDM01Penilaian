@@ -12,12 +12,12 @@ Semua kolom "Ada" **belum diuji dengan data Firestore sungguhan** — gunakan da
 | Input Setoran: pilih siswa, jenis, materi Iqro/Al-Qur'an, status hafalan, catatan, tamat Iqro | Ada | Tata letak PC dua kolom (daftar siswa tetap di kiri, bilah simpan selalu terlihat), tombol Lanjutkan dari setoran terakhir, Simpan & berikutnya, Ctrl+Enter. Status memakai istilah v2: **Lulus / Perlu diulang** |
 | Input Setoran: **Baca & Tandai** (ketuk kata = tajwid/makhroj, ayat Lulus / Perlu diulang, ayat kritis) | Ada | Hanya satu surah per setoran (sama dengan v2). Teks Arab (font Amiri Quran), transliterasi, terjemahan Kemenag, audio per ayat dan surah penuh dari 6 qari — sumber EQuran.id |
 | Input Setoran: Latihan Membaca Iqro (kartu kata) | Ada | Dikembalikan 10 Okt 2026 |
-| Riwayat Siswa: tab Membaca, Hafalan, Menulis, Ringkasan | Sebagian | Ringkasan kini memuat Kualitas bacaan (5 sesi) dan progres Target Hafalan. Detail Menulis menunggu Catat Menulis |
+| Riwayat Siswa: tab Membaca, Hafalan, Menulis, Ringkasan | Ada | Ringkasan memuat Kualitas bacaan (5 sesi), progres Target Hafalan, dan rata-rata Menulis periode ini. Tab Menulis menampilkan jenis tugas, skor tiap aspek, dan kesalahan umum. Belum diuji dengan data |
 | Riwayat: ringkasan Baca & Tandai pada kartu | Ada | Kata-kata ringkasan sama dengan v2 |
 | Riwayat: ubah (jenis, status, catatan) dan hapus catatan sendiri | Ada | Dikembalikan 10 Okt 2026; butuh `deploy:rules` |
-| Catat Menulis | Belum | |
+| Catat Menulis (`/tahsin/menulis`) | Ada | Konteks tugas (Salin/Dikte/Dari hafalan) + tiga aspek inti skala 1-4 (Huruf & Sambungan, Harakat & Tanda Baca, Kelengkapan Teks; awal "3 Baik") + Kerapian opsional di luar rata-rata + kesalahan umum opsional. Berbeda dari v2: Kerapian tidak masuk rata-rata. Belum diuji dengan data |
 | Target Hafalan (Iqro: jilid + halaman; Al-Qur'an: daftar surah, isi cepat Juz 30/29) | Ada | Ringkasan target semua kelas dalam satu daftar. Butuh `target_hafalan` dari migrasi v2 atau diisi baru |
-| Cetak Laporan (per siswa, untuk orang tua; satu siswa atau seluruh kelas) | Ada | Belum diuji dengan data. Bagian Menulis menunggu Catat Menulis |
+| Cetak Laporan (per siswa, untuk orang tua; satu siswa atau seluruh kelas) | Ada | Belum diuji dengan data. Bagian Menulis memakai rata-rata tiga aspek inti dari Catat Menulis |
 | Portal orang tua (daftar, riwayat anak, kelola akun ortu) | Belum | |
 | seed-siswa, seed-kktp | Tidak perlu | Diganti impor Excel Dapodik |
 

@@ -104,17 +104,67 @@ export interface SetoranRecord extends SetoranPayload {
   createdBy?: string | null
 }
 
+/** Konteks tugas menulis (Catat Menulis): skor "Salin" tidak setara dengan skor "Dikte" atau "Dari hafalan". */
+export type JenisTugasMenulis = 'salin' | 'dikte' | 'hafalan'
+
+/** Tiga aspek inti (masuk rata-rata). Nama kunci sama dengan v2 agar data impor tetap terbaca. */
+export type AspekMenulis = 'hurufSambungan' | 'harakat' | 'keutuhanTeks'
+
+/** Kesalahan umum yang bisa ditandai sekali ketuk (opsional). */
+export type KesalahanMenulis =
+  | 'huruf-mirip'
+  | 'salah-sambung'
+  | 'bentuk-posisi'
+  | 'harakat-hilang'
+  | 'tasydid-tanwin'
+  | 'bagian-terlewat'
+
+/**
+ * Penilaian menulis, skala 1–4. `kerapian` adalah aspek pelengkap (opsional, boleh null) dan TIDAK masuk
+ * rata-rata. Catatan v2 mengisi keempatnya.
+ */
+export interface PenilaianMenulis {
+  hurufSambungan?: number | null
+  harakat?: number | null
+  keutuhanTeks?: number | null
+  kerapian?: number | null
+}
+
 export interface MenulisRecord {
   id: string
   siswaId: string
   siswaNama?: string
   kelas: string
   materi?: { label?: string; tipe?: string; [k: string]: unknown }
+  /** Konteks tugas; kosong pada catatan hasil impor v2. */
+  jenisTugas?: JenisTugasMenulis
+  penilaian?: PenilaianMenulis
+  kesalahan?: KesalahanMenulis[]
   catatan?: string
   tanggalPeriksa?: string
+  tahunAjaran?: string
+  semester?: string
   createdAt?: { seconds: number; nanoseconds: number } | string | Date | null
   createdBy?: string | null
   [k: string]: unknown
+}
+
+/** Isi yang ditulis ke koleksi `menulis_log` oleh Catat Menulis (createdBy/createdAt ditambah saat simpan). */
+export interface MenulisPayload {
+  siswaId: string
+  siswaNama: string
+  kelas: string
+  jenjang: JenjangTahsin
+  materi: MateriSetoran
+  jenisTugas: JenisTugasMenulis
+  penilaian: PenilaianMenulis
+  kesalahan: KesalahanMenulis[]
+  catatan: string
+  /** Tanggal pemeriksaan, yyyy-mm-dd. */
+  tanggalPeriksa: string
+  createdByNama: string
+  tahunAjaran: string
+  semester: '1' | '2'
 }
 
 export interface AuthScope {
@@ -140,4 +190,19 @@ export const JENIS_LABEL: Record<JenisSetoran, string> = {
 export const STATUS_LABEL: Record<StatusHafalan, string> = {
   lulus: 'Lulus',
   ulang: 'Perlu diulang',
+}
+
+export const JENIS_TUGAS_MENULIS_LABEL: Record<JenisTugasMenulis, string> = {
+  salin: 'Salin',
+  dikte: 'Dikte',
+  hafalan: 'Dari hafalan',
+}
+
+export const KESALAHAN_MENULIS_LABEL: Record<KesalahanMenulis, string> = {
+  'huruf-mirip': 'Huruf mirip / titik',
+  'salah-sambung': 'Salah sambung',
+  'bentuk-posisi': 'Bentuk per posisi',
+  'harakat-hilang': 'Harakat hilang / salah',
+  'tasydid-tanwin': 'Tasydid / tanwin',
+  'bagian-terlewat': 'Bagian terlewat',
 }

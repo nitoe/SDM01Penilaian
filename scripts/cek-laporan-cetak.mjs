@@ -141,10 +141,10 @@ const mn = [{ id: 'm1', siswaId: 'a', kelas: '5A', materi: { tipe: 'quran', labe
   { id: 'm2', siswaId: 'a', kelas: '5A', materi: { tipe: 'quran', label: 'Al-Baqarah 1-3' }, tanggalPeriksa: '2026-09-01' }]
 const km = kelompokkanMenulis(mn)
 cek('menulis: terbaru dulu', km.a[0].id === 'm1')
-cek('menulis: rata-rata 3.5', rataMenulis(km.a[0]) === 3.5)
+cek('menulis: rata-rata tiga aspek inti 3.7 (Kerapian tidak ikut)', rataMenulis(km.a[0]) === 3.7)
 cek('menulis: posisi label Al-Qur\'an', posisiMenulis(km.a[0]) === 'Al-Baqarah 1-5')
 const lap2 = susunLaporanSiswa({ nama: 'Ahmad', jenjang: 'quran' }, [], km.a)
-cek('menulis: narasi level sangat baik', lap2.menulis.narasi.includes('sangat baik') && lap2.menulis.narasi.includes('3.5/4') && lap2.menulis.nilaiTerakhir === '3.5/4')
+cek('menulis: narasi level sangat baik', lap2.menulis.narasi.includes('sangat baik') && lap2.menulis.narasi.includes('3.7/4') && lap2.menulis.nilaiTerakhir === '3.7/4')
 cek('rentang semester ganjil', rentangSemester('2026/2027', '1').dari === '2026-07-01' && rentangSemester('2026/2027', '1').sampai === '2026-12-31')
 cek('rentang semester genap pakai tahun kedua', rentangSemester('2026/2027', '2').dari === '2027-01-01' && rentangSemester('2026/2027', '2').sampai === '2027-06-30')
 cek('dalam rentang: batas akhir hari termasuk', dalamRentang('2026-12-31T20:00:00', '2026-07-01', '2026-12-31') && !dalamRentang('2027-01-01T00:00:00', '2026-07-01', '2026-12-31'))

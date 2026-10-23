@@ -3,7 +3,8 @@
  * ke file Excel (.xlsx). Hanya membaca data — tidak mengubah Firestore.
  */
 import type { MenulisRecord, SetoranRecord } from '../types/tahsin'
-import { JENIS_LABEL, STATUS_LABEL } from '../types/tahsin'
+import { JENIS_LABEL, JENIS_TUGAS_MENULIS_LABEL, KESALAHAN_MENULIS_LABEL, STATUS_LABEL } from '../types/tahsin'
+import { bangunKesalahan, rataInti } from './menulis'
 import { formatTanggal, getMenulisKelas, getSetoranKelasPeriode, type ScopePeriode } from './tahsinData'
 import { unduhBlob } from './tpImport'
 
@@ -30,8 +31,18 @@ export interface BarisEksporMenulis {
   siswaNama: string
   kelas: string
   materi: string
+  jenisTugas: string
+  hurufSambungan: number | ''
+  harakat: number | ''
+  kelengkapan: number | ''
+  /** Rata-rata tiga aspek inti (tanpa Kerapian). */
+  rata: number | ''
+  kerapian: number | ''
+  kesalahan: string
   catatan: string
 }
+
+const skorAtauKosong = (v: unknown): number | '' => (typeof v === 'number' ? v : '')
 
 function labelMateri(m: SetoranRecord['materi'] | undefined): string {
   if (!m) return ''
@@ -87,6 +98,15 @@ export function susunBarisMenulis(list: MenulisRecord[]): BarisEksporMenulis[] {
     siswaNama: r.siswaNama || '',
     kelas: r.kelas,
     materi: (r.materi && typeof r.materi === 'object' && r.materi.label) || '',
+    jenisTugas: r.jenisTugas ? JENIS_TUGAS_MENULIS_LABEL[r.jenisTugas] || '' : '',
+    hurufSambungan: skorAtauKosong(r.penilaian?.hurufSambungan),
+    harakat: skorAtauKosong(r.penilaian?.harakat),
+    kelengkapan: skorAtauKosong(r.penilaian?.keutuhanTeks),
+    rata: skorAtauKosong(rataInti(r.penilaian)),
+    kerapian: skorAtauKosong(r.penilaian?.kerapian),
+    kesalahan: bangunKesalahan(r.kesalahan ?? [])
+      .map((k) => KESALAHAN_MENULIS_LABEL[k])
+      .join('; '),
     catatan: r.catatan || '',
   }))
 }
@@ -107,7 +127,22 @@ const HEADER_SETORAN = [
   'Semester',
 ] as const
 
-const HEADER_MENULIS = ['No', 'Tanggal', 'ID Siswa', 'Nama Siswa', 'Kelas', 'Materi', 'Catatan'] as const
+const HEADER_MENULIS = [
+  'No',
+  'Tanggal',
+  'ID Siswa',
+  'Nama Siswa',
+  'Kelas',
+  'Materi',
+  'Jenis Tugas',
+  'Huruf & Sambungan',
+  'Harakat & Tanda Baca',
+  'Kelengkapan Teks',
+  'Rata-rata (3 aspek)',
+  'Kerapian',
+  'Kesalahan Umum',
+  'Catatan',
+] as const
 
 function barisSetoranKeArray(b: BarisEksporSetoran): (string | number)[] {
   return [
@@ -128,7 +163,22 @@ function barisSetoranKeArray(b: BarisEksporSetoran): (string | number)[] {
 }
 
 function barisMenulisKeArray(b: BarisEksporMenulis): (string | number)[] {
-  return [b.no, b.tanggal, b.siswaId, b.siswaNama, b.kelas, b.materi, b.catatan]
+  return [
+    b.no,
+    b.tanggal,
+    b.siswaId,
+    b.siswaNama,
+    b.kelas,
+    b.materi,
+    b.jenisTugas,
+    b.hurufSambungan,
+    b.harakat,
+    b.kelengkapan,
+    b.rata,
+    b.kerapian,
+    b.kesalahan,
+    b.catatan,
+  ]
 }
 
 /**
@@ -173,6 +223,13 @@ export async function buatExcelNilaiTahsin(opts: {
     { wch: 28 },
     { wch: 8 },
     { wch: 28 },
+    { wch: 14 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 10 },
+    { wch: 30 },
     { wch: 28 },
   ]
 
@@ -185,7 +242,7 @@ export async function buatExcelNilaiTahsin(opts: {
     ['Jumlah catatan menulis', barisM.length],
     [],
     ['Sheet "Setoran": semua catatan setoran (ziyadah, muroja\'ah, tahsin) pada periode ini.'],
-    ['Sheet "Menulis": semua catatan menulis/latihan menulis pada kelas ini (tidak terikat semester).'],
+    ['Sheet "Menulis": semua catatan menulis pada kelas ini (tidak terikat semester). Skor 1-4; rata-rata dihitung dari tiga aspek inti, Kerapian tidak ikut.'],
     ['File ini hanya untuk arsip/rekap. Tidak diimpor kembali ke sistem.'],
   ])
 

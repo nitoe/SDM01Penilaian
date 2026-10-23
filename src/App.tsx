@@ -22,6 +22,7 @@ import AkademikHub from './pages/AkademikHub'
 import AdminHub from './pages/AdminHub'
 import Placeholder from './pages/Placeholder'
 import InputSetoran from './pages/tahsin/InputSetoran'
+import CatatMenulis from './pages/tahsin/CatatMenulis'
 import RiwayatSiswa from './pages/tahsin/RiwayatSiswa'
 import TargetHafalan from './pages/tahsin/TargetHafalan'
 import DataSiswa from './pages/admin/DataSiswa'
@@ -141,6 +142,10 @@ export default function App() {
               <Route
                 path="/tahsin/input-setoran"
                 element={profile ? <InputSetoran profile={profile} /> : null}
+              />
+              <Route
+                path="/tahsin/menulis"
+                element={profile ? <CatatMenulis profile={profile} /> : null}
               />
             </Route>
             <Route
