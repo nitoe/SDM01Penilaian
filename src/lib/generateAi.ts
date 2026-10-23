@@ -105,7 +105,7 @@ export interface KatalogDplStem {
   levelDeskripsi?: string[]
 }
 
-/** Satu aspek rubrik hasil AI: 4 deskripsi untuk rentang 0–60, 61–75, 76–85, 86–100. */
+/** Satu aspek rubrik hasil AI: 4 deskripsi untuk rentang 0–74 (D), 75–83 (C), 84–89 (B), 90–100 (A). */
 export interface RubrikAiStem {
   nama: string
   mapel?: string

@@ -55,14 +55,14 @@ export interface MapelTerlibatStem {
 }
 
 /**
- * Rentang angka 0–100 selaras LEVEL_RANGE_DEFAULT akademik (pengetahuan).
- * Index 0 = 0–60, 1 = 61–75, 2 = 76–85, 3 = 86–100.
+ * Rentang angka 0–100 selaras skala predikat AI / LEVEL_RANGE_DEFAULT.
+ * Index 0 = D (0–74), 1 = C (75–83), 2 = B (84–89), 3 = A (90–100).
  */
 export const STEM_NILAI_RANGE = [
-  { min: 0, maks: 60, label: 'Perlu Bimbingan' },
-  { min: 61, maks: 75, label: 'Cukup' },
-  { min: 76, maks: 85, label: 'Baik' },
-  { min: 86, maks: 100, label: 'Sangat Baik' },
+  { min: 0, maks: 74, label: 'D' },
+  { min: 75, maks: 83, label: 'C' },
+  { min: 84, maks: 89, label: 'B' },
+  { min: 90, maks: 100, label: 'A' },
 ] as const
 
 /** Aspek rubrik penilaian produk/proses proyek (bukan DPL, bukan nilai_tp). */
@@ -155,21 +155,9 @@ export const KEBIASAAN_SULIT_VERIFIKASI_7KAIH: readonly Kebiasaan7KaihId[] = [
   'makanSehat',
 ]
 
-/**
- * Skala 7KAIH: 4 level yang sama dengan observasi DPL (Belum Terlihat … Sangat Berkembang).
- * Pembiasaan TIDAK ditautkan ke DPL dan TIDAK memakai skala 0–100 (itu khusus proyek STEM).
- */
-export const LEVEL_7KAIH_LABEL = DPL_LEVEL_LABEL
-
 export interface CatatanKebiasaan {
-  /** 1–4 (index+1 dari LEVEL_7KAIH_LABEL); null = belum diisi / tidak teramati. */
-  level: LevelDpl | null
-  /**
-   * Legacy (versi lama): catatan teks dan tautan DPL. UI tidak lagi mengisinya, tetapi nilainya
-   * dipertahankan saat menyimpan agar data lama tidak hilang.
-   */
-  catatan?: string
-  dplId?: string
+  catatan: string
+  dplId: string
 }
 
 /** Koleksi `g7kaih` — satu dokumen per siswa × semester. */
@@ -196,26 +184,4 @@ export function predikatDariNilaiStem(n: number | null | undefined): string | nu
     if (v >= r.min && v <= r.maks) return r.label
   }
   return STEM_NILAI_RANGE[STEM_NILAI_RANGE.length - 1].label
-}
-
-/**
- * Konversi skor proyek 0–100 → level DPL 1–4 (rentang STEM_NILAI_RANGE).
- * Dipakai untuk mengisi observasi DPL otomatis dari rata-rata nilai instrumen proyek.
- */
-export function levelDplDariNilaiStem(n: number | null | undefined): LevelDpl | null {
-  if (n == null || Number.isNaN(n)) return null
-  const v = Math.max(0, Math.min(100, Math.round(n)))
-  for (let i = 0; i < STEM_NILAI_RANGE.length; i++) {
-    const r = STEM_NILAI_RANGE[i]
-    if (v >= r.min && v <= r.maks) return (i + 1) as LevelDpl
-  }
-  return 4
-}
-
-/** Rata-rata skor aspek rubrik yang terisi (null jika belum ada isian). */
-export function rataNilaiProyek(nilai: Record<string, number | null> | undefined | null): number | null {
-  if (!nilai) return null
-  const nums = Object.values(nilai).filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
-  if (!nums.length) return null
-  return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length)
 }

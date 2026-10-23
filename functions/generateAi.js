@@ -742,7 +742,7 @@ export function susunPromptStem(input) {
     '- jenisNilai hanya "SLM" atau "SAS" (pilih yang paling masuk akal untuk TP itu).',
     '- rubrik: 4–6 aspek yang dapat diamati guru (proses dan produk, mis. ketepatan pengukuran, kerja sama, presentasi), bukan angka.',
     '  "mapel" di rubrik harus salah satu mapel di mapelTerlibat, atau string kosong untuk aspek lintas mapel.',
-    '  "rentang" berisi TEPAT 4 deskripsi capaian berurutan untuk skor 0–60 (Perlu Bimbingan), 61–75 (Cukup), 76–85 (Baik), 86–100 (Sangat Baik).',
+    '  "rentang" berisi TEPAT 4 deskripsi capaian berurutan untuk skor 0–74 (D), 75–83 (C), 84–89 (B), 90–100 (A).',
     '  Tiap deskripsi 1 kalimat singkat (maks 200 karakter), konkret dan teramati, tanpa subjek "siswa/murid", tanpa awalan angka atau label rentang, naik bertahap antar level (bukan loncatan).',
     '- dplLevel: hanya untuk DPL TERPILIH yang ada dalam daftar "DPL tanpa deskripsi level". Isi 4 kalimat berurutan: Belum Terlihat, Mulai Terlihat, Berkembang Sesuai Harapan, Sangat Berkembang.',
     '  Deskripsi ini disimpan sebagai bank kelas dan dipakai ulang di proyek lain, jadi harus umum (perilaku DPL itu), JANGAN menyebut topik proyek ini.',
@@ -823,7 +823,7 @@ export function normalisasiStem(json, meta) {
     }
   }
 
-  // Rubrik: aspek + 4 deskripsi rentang (0–60, 61–75, 76–85, 86–100).
+  // Rubrik: aspek + 4 deskripsi rentang (0–74, 75–83, 84–89, 90–100).
   const mapelSah = new Set(mapelTerlibat.map((m) => m.mapel))
   let rubrik = []
   if (Array.isArray(data.rubrik)) {
@@ -885,19 +885,27 @@ export function normalisasiStem(json, meta) {
 }
 
 
-/** Predikat huruf → rentang skor 0–100 (skala rapor umum). */
+/**
+ * Predikat huruf → rentang skor 0–100 (skala global AI, akun UID_AI).
+ * Garis besar:
+ *   D  >60 dan ≤74  → [61, 74]
+ *   C  ≥75 dan <84  → [75, 83]
+ *   B  ≥84 dan <90  → [84, 89]
+ *   A  ≥90 dan ≤100 → [90, 100]
+ * Sub-predikat (D+ … A+) diisi di dalam pita induk agar UI lama tetap valid.
+ */
 const RENTANG_PREDIKAT_NILAI = {
-  D: [0, 45],
-  'D+': [46, 50],
-  'C-': [51, 55],
-  C: [56, 60],
-  'C+': [61, 65],
-  'B-': [66, 70],
-  B: [71, 75],
-  'B+': [76, 80],
-  'A-': [81, 85],
-  A: [86, 90],
-  'A+': [91, 100],
+  D: [61, 74],
+  'D+': [70, 74],
+  'C-': [75, 78],
+  C: [75, 83],
+  'C+': [80, 83],
+  'B-': [84, 86],
+  B: [84, 89],
+  'B+': [87, 89],
+  'A-': [90, 94],
+  A: [90, 100],
+  'A+': [95, 100],
 }
 
 /**

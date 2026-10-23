@@ -19,11 +19,12 @@ export const LEVEL_LABEL: Record<TipeTp, string[]> = {
   kinerja: ['Mulai Berkembang', 'Layak', 'Cakap', 'Mahir'],
 }
 
+/** Selaras skala predikat AI: D 0–74 · C 75–83 · B 84–89 · A 90–100 */
 export const LEVEL_RANGE_DEFAULT: Pick<LevelKktp, 'min' | 'maks'>[] = [
-  { min: 0, maks: 60 },
-  { min: 61, maks: 75 },
-  { min: 76, maks: 85 },
-  { min: 86, maks: 100 },
+  { min: 0, maks: 74 },
+  { min: 75, maks: 83 },
+  { min: 84, maks: 89 },
+  { min: 90, maks: 100 },
 ]
 
 export function faseDariTingkatan(tingkatan: string | number): string {
