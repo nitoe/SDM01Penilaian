@@ -34,62 +34,6 @@ function salam(): string {
   return 'Selamat malam'
 }
 
-/** Diagram batang jumlah siswa per kelas (CSS murni). Kelas milik pengguna disorot peach. */
-function KelasBars({
-  data,
-  saya,
-}: {
-  data: DashboardStats['perKelas']
-  saya: string[]
-}) {
-  const max = Math.max(1, ...data.map((d) => d.jumlah))
-  return (
-    <div className="card-soft p-5">
-      <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-[15px] font-semibold text-slate-900">Siswa per kelas</h3>
-        <span className="text-[12px] text-muted">Aktif dan nonaktif</span>
-      </div>
-      <div
-        className="mt-5 flex h-44 items-end gap-1.5 sm:gap-2.5"
-        role="img"
-        aria-label="Diagram jumlah siswa per kelas"
-      >
-        {data.map((d) => {
-          const milikku = saya.includes(d.kelas)
-          return (
-            <div
-              key={d.kelas}
-              className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5"
-            >
-              <span className="text-[11px] font-medium text-slate-500">{d.jumlah}</span>
-              <div
-                title={`Kelas ${d.kelas}: ${d.jumlah} siswa`}
-                className={`w-full rounded-t-lg ${milikku ? 'bg-peach-400' : 'bg-muh-500'}`}
-                style={{ height: `${Math.max(4, (d.jumlah / max) * 100)}%` }}
-              />
-              <span
-                className={`text-[11px] ${milikku ? 'font-semibold text-peach-500' : 'text-muted'}`}
-              >
-                {d.kelas}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-      {saya.length > 0 && (
-        <div className="mt-4 flex gap-4 text-[12px] text-muted">
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-peach-400" /> Kelas saya
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-muh-500" /> Kelas lain
-          </span>
-        </div>
-      )}
-    </div>
-  )
-}
-
 /** Kartu progres interaktif — klik menuju halaman terkait. */
 function ProgressCard({
   to,
@@ -134,6 +78,46 @@ function ProgressCard({
         Buka <Icon name="arrow" />
       </span>
     </Link>
+  )
+}
+
+/** Placeholder highlight prestasi — siap diisi data top SLM/STS/SAS. */
+function HighlightPrestasi({ kelasLabel }: { kelasLabel: string }) {
+  return (
+    <div>
+      <SectionTitle>Highlight prestasi siswa</SectionTitle>
+      <p className="mb-3 text-[13px] text-muted">
+        Siswa dengan capaian terbaik di {kelasLabel || 'kelas Anda'} (SLM · STS · SAS)
+      </p>
+      <div className="grid gap-3 md:grid-cols-3">
+        {[
+          { title: 'Top SLM', tone: 'bg-muh-600' },
+          { title: 'Top STS', tone: 'bg-emerald-600' },
+          { title: 'Top SAS', tone: 'bg-violet-600' },
+        ].map((col) => (
+          <div key={col.title} className="card-soft overflow-hidden">
+            <div className={`${col.tone} px-4 py-2.5`}>
+              <span className="text-[13px] font-semibold text-white">{col.title}</span>
+            </div>
+            <div className="px-4 py-6 text-center">
+              <p className="text-[13px] text-muted">
+                Data akan muncul setelah nilai {col.title.replace('Top ', '')} diisi untuk kelas ini.
+              </p>
+              <Link
+                to={
+                  col.title === 'Top SLM'
+                    ? '/akademik/nilai-slm'
+                    : '/akademik/nilai-sts'
+                }
+                className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-muh-700 hover:underline"
+              >
+                Input nilai <Icon name="arrow" />
+              </Link>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -226,6 +210,12 @@ export default function Home({ profile }: HomeProps) {
     : null
 
   const depan = profile.nama.split(' ')[0] || profile.nama
+  const labelKelasSaya =
+    saya.wali.length > 0
+      ? saya.wali.map((k) => `kelas ${k}`).join(', ')
+      : saya.mengajar.length > 0
+        ? `${saya.mengajar.length} kelas yang diampu`
+        : 'kelas Anda'
 
   return (
     <div className="space-y-6">
@@ -380,6 +370,11 @@ export default function Home({ profile }: HomeProps) {
             </div>
           )}
 
+          {/* Highlight prestasi — menggantikan grafik jumlah siswa & modul redundan */}
+          {guruMapel && !admin && saya.semua.length > 0 && (
+            <HighlightPrestasi kelasLabel={labelKelasSaya} />
+          )}
+
           {/* Ringkasan khusus guru Tahsin */}
           {guruTahsinOnly && (profile.kelasAmpu?.length ?? 0) > 0 && (
             <div className={sembunyikanTahsinDiHP ? 'hidden sm:block' : ''}>
@@ -421,7 +416,7 @@ export default function Home({ profile }: HomeProps) {
           {guruMapel && (
             <div>
               <SectionTitle>Akses cepat</SectionTitle>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 <ModuleCard
                   to="/akademik/setup-tp"
                   title="Setup TP & KKTP"
@@ -462,53 +457,6 @@ export default function Home({ profile }: HomeProps) {
           )}
 
           {admin && <AdminDashboard />}
-
-          {stats && !admin && saya.semua.length > 0 && (
-            <KelasBars data={stats.perKelas} saya={saya.semua} />
-          )}
-
-          <div>
-            <SectionTitle>Modul</SectionTitle>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {adaAkademik && (
-                <ModuleCard
-                  to="/akademik"
-                  title={admin ? 'Pantauan Akademik' : 'Akademik & Rapor'}
-                  desc={
-                    admin
-                      ? 'Lihat tujuan pembelajaran, bobot, dan daftar nilai'
-                      : 'TP, nilai mapel, absensi, ekskul, dan rapor'
-                  }
-                  icon="clipboard"
-                  tone="peach"
-                />
-              )}
-              {adaTahsin && (
-                <div className={sembunyikanTahsinDiHP ? 'hidden sm:block' : ''}>
-                  <ModuleCard
-                    to="/tahsin"
-                    title={admin ? 'Pantauan Tahsin & Tahfizh' : 'Tahsin & Tahfizh'}
-                    desc={
-                      admin
-                        ? 'Lihat riwayat setoran dan target hafalan'
-                        : 'Setoran, riwayat, target hafalan, dan laporan kemajuan'
-                    }
-                    icon="quran"
-                    tone="green"
-                  />
-                </div>
-              )}
-              {admin && (
-                <ModuleCard
-                  to="/admin"
-                  title="Administrasi"
-                  desc="Data siswa, akun guru, dan pengaturan"
-                  icon="settings"
-                  tone="ink"
-                />
-              )}
-            </div>
-          </div>
         </>
       )}
     </div>

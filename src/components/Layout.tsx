@@ -26,6 +26,7 @@ interface NavItem {
 /** Halaman kerja harian yang memakai lebar layar penuh (dua kolom di PC); lainnya tetap berlebar baca. */
 /** Halaman data/tabel — pakai lebar penuh shell (bukan kolom sempit). */
 const HALAMAN_LEBAR = [
+  '/',           // Beranda: isi penuh agar tidak kosong di kiri-kanan
   '/akademik',
   '/admin',
   '/tahsin',
