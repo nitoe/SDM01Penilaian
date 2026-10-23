@@ -155,9 +155,11 @@ export const KEBIASAAN_SULIT_VERIFIKASI_7KAIH: readonly Kebiasaan7KaihId[] = [
   'makanSehat',
 ]
 
+/** Satu kebiasaan 7KAIH: level 1–4 (utama); catatan/dplId opsional (legacy). */
 export interface CatatanKebiasaan {
-  catatan: string
-  dplId: string
+  level: LevelDpl | null
+  catatan?: string
+  dplId?: string
 }
 
 /** Koleksi `g7kaih` — satu dokumen per siswa × semester. */
@@ -184,4 +186,32 @@ export function predikatDariNilaiStem(n: number | null | undefined): string | nu
     if (v >= r.min && v <= r.maks) return r.label
   }
   return STEM_NILAI_RANGE[STEM_NILAI_RANGE.length - 1].label
+}
+
+/** Rata-rata skor aspek rubrik proyek (abaikan null/kosong). */
+export function rataNilaiProyek(
+  nilai: Record<string, number | null | undefined> | null | undefined,
+): number | null {
+  if (!nilai) return null
+  const nums: number[] = []
+  for (const v of Object.values(nilai)) {
+    if (v == null || Number.isNaN(Number(v))) continue
+    nums.push(Math.max(0, Math.min(100, Number(v))))
+  }
+  if (!nums.length) return null
+  return Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 100) / 100
+}
+
+/**
+ * Map rata-rata 0–100 → LevelDpl 1–4 mengikuti STEM_NILAI_RANGE
+ * (index 0 → level 1, …, index 3 → level 4).
+ */
+export function levelDplDariNilaiStem(n: number | null | undefined): LevelDpl | null {
+  if (n == null || Number.isNaN(n)) return null
+  const v = Math.max(0, Math.min(100, Number(n)))
+  for (let i = 0; i < STEM_NILAI_RANGE.length; i++) {
+    const r = STEM_NILAI_RANGE[i]
+    if (v >= r.min && v <= r.maks) return (i + 1) as LevelDpl
+  }
+  return 4
 }
