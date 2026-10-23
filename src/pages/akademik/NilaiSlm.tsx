@@ -48,6 +48,39 @@ function parseNilai(t: string | undefined): number | null {
   return Number.isFinite(n) ? n : NaN
 }
 
+function nilaiSlmEfektif(
+  siswaId: string,
+  tp: TujuanPembelajaran,
+  nilai: NilaiKelas,
+  draf: Record<string, Record<string, string>>,
+): number | null {
+  const teks = draf[tp.id]?.[siswaId]
+  if (teks !== undefined && teks.trim() !== '') {
+    const n = parseNilai(teks)
+    if (n !== null && !Number.isNaN(n)) return n
+  }
+  const slm = nilai[tp.id]?.[siswaId]?.slm
+  return slm == null ? null : slm
+}
+
+/** Jumlah (total) nilai SLM mentah per siswa di daftar TP semester. */
+function totalSlm(
+  siswaId: string,
+  daftar: TujuanPembelajaran[],
+  nilai: NilaiKelas,
+  draf: Record<string, Record<string, string>>,
+): number | null {
+  let sum = 0
+  let n = 0
+  for (const tp of daftar) {
+    const v = nilaiSlmEfektif(siswaId, tp, nilai, draf)
+    if (v == null) continue
+    sum += v
+    n++
+  }
+  return n === 0 ? null : Math.round(sum * 10) / 10
+}
+
 function rataSlm(
   siswaId: string,
   daftar: TujuanPembelajaran[],
@@ -57,12 +90,7 @@ function rataSlm(
 ): number | null {
   return hitungNilaiAkhirMapel(
     daftar.map((tp) => {
-      const teks = draf[tp.id]?.[siswaId]
-      let slm: number | null | undefined = nilai[tp.id]?.[siswaId]?.slm
-      if (teks !== undefined && teks.trim() !== '') {
-        const n = parseNilai(teks)
-        if (n !== null && !Number.isNaN(n)) slm = n
-      }
+      const slm = nilaiSlmEfektif(siswaId, tp, nilai, draf)
       const bobot = bobotTpDiSemester(tp, semester)
       return {
         nilai: slm == null ? null : hitungNilaiAkhirTP(slm, null, tp),
@@ -424,6 +452,28 @@ function Detail({
     return { terisi, total }
   }, [draf, kolom, siswa, nilai])
 
+  /** Ringkasan mapel: total & rata per siswa → agregat kelas. */
+  const ringkasanMapel = useMemo(() => {
+    if (!siswa || !nilai || !config || !tampil.length) {
+      return { punya: 0, rataKelas: null as number | null, max: null as number | null, min: null as number | null }
+    }
+    const rates: number[] = []
+    for (const s of siswa) {
+      const r = rataSlm(s.id, tampil, nilai, draf, config.semesterAktif)
+      if (r != null) rates.push(r)
+    }
+    if (!rates.length) {
+      return { punya: 0, rataKelas: null, max: null, min: null }
+    }
+    const sum = rates.reduce((a, b) => a + b, 0)
+    return {
+      punya: rates.length,
+      rataKelas: Math.round(sum / rates.length),
+      max: Math.max(...rates),
+      min: Math.min(...rates),
+    }
+  }, [siswa, nilai, config, tampil, draf])
+
   const dirty = perubahan.length > 0
   const { dialogNode } = useUnsavedGuard(dirty && tulis)
 
@@ -721,6 +771,35 @@ function Detail({
                   {panelMateri ? ' Centang materi di panel kanan.' : ' Tampilkan panel materi dulu.'}
                 </Notice>
               ) : (
+                <>
+                {/* Ringkasan total & rata-rata mapel untuk kelas ini */}
+                <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="card-soft px-3 py-2.5">
+                    <p className="text-[11px] font-medium text-muted">Rata-rata kelas</p>
+                    <p className="mt-0.5 text-[20px] font-bold tabular-nums text-slate-900">
+                      {ringkasanMapel.rataKelas ?? '—'}
+                    </p>
+                  </div>
+                  <div className="card-soft px-3 py-2.5">
+                    <p className="text-[11px] font-medium text-muted">Nilai tertinggi</p>
+                    <p className="mt-0.5 text-[20px] font-bold tabular-nums text-muh-700">
+                      {ringkasanMapel.max ?? '—'}
+                    </p>
+                  </div>
+                  <div className="card-soft px-3 py-2.5">
+                    <p className="text-[11px] font-medium text-muted">Nilai terendah</p>
+                    <p className="mt-0.5 text-[20px] font-bold tabular-nums text-slate-700">
+                      {ringkasanMapel.min ?? '—'}
+                    </p>
+                  </div>
+                  <div className="card-soft px-3 py-2.5">
+                    <p className="text-[11px] font-medium text-muted">Siswa punya rata-rata</p>
+                    <p className="mt-0.5 text-[20px] font-bold tabular-nums text-slate-900">
+                      {ringkasanMapel.punya}
+                      <span className="text-[13px] font-medium text-muted">/{siswa?.length ?? 0}</span>
+                    </p>
+                  </div>
+                </div>
                 <div className="card-soft overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-max border-collapse text-left">
@@ -737,6 +816,9 @@ function Detail({
                               </span>
                             </th>
                           ))}
+                          <th className="px-2 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted sm:px-3">
+                            Total
+                          </th>
                           <th className="px-2 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted sm:px-3">
                             Rata*
                           </th>
@@ -793,6 +875,9 @@ function Detail({
                                   </td>
                                 )
                               })}
+                              <td className="px-2 py-2 text-center text-[13px] font-semibold tabular-nums text-slate-600 sm:px-3">
+                                {totalSlm(s.id, tampil, nilai, draf) ?? '—'}
+                              </td>
                               <td className="px-2 py-2 text-center text-[13px] font-semibold tabular-nums text-slate-700 sm:px-3">
                                 {rata ?? '—'}
                               </td>
@@ -803,10 +888,11 @@ function Detail({
                     </table>
                   </div>
                   <p className="border-t border-border px-3 py-2 text-[11.5px] text-muted sm:px-4">
-                    {siswa.length} siswa · {kolom.length} materi · *Rata = rata-rata tertimbang SLM (belum STS/SAS) ·
-                    gulir horizontal jika kolom banyak
+                    {siswa.length} siswa · {kolom.length} materi · Total = jumlah SLM · *Rata = rata-rata tertimbang SLM
+                    (belum STS/SAS) · gulir horizontal jika kolom banyak
                   </p>
                 </div>
+                </>
               )}
             </div>
           </div>

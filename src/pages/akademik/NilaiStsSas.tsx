@@ -56,6 +56,41 @@ function parseNilai(t: string | undefined): number | null {
   return Number.isFinite(n) ? n : NaN
 }
 
+/** Nilai efektif (draf mengalahkan server) untuk satu sel asesmen. */
+function nilaiAsesmenEfektif(
+  siswaId: string,
+  tpId: string,
+  nilai: Record<string, Record<string, { nilai?: number | null }>>,
+  draf: Record<string, Record<string, string>>,
+): number | null {
+  const teks = draf[tpId]?.[siswaId]
+  if (teks !== undefined && teks.trim() !== '') {
+    const n = parseNilai(teks)
+    if (n !== null && !Number.isNaN(n)) return n
+  }
+  const v = nilai[tpId]?.[siswaId]?.nilai
+  return v == null ? null : v
+}
+
+/** Total = jumlah nilai materi terpilih; Rata = rata-rata sederhana materi yang terisi. */
+function totalDanRataAsesmen(
+  siswaId: string,
+  daftar: TujuanPembelajaran[],
+  nilai: Record<string, Record<string, { nilai?: number | null }>>,
+  draf: Record<string, Record<string, string>>,
+): { total: number | null; rata: number | null } {
+  let sum = 0
+  let n = 0
+  for (const tp of daftar) {
+    const v = nilaiAsesmenEfektif(siswaId, tp.id, nilai, draf)
+    if (v == null) continue
+    sum += v
+    n++
+  }
+  if (n === 0) return { total: null, rata: null }
+  return { total: Math.round(sum * 10) / 10, rata: Math.round(sum / n) }
+}
+
 export default function NilaiStsSas({ profile }: { profile: AppUser }) {
   const [params, setParams] = useSearchParams()
   const jenis = jenisDari(params.get('jenis'))
@@ -428,6 +463,26 @@ function Detail(props: {
     return { terisi, total }
   }, [draf, terpilih, siswa, props.nilai])
 
+  /** Ringkasan mapel: rata kelas dari rata-rata per siswa. */
+  const ringkasanMapel = useMemo(() => {
+    if (!siswa || !terpilih.length) {
+      return { punya: 0, rataKelas: null as number | null, max: null as number | null, min: null as number | null }
+    }
+    const rates: number[] = []
+    for (const s of siswa) {
+      const { rata } = totalDanRataAsesmen(s.id, terpilih, props.nilai, draf)
+      if (rata != null) rates.push(rata)
+    }
+    if (!rates.length) return { punya: 0, rataKelas: null, max: null, min: null }
+    const sum = rates.reduce((a, b) => a + b, 0)
+    return {
+      punya: rates.length,
+      rataKelas: Math.round(sum / rates.length),
+      max: Math.max(...rates),
+      min: Math.min(...rates),
+    }
+  }, [siswa, terpilih, props.nilai, draf])
+
   const dirty = perubahan.length > 0
   const { dialogNode } = useUnsavedGuard(dirty && tulis)
 
@@ -793,6 +848,34 @@ function Detail(props: {
                     : ' Tampilkan panel materi, lalu centang yang diujikan.'}
                 </Notice>
               ) : (
+                <>
+                <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="card-soft px-3 py-2.5">
+                    <p className="text-[11px] font-medium text-muted">Rata-rata kelas</p>
+                    <p className="mt-0.5 text-[20px] font-bold tabular-nums text-slate-900">
+                      {ringkasanMapel.rataKelas ?? '—'}
+                    </p>
+                  </div>
+                  <div className="card-soft px-3 py-2.5">
+                    <p className="text-[11px] font-medium text-muted">Nilai tertinggi</p>
+                    <p className="mt-0.5 text-[20px] font-bold tabular-nums text-muh-700">
+                      {ringkasanMapel.max ?? '—'}
+                    </p>
+                  </div>
+                  <div className="card-soft px-3 py-2.5">
+                    <p className="text-[11px] font-medium text-muted">Nilai terendah</p>
+                    <p className="mt-0.5 text-[20px] font-bold tabular-nums text-slate-700">
+                      {ringkasanMapel.min ?? '—'}
+                    </p>
+                  </div>
+                  <div className="card-soft px-3 py-2.5">
+                    <p className="text-[11px] font-medium text-muted">Siswa punya rata-rata</p>
+                    <p className="mt-0.5 text-[20px] font-bold tabular-nums text-slate-900">
+                      {ringkasanMapel.punya}
+                      <span className="text-[13px] font-medium text-muted">/{siswa?.length ?? 0}</span>
+                    </p>
+                  </div>
+                </div>
                 <div className="card-soft overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-max border-collapse text-left">
@@ -813,10 +896,18 @@ function Detail(props: {
                               </span>
                             </th>
                           ))}
+                          <th className="px-2 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted sm:px-3">
+                            Total
+                          </th>
+                          <th className="px-2 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted sm:px-3">
+                            Rata
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {siswa.map((s, sIdx) => (
+                        {siswa.map((s, sIdx) => {
+                          const tr = totalDanRataAsesmen(s.id, terpilih, props.nilai, draf)
+                          return (
                           <tr key={s.id} className="border-t border-border hover:bg-slate-50/80">
                             <td className="sticky left-0 z-10 bg-white px-3 py-2 text-[13.5px] font-medium text-slate-900 sm:px-4">
                               <span className="line-clamp-2 max-w-[10rem] sm:max-w-[14rem]">{s.nama}</span>
@@ -864,15 +955,24 @@ function Detail(props: {
                                 </td>
                               )
                             })}
+                            <td className="px-2 py-2 text-center text-[13px] font-semibold tabular-nums text-slate-600 sm:px-3">
+                              {tr.total ?? '—'}
+                            </td>
+                            <td className="px-2 py-2 text-center text-[13px] font-semibold tabular-nums text-slate-700 sm:px-3">
+                              {tr.rata ?? '—'}
+                            </td>
                           </tr>
-                        ))}
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
                   <p className="border-t border-border px-3 py-2 text-[11.5px] text-muted sm:px-4">
-                    {siswa.length} siswa · {terpilih.length} materi · gulir horizontal jika kolom banyak
+                    {siswa.length} siswa · {terpilih.length} materi · Total = jumlah nilai · Rata = rata-rata materi
+                    terisi · gulir horizontal jika kolom banyak
                   </p>
                 </div>
+                </>
               )}
             </div>
           </div>
