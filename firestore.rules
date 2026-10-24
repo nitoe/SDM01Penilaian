@@ -14,7 +14,7 @@ rules_version = '2';
 // Gabungan: aturan aplikasi Penilaian
 //   + koleksi sarpras_* (aplikasi Sarpras, repo nitoe/sarpras)
 //     termasuk sarpras_sumber, sarpras_pemeliharaan, sarpras_usulan
-//   + koleksi perpus_* (aplikasi Perpustakaan, firestore.rules.perpustakaan)
+//   + koleksi perpus_* (aplikasi Perpustakaan, termasuk fase 2/3 + login/jurnal siswa)
 // Bagian Sarpras/Perpustakaan ditandai komentar masing-masing.
 //
 // Catatan: file ini baru berlaku setelah `npm run deploy:rules`. Uji dulu
@@ -239,8 +239,10 @@ service cloud.firestore {
     // guru Tahsin-Tahfizh yang boleh mengubah HANYA field tamatIqro.
     match /siswa/{id} {
       // perpusPustakawan: baca data dasar (nama, NIS, kelas) untuk kartu anggota & peminjaman.
-      allow get: if isGuru() || perpusPustakawan() || anakSaya(id);
-      allow list: if isGuru() || perpusPustakawan();
+      // `true` pada get/list: login siswa perpustakaan (dropdown kelas/nama tanpa Auth).
+      // Hanya data dasar di koleksi ini; biodata sensitif tetap di identitas_siswa.
+      allow get: if isGuru() || perpusPustakawan() || anakSaya(id) || true;
+      allow list: if isGuru() || perpusPustakawan() || true;
       allow create, delete: if isAdmin();
       allow update: if isAdmin()
         || (isGuruTahsin()
@@ -757,7 +759,9 @@ match /g7kaih/{id} {
     // status eksemplar tersedia -> dipinjam; mengembalikan WAJIB satu batch dengan eksemplar
     // kembali tersedia (atau hilang). Tidak ada hapus (riwayat tetap).
     match /perpus_peminjaman/{id} {
-      allow read: if perpusStaf();
+      // Staf penuh. Baca dokumen peminjam siswa: area siswa "Pinjaman saya" (tanpa Auth; sandi=NISN).
+      allow read: if perpusStaf()
+                  || resource.data.peminjam.tipe == 'siswa';
       allow create: if perpusPustakawan()
                     && request.resource.data.status == 'dipinjam'
                     && request.resource.data.petugasUid == request.auth.uid
@@ -786,7 +790,8 @@ match /g7kaih/{id} {
 
     // Sampul buku terkompres (string base64). Tidak ada ubah.
     match /perpus_foto/{id} {
-      allow read: if perpusStaf();
+      // Baca publik: sampul di katalog/rak baca tanpa login.
+      allow read: if true;
       allow create: if perpusPustakawan()
                     && request.resource.data.keys().hasOnly(['data', 'createdBy', 'createdAt'])
                     && request.resource.data.createdBy == request.auth.uid
@@ -818,8 +823,91 @@ match /g7kaih/{id} {
       allow update, delete: if false;
     }
 
-    // Koleksi fase 2 dan 3 (perpus_usulan, perpus_reservasi, perpus_jurnal) sengaja belum ada:
-    // tanpa aturan = ditolak oleh blok "Default: tolak semuanya".
+    // Reservasi buku (antrian).
+    match /perpus_reservasi/{id} {
+      allow read: if perpusStaf();
+      allow create: if perpusPustakawan()
+                    && request.resource.data.status == 'antrian'
+                    && request.resource.data.petugasUid == request.auth.uid
+                    && request.resource.data.keys().hasAll(['bukuId', 'judul', 'pemesan', 'status']);
+      allow update: if perpusPustakawan()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'catatan', 'updatedAt'])
+                    && request.resource.data.status in ['antrian', 'siap', 'diambil', 'batal'];
+      allow delete: if perpusAdmin();
+    }
+
+    // Usulan pengadaan buku: staf mengajukan; pustakawan/admin memutuskan.
+    match /perpus_usulan/{id} {
+      allow read: if perpusStaf();
+      allow create: if perpusStaf()
+                    && request.resource.data.pengusulUid == request.auth.uid
+                    && request.resource.data.status == 'diajukan'
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 300;
+      allow update: if perpusPustakawan()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'catatanAdmin', 'updatedAt'])
+                    && request.resource.data.status in ['diajukan', 'disetujui', 'ditolak', 'dibatalkan']
+                    || (akunAktif() && resource.data.pengusulUid == request.auth.uid
+                        && resource.data.status == 'diajukan'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'updatedAt'])
+                        && request.resource.data.status == 'dibatalkan');
+      allow delete: if false;
+    }
+
+    // Stock opname.
+    match /perpus_opname/{id} {
+      allow read: if perpusStaf();
+      allow create: if perpusPustakawan()
+                    && request.resource.data.petugasUid == request.auth.uid
+                    && request.resource.data.status == 'berjalan';
+      allow update: if perpusPustakawan()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'selesaiAt', 'updatedAt'])
+                    && request.resource.data.status in ['berjalan', 'selesai'];
+      allow delete: if perpusAdmin();
+    }
+
+    match /perpus_opname_item/{id} {
+      allow read: if perpusStaf();
+      allow create: if perpusPustakawan()
+                    && request.resource.data.keys().hasAll(['sesiId', 'eksemplarId', 'ditemukan']);
+      allow update: if false;
+      allow delete: if perpusAdmin();
+    }
+
+    // Jurnal baca / literasi: siswa menulis tanpa Auth; staf memberi tanggapan.
+    match /perpus_jurnal/{id} {
+      allow read: if perpusStaf() || resource.data.siswaId is string;
+      allow create: if request.resource.data.keys().hasAll(['siswaId', 'siswaNama', 'kelas', 'judul', 'catatan', 'tanggalBaca'])
+                    && request.resource.data.siswaId is string
+                    && request.resource.data.siswaId.size() > 0
+                    && request.resource.data.siswaId.size() <= 40
+                    && request.resource.data.siswaNama is string
+                    && request.resource.data.siswaNama.size() > 0
+                    && request.resource.data.siswaNama.size() <= 120
+                    && request.resource.data.kelas is string
+                    && request.resource.data.kelas.size() <= 20
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 300
+                    && request.resource.data.catatan is string
+                    && request.resource.data.catatan.size() > 0
+                    && request.resource.data.catatan.size() <= 2000
+                    && request.resource.data.tanggalBaca is string
+                    && request.resource.data.tanggalBaca.size() == 10
+                    && !('tanggapanGuru' in request.resource.data)
+                    && !('guruUid' in request.resource.data);
+      allow update: if perpusStaf()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['tanggapanGuru', 'guruUid', 'guruNama', 'updatedAt'])
+                    && request.resource.data.tanggapanGuru is string
+                    && request.resource.data.tanggapanGuru.size() <= 2000;
+      allow delete: if perpusPustakawan();
+    }
 
     // ---- Default: tolak semuanya -------------------------------------------
     match /{document=**} {
