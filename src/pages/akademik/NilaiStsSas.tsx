@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { AppUser } from '../../types/user'
 import type { ConfigAkademik, JenisAsesmen, NilaiAsesmenDoc, NilaiTpDoc, TujuanPembelajaran } from '../../types/akademik'
@@ -29,6 +29,15 @@ import { getSiswaList } from '../../lib/tahsinData'
 import { aksesMapelKelas } from '../../lib/aksesAkademik'
 import { isAdminRole, isGuruAkademikRole } from '../../lib/roles'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
+import {
+  bacaExcelNilai,
+  gabungIsiKeDraf,
+  kolomDariTp,
+  parseClipboardMatrix,
+  parseNilaiExcelRows,
+  terapkanPasteNilai,
+  unduhExcelNilai,
+} from '../../lib/nilaiImportExport'
 import type { SiswaTahsin } from '../../types/tahsin'
 import { PageHeader } from '../../components/ui'
 import { MapelKelasPicker } from '../../components/MapelKelasPicker'
@@ -380,8 +389,10 @@ function Detail(props: {
   /** Panel materi di kanan (desktop) / atas (mobile) — bisa disembunyikan */
   const [panelMateri, setPanelMateri] = useState(true)
   const [drafPulih, setDrafPulih] = useState(false)
+  const [busyIo, setBusyIo] = useState(false)
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const skipCacheWrite = useRef(false)
+  const fileImporRef = useRef<HTMLInputElement>(null)
 
   const kunciCache = useMemo(() => {
     if (!config) return null
@@ -613,6 +624,94 @@ function Detail(props: {
     }))
   }
 
+  const kolomMeta = useMemo(() => kolomDariTp(terpilih, labelPendek(jenis)), [terpilih, jenis])
+
+  function nilaiMapUntukEkspor(): Record<string, Record<string, number | null>> {
+    const out: Record<string, Record<string, number | null>> = {}
+    if (!siswa) return out
+    for (const t of terpilih) {
+      out[t.id] = {}
+      for (const s of siswa) {
+        out[t.id]![s.id] = nilaiAsesmenEfektif(s.id, t.id, props.nilai, draf)
+      }
+    }
+    return out
+  }
+
+  async function unduhSheet(template: boolean) {
+    if (!config || !siswa || !terpilih.length) return
+    setBusyIo(true)
+    try {
+      await unduhExcelNilai({
+        jenis,
+        mapel,
+        kelas,
+        semester: config.semesterAktif,
+        tahunAjaran: config.tahunAjaran,
+        siswa,
+        kolom: kolomMeta,
+        nilai: template ? {} : nilaiMapUntukEkspor(),
+        template,
+      })
+      props.show(template ? 'Template Excel diunduh.' : `Nilai ${labelPendek(jenis)} diekspor ke Excel.`)
+    } catch (e) {
+      console.error(e)
+      props.show('Gagal membuat file Excel.', true)
+    } finally {
+      setBusyIo(false)
+    }
+  }
+
+  async function imporDariFile(file: File) {
+    if (!siswa || !terpilih.length || !tulis) return
+    setBusyIo(true)
+    try {
+      const rows = await bacaExcelNilai(await file.arrayBuffer())
+      const hasil = parseNilaiExcelRows(rows, siswa, kolomMeta)
+      if (!hasil.terisi) {
+        props.show(hasil.peringatan[0] || 'Tidak ada nilai valid di file.', true)
+        return
+      }
+      setDraf((prev) => gabungIsiKeDraf(prev, hasil.isi))
+      const ekstra =
+        hasil.peringatan.length > 0 ? ` (${hasil.peringatan.slice(0, 2).join('; ')})` : ''
+      props.show(`${hasil.terisi} nilai dimuat ke draf. Periksa lalu tekan Simpan.${ekstra}`)
+    } catch (e) {
+      console.error(e)
+      props.show('File Excel tidak bisa dibaca.', true)
+    } finally {
+      setBusyIo(false)
+      if (fileImporRef.current) fileImporRef.current.value = ''
+    }
+  }
+
+  function onPasteCell(e: ClipboardEvent<HTMLInputElement>, siswaIdx: number, tpIdx: number) {
+    if (!tulis || !siswa || !terpilih.length) return
+    const text = e.clipboardData.getData('text/plain')
+    if (!text || (!text.includes('\t') && !text.includes('\n') && !text.includes(';'))) return
+    if (!text.includes('\t') && !text.includes('\n')) return
+    e.preventDefault()
+    const matrix = parseClipboardMatrix(text)
+    if (!matrix.length) return
+    const { patch, terisi, invalid } = terapkanPasteNilai(matrix, siswaIdx, tpIdx, siswa, kolomMeta)
+    if (!terisi) {
+      props.show(invalid ? 'Nilai tempel di luar 0–100.' : 'Tidak ada nilai yang bisa ditempel.', true)
+      return
+    }
+    setDraf((prev) => {
+      const next = { ...prev }
+      for (const [tpId, byS] of Object.entries(patch)) {
+        next[tpId] = { ...(next[tpId] || {}), ...byS }
+      }
+      return next
+    })
+    props.show(
+      invalid
+        ? `${terisi} nilai ditempel; ${invalid} diabaikan (di luar 0–100).`
+        : `${terisi} nilai ditempel dari clipboard.`,
+    )
+  }
+
   /** Enter / ArrowRight → sel berikutnya di baris; ArrowDown → siswa berikutnya */
   function onKeyCell(e: KeyboardEvent<HTMLInputElement>, siswaIdx: number, tpIdx: number) {
     if (!siswa || !terpilih.length) return
@@ -785,6 +884,47 @@ function Detail(props: {
           />
         </div>
         {tombolSimpan}
+        {tulis && terpilih.length > 0 && siswa && (
+          <div className="grid grid-cols-1 gap-1.5">
+            <button
+              type="button"
+              className={`${btnGhost} h-9 text-[12px]`}
+              disabled={busyIo}
+              onClick={() => void unduhSheet(true)}
+            >
+              Unduh template Excel
+            </button>
+            <button
+              type="button"
+              className={`${btnGhost} h-9 text-[12px]`}
+              disabled={busyIo}
+              onClick={() => void unduhSheet(false)}
+            >
+              Ekspor nilai Excel
+            </button>
+            <button
+              type="button"
+              className={`${btnGhost} h-9 text-[12px]`}
+              disabled={busyIo}
+              onClick={() => fileImporRef.current?.click()}
+            >
+              Impor dari Excel…
+            </button>
+            <input
+              ref={fileImporRef}
+              type="file"
+              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) void imporDariFile(f)
+              }}
+            />
+            <p className="text-[10.5px] leading-snug text-muted">
+              Atau salin blok di Excel → klik sel pertama di tabel → Ctrl+V.
+            </p>
+          </div>
+        )}
         <p className="text-[11px] leading-snug text-muted">
           Tab / panah navigasi antar sel. Simpan bisa ditekan kapan saja.
         </p>
@@ -956,6 +1096,7 @@ function Detail(props: {
                                     placeholder="–"
                                     onChange={(e) => setNilaiCell(t.id, s.id, e.target.value)}
                                     onKeyDown={(e) => onKeyCell(e, sIdx, tIdx)}
+                                    onPaste={(e) => onPasteCell(e, sIdx, tIdx)}
                                     onFocus={(e) => e.target.select()}
                                   />
                                 </td>
