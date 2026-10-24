@@ -791,47 +791,10 @@ function Detail({
           />
         </div>
         {tombolSimpan}
-        {tulis && kolom.length > 0 && siswa && (
-          <div className="grid grid-cols-1 gap-1.5">
-            <button
-              type="button"
-              className={`${btnGhost} h-9 text-[12px]`}
-              disabled={busyIo}
-              onClick={() => void unduhSheet(true)}
-            >
-              Unduh template Excel
-            </button>
-            <button
-              type="button"
-              className={`${btnGhost} h-9 text-[12px]`}
-              disabled={busyIo}
-              onClick={() => void unduhSheet(false)}
-            >
-              Ekspor nilai Excel
-            </button>
-            <button
-              type="button"
-              className={`${btnGhost} h-9 text-[12px]`}
-              disabled={busyIo}
-              onClick={() => fileImporRef.current?.click()}
-            >
-              Impor dari Excel…
-            </button>
-            <input
-              ref={fileImporRef}
-              type="file"
-              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) void imporDariFile(f)
-              }}
-            />
-            <p className="text-[10.5px] leading-snug text-muted">
-              Atau salin blok di Excel → klik sel pertama di tabel → Ctrl+V.
-            </p>
-          </div>
-        )}
+        <p className="text-[11px] leading-snug text-muted">
+          Template · Ekspor · Impor Excel di bilah atas tabel. Bisa juga salin blok di Excel → klik sel →
+          Ctrl+V.
+        </p>
         <Link to={laporan} className={`${btnGhost} flex h-10 w-full items-center justify-center text-[13px] no-underline`}>
           Laporan SLM
         </Link>
@@ -893,17 +856,59 @@ function Detail({
             <p className="text-[12px] text-muted">{tersembunyi} materi semester lain disembunyikan.</p>
           )}
 
-          {!panelMateri && (
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {!panelMateri && (
               <button type="button" className={`${btnGhost} text-[13px]`} onClick={() => setPanelMateri(true)}>
                 Tampilkan daftar materi ({kolom.length})
               </button>
-              <span className="text-[12.5px] text-muted">
-                Terisi {progress.terisi}/{progress.total}
-                {perubahan.length > 0 ? ` · ${perubahan.length} belum disimpan` : ''}
-              </span>
-            </div>
-          )}
+            )}
+            <span className="text-[12.5px] text-muted">
+              Terisi {progress.terisi}/{progress.total}
+              {perubahan.length > 0 ? ` · ${perubahan.length} belum disimpan` : ''}
+            </span>
+            {tulis && kolom.length > 0 && siswa && (
+              <>
+                <span className="hidden text-border sm:inline">|</span>
+                <button
+                  type="button"
+                  className={`${btnGhost} text-[12.5px]`}
+                  disabled={busyIo}
+                  onClick={() => void unduhSheet(true)}
+                  title="Unduh template kosong siap diisi di Excel"
+                >
+                  Template Excel
+                </button>
+                <button
+                  type="button"
+                  className={`${btnGhost} text-[12.5px]`}
+                  disabled={busyIo}
+                  onClick={() => void unduhSheet(false)}
+                  title="Unduh nilai terkini ke Excel"
+                >
+                  Ekspor nilai
+                </button>
+                <button
+                  type="button"
+                  className={`${btnGhost} text-[12.5px]`}
+                  disabled={busyIo}
+                  onClick={() => fileImporRef.current?.click()}
+                  title="Impor nilai dari file Excel"
+                >
+                  Impor Excel…
+                </button>
+                <input
+                  ref={fileImporRef}
+                  type="file"
+                  accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) void imporDariFile(f)
+                  }}
+                />
+              </>
+            )}
+          </div>
 
           <div className={`flex flex-col gap-4 ${panelMateri ? 'lg:flex-row lg:items-start' : ''}`}>
             {panelMateri && (
