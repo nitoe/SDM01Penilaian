@@ -21,11 +21,11 @@ import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 
 type TabId = 'antrian' | 'semua' | 'arsip'
 
-function nadaStatus(s: StatusPengajuanMutasi) {
-  if (s === 'disetujui') return 'green' as const
-  if (s === 'diajukan') return 'peach' as const
-  if (s === 'ditolak') return 'red' as const
-  return 'neutral' as const
+function nadaStatus(s: StatusPengajuanMutasi): 'green' | 'peach' | 'neutral' {
+  if (s === 'disetujui') return 'green'
+  if (s === 'diajukan') return 'peach'
+  // ditolak / dibatalkan — Badge tidak punya tone "red"
+  return 'neutral'
 }
 
 const WAKTU = new Intl.DateTimeFormat('id-ID', {

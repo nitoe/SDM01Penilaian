@@ -24,11 +24,11 @@ import { BATAS_ALASAN, BATAS_CATATAN } from '../../types/mutasi'
 const inputCls =
   'mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] outline-none focus:border-muh-500'
 
-function nadaStatus(s: PengajuanMutasi['status']) {
-  if (s === 'disetujui') return 'green' as const
-  if (s === 'diajukan') return 'peach' as const
-  if (s === 'ditolak') return 'red' as const
-  return 'neutral' as const
+function nadaStatus(s: PengajuanMutasi['status']): 'green' | 'peach' | 'neutral' {
+  if (s === 'disetujui') return 'green'
+  if (s === 'diajukan') return 'peach'
+  // ditolak / dibatalkan — Badge tidak punya tone "red"
+  return 'neutral'
 }
 
 export default function MutasiSiswa({ profile }: { profile: AppUser }) {
