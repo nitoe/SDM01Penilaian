@@ -122,9 +122,14 @@ export default function NilaiStsSas({ profile }: { profile: AppUser }) {
   const berhak = pilihan.some((p) => p.mapel === mapel && p.kelas === kelas)
 
   const periodeAk = usePeriodeAkademik()
-  const config: ConfigAkademik | null = periodeAk.ready
-    ? { semesterAktif: periodeAk.semester, tahunAjaran: periodeAk.tahunAjaran }
-    : null
+  // WAJIB stabil (useMemo): `config` ada di dependensi efek sinkron draf pada <Detail>. Objek baru di tiap
+  // render membuat efek itu mengembalikan draf ke data server setiap kali toast tampil/hilang, sehingga
+  // hasil impor Excel / tempel hilang sebelum sempat disimpan (ANTIREGRESI §27).
+  const config: ConfigAkademik | null = useMemo(
+    () =>
+      periodeAk.ready ? { semesterAktif: periodeAk.semester, tahunAjaran: periodeAk.tahunAjaran } : null,
+    [periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran],
+  )
   const [tp, setTp] = useState<TujuanPembelajaran[] | null>(null)
   const [siswa, setSiswa] = useState<SiswaTahsin[] | null>(null)
   const [cakupanId, setCakupanId] = useState<string | undefined>()

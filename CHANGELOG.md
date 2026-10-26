@@ -324,3 +324,15 @@
 - `src/lib/menulis.ts`: perbaikan tren. Selisih rata-rata sekarang dibulatkan satu desimal sebelum dibandingkan dengan ambang 0,3 (sebelumnya 3,3 vs 3,0 terhitung 0,2999… dan dibaca "tetap").
 - Uji: `scripts/cek-laporan-cetak.mjs` (10 uji baru: rata-rata rentang bukan catatan terakhir, level, tren, aspek, kalimat latihan, log, HTML, judul Iqro, tampilan tanpa skor) dan `scripts/cek-menulis.mts` (uji ambang tren). Tiga uji GAGAL bobot STS yang sudah ada sebelumnya tidak diubah.
 - Tampilan cetak A4 diperiksa lewat wkhtmltoimage (mesin lama), bukan peramban sungguhan: sebaiknya cetak satu laporan penuh dari situs untuk memastikan tetap satu halaman. Perlu di-deploy: hosting saja.
+
+
+## Belum dirilis (basis: package.json 0.1.0) — Perbaikan: hasil impor Excel / tempel nilai STS & SAS hilang dari tabel
+
+- **Gejala (dilaporkan guru, termasuk kelas 4A)**: impor Excel memakai template dari aplikasi tampak berhasil (muncul pesan "N nilai dimuat ke draf"), tetapi tabel tetap kosong dan tombol Simpan menunjukkan "Tidak ada perubahan". Hanya halaman **STS/SAS**; halaman **SLM tidak terkena**.
+- **Penyebab**: di `src/pages/akademik/NilaiStsSas.tsx`, objek `config` dibuat baru di setiap render dan menjadi dependensi efek sinkron draf pada `<Detail>`. Pesan (toast) mengubah state induk, induk render ulang, efek berjalan lagi sebelum cache lokal sempat tertulis (jeda 400 ms), lalu mengembalikan draf ke nilai server. Hasil impor dan tempel (Ctrl+V) ikut terhapus. Ketik manual tidak terkena karena tidak memicu toast.
+- `src/pages/akademik/NilaiStsSas.tsx`: `config` dibungkus `useMemo` (dependensi `periodeAk.ready`, `.semester`, `.tahunAjaran`). Tidak ada logika lain yang diubah; `NilaiSlm.tsx` tidak disentuh.
+- `src/lib/nilaiImportExport.ts` (`parseNilaiExcelRows`): peringatan "N baris siswa tidak cocok" dan "Kolom tidak dikenali" kini berada di urutan pertama (`unshift`), karena halaman input hanya menampilkan dua peringatan pertama di toast; sebelumnya impor yang sebagian siswanya tidak cocok tampak sukses penuh. Isi pesan, pencocokan siswa/kolom, dan nilai yang diimpor tidak berubah.
+- `scripts/cek-nilai-import.mts` (baru): `npx tsx scripts/cek-nilai-import.mts`. Menguji pencocokan NIS/nama, sel kosong tidak mengubah, koma desimal, urutan peringatan (gagal pada kode lama, lulus pada kode baru).
+- Diperiksa: `npm run build` lolos; hasil semua skrip `scripts/cek-*` identik sebelum dan sesudah perubahan (kegagalan yang sudah ada tidak diubah: `cek-laporan-cetak.mjs`, `cek-rapor-sas.mjs`, `cek-generate-ai.mjs`, `cek-setup-tp.mjs`, `cek-akun-guru.mjs`).
+- **Catatan**: perbaikan efek diverifikasi lewat replika komponen (pola efek + toast yang sama), bukan lewat peramban pada halaman asli. Setelah deploy, uji: impor template di STS, pastikan nilai tetap tampil di tabel dan tombol Simpan berisi jumlah perubahan.
+- Perlu di-deploy: hosting saja (`npm run deploy`). Tidak ada perubahan `firestore.rules`.

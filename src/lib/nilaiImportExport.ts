@@ -349,11 +349,13 @@ export function parseNilaiExcelRows(
     }
   }
 
-  if (tidakCocok.length) {
-    peringatan.push(`${tidakCocok.length} baris siswa tidak cocok dengan daftar kelas.`)
-  }
+  // unshift (bukan push): halaman input hanya menampilkan 2 peringatan pertama di toast, dan
+  // "siswa tidak cocok" / "kolom tidak dikenali" adalah yang paling penting diketahui guru.
   if (kolomTakDikenal.length) {
-    peringatan.push(`Kolom tidak dikenali: ${kolomTakDikenal.slice(0, 5).join(', ')}${kolomTakDikenal.length > 5 ? '…' : ''}`)
+    peringatan.unshift(`Kolom tidak dikenali: ${kolomTakDikenal.slice(0, 5).join(', ')}${kolomTakDikenal.length > 5 ? '…' : ''}`)
+  }
+  if (tidakCocok.length) {
+    peringatan.unshift(`${tidakCocok.length} baris siswa tidak cocok dengan daftar kelas.`)
   }
 
   return { isi, terisi, tidakCocok, kolomTakDikenal, peringatan }

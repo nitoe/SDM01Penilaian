@@ -225,3 +225,18 @@
 18.6 **Skor menulis di laporan orang tua = rata-rata seluruh catatan dalam rentang laporan** (`ringkasMenulis`), bukan catatan terakhir. Posisi menulis ("hingga …") boleh dari catatan terbaru, tetapi angka skor dan kata "rata-rata" tidak. Rincian aspek di bagian 3 laporan memakai kotak (tanpa menambah tinggi) agar laporan tetap satu halaman A4; jangan menambah blok baru di bagian ini tanpa memeriksa cetaknya.
 
 18.7 Pembandingan selisih rata-rata (tren) wajib dibulatkan satu desimal dulu; jangan membandingkan hasil pengurangan floating point langsung dengan ambang.
+
+
+## §27. Input nilai STS/SAS: draf, impor Excel, dan tempel
+
+> Catatan penomoran: nomor §19–§26 dipakai oleh versi ANTIREGRESI sebelum 20 Okt 2026 (commit `7c3b762`) dan masih dirujuk oleh komentar di kode (notifikasi, rapor STS/SAS, UI). Nomor itu sengaja dilewati agar tidak bentrok bila bagian lama dipulihkan.
+
+27.1 **Objek/array yang menjadi dependensi `useEffect`/`useMemo` harus stabil.** `config` di `NilaiStsSas.tsx` wajib `useMemo` (dependensi nilai primitif `periodeAk.ready/semester/tahunAjaran`). Objek baru di tiap render membuat efek sinkron draf berjalan setiap kali toast tampil atau hilang dan menghapus isian yang belum disimpan.
+
+27.2 Efek sinkron draf pada `<Detail>` hanya boleh bergantung pada data server (`props.nilai`) dan kunci cache. Jangan menambahkan dependensi yang berubah di tiap render. `NilaiSlm.tsx` memakai `[nilai, kunciCache, show]` dengan `show` dari `useCallback`; jangan diubah tanpa menguji impor dan tempel.
+
+27.3 Impor Excel dan tempel (Ctrl+V) hanya memuat nilai ke **draf**; penulisan ke Firestore hanya lewat tombol Simpan (`simpanSemuaNilai`/`simpanSemua`). Jangan membuat impor langsung menulis ke Firestore tanpa pratinjau.
+
+27.4 Peringatan `parseNilaiExcelRows` yang paling penting ("baris siswa tidak cocok", "kolom tidak dikenali") harus tetap berada di dua posisi pertama, karena toast di halaman input hanya menampilkan `peringatan.slice(0, 2)`.
+
+27.5 Sebelum mengubah `nilaiImportExport.ts` atau efek draf, jalankan `npx tsx scripts/cek-nilai-import.mts` (harus mencetak SEMUA UJI LULUS). Uji ini tidak mencakup perilaku React; setelah mengubah efek draf, uji manual: impor template di STS, nilai harus tetap tampil di tabel dan tombol Simpan menampilkan jumlah perubahan.
