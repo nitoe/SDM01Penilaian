@@ -909,6 +909,51 @@ match /g7kaih/{id} {
       allow delete: if perpusPustakawan();
     }
 
+
+    // ---- Mutasi siswa -------------------------------------------------------
+    // Pengajuan: HANYA wali kelas (bukan admin). Admin hanya update status + baca.
+    // Arsip siswa_mutasi: HANYA admin (daftar siswa yang sudah dimutasi).
+    // ANTIREGRESI: admin tidak mengajukan; wali tidak menyetujui sendiri.
+    match /pengajuan_mutasi/{id} {
+      allow read: if isAdmin()
+                  || (akunAktif()
+                      && myRole() in ['guru_akademik', 'guru']
+                      && daftarAda('waliKelas')
+                      && resource.data.kelas in myProfile().waliKelas);
+      allow create: if akunAktif()
+                    && myRole() in ['guru_akademik', 'guru']
+                    && daftarAda('waliKelas')
+                    && request.resource.data.kelas in myProfile().waliKelas
+                    && request.resource.data.diajukanOleh == request.auth.uid
+                    && request.resource.data.status == 'diajukan'
+                    && request.resource.data.arah in ['masuk', 'keluar']
+                    && request.resource.data.tanggal is string
+                    && request.resource.data.tanggal.size() == 10
+                    && request.resource.data.alasan is string
+                    && request.resource.data.alasan.size() > 0
+                    && request.resource.data.alasan.size() <= 500
+                    && request.resource.data.siswaNama is string
+                    && request.resource.data.siswaNama.size() > 0
+                    && request.resource.data.siswaNama.size() <= 120;
+      // Wali membatalkan pengajuan sendiri; admin menyetujui/menolak (+ field proses).
+      allow update: if (akunAktif()
+                        && resource.data.diajukanOleh == request.auth.uid
+                        && resource.data.status == 'diajukan'
+                        && request.resource.data.status == 'dibatalkan'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'diprosesAt']))
+                    || (isAdmin()
+                        && resource.data.status == 'diajukan'
+                        && request.resource.data.status in ['disetujui', 'ditolak']);
+      allow delete: if false;
+    }
+
+    match /siswa_mutasi/{id} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
     // ---- Default: tolak semuanya -------------------------------------------
     match /{document=**} {
       allow read, write: if false;

@@ -29,6 +29,14 @@ const dataMaster: Item[] = [
     ready: true,
   },
   {
+    to: '/admin/mutasi',
+    title: 'Mutasi Siswa',
+    desc: 'Setujui/tolak pengajuan wali kelas; arsip siswa mutasi',
+    icon: 'users',
+    tone: 'green',
+    ready: true,
+  },
+  {
     to: '/admin/mapel',
     title: 'Mata Pelajaran',
     desc: 'Daftar mapel untuk tugas guru dan setup TP',

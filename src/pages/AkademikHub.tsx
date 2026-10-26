@@ -103,6 +103,14 @@ const laporan: Item[] = [
 
 const segera: Item[] = [
   {
+    to: '/akademik/mutasi',
+    title: 'Mutasi Siswa',
+    desc: 'Ajukan siswa masuk/keluar — hanya wali kelas; disetujui admin',
+    icon: 'users',
+    tone: 'green',
+    ready: true,
+  },
+  {
     to: '/akademik/absensi',
     title: 'Absensi & Keputusan',
     desc: 'Rekap kehadiran dan keputusan kenaikan kelas',

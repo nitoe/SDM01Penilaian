@@ -40,6 +40,8 @@ import Rapor from './pages/akademik/Rapor'
 import InputEkskul from './pages/akademik/InputEkskul'
 import Kokurikuler from './pages/akademik/Kokurikuler'
 import ProyekStemDetail from './pages/akademik/ProyekStemDetail'
+import MutasiSiswa from './pages/akademik/MutasiSiswa'
+import MutasiSiswaAdmin from './pages/admin/MutasiSiswaAdmin'
 
 /** Menjaga rute per role di sisi UI. Penegakan sebenarnya tetap di firestore.rules. */
 function RoleGate({ allow, to = '/' }: { allow: boolean; to?: string }) {
@@ -187,6 +189,8 @@ export default function App() {
               path="/akademik/kokurikuler/proyek/:proyekId"
               element={profile ? <ProyekStemDetail profile={profile} /> : null}
             />
+            {/* Mutasi: hanya wali kelas yang mengajukan (bukan admin) */}
+            <Route path="/akademik/mutasi" element={profile ? <MutasiSiswa profile={profile} /> : null} />
             <Route path="/akademik/*" element={<Placeholder />} />
           </Route>
 
@@ -220,6 +224,10 @@ export default function App() {
             <Route
               path="/admin/impor-nilai-v2"
               element={profile ? <ImporNilaiV2 profile={profile} /> : null}
+            />
+            <Route
+              path="/admin/mutasi"
+              element={profile ? <MutasiSiswaAdmin profile={profile} /> : null}
             />
             <Route path="/admin/*" element={<Placeholder />} />
           </Route>
