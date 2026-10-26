@@ -220,46 +220,40 @@ export async function batalkanPengajuan(id: string): Promise<void> {
   await updateDoc(ref, { status: 'dibatalkan', diprosesAt: serverTimestamp() })
 }
 
-/** Daftar pengajuan untuk kelas yang diwalikan (atau semua milik uid). */
+/** Daftar pengajuan untuk kelas yang diwalikan. */
 export async function listPengajuanWali(opts: {
   uid: string
   kelasWali: string[]
 }): Promise<PengajuanMutasi[]> {
   if (!opts.kelasWali.length) return []
-  // Firestore 'in' max 10 — kelas wali biasanya ≤ 2
-  const chunks: string[][] = []
-  for (let i = 0; i < opts.kelasWali.length; i += 10) {
-    chunks.push(opts.kelasWali.slice(i, i + 10))
-  }
+  // Satu query per kelas (where ==) agar lolos rules tanpa indeks komposit
+  // dan tanpa bergantung pada pembuktian `in` di security rules.
   const hasil: PengajuanMutasi[] = []
-  for (const chunk of chunks) {
-    const q = query(
-      collection(db, KOLEKSI_PENGAJUAN),
-      where('kelas', 'in', chunk),
-      orderBy('diajukanAt', 'desc'),
-      limit(100),
+  for (const kelas of opts.kelasWali) {
+    const snap = await getDocs(
+      query(collection(db, KOLEKSI_PENGAJUAN), where('kelas', '==', kelas), limit(80)),
     )
-    const snap = await getDocs(q)
     snap.docs.forEach((d) => hasil.push(dariPengajuan(d.id, d.data())))
   }
-  // Urut ulang gabungan
   return hasil.sort((a, b) => (b.diajukanAt?.getTime() ?? 0) - (a.diajukanAt?.getTime() ?? 0))
 }
 
-/** Inbox admin: semua pengajuan, terbaru dulu. */
+/** Inbox admin: semua pengajuan, terbaru dulu (urut di klien — tanpa orderBy agar tidak wajib indeks). */
 export async function listPengajuanAdmin(batas = 150): Promise<PengajuanMutasi[]> {
-  const snap = await getDocs(
-    query(collection(db, KOLEKSI_PENGAJUAN), orderBy('diajukanAt', 'desc'), limit(batas)),
-  )
-  return snap.docs.map((d) => dariPengajuan(d.id, d.data()))
+  const snap = await getDocs(query(collection(db, KOLEKSI_PENGAJUAN), limit(batas)))
+  const list = snap.docs.map((d) => dariPengajuan(d.id, d.data()))
+  return list
+    .sort((a, b) => (b.diajukanAt?.getTime() ?? 0) - (a.diajukanAt?.getTime() ?? 0))
+    .slice(0, batas)
 }
 
 /** Arsip mutasi — hanya admin. */
 export async function listArsipMutasi(batas = 200): Promise<ArsipSiswaMutasi[]> {
-  const snap = await getDocs(
-    query(collection(db, KOLEKSI_ARSIP), orderBy('disetujuiAt', 'desc'), limit(batas)),
-  )
-  return snap.docs.map((d) => dariArsip(d.id, d.data()))
+  const snap = await getDocs(query(collection(db, KOLEKSI_ARSIP), limit(batas)))
+  const list = snap.docs.map((d) => dariArsip(d.id, d.data()))
+  return list
+    .sort((a, b) => (b.disetujuiAt?.getTime() ?? 0) - (a.disetujuiAt?.getTime() ?? 0))
+    .slice(0, batas)
 }
 
 export async function tolakPengajuan(

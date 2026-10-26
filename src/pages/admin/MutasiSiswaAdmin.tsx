@@ -49,9 +49,17 @@ export default function MutasiSiswaAdmin({ profile }: { profile: AppUser }) {
   const muat = useCallback(() => {
     listPengajuanAdmin()
       .then(setPengajuan)
-      .catch(() => {
+      .catch((e: unknown) => {
+        console.error(e)
         setPengajuan([])
-        toast.show('Gagal memuat pengajuan. Deploy rules mutasi terlebih dahulu.', true)
+        const code = e && typeof e === 'object' && 'code' in e ? String((e as { code: string }).code) : ''
+        const msg =
+          code === 'permission-denied'
+            ? 'Tidak diizinkan membaca pengajuan (rules). Pastikan akun admin dan rules pengajuan_mutasi sudah deploy.'
+            : code === 'failed-precondition'
+              ? 'Indeks Firestore belum siap. Coba lagi atau buat indeks dari konsol browser (F12).'
+              : 'Gagal memuat pengajuan. Periksa koneksi dan rules mutasi.'
+        toast.show(msg, true)
       })
     listArsipMutasi()
       .then(setArsip)

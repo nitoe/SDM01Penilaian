@@ -54,9 +54,17 @@ export default function MutasiSiswa({ profile }: { profile: AppUser }) {
     if (!boleh) return
     listPengajuanWali({ uid: profile.uid, kelasWali: wali })
       .then(setDaftar)
-      .catch(() => {
+      .catch((e: unknown) => {
+        console.error(e)
         setDaftar([])
-        toast.show('Gagal memuat pengajuan. Pastikan rules mutasi sudah di-deploy.', true)
+        const code = e && typeof e === 'object' && 'code' in e ? String((e as { code: string }).code) : ''
+        const msg =
+          code === 'permission-denied'
+            ? 'Tidak diizinkan membaca pengajuan. Cek rules pengajuan_mutasi & field waliKelas di akun Anda.'
+            : code === 'failed-precondition'
+              ? 'Indeks Firestore belum siap. Coba lagi beberapa menit atau buat indeks dari tautan di konsol browser.'
+              : 'Gagal memuat pengajuan. Periksa koneksi dan rules mutasi.'
+        toast.show(msg, true)
       })
   }, [boleh, profile.uid, wali, toast])
 
