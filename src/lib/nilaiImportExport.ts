@@ -42,6 +42,8 @@ export interface HasilParseNilai {
   isi: Record<string, Record<string, number>>
   /** Jumlah sel terisi valid */
   terisi: number
+  /** Jumlah siswa yang berhasil dicocokkan (punya ≥1 nilai) */
+  siswaCocok: number
   /** Siswa di file yang tidak cocok dengan daftar kelas */
   tidakCocok: string[]
   /** Kolom header yang tidak dikenali */
@@ -53,8 +55,34 @@ const META_KEYS = new Set(['no', 'nomor', 'nis', 'nisn', 'nama', 'nama siswa', '
 
 function cellStr(v: unknown): string {
   if (v == null) return ''
-  if (typeof v === 'number' && Number.isFinite(v)) return String(v)
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    // Hindari notasi ilmiah (NIS panjang) dan trailing .0
+    if (Math.abs(v) >= 1e12 || (Math.abs(v) > 0 && Math.abs(v) < 1e-6)) {
+      // tetap String biasa; pemanggil NIS akan menormalisasi digit
+      return String(v)
+    }
+    if (Number.isInteger(v) || Math.abs(v - Math.round(v)) < 1e-9) {
+      return String(Math.round(v))
+    }
+    return String(v)
+  }
   return String(v).trim()
+}
+
+/** Stringifikasi khusus identitas (NIS): bulatkan float Excel, buang notasi ilmiah. */
+function cellStrId(v: unknown): string {
+  if (v == null) return ''
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    // Excel kadang simpan NIS sebagai float; ambil digit bulat aman hingga 15 digit
+    const bulat = Math.round(v)
+    if (Math.abs(v - bulat) < 1e-6) return String(bulat)
+    // fallback: hapus non-digit dari representasi
+    return String(v).replace(/[^0-9]/g, '')
+  }
+  const t = String(v).trim()
+  // "12345.0" dari CSV
+  if (/^\d+\.0+$/.test(t)) return t.replace(/\.0+$/, '')
+  return t
 }
 
 function parseAngka(v: unknown): number | null {
@@ -76,6 +104,18 @@ function normalisasiNama(s: string): string {
     .trim()
 }
 
+/** Varian kunci NIS untuk toleransi leading zero / non-digit. */
+function varianNis(raw: string): string[] {
+  const t = raw.trim().toLowerCase()
+  if (!t) return []
+  const digits = t.replace(/\D/g, '')
+  const noLead = digits.replace(/^0+/, '') || (digits ? '0' : '')
+  const out = [t]
+  if (digits && digits !== t) out.push(digits)
+  if (noLead && noLead !== digits && noLead !== t) out.push(noLead)
+  return out
+}
+
 function labelJenis(j: JenisNilaiSheet): string {
   if (j === 'slm') return 'SLM'
   if (j === 'sts') return 'STS'
@@ -90,8 +130,10 @@ function indeksSiswa(siswa: SiswaTahsin[]): {
   const byNis = new Map<string, string>()
   const byNama = new Map<string, string>()
   for (const s of siswa) {
-    const nis = cellStr(s.nis || s.nipd || s.nisn)
-    if (nis) byNis.set(nis.toLowerCase(), s.id)
+    const nis = cellStrId(s.nis || s.nipd || s.nisn)
+    for (const v of varianNis(nis)) {
+      if (!byNis.has(v)) byNis.set(v, s.id)
+    }
     const nama = normalisasiNama(s.nama)
     if (nama) {
       // Jika nama ganda, prioritaskan yang pertama (urut abjad biasanya)
@@ -99,6 +141,28 @@ function indeksSiswa(siswa: SiswaTahsin[]): {
     }
   }
   return { byNis, byNama }
+}
+
+function cariSiswaId(
+  nisRaw: string,
+  namaRaw: string,
+  byNis: Map<string, string>,
+  byNama: Map<string, string>,
+): string | undefined {
+  if (nisRaw) {
+    for (const v of varianNis(nisRaw)) {
+      const hit = byNis.get(v)
+      if (hit) return hit
+    }
+  }
+  if (namaRaw) {
+    const n = normalisasiNama(namaRaw)
+    if (n) {
+      const hit = byNama.get(n)
+      if (hit) return hit
+    }
+  }
+  return undefined
 }
 
 /** Cocokkan header kolom ke id materi. */
@@ -109,12 +173,12 @@ function cocokkanKolom(
   const h = header.trim()
   if (!h || META_KEYS.has(h.toLowerCase())) return null
 
-  // Exact label
+  // Exact label (mis. "STS 1", "TP 3")
   for (const k of kolom) {
     if (k.label.toLowerCase() === h.toLowerCase()) return k.id
   }
-  // "TP 3" / "Materi 3" / "3"
-  const mNomor = h.match(/^(?:tp|materi|m)?\s*[-.]?\s*(\d+)$/i)
+  // "TP 3" / "Materi 3" / "STS 3" / "SAS 3" / "SLM 3" / "M.3" / "M 3" / "3"
+  const mNomor = h.match(/^(?:tp|materi|m|sts|sas|slm)?\s*[.\-–]?\s*(\d+)$/i)
   if (mNomor) {
     const n = Number(mNomor[1])
     const hit = kolom.find((k) => k.nomorTp === n)
@@ -151,7 +215,8 @@ export async function buatExcelNilai(opts: OpsiSheetNilai): Promise<Blob> {
     header1,
     header2,
     ...siswa.map((s, i) => {
-      const nis = cellStr(s.nis || s.nipd || s.nisn)
+      // Paksa NIS sebagai teks agar Excel tidak mengubah ke angka/notasi ilmiah
+      const nis = cellStrId(s.nis || s.nipd || s.nisn)
       const cells: (string | number | null)[] = [i + 1, nis, s.nama]
       for (const k of kolom) {
         if (template) {
@@ -166,6 +231,19 @@ export async function buatExcelNilai(opts: OpsiSheetNilai): Promise<Blob> {
   ]
 
   const ws = XLSX.utils.aoa_to_sheet(rows)
+
+  // Tandai kolom NIS sebagai teks (hindari hilangnya leading zero saat dibuka ulang)
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1')
+  for (let R = 2; R <= range.e.r; R++) {
+    const addr = XLSX.utils.encode_cell({ r: R, c: 1 }) // kolom B = NIS
+    const cell = ws[addr]
+    if (cell && cell.v != null && cell.v !== '') {
+      cell.t = 's'
+      cell.v = String(cell.v)
+      cell.z = '@'
+    }
+  }
+
   ws['!cols'] = [
     { wch: 5 },
     { wch: 14 },
@@ -241,7 +319,7 @@ export function parseNilaiExcelRows(
   let terisi = 0
 
   if (!rows.length) {
-    return { isi, terisi: 0, tidakCocok, kolomTakDikenal, peringatan: ['File kosong.'] }
+    return { isi, terisi: 0, siswaCocok: 0, tidakCocok, kolomTakDikenal, peringatan: ['File kosong.'] }
   }
 
   // Cari baris header (mengandung "Nama" atau "NIS")
@@ -288,6 +366,7 @@ export function parseNilaiExcelRows(
     return {
       isi,
       terisi: 0,
+      siswaCocok: 0,
       tidakCocok,
       kolomTakDikenal,
       peringatan: ['Kolom Nama atau NIS wajib ada di file.'],
@@ -297,6 +376,7 @@ export function parseNilaiExcelRows(
     return {
       isi,
       terisi: 0,
+      siswaCocok: 0,
       tidakCocok,
       kolomTakDikenal,
       peringatan: ['Tidak ada kolom materi yang dikenali. Unduh template dari halaman ini agar header cocok.'],
@@ -306,6 +386,10 @@ export function parseNilaiExcelRows(
   const { byNis, byNama } = indeksSiswa(siswa)
   const dipakai = new Set<string>()
 
+  // Kumpulkan baris data dulu (lewatkan baris header materi)
+  type BarisData = { row: unknown[]; nis: string; nama: string; rowIdx: number }
+  const barisData: BarisData[] = []
+
   for (let r = headerIdx + 1; r < rows.length; r++) {
     const row = rows[r]
     if (!Array.isArray(row)) continue
@@ -314,19 +398,52 @@ export function parseNilaiExcelRows(
     if (r === headerIdx + 1) {
       const sample = colMap.map((c) => parseAngka(row[c.idx]))
       const semuaKosongAtauNaN = sample.every((n) => n == null || Number.isNaN(n))
-      const adaTeksPanjang = colMap.some((c) => cellStr(row[c.idx]).length > 20)
-      if (semuaKosongAtauNaN && adaTeksPanjang) continue
+      const adaTeksPanjang = colMap.some((c) => cellStr(row[c.idx]).length > 15)
+      const adaTeksNonAngka = colMap.some((c) => {
+        const t = cellStr(row[c.idx])
+        return t.length > 0 && parseAngka(row[c.idx]) == null
+      })
+      if (semuaKosongAtauNaN && (adaTeksPanjang || adaTeksNonAngka)) continue
     }
 
-    const nis = idxNis >= 0 ? cellStr(row[idxNis]) : ''
+    const nis = idxNis >= 0 ? cellStrId(row[idxNis]) : ''
     const nama = idxNama >= 0 ? cellStr(row[idxNama]) : ''
-    if (!nis && !nama) continue
+    if (!nis && !nama) {
+      // baris benar-benar kosong
+      const adaNilai = colMap.some((c) => {
+        const n = parseAngka(row[c.idx])
+        return n != null && !Number.isNaN(n)
+      })
+      if (!adaNilai) continue
+    }
+    barisData.push({ row, nis, nama, rowIdx: r })
+  }
 
-    let siswaId: string | undefined
-    if (nis) siswaId = byNis.get(nis.toLowerCase())
-    if (!siswaId && nama) siswaId = byNama.get(normalisasiNama(nama))
+  // Apakah urutan baris data selaras dengan daftar siswa (template tidak diacak)?
+  const bisaPosisi =
+    barisData.length === siswa.length &&
+    siswa.length > 0 &&
+    barisData.length > 0
+
+  let dipakaiPosisi = 0
+
+  for (let i = 0; i < barisData.length; i++) {
+    const { row, nis, nama } = barisData[i]!
+
+    let siswaId = cariSiswaId(nis, nama, byNis, byNama)
+
+    // Fallback urutan: template app mengisi siswa terurut nama — jika NIS/nama gagal
+    // tapi jumlah baris = jumlah siswa, pakai posisi (hanya bila belum dipakai).
+    if (!siswaId && bisaPosisi) {
+      const kandidat = siswa[i]
+      if (kandidat && !dipakai.has(kandidat.id)) {
+        siswaId = kandidat.id
+        dipakaiPosisi++
+      }
+    }
+
     if (!siswaId) {
-      tidakCocok.push(nama || nis)
+      tidakCocok.push(nama || nis || `baris ${i + 1}`)
       continue
     }
     if (dipakai.has(siswaId)) {
@@ -349,16 +466,30 @@ export function parseNilaiExcelRows(
     }
   }
 
-  // unshift (bukan push): halaman input hanya menampilkan 2 peringatan pertama di toast, dan
-  // "siswa tidak cocok" / "kolom tidak dikenali" adalah yang paling penting diketahui guru.
+  if (dipakaiPosisi > 0) {
+    peringatan.push(
+      `${dipakaiPosisi} siswa dicocokkan lewat urutan baris (NIS/nama di file tidak tepat). Periksa sekilas.`,
+    )
+  }
+
+  // unshift: halaman input hanya menampilkan 2 peringatan pertama di toast
   if (kolomTakDikenal.length) {
-    peringatan.unshift(`Kolom tidak dikenali: ${kolomTakDikenal.slice(0, 5).join(', ')}${kolomTakDikenal.length > 5 ? '…' : ''}`)
+    peringatan.unshift(
+      `Kolom tidak dikenali: ${kolomTakDikenal.slice(0, 5).join(', ')}${kolomTakDikenal.length > 5 ? '…' : ''}`,
+    )
   }
   if (tidakCocok.length) {
     peringatan.unshift(`${tidakCocok.length} baris siswa tidak cocok dengan daftar kelas.`)
   }
 
-  return { isi, terisi, tidakCocok, kolomTakDikenal, peringatan }
+  return {
+    isi,
+    terisi,
+    siswaCocok: dipakai.size,
+    tidakCocok,
+    kolomTakDikenal,
+    peringatan,
+  }
 }
 
 /**

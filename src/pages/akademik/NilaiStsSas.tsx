@@ -677,10 +677,28 @@ function Detail(props: {
         props.show(hasil.peringatan[0] || 'Tidak ada nilai valid di file.', true)
         return
       }
-      setDraf((prev) => gabungIsiKeDraf(prev, hasil.isi))
+      // Gabung ke draf + tulis localStorage SEGERA agar efek sinkron / refresh
+      // tidak menghapus hasil impor (ANTIREGRESI impor STS).
+      setDraf((prev) => {
+        const next = gabungIsiKeDraf(prev, hasil.isi)
+        if (kunciCache) {
+          try {
+            tulisDrafLokal(kunciCache, next)
+          } catch {
+            /* kuota / private mode */
+          }
+        }
+        return next
+      })
+      skipCacheWrite.current = true
+      setDrafPulih(true)
+      const ringkasSiswa =
+        typeof hasil.siswaCocok === 'number' ? ` · ${hasil.siswaCocok} siswa` : ''
       const ekstra =
         hasil.peringatan.length > 0 ? ` (${hasil.peringatan.slice(0, 2).join('; ')})` : ''
-      props.show(`${hasil.terisi} nilai dimuat ke draf. Periksa lalu tekan Simpan.${ekstra}`)
+      props.show(
+        `${hasil.terisi} nilai dimuat ke draf${ringkasSiswa}. Periksa lalu tekan Simpan.${ekstra}`,
+      )
     } catch (e) {
       console.error(e)
       props.show('File Excel tidak bisa dibaca.', true)
