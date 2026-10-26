@@ -2,6 +2,7 @@ import type { Mapel } from '../types/akademik.ts'
 import type { AppUser } from '../types/user.ts'
 import { SEMUA_KELAS } from '../types/tahsin.ts'
 import { mapelBerlakuDiTingkatan, tingkatanDariKelas } from './akademikRumus.ts'
+import { ekuivalenMapel } from './tpImport.ts'
 import { isAdminRole } from './roles.ts'
 
 type AkunAkses = Pick<AppUser, 'role' | 'waliKelas' | 'penugasan'>
@@ -12,6 +13,11 @@ function unik<T>(items: T[], key: (item: T) => string): T[] {
   const seen = new Map<string, T>()
   for (const item of items) seen.set(key(item), item)
   return [...seen.values()]
+}
+
+/** Cocokkan nama penugasan ke master mapel (termasuk alias IPAS/PJOK). */
+function temukanMapelMaster(mapel: Mapel[], namaPenugasan: string): Mapel | undefined {
+  return mapel.find((m) => m.nama === namaPenugasan || ekuivalenMapel(m.nama, namaPenugasan))
 }
 
 function tingkatMapel(m: Mapel): string[] {
@@ -35,9 +41,10 @@ export function aksesMapelTingkatan(akun: AkunAkses, mapel: Mapel[]): { mapel: s
     for (const p of akun.penugasan ?? []) {
       const tingkatan = tingkatanDariKelas(p.kelas)
       if (!p.mapel || !tingkatan) continue
-      const master = mapel.find((m) => m.nama === p.mapel)
+      const master = temukanMapelMaster(mapel, p.mapel)
       if (master && !mapelBerlakuDiTingkatan(master, tingkatan)) continue
-      out.push({ mapel: p.mapel, tingkatan })
+      // Pakai nama resmi master agar URL/input/leger konsisten (IPAS/PJOK, bukan nama panjang)
+      out.push({ mapel: master?.nama ?? p.mapel, tingkatan })
     }
   }
   return unik(out, (x) => `${x.mapel}|${x.tingkatan}`).sort(
@@ -59,9 +66,10 @@ export function aksesMapelKelas(akun: AkunAkses, mapel: Mapel[]): { mapel: strin
   if (!isAdminRole(akun.role)) {
     for (const p of akun.penugasan ?? []) {
       if (!p.mapel || !p.kelas) continue
-      const master = mapel.find((m) => m.nama === p.mapel)
+      const master = temukanMapelMaster(mapel, p.mapel)
       if (master && !mapelBerlakuDiTingkatan(master, tingkatanDariKelas(p.kelas))) continue
-      out.push({ mapel: p.mapel, kelas: p.kelas })
+      // Nama resmi master → nilai baru tersimpan di bawah IPAS/PJOK; alias baca menangani data lama
+      out.push({ mapel: master?.nama ?? p.mapel, kelas: p.kelas })
     }
   }
   return unik(out, (x) => `${x.mapel}|${x.kelas}`).sort(
