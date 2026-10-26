@@ -78,8 +78,14 @@ export function namaFileRaporKelas(jenis: JenisRapor, kelas: string): string {
 const nomorKelas = (kelas: string) => parseInt(String(kelas).replace(/[^0-9]/g, ''), 10)
 const faseDariNomor = (n: number) => (isNaN(n) ? '?' : n <= 2 ? 'A' : n <= 4 ? 'B' : n <= 6 ? 'C' : 'D')
 
-/** Teks baku Fase A (kelas 1–2) untuk Muatan Yayasan, sama dengan rapor v1. */
-const FASE_A_YAYASAN = [
+/**
+ * Teks baku Fase A (kelas 1–2) untuk Muatan Yayasan — disimpan untuk reaktifasi
+ * bila kebijakan kurikulum mengubah penerapan Bahasa Arab / Kemuhammadiyahan di Fase A.
+ * Saat ini DINONAKTIFKAN: tidak disisipkan ke cetak rapor STS/SAS (permintaan 26 Okt 2026).
+ * Mapel tetap di master (`tingkatanBerlaku` kelas 3–6); filter `mapelBerlakuDiTingkatan`
+ * sudah mengeluarkannya dari daftar nilai kelas 1–2.
+ */
+const FASE_A_YAYASAN: { nama: string; teks: string }[] = [
   {
     nama: 'Bahasa Arab',
     teks: 'Belum menjadi fokus tersendiri di Fase A (kelas 1 dan 2). Pengenalan kosakata dan ungkapan bahasa Arab dasar diintegrasikan dalam mata pelajaran Al-Islam dan kegiatan Tahsin-Tahfizh.',
@@ -89,6 +95,8 @@ const FASE_A_YAYASAN = [
     teks: 'Belum menjadi fokus tersendiri di Fase A (kelas 1 dan 2). Nilai-nilai ke-Muhammadiyahan ditanamkan melalui pembiasaan dan keteladanan dalam keseharian di sekolah.',
   },
 ]
+// Sengaja tidak di-export / tidak dipakai di bagianNilai agar tidak masuk print.
+void FASE_A_YAYASAN
 
 function barisTabel(no: number, item: BarisRaporSts): string {
   const nilai = item.nilaiAkhir == null ? '—' : String(item.nilaiAkhir)
@@ -114,22 +122,25 @@ function bagianNilai(d: DataRaporSts): { html: string; terakhir: number } {
   const yayasan = d.daftarNilai.filter((b) => b.muatan === 'yayasan')
   let no = 0
   const barisWajib = wajib.map((b) => barisTabel(++no, b)).join('')
-  let barisYayasan = yayasan.map((b) => barisTabel(++no, b)).join('')
-  if (!yayasan.length && d.fase === 'A') {
-    barisYayasan = FASE_A_YAYASAN.map(
-      (f) =>
-        `<tr><td class="td-no">${++no}</td><td class="td-mapel">${escapeHtml(f.nama)}</td><td class="td-nilai kosong">—</td><td class="td-capaian"><em>${escapeHtml(f.teks)}</em></td></tr>`,
-    ).join('')
-  }
+  // Hanya mapel yayasan yang benar-benar berlaku di tingkatan (ada di daftarNilai).
+  // Placeholder Fase A (Bahasa Arab / Kemuhammadiyahan) DINONAKTIFKAN — tidak disisipkan
+  // agar tidak muncul di print rapor STS kelas 1–2. Aktifkan kembali lewat FASE_A_YAYASAN
+  // jika kebijakan kurikulum mengubah penerapan di Fase A.
+  const barisYayasan = yayasan.map((b) => barisTabel(++no, b)).join('')
   const kosong = `<tr><td colspan="4" class="kosong" style="text-align:center;font-style:italic">Belum ada mata pelajaran terdaftar.</td></tr>`
+  // Sembunyikan seluruh blok A.2 bila tidak ada mapel yayasan untuk tingkatan ini
+  // (kelas 1–2 / Fase A: Bahasa Arab & Kemuhammadiyahan tidak berlaku).
+  const blokYayasan = yayasan.length
+    ? `<div class="rpr-sub-title" style="margin-top:8pt">A.2. Muatan Yayasan</div>
+  <table>${KEPALA_TABEL}<tbody>${barisYayasan}</tbody></table>`
+    : ''
   return {
     terakhir: no,
     html: `<div class="rpr-section">
   <div class="rpr-section-title">A. Nilai dan Ketercapaian Kompetensi</div>
   <div class="rpr-sub-title">A.1. Muatan Wajib</div>
   <table>${KEPALA_TABEL}<tbody>${barisWajib || kosong}</tbody></table>
-  <div class="rpr-sub-title" style="margin-top:8pt">A.2. Muatan Yayasan</div>
-  <table>${KEPALA_TABEL}<tbody>${barisYayasan || kosong}</tbody></table>
+  ${blokYayasan}
 </div>`,
   }
 }
