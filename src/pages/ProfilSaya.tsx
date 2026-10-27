@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { doc, updateDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { pesanGalatUbahPassword, ubahPasswordSendiri } from '../lib/auth'
+import { hapusTtdSendiri, unggahTtdSendiri } from '../lib/tandaTangan'
 import type { AppUser } from '../types/user'
 import { namaDenganGelar } from '../types/user'
 import { PageHeader } from '../components/ui'
@@ -25,6 +26,14 @@ export default function ProfilSaya({ profile }: Props) {
   const [busySandi, setBusySandi] = useState(false)
   const [msgSandi, setMsgSandi] = useState<string | null>(null)
   const [errSandi, setErrSandi] = useState<string | null>(null)
+
+  const [ttdUrl, setTtdUrl] = useState(profile.ttdUrl ?? '')
+  const [busyTtd, setBusyTtd] = useState(false)
+  const [msgTtd, setMsgTtd] = useState<string | null>(null)
+  const [errTtd, setErrTtd] = useState<string | null>(null)
+  const inputTtdRef = useRef<HTMLInputElement>(null)
+
+  const staf = profile.role !== 'orangtua'
 
   async function handleSaveProfil(e: FormEvent) {
     e.preventDefault()
@@ -70,11 +79,44 @@ export default function ProfilSaya({ profile }: Props) {
     }
   }
 
+  async function handleUnggahTtd(file: File | null) {
+    if (!file) return
+    setBusyTtd(true)
+    setMsgTtd(null)
+    setErrTtd(null)
+    try {
+      const url = await unggahTtdSendiri(file)
+      setTtdUrl(url)
+      setMsgTtd('Tanda tangan tersimpan. Akan muncul otomatis di cetak Rapor STS.')
+    } catch (err) {
+      setErrTtd(err instanceof Error ? err.message : 'Gagal mengunggah tanda tangan.')
+    } finally {
+      setBusyTtd(false)
+      if (inputTtdRef.current) inputTtdRef.current.value = ''
+    }
+  }
+
+  async function handleHapusTtd() {
+    if (!confirm('Hapus tanda tangan digital Anda?')) return
+    setBusyTtd(true)
+    setMsgTtd(null)
+    setErrTtd(null)
+    try {
+      await hapusTtdSendiri()
+      setTtdUrl('')
+      setMsgTtd('Tanda tangan dihapus.')
+    } catch (err) {
+      setErrTtd(err instanceof Error ? err.message : 'Gagal menghapus.')
+    } finally {
+      setBusyTtd(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-md space-y-6 p-4">
       <PageHeader
         title="Pengaturan akun"
-        subtitle="Perbarui nama yang tampil di rapor dan ubah password login Anda."
+        subtitle="Perbarui nama yang tampil di rapor, tanda tangan digital (STS), dan ubah password login Anda."
       />
 
       {/* —— Profil —— */}
@@ -121,6 +163,63 @@ export default function ProfilSaya({ profile }: Props) {
         </form>
         {msgProfil && <p className="text-[12px] text-muh-800">{msgProfil}</p>}
       </section>
+
+      {/* —— Tanda tangan digital (STS online) —— */}
+      {staf && (
+        <section className="card-soft space-y-3 p-4">
+          <h3 className="text-[14px] font-semibold text-slate-900">Tanda tangan digital</h3>
+          <p className="text-[12px] leading-snug text-muted">
+            Dipakai otomatis di cetak <strong>Rapor STS</strong> (pelaporan online). Unggah foto
+            tanda tangan di kertas putih atau hasil scan transparan (PNG/JPG). Gambar akan
+            diperkecil otomatis.
+          </p>
+          {ttdUrl ? (
+            <div className="flex flex-col items-start gap-2">
+              <img
+                src={ttdUrl}
+                alt="Pratinjau tanda tangan"
+                className="max-h-20 max-w-[200px] rounded border border-border bg-white object-contain p-2"
+              />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={busyTtd}
+                  className="rounded-xl border border-border bg-white px-3 py-1.5 text-[12px] font-medium hover:bg-slate-50 disabled:opacity-60"
+                  onClick={() => inputTtdRef.current?.click()}
+                >
+                  Ganti gambar
+                </button>
+                <button
+                  type="button"
+                  disabled={busyTtd}
+                  className="rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-[12px] font-medium text-red-700 hover:bg-red-100 disabled:opacity-60"
+                  onClick={() => void handleHapusTtd()}
+                >
+                  Hapus
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={busyTtd}
+              className="rounded-xl bg-muh-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
+              onClick={() => inputTtdRef.current?.click()}
+            >
+              {busyTtd ? 'Mengunggah…' : 'Unggah tanda tangan'}
+            </button>
+          )}
+          <input
+            ref={inputTtdRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/jpg"
+            className="hidden"
+            onChange={(e) => void handleUnggahTtd(e.target.files?.[0] ?? null)}
+          />
+          {msgTtd && <p className="text-[12px] font-medium text-muh-800">{msgTtd}</p>}
+          {errTtd && <p className="text-[12px] font-medium text-red-700">{errTtd}</p>}
+        </section>
+      )}
 
       {/* —— Password —— */}
       <section className="card-soft space-y-3 p-4">

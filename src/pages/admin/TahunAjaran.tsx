@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { getConfigAkademik, simpanProfilSekolah } from '../../lib/akademik'
+import { hapusTtdKepsek, unggahTtdKepsek } from '../../lib/tandaTangan'
 import type { Semester } from '../../types/akademik'
 import type { AppUser } from '../../types/user'
 import { PageHeader } from '../../components/ui'
@@ -30,6 +31,10 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
   const [busy, setBusy] = useState(false)
   const [pesan, setPesan] = useState<string | null>(null)
   const [galat, setGalat] = useState<string | null>(null)
+  const [ttdKepsekUrl, setTtdKepsekUrl] = useState('')
+  const [busyTtd, setBusyTtd] = useState(false)
+  const [msgTtd, setMsgTtd] = useState<string | null>(null)
+  const inputTtdRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     void getConfigAkademik()
@@ -40,6 +45,7 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
         if (c.telpSekolah) setTelp(c.telpSekolah)
         if (c.namaKepsek) setKepsek(c.namaKepsek)
         if (c.nbmKepsek) setNbm(c.nbmKepsek)
+        if (typeof c.ttdKepsekUrl === 'string' && c.ttdKepsekUrl) setTtdKepsekUrl(c.ttdKepsekUrl)
         if (c.tahunAjaran) setLegacyTahun(c.tahunAjaran)
         setLegacySemester(c.semesterAktif === '2' ? '2' : '1')
         if (c.tglRapor) setLegacyTglRapor(c.tglRapor)
@@ -180,6 +186,86 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
                   inputMode="numeric"
                 />
               </Field>
+            </div>
+            <div className="pt-2">
+              <p className="mb-1 text-[12px] font-medium text-slate-700">Tanda tangan digital (Rapor STS)</p>
+              <p className="mb-2 text-[11px] text-muted">
+                Muncul otomatis di cetak Rapor STS (pelaporan online). PNG/JPG, akan diperkecil.
+              </p>
+              {ttdKepsekUrl ? (
+                <div className="flex flex-wrap items-end gap-3">
+                  <img
+                    src={ttdKepsekUrl}
+                    alt="TTD Kepala Sekolah"
+                    className="max-h-16 max-w-[160px] rounded border border-border bg-white object-contain p-1.5"
+                  />
+                  <button
+                    type="button"
+                    disabled={busyTtd}
+                    className="rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium hover:bg-slate-50 disabled:opacity-60"
+                    onClick={() => inputTtdRef.current?.click()}
+                  >
+                    Ganti
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyTtd}
+                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[12px] font-medium text-red-700 disabled:opacity-60"
+                    onClick={() => {
+                      void (async () => {
+                        setBusyTtd(true)
+                        setMsgTtd(null)
+                        try {
+                          await hapusTtdKepsek()
+                          setTtdKepsekUrl('')
+                          setMsgTtd('Tanda tangan kepala sekolah dihapus.')
+                        } catch (e) {
+                          setGalat(e instanceof Error ? e.message : 'Gagal menghapus TTD.')
+                        } finally {
+                          setBusyTtd(false)
+                        }
+                      })()
+                    }}
+                  >
+                    Hapus
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busyTtd}
+                  className="rounded-lg bg-muh-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
+                  onClick={() => inputTtdRef.current?.click()}
+                >
+                  {busyTtd ? 'Mengunggah…' : 'Unggah tanda tangan'}
+                </button>
+              )}
+              <input
+                ref={inputTtdRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/jpg"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (!f) return
+                  void (async () => {
+                    setBusyTtd(true)
+                    setMsgTtd(null)
+                    setGalat(null)
+                    try {
+                      const url = await unggahTtdKepsek(f)
+                      setTtdKepsekUrl(url)
+                      setMsgTtd('Tanda tangan kepala sekolah tersimpan.')
+                    } catch (err) {
+                      setGalat(err instanceof Error ? err.message : 'Gagal mengunggah.')
+                    } finally {
+                      setBusyTtd(false)
+                      if (inputTtdRef.current) inputTtdRef.current.value = ''
+                    }
+                  })()
+                }}
+              />
+              {msgTtd && <p className="mt-2 text-[12px] text-muh-800">{msgTtd}</p>}
             </div>
           </section>
 

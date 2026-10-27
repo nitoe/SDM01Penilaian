@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// Firebase Storage — tanda tangan digital rapor STS
+// Deploy: firebase deploy --only storage
+// Path:
+//   tanda-tangan/kepsek.png          → hanya admin tulis
+//   tanda-tangan/guru/{uid}.png      → pemilik (uid) tulis
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isLoggedIn()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        && (
+          !('aktif' in firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data)
+          || firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.aktif == true
+        );
+    }
+
+    function gambarSah() {
+      return request.resource.size < 4 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Baca: semua user login (untuk pratinjau & cetak rapor)
+    match /tanda-tangan/{allPaths=**} {
+      allow read: if isLoggedIn();
+    }
+
+    match /tanda-tangan/kepsek.png {
+      allow write: if isAdmin() && gambarSah();
+      allow delete: if isAdmin();
+    }
+
+    match /tanda-tangan/guru/{uid} {
+      allow write: if isLoggedIn() && request.auth.uid == uid && gambarSah();
+      allow delete: if isLoggedIn() && request.auth.uid == uid;
+    }
+
+    // Tolak sisanya
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

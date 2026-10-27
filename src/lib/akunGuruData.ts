@@ -82,6 +82,7 @@ function dariDokumen(uid: string, data: DocumentData): AkunStaf | null {
     email: typeof data.email === 'string' ? data.email : '',
     nama: typeof data.nama === 'string' && data.nama ? data.nama : '(tanpa nama)',
     gelar: typeof data.gelar === 'string' ? data.gelar : undefined,
+    ttdUrl: typeof data.ttdUrl === 'string' && data.ttdUrl ? data.ttdUrl : undefined,
     role,
     roleRusak,
     kelasAmpu: sebagaiStringArray(data.kelasAmpu),

@@ -16,7 +16,7 @@ import {
   type JenisRapor,
 } from '../../lib/raporSts'
 import { muatDataRaporSasKelas } from '../../lib/raporSas'
-import { cariWaliKelas } from '../../lib/penandatangan'
+import { cariWaliKelasLengkap } from '../../lib/penandatangan'
 import { PageHeader } from '../../components/ui'
 import { BackLink, Notice, Spinner, btnGhost, btnPrimary, inputCls } from './shared'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
@@ -50,6 +50,7 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
   const [loadingRapor, setLoadingRapor] = useState(false)
   const [galat, setGalat] = useState('')
   const [waliNama, setWaliNama] = useState(namaDenganGelar(profile))
+  const [ttdWaliUrl, setTtdWaliUrl] = useState<string | undefined>(profile.ttdUrl)
   const [cetakKelas, setCetakKelas] = useState(false)
   const [tinggiPratinjau, setTinggiPratinjau] = useState(900)
 
@@ -82,15 +83,20 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
     if (!kelas && kelasWali.length) setKelas(kelasWali[0])
   }, [kelas, kelasWali])
 
-  // Nama wali kelas untuk tanda tangan: wali = dirinya; admin = wali kelas terdaftar untuk kelas itu.
+  // Nama + TTD wali kelas: wali = dirinya; admin = wali kelas terdaftar untuk kelas itu.
   useEffect(() => {
     if (!admin) {
       setWaliNama(namaDenganGelar(profile))
+      setTtdWaliUrl(profile.ttdUrl?.trim() || undefined)
       return
     }
     if (!kelas) return
     let batal = false
-    void cariWaliKelas(kelas, profile).then((n) => !batal && setWaliNama(n))
+    void cariWaliKelasLengkap(kelas, profile).then((info) => {
+      if (batal) return
+      setWaliNama(info.nama)
+      setTtdWaliUrl(info.ttdUrl)
+    })
     return () => {
       batal = true
     }
@@ -186,6 +192,7 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
       siswa: { id: siswa.id, nama: siswa.nama, nisn: siswa.nisn, nipd: siswa.nipd },
       kelas,
       waliNama,
+      ttdWaliUrl,
       semester: periodeAk.semester,
       tahunAjaran: periodeAk.tahunAjaran,
       kotaRapor: periodeAk.periode?.kotaRapor,
@@ -204,7 +211,7 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
     return () => {
       batal = true
     }
-  }, [sas, kelasData, kelas, siswaId, siswaList, profile, waliNama, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran, periodeAk.periode])
+  }, [sas, kelasData, kelas, siswaId, siswaList, profile, waliNama, ttdWaliUrl, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran, periodeAk.periode])
 
   if (!periodeAk.loading && !periodeAk.ready) {
     return (
@@ -242,6 +249,7 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
               kelas,
               waliNama,
               role: profile.role,
+              ...(sas ? {} : { ttdWaliUrl }),
               semester: periodeAk.semester,
               tahunAjaran: periodeAk.tahunAjaran,
               kotaRapor: periodeAk.periode?.kotaRapor,

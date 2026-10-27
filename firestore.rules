@@ -229,7 +229,7 @@ service cloud.firestore {
       allow update: if isAdmin()
         || (akunAktif() && request.auth.uid == uid
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['nama', 'gelar', 'updatedAt']));
+                 .hasOnly(['nama', 'gelar', 'ttdUrl', 'updatedAt']));
       allow delete: if isAdmin();
     }
 

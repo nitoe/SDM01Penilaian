@@ -154,6 +154,10 @@ export async function muatDataRaporSts(ctx: {
   siswa: { id: string; nama: string; nisn?: string; nipd?: string }
   kelas: string
   waliNama: string
+  /** URL TTD digital wali kelas (dari profil / cariWaliKelasLengkap). */
+  ttdWaliUrl?: string
+  /** Override URL TTD kepsek; default dari config.ttdKepsekUrl. */
+  ttdKepsekUrl?: string
   /** Dari PeriodeContext — wajib agar nilai sesuai periode login */
   semester?: Semester
   tahunAjaran?: string
@@ -180,6 +184,8 @@ export async function muatDataRaporSts(ctx: {
     waliNama: ctx.waliNama,
     kota: k.kota,
     tanggal: k.tanggal,
+    ttdWaliUrl: ctx.ttdWaliUrl,
+    ttdKepsekUrl: (ctx.ttdKepsekUrl ?? k.config.ttdKepsekUrl)?.trim() || undefined,
   }
 }
 
@@ -191,6 +197,8 @@ export async function muatDataRaporStsKelas(ctx: {
   kelas: string
   waliNama: string
   role: string
+  ttdWaliUrl?: string
+  ttdKepsekUrl?: string
   semester?: Semester
   tahunAjaran?: string
   kotaRapor?: string
@@ -201,6 +209,7 @@ export async function muatDataRaporStsKelas(ctx: {
     getSiswaList(ctx.kelas, { role: ctx.role, kelasAmpu: [] }),
     muatSumberSts(ctx.kelas, k.semester, k.tahunAjaran),
   ])
+  const ttdKepsek = (ctx.ttdKepsekUrl ?? k.config.ttdKepsekUrl)?.trim() || undefined
   return siswaList.map((s) => ({
     config: k.config,
     siswa: { id: s.id, nama: s.nama, nisn: s.nisn, nipd: s.nipd },
@@ -213,6 +222,8 @@ export async function muatDataRaporStsKelas(ctx: {
     waliNama: ctx.waliNama,
     kota: k.kota,
     tanggal: k.tanggal,
+    ttdWaliUrl: ctx.ttdWaliUrl,
+    ttdKepsekUrl: ttdKepsek,
   }))
 }
 

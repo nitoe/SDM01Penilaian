@@ -3,8 +3,8 @@ import { kalimatCapaian } from './asesmenRumus.ts'
 
 // Pembangun HTML rapor cetak (murni, tanpa Firebase) agar bisa diuji dan dipakai pratinjau + cetak
 // dengan hasil identik. Format mengikuti rapor PAS/SAS v1 (rapor/preview.html), ANTIREGRESI §21.
-//   - 'sts': rapor bayangan untuk orang tua — HANYA nilai dan capaian. Tanpa ketidakhadiran, catatan wali,
-//            tanggapan orang tua, dan tanda tangan kepala sekolah (permintaan pemilik, 16 Okt 2026).
+//   - 'sts': rapor bayangan untuk orang tua — HANYA nilai dan capaian. Tanda tangan: Ortu + Wali + Kepsek
+//            dengan gambar digital bila tersedia (pelaporan STS sering online).
 //   - 'sas': rapor akhir lengkap (kokurikuler, ekstrakurikuler, ketidakhadiran, catatan wali, tanggapan,
 //            keputusan kenaikan, tanda tangan tiga pihak). Formnya dipertahankan untuk Rapor SAS nanti.
 
@@ -36,6 +36,10 @@ export interface DataRaporSts {
   waliNama: string
   kota: string
   tanggal: string
+  /** URL gambar tanda tangan digital wali kelas (STS online). */
+  ttdWaliUrl?: string
+  /** URL gambar tanda tangan digital kepala sekolah (STS online). */
+  ttdKepsekUrl?: string
   /** Hanya dipakai rapor SAS. Bila kosong, bagian tetap tercetak sebagai isian kosong. */
   kokurikuler?: string
   ekskul?: { nama: string; predikat?: string; ket: string }[]
@@ -162,27 +166,47 @@ function kepala(d: DataRaporSts, jenis: JenisRapor): string {
       ${info('Kelas', d.kelas)}
       ${info('Fase', d.fase)}
       ${info('Semester', d.semester === '2' ? 'II (Genap)' : 'I (Ganjil)')}
+
       ${info('Tahun Pelajaran', d.tahunAjaran || '—')}
     </div>
   </div>
 </div>`
 }
 
+/** Ruang tanda tangan: gambar digital jika ada, else kosong untuk TTD basah. */
+function ruangTtd(url?: string): string {
+  const src = (url || '').trim()
+  if (src) {
+    // Cross-origin image di iframe srcDoc / jendela cetak
+    return `<div class="rpr-ttd-space"><img class="rpr-ttd-img" src="${escapeHtml(src)}" alt="" /></div>`
+  }
+  return `<div class="rpr-ttd-space"></div>`
+}
+
 const tandaTangan = (d: DataRaporSts, jenis: JenisRapor): string => {
   // Tempat dan tanggal berada DI DALAM kolom Wali Kelas (rata tengah, sejajar dengan "Wali Kelas,"),
   // bukan rata kanan halaman. Kolom lain diberi baris kosong setinggi sama agar jabatan tetap sejajar.
-  const kolom = (peran: string, nama: string, nbm = '', tempat = '') =>
-    `<div class="rpr-ttd-col"><div class="rpr-ttd-tempat">${tempat || '&nbsp;'}</div><div>${peran}</div><div class="rpr-ttd-space"></div><div class="rpr-ttd-name">${nama}</div><div class="rpr-ttd-nbm">${nbm}</div></div>`
+  const kolom = (peran: string, nama: string, nbm = '', tempat = '', ttdUrl?: string) =>
+    `<div class="rpr-ttd-col"><div class="rpr-ttd-tempat">${tempat || '&nbsp;'}</div><div>${peran}</div>${ruangTtd(ttdUrl)}<div class="rpr-ttd-name">${nama}</div><div class="rpr-ttd-nbm">${nbm}</div></div>`
   const tempat = `${escapeHtml(d.kota)}, ${escapeHtml(d.tanggal)}`
   const ortu = kolom('Orang Tua/Wali', '(………………………………)')
-  const wali = kolom('Wali Kelas,', escapeHtml(d.waliNama), '', tempat)
+  const wali = kolom('Wali Kelas,', escapeHtml(d.waliNama), '', tempat, d.ttdWaliUrl)
   const kepsek = kolom(
     'Kepala Sekolah,',
     escapeHtml(d.config.namaKepsek || '—'),
     d.config.nbmKepsek ? `NBM. ${escapeHtml(d.config.nbmKepsek)}` : '',
+    '',
+    d.ttdKepsekUrl || d.config.ttdKepsekUrl,
   )
+  // STS (online): Ortu + Wali + Kepsek agar TTD digital guru & kepsek ikut tercetak.
+  // SAS: tetap tiga pihak (Ortu + Kepsek + Wali) — TTD digital tidak dipaksa (cetak offline).
+  if (jenis === 'sts') {
+    return `<div class="rpr-ttd-wrap">
+    <div class="rpr-ttd">${ortu}${wali}${kepsek}</div>
+  </div>`
+  }
   return `<div class="rpr-ttd-wrap">
-    <div class="rpr-ttd ${jenis === 'sts' ? 'dua' : ''}">${jenis === 'sts' ? ortu + wali : ortu + kepsek + wali}</div>
+    <div class="rpr-ttd">${ortu}${kepsek}${wali}</div>
   </div>`
 }
 
@@ -253,7 +277,7 @@ export function buildBodyPrintRapor(d: DataRaporSts, jenis: JenisRapor): string 
   return `<section class="rpr-page">\n${kepala(d, jenis)}\n${isi}\n</section>`
 }
 
-/** Rapor STS (rapor bayangan): hanya nilai dan capaian, tanda tangan orang tua dan wali kelas. */
+/** Rapor STS (rapor bayangan): nilai dan capaian + TTD digital Ortu/Wali/Kepsek. */
 export const buildBodyPrintSts = (d: DataRaporSts) => buildBodyPrintRapor(d, 'sts')
 /** Rapor SAS: form lengkap v1 (dipertahankan). Belum ada halaman yang memakainya. */
 export const buildBodyPrintSas = (d: DataRaporSts) => buildBodyPrintRapor(d, 'sas')
@@ -304,7 +328,8 @@ tr{page-break-inside:avoid;break-inside:avoid}
 .rpr-ttd{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8pt;font-size:10.5pt}
 .rpr-ttd.dua{grid-template-columns:1fr 1fr;gap:80pt;padding:0 20pt}
 .rpr-ttd-col{text-align:center}
-.rpr-ttd-space{height:50pt}
+.rpr-ttd-space{height:50pt;display:flex;align-items:flex-end;justify-content:center}
+.rpr-ttd-img{max-height:48pt;max-width:110pt;object-fit:contain;display:block}
 .rpr-ttd-name{font-weight:bold;border-top:1pt solid #000;padding-top:2pt}
 .rpr-ttd-nbm{font-size:9.5pt;color:#444;min-height:12pt}
 .rpr-bagian-d,.rpr-ttd-wrap,.rpr-ttd,.rpr-footer-group,.rpr-keputusan-wrap{page-break-inside:avoid;break-inside:avoid}

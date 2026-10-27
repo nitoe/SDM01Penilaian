@@ -17,6 +17,8 @@ export interface AppUser {
   nama: string
   /** Gelar pendidikan terakhir, mis. "S.Pd", "S.Pd.I" — untuk penandatanganan rapor. */
   gelar?: string
+  /** URL unduhan gambar tanda tangan digital (Firebase Storage). Rapor STS online. */
+  ttdUrl?: string
   role: UserRole
   /** Kelas yang diampu (untuk guru) — contoh: ["5A", "5B"] */
   kelasAmpu?: string[]
