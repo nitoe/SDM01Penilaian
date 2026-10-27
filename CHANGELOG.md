@@ -358,3 +358,16 @@
 - **Prasyarat**: aktifkan Firebase Storage (production mode; lokasi usahakan `asia-southeast2` bila tersedia), lalu `firebase deploy --only firestore:rules,storage` sebelum hosting.
 - Perlu di-deploy: `firestore:rules`, `storage`, hosting. Tidak ada Cloud Functions baru.
 
+## Belum dirilis — Stempel sekolah, NBM guru, perbaikan load profil & layout TTD
+
+- **Stempel sekolah** (`config/akademik.stempelUrl`, Storage `tanda-tangan/stempel.png`): unggah di Admin → Data Sekolah. Di cetak STS, stempel menumpuk dengan TTD kepsek (TTD di depan / `z-index` lebih tinggi; stempel digeser sedikit ke kiri).
+- **Kompresi**: TTD tetap PNG transparan; **stempel dikomposit ke latar putih** (`kompresStempel`) — mesin cetak sering menghitamkan piksel alpha. Jangan fallback JPEG.
+- **Storage rules**: path guru adalah `tanda-tangan/guru/{uid}.png` — match rules harus `fileName == request.auth.uid + '.png'` (bukan `{uid}` saja, itu menyebabkan 403).
+- **`fetchUserProfile` (`auth.ts`)**: wajib memetakan `ttdUrl` dan `nbm`. Tanpa ini unggah/simpan tampak sukses tetapi hilang setelah refresh.
+- **Rules self-update users**: allowlist `nama`, `gelar`, `nbm`, `ttdUrl`, `updatedAt`.
+- **NBM wali** di rapor STS dari `users.nbm` (isi di Profil Saya); tipe `DataRaporSts.waliNbm` + wiring `raporSts` / `Rapor.tsx` / `penandatangan`.
+- **Layout tanda tangan STS**: tempat+tanggal hanya di kolom Kepala Sekolah (jarak sebelum jabatan); tinggi ruang TTD seragam agar nama sejajar; ukuran TTD ~60pt.
+- **Pratinjau iframe**: `sandbox="allow-same-origin allow-scripts"` — hilangkan peringatan `about:srcdoc` (konten HTML aplikasi sendiri).
+- **Layout Profil**: lebar penuh + grid kartu (bukan `max-w-md` / `HALAMAN_SEMPIT`).
+- Perlu di-deploy: `firestore:rules`, `storage`, hosting. Setelah ubah kompresi stempel, **unggah ulang** file stempel di Storage.
+

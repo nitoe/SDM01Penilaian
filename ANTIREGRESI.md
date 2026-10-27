@@ -264,3 +264,15 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 
 28.8 Marker merge (`<<<<<<<`, `=======`, `>>>>>>>`) tidak boleh masuk ke `main`. Sebelum `npm run build`, pastikan `src/lib/akademik.ts` dan file lain bebas marker (pernah memblokir deploy karena sisi `PLACEHOLDER`).
 
+28.9 `fetchUserProfile` di `src/lib/auth.ts` **wajib** memetakan `ttdUrl` dan `nbm` dari dokumen `users/{uid}`. Menyimpan ke Firestore saja tidak cukup — tanpa mapping ini nilai hilang setelah refresh/login ulang.
+
+28.10 Self-update `users/{uid}` (rules): allowlist field hanya `nama`, `gelar`, `nbm`, `ttdUrl`, `updatedAt`. Menambah field profil yang boleh diubah guru harus mengubah rules lalu `firebase deploy --only firestore:rules`.
+
+28.11 Storage path guru: objek bernama `{uid}.png`. Rules harus membandingkan `fileName == request.auth.uid + '.png'`. Match `guru/{uid}` saja membuat 403 karena `uid` terikat ke string termasuk `.png`.
+
+28.12 Stempel: unggah lewat `kompresStempel` (latar putih, PNG). Jangan mengandalkan transparansi murni di cetak. Setelah mengubah algoritma kompresi, unggah ulang stempel di Data Sekolah.
+
+28.13 Lapisan cetak kepsek (keputusan produk terkini): **TTD di depan stempel** (`z-index` TTD > stempel), stempel digeser sedikit kiri agar tidak menutup tinta. Tinggi ruang TTD seragam antar kolom; tempat+tanggal hanya di kolom Kepala Sekolah.
+
+28.14 Pratinjau rapor memakai `iframe` + `srcDoc` dengan `sandbox` yang mencakup `allow-scripts` (konten dipercaya dari app). Tanpa itu konsol penuh peringatan `about:srcdoc` (bukan kegagalan bisnis, tetapi mengganggu diagnosis).
+
