@@ -240,3 +240,27 @@
 27.4 Peringatan `parseNilaiExcelRows` yang paling penting ("baris siswa tidak cocok", "kolom tidak dikenali") harus tetap berada di dua posisi pertama, karena toast di halaman input hanya menampilkan `peringatan.slice(0, 2)`.
 
 27.5 Sebelum mengubah `nilaiImportExport.ts` atau efek draf, jalankan `npx tsx scripts/cek-nilai-import.mts` (harus mencetak SEMUA UJI LULUS). Uji ini tidak mencakup perilaku React; setelah mengubah efek draf, uji manual: impor template di STS, nilai harus tetap tampil di tabel dan tombol Simpan menampilkan jumlah perubahan.
+
+## §28. Tanda tangan digital Rapor STS (Storage)
+
+28.1 Fitur gambar TTD **hanya untuk Rapor STS** (distribusi online). Jangan memaksa URL gambar ke alur cetak SAS/rapor semester offline kecuali produk meminta ulang.
+
+28.2 Penyimpanan:
+- Kepala sekolah: `config/akademik.ttdKepsekUrl` + objek Storage `tanda-tangan/kepsek.png`.
+- Guru/wali: `users/{uid}.ttdUrl` + objek Storage `tanda-tangan/guru/{uid}.png`.
+Jangan menyimpan blob base64 besar di dokumen Firestore.
+
+28.3 Rules:
+- `users` self-update boleh `ttdUrl` (bersama `nama`, `gelar`, `updatedAt`); jangan memperlonggar field lain (role, penugasan, aktif, …).
+- Storage: baca TTD untuk user login; tulis/hapus kepsek hanya admin; tulis/hapus path guru hanya `request.auth.uid == uid`. Setelah mengubah `storage.rules`, wajib `firebase deploy --only storage`.
+
+28.4 Cetak STS: tiga kolom Ortu | Wali Kelas | Kepala Sekolah. Bila `ttdWaliUrl` / `ttdKepsekUrl` kosong, ruang tetap kosong (TTD basah). Jangan menghapus fallback ruang kosong.
+
+28.5 Nama wali tetap dari `cariWaliKelas` / `cariWaliKelasLengkap`. Bila satu kelas punya lebih dari satu wali terdaftar, TTD digital tidak dipilih otomatis (hanya nama digabung) agar tidak menampilkan tanda tangan orang yang salah.
+
+28.6 Kompresi gambar dilakukan di klien sebelum upload. Jangan menaikkan batas ukuran Storage rules tanpa menyesuaikan kompresi.
+
+28.7 Layout `/profil`: jangan mengembalikan `/profil` ke `HALAMAN_SEMPIT` / `max-w-md` tanpa alasan UX — halaman mengikuti lebar konten biasa (`max-w-6xl`) agar tidak menyisakan ruang kosong kiri-kanan saat zoom.
+
+28.8 Marker merge (`<<<<<<<`, `=======`, `>>>>>>>`) tidak boleh masuk ke `main`. Sebelum `npm run build`, pastikan `src/lib/akademik.ts` dan file lain bebas marker (pernah memblokir deploy karena sisi `PLACEHOLDER`).
+

@@ -336,3 +336,25 @@
 - Diperiksa: `npm run build` lolos; hasil semua skrip `scripts/cek-*` identik sebelum dan sesudah perubahan (kegagalan yang sudah ada tidak diubah: `cek-laporan-cetak.mjs`, `cek-rapor-sas.mjs`, `cek-generate-ai.mjs`, `cek-setup-tp.mjs`, `cek-akun-guru.mjs`).
 - **Catatan**: perbaikan efek diverifikasi lewat replika komponen (pola efek + toast yang sama), bukan lewat peramban pada halaman asli. Setelah deploy, uji: impor template di STS, pastikan nilai tetap tampil di tabel dan tombol Simpan berisi jumlah perubahan.
 - Perlu di-deploy: hosting saja (`npm run deploy`). Tidak ada perubahan `firestore.rules`.
+
+## Belum dirilis — Tanda tangan digital Rapor STS + layout Profil
+
+- **Tujuan**: STS sering dibagikan online; cetak perlu gambar tanda tangan guru (wali) dan kepala sekolah, bukan hanya ruang kosong untuk TTD basah. SAS tetap offline / tidak memaksa gambar.
+- `src/lib/tandaTangan.ts` (baru): kompres gambar di klien (max ~480 px, <280 KB), unggah ke Firebase Storage, simpan download URL di Firestore.
+  - Kepsek: path `tanda-tangan/kepsek.png` → `config/akademik.ttdKepsekUrl` (hanya admin).
+  - Guru: path `tanda-tangan/guru/{uid}.png` → `users/{uid}.ttdUrl` (pemilik akun).
+- `src/types/akademik.ts`: field opsional `ttdKepsekUrl`.
+- `src/types/user.ts`: field opsional `ttdUrl`.
+- `src/lib/akunGuruData.ts`: `dariDokumen` membaca `ttdUrl`.
+- `src/lib/penandatangan.ts`: `cariWaliKelasLengkap` mengembalikan `{ nama, ttdUrl? }` (satu wali → TTD-nya; beberapa wali → nama digabung, TTD kosong).
+- `src/lib/raporHtml.ts` / `raporSts.ts`: `DataRaporSts` menambah `ttdWaliUrl` / `ttdKepsekUrl`; blok tanda tangan STS menjadi **tiga kolom** (Ortu | Wali Kelas | Kepala Sekolah) dengan `<img class="rpr-ttd-img">` bila URL ada; kosong = ruang TTD basah seperti sebelumnya.
+- `src/pages/ProfilSaya.tsx`: UI unggah/ganti/hapus TTD sendiri (staf).
+- `src/pages/admin/TahunAjaran.tsx`: UI unggah/ganti/hapus TTD kepala sekolah di bagian Data Sekolah.
+- `src/pages/akademik/Rapor.tsx`: memuat `ttdWaliUrl` lewat `cariWaliKelasLengkap` dan meneruskannya ke `muatDataRaporSts` / cetak kelas.
+- `firestore.rules`: self-update `users/{uid}` boleh menyentuh `ttdUrl` (selain `nama`, `gelar`, `updatedAt`).
+- `storage.rules` (baru) + `firebase.json`: Storage production; baca TTD untuk user login; tulis kepsek admin; tulis guru hanya path sendiri. CSP Report-Only: `img-src` menambah `https://*.firebasestorage.app` dan `https://firebasestorage.googleapis.com`.
+- **Layout Profil**: `Layout.tsx` mengosongkan `HALAMAN_SEMPIT` (sebelumnya `/profil` → `max-w-xl`); `ProfilSaya` memakai `space-y-5` + grid `lg:grid-cols-2` agar tidak kolom sempit di tengah layar.
+- **Perbaikan build**: `src/lib/akademik.ts` dan `src/lib/aksesAkademik.ts` membersihkan marker merge conflict (`<<<<<<<` / `PLACEHOLDER`) yang sempat ter-commit dan memblokir `tsc`.
+- **Prasyarat**: aktifkan Firebase Storage (production mode; lokasi usahakan `asia-southeast2` bila tersedia), lalu `firebase deploy --only firestore:rules,storage` sebelum hosting.
+- Perlu di-deploy: `firestore:rules`, `storage`, hosting. Tidak ada Cloud Functions baru.
+
