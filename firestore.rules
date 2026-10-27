@@ -1,3 +1,964 @@
 rules_version = '2';
 
-// TEMP - will be replaced
+// ============================================================================
+// Firestore Security Rules — SDM 01 Kukusan (sdm01kukusan-2e735)
+//
+// Prinsip:
+//   1. Default TOLAK (blok paling bawah). Koleksi baru wajib didaftarkan di sini.
+//   2. users/{uid}.role adalah SATU-SATUNYA sumber role. Role TIDAK BOLEH
+//      bisa di-set oleh pemiliknya sendiri (kecuali pendaftaran orang tua:
+//      selalu 'orangtua' + 'pending', disetujui admin).
+//   3. Data siswa itu data pribadi anak. Orang tua hanya boleh GET anaknya
+//      sendiri (anakIds), TIDAK boleh list.
+//
+// Gabungan: aturan aplikasi Penilaian
+//   + koleksi sarpras_* (aplikasi Sarpras, repo nitoe/sarpras)
+//     termasuk sarpras_sumber, sarpras_pemeliharaan, sarpras_usulan
+//   + koleksi perpus_* (aplikasi Perpustakaan, termasuk fase 2/3 + login/jurnal siswa)
+// Bagian Sarpras/Perpustakaan ditandai komentar masing-masing.
+//
+// Catatan: file ini baru berlaku setelah `npm run deploy:rules`. Uji dulu
+// dengan akun admin, guru Tahsin-Tahfizh, dan orang tua sebelum deploy.
+// Lihat ANTIREGRESI.md bagian rules sebelum mengubah apa pun di sini.
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function myProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function myRole() {
+      return myProfile().role;
+    }
+
+    // Field `aktif` tidak ada atau true = boleh dipakai. false = akun dimatikan admin.
+    // Dokumen lama tanpa field ini tetap aktif.
+    function akunAktif() {
+      return isLoggedIn() && (
+        !('aktif' in myProfile()) || myProfile().aktif == true
+      );
+    }
+
+    function isAdmin() {
+      return akunAktif() && myRole() == 'admin';
+    }
+
+    // Semua jenis guru (+ admin). Dipakai untuk BACA roster siswa.
+    function isGuru() {
+      return akunAktif() && myRole() in [
+        'admin', 'guru', 'guru_tahsin_tahfizh', 'guru_akademik'
+      ];
+    }
+
+    function isGuruTahsin() {
+      return akunAktif() && myRole() in ['admin', 'guru', 'guru_tahsin_tahfizh'];
+    }
+
+    function isGuruAkademik() {
+      return akunAktif() && myRole() in ['guru_akademik', 'guru'];
+    }
+
+    // ---- Sarpras: peran ------------------------------------------------------
+    // Sumber peran: admin Penilaian = admin sarpras. Selain itu field users/{uid}.peranSarpras
+    // ('admin' | 'pimpinan' | 'guru' | 'petugas'), yang hanya bisa diubah admin (aturan `users`
+    // melarang pemilik akun mengubahnya). Bila kosong, semua jenis guru dianggap 'guru'.
+    // Peran lain (mis. orangtua) tanpa peranSarpras = tidak punya akses.
+    // Harus sama dengan peranDari() di src/lib/peran.ts repo sarpras.
+    function peranSarpras() {
+      return isAdmin() ? 'admin'
+        : myProfile().get('peranSarpras', isGuru() ? 'guru' : '');
+    }
+
+    function sarprasAdmin() {
+      return akunAktif() && peranSarpras() == 'admin';
+    }
+
+    function sarprasStaf() {
+      return akunAktif() && peranSarpras() in ['admin', 'pimpinan', 'guru', 'petugas'];
+    }
+
+    // ---- Perpustakaan: peran -------------------------------------------------
+    // Sumber peran: admin Penilaian = admin perpustakaan. Selain itu field
+    // users/{uid}.peranPerpus ('admin' | 'pustakawan' | 'pimpinan' | 'guru'), yang hanya bisa
+    // diubah admin (aturan `users` melarang pemilik akun mengubahnya). Bila kosong, semua
+    // jenis guru dianggap 'guru'. Peran lain tanpa peranPerpus = tidak punya akses.
+    // Memakai .get('role', '') (bukan myRole()) supaya akun tanpa field `role`, mis. petugas TU
+    // yang hanya diberi peranPerpus, tidak membuat aturan error.
+    // Harus sama dengan peranDari() di src/lib/peran.ts repo perpustakaan.
+    function peranPerpus() {
+      return myProfile().get('role', '') == 'admin' ? 'admin'
+        : myProfile().get('peranPerpus',
+            myProfile().get('role', '') in ['guru', 'guru_tahsin_tahfizh', 'guru_akademik'] ? 'guru' : '');
+    }
+
+    function perpusAdmin() {
+      return akunAktif() && peranPerpus() == 'admin';
+    }
+
+    // Admin dan pustakawan: mengelola koleksi dan mencatat sirkulasi.
+    function perpusPustakawan() {
+      return akunAktif() && peranPerpus() in ['admin', 'pustakawan'];
+    }
+
+    function perpusStaf() {
+      return akunAktif() && peranPerpus() in ['admin', 'pustakawan', 'pimpinan', 'guru'];
+    }
+
+    function perpusBukuSah(d) {
+      return d.judul is string && d.judul.size() > 0 && d.judul.size() <= 300
+        && d.jenis in ['cetak', 'digital', 'keduanya'];
+    }
+
+    // Status eksemplar sebelum dan sesudah permintaan (batch) dijalankan.
+    function perpusEksemplarSebelum(kode) {
+      return get(/databases/$(database)/documents/perpus_eksemplar/$(kode)).data;
+    }
+    function perpusEksemplarSesudah(kode) {
+      return getAfter(/databases/$(database)/documents/perpus_eksemplar/$(kode)).data;
+    }
+
+    function isApprovedParent() {
+      return akunAktif()
+        && myRole() == 'orangtua'
+        && myProfile().status == 'approved';
+    }
+
+    // Orang tua hanya boleh melihat anaknya sendiri (siswaId = NIS = ID dokumen siswa).
+    function anakSaya(siswaId) {
+      return isApprovedParent() && siswaId in myProfile().anakIds;
+    }
+
+    // TULIS Tahsin-Tahfizh: hanya guru Tahsin-Tahfizh yang kelasnya ada di kelasAmpu.
+    // Admin sengaja TIDAK termasuk: administrator hanya memantau (ANTIREGRESI §17).
+    function bolehKelas(kelas) {
+      return akunAktif()
+        && myRole() in ['guru', 'guru_tahsin_tahfizh']
+        && kelas in myProfile().kelasAmpu;
+    }
+
+    // BACA Tahsin-Tahfizh: admin (pantauan) atau guru pemilik kelas.
+    function lihatKelas(kelas) {
+      return isAdmin() || bolehKelas(kelas);
+    }
+
+
+    // ---- Akademik: akses per kelas+mapel & wali kelas -----------------------
+    // Rules tidak bisa menelusuri array of map, jadi dibaca dari field DATAR yang
+    // diturunkan dari `penugasan` (lib/penugasan.ts → turunkanFieldRules()):
+    //   penugasanKelasMapel = ["4A::Matematika", ...]   penugasanKelas = ["4A", ...]
+    //   waliKelas           = ["4A", ...]
+    // Field ini WAJIB sinkron dengan `penugasan` (lihat ANTIREGRESI §6).
+    // Guru kelas menulis nilai setiap mapel di kelas yang diwalikan.
+    // Guru bidang studi hanya pasangan kelas::mapel pada penugasannya.
+    // Admin boleh membaca, tidak boleh menulis (UI juga hanya mode lihat).
+    function daftarAda(field) {
+      return field in myProfile() && myProfile()[field] is list;
+    }
+
+    function tulisMapelKelas(mapel, kelas) {
+      return akunAktif()
+        && myRole() in ['guru_akademik', 'guru']
+        && (
+          (daftarAda('penugasanKelasMapel') && (kelas + '::' + mapel) in myProfile().penugasanKelasMapel)
+          || (daftarAda('waliKelas') && kelas in myProfile().waliKelas)
+        );
+    }
+
+    function lihatMapelKelas(mapel, kelas) {
+      return isAdmin() || tulisMapelKelas(mapel, kelas);
+    }
+
+    function bolehWaliKelas(kelas) {
+      return akunAktif() && (
+        myRole() == 'admin' ||
+        (myRole() in ['guru_akademik', 'guru'] && kelas in myProfile().waliKelas)
+      );
+    }
+
+    // Wali kelas sungguhan (tanpa admin). Untuk data yang ditulis guru, bukan master data.
+    function waliKelasSendiri(kelas) {
+      return akunAktif()
+        && myRole() in ['guru_akademik', 'guru']
+        && daftarAda('waliKelas')
+        && kelas in myProfile().waliKelas;
+    }
+
+
+    // UID pemanggil terdaftar sebagai pengampu di master ekstrakurikuler.
+    function isPengampuEkskul(ekskulId) {
+      return isGuru()
+        && ekskulId is string
+        && ekskulId.size() > 0
+        && ekskulId.size() <= 80
+        && exists(/databases/$(database)/documents/ekstrakurikuler/$(ekskulId))
+        && request.auth.uid in get(/databases/$(database)/documents/ekstrakurikuler/$(ekskulId)).data.get('pengampuUids', []);
+    }
+
+    // ---- users/{uid} -----------------------------------------------------
+    // Guru/admin dibuat admin (Console atau halaman admin). Pendaftaran mandiri
+    // HANYA sebagai orang tua berstatus pending, dengan daftar field terbatas.
+    // Pemilik akun hanya boleh mengubah nama (bukan role/status/aktif/kelasAmpu/
+    // penugasan/anakIds dan field turunan lain yang dipakai rules), dan hanya
+    // selama akunnya masih aktif.
+    match /users/{uid} {
+      allow get: if isLoggedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isAdmin()
+        || (isLoggedIn() && request.auth.uid == uid
+            && request.resource.data.status == 'pending'
+            && (
+              // Pendaftaran orang tua
+              (request.resource.data.role == 'orangtua'
+               && request.resource.data.keys().hasOnly(
+                    ['email', 'nama', 'role', 'status', 'anakIds', 'createdAt', 'updatedAt']))
+              ||
+              // Pendaftaran mandiri guru: boleh isi peran, kelas, penugasan (status tetap pending)
+              (request.resource.data.role in ['guru', 'guru_tahsin_tahfizh', 'guru_akademik']
+               && request.resource.data.keys().hasOnly(
+                    ['email', 'nama', 'gelar', 'role', 'status',
+                     'kelasAmpu', 'penugasan', 'waliKelas',
+                     'penugasanKelas', 'penugasanKelasMapel',
+                     'aktif', 'createdAt', 'updatedAt']))
+            ));
+      allow update: if isAdmin()
+        || (akunAktif() && request.auth.uid == uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['nama', 'gelar', 'nbm', 'ttdUrl', 'updatedAt']));
+      allow delete: if isAdmin();
+    }
+
+    // ---- siswa/{id} ------------------------------------------------------
+    // Data DASAR saja (nama, NIPD/NIS, NISN, kelas, jenjang, aktif, tamatIqro, tempat/tanggal lahir).
+    // Biodata sensitif ada di identitas_siswa. Guru boleh baca roster. Tulis khusus admin, kecuali
+    // guru Tahsin-Tahfizh yang boleh mengubah HANYA field tamatIqro.
+    match /siswa/{id} {
+      // perpusPustakawan: baca data dasar (nama, NIS, kelas) untuk kartu anggota & peminjaman.
+      // `true` pada get/list: login siswa perpustakaan (dropdown kelas/nama tanpa Auth).
+      // Hanya data dasar di koleksi ini; biodata sensitif tetap di identitas_siswa.
+      allow get: if isGuru() || perpusPustakawan() || anakSaya(id) || true;
+      allow list: if isGuru() || perpusPustakawan() || true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isGuruTahsin()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['tamatIqro']));
+    }
+
+    // ---- identitas_siswa/{id} -----------------------------------------------
+    // Biodata sensitif (alamat, HP, email, data orang tua, sekolah asal, berat/tinggi badan).
+    // ID dokumen = ID siswa. Hanya admin dan wali kelas siswa tersebut (v2 antiregresi §12).
+    // SENGAJA tidak ada akses guru lain maupun orang tua. Jangan memindahkan field ini kembali ke `siswa`.
+    match /identitas_siswa/{id} {
+      allow read, write: if isAdmin()
+        || bolehWaliKelas(get(/databases/$(database)/documents/siswa/$(id)).data.kelas);
+    }
+
+    // ---- Tahsin-Tahfizh --------------------------------------------------
+    // Entri baru harus mencantumkan createdBy = uid pembuatnya dan kelas yang memang diampu.
+    // Sesuai v2 antiregresi §5: hanya PEMBUATNYA yang boleh mengubah (dan hanya field sederhana: jenis, status
+    // hafalan, catatan; materi dan Baca & Tandai terkunci), pembuatnya atau admin boleh menghapus.
+    //
+    // Pengecualian SEMENTARA migrasi penilaian-v2 (sumber == 'impor-v2'):
+    // admin boleh create agar data historis bisa diimpor dari Excel. Setelah semua kelas
+    // selesai migrasi, hapus cabang isAdmin() + sumber == 'impor-v2' di allow create
+    // (kembalikan ke bolehKelas saja — ANTIREGRESI §17).
+    match /setoran/{id} {
+      allow get, list: if lihatKelas(resource.data.kelas)
+                       || anakSaya(resource.data.siswaId);
+      allow create: if (bolehKelas(request.resource.data.kelas)
+                        && request.resource.data.createdBy == request.auth.uid)
+                    || (isAdmin()
+                        && request.resource.data.createdBy == request.auth.uid
+                        && request.resource.data.get('sumber', '') == 'impor-v2');
+      allow update: if akunAktif()
+                    && resource.data.createdBy == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['jenis', 'statusHafalan', 'catatan']);
+      // Admin tidak menghapus catatan guru (ANTIREGRESI §17).
+      allow delete: if akunAktif()
+                    && resource.data.createdBy == request.auth.uid;
+    }
+
+    match /menulis_log/{id} {
+      allow get, list: if lihatKelas(resource.data.kelas)
+                       || anakSaya(resource.data.siswaId);
+      allow create: if (bolehKelas(request.resource.data.kelas)
+                        && request.resource.data.createdBy == request.auth.uid)
+                    || (isAdmin()
+                        && request.resource.data.createdBy == request.auth.uid
+                        && request.resource.data.get('sumber', '') == 'impor-v2');
+      allow update: if akunAktif()
+                    && resource.data.createdBy == request.auth.uid
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                         .hasAny(['siswaId', 'kelas', 'createdBy', 'createdAt']);
+      // Admin tidak menghapus catatan guru (ANTIREGRESI §17).
+      allow delete: if akunAktif()
+                    && resource.data.createdBy == request.auth.uid;
+    }
+
+    // ID dokumen = kode kelas (mis. '3A').
+    // ID dokumen: "{kelas}" (legacy) atau "{kelas}_{tahun}-{semester}" (multi-periode).
+    // Otorisasi memakai field data.kelas, bukan path id.
+    match /target_hafalan/{id} {
+      allow read: if isGuru();
+      allow create: if bolehKelas(request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(['kelas', 'tahunAjaran', 'semester']);
+      allow update: if bolehKelas(resource.data.kelas);
+      allow delete: if bolehKelas(resource.data.kelas);
+    }
+
+    // Notifikasi dan laporan guru ke admin: laporan tugas, laporan kendala, mutasi siswa masuk/keluar.
+    // Guru (dan admin) membuat; admin saja yang mengubah status/catatan; tidak ada hapus (ANTIREGRESI §19).
+    match /notifikasi/{id} {
+      allow read: if isAdmin()
+                  || (akunAktif() && resource.data.dariUid == request.auth.uid);
+      allow create: if isGuru()
+                    && request.resource.data.dariUid == request.auth.uid
+                    && request.resource.data.status == 'baru'
+                    && request.resource.data.jenis in ['laporan_tugas', 'laporan_kendala', 'mutasi_siswa']
+                    && request.resource.data.keys().hasOnly(
+                         ['jenis', 'judul', 'isi', 'kelas', 'mutasi', 'status', 'dariUid', 'dariNama', 'createdAt'])
+                    && request.resource.data.keys().hasAll(
+                         ['jenis', 'judul', 'isi', 'status', 'dariUid', 'dariNama', 'createdAt'])
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 120
+                    && request.resource.data.isi is string
+                    && request.resource.data.isi.size() > 0
+                    && request.resource.data.isi.size() <= 2000;
+      allow update: if isAdmin()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'catatanAdmin', 'updatedAt'])
+                    && request.resource.data.status in ['baru', 'diproses', 'selesai'];
+      allow delete: if false;
+    }
+
+    // ---- Data pelengkap Rapor SAS (ANTIREGRESI §23) ------------------------------
+    // Diisi WALI KELAS kelas itu (admin hanya membaca/mencetak, §17). Tidak ada hapus kecuali ekskul siswa.
+    match /absensi_rapor/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasOnly(
+                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'sakit', 'izin', 'tanpaKeterangan',
+                          'catatanWali', 'keputusan', 'updatedAt'])
+                    && request.resource.data.keputusan in ['Belum diputuskan', 'Naik Kelas', 'Tinggal Kelas']
+                    && request.resource.data.sakit is int && request.resource.data.sakit >= 0 && request.resource.data.sakit <= 366
+                    && request.resource.data.izin is int && request.resource.data.izin >= 0 && request.resource.data.izin <= 366
+                    && request.resource.data.tanpaKeterangan is int && request.resource.data.tanpaKeterangan >= 0
+                    && request.resource.data.tanpaKeterangan <= 366
+                    && request.resource.data.catatanWali is string && request.resource.data.catatanWali.size() <= 1000;
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.siswaId == resource.data.siswaId
+                    && request.resource.data.keys().hasOnly(
+                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'sakit', 'izin', 'tanpaKeterangan',
+                          'catatanWali', 'keputusan', 'updatedAt'])
+                    && request.resource.data.keputusan in ['Belum diputuskan', 'Naik Kelas', 'Tinggal Kelas']
+                    && request.resource.data.sakit is int && request.resource.data.sakit >= 0 && request.resource.data.sakit <= 366
+                    && request.resource.data.izin is int && request.resource.data.izin >= 0 && request.resource.data.izin <= 366
+                    && request.resource.data.tanpaKeterangan is int && request.resource.data.tanpaKeterangan >= 0
+                    && request.resource.data.tanpaKeterangan <= 366
+                    && request.resource.data.catatanWali is string && request.resource.data.catatanWali.size() <= 1000;
+      allow delete: if false;
+    }
+
+    match /kokurikuler_rapor/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasOnly(
+                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'deskripsi', 'updatedAt'])
+                    && request.resource.data.deskripsi is string && request.resource.data.deskripsi.size() <= 2000;
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.siswaId == resource.data.siswaId
+                    && request.resource.data.keys().hasOnly(
+                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'deskripsi', 'updatedAt'])
+                    && request.resource.data.deskripsi is string && request.resource.data.deskripsi.size() <= 2000;
+      allow delete: if false;
+    }
+
+    // Master kegiatan ekstrakurikuler: admin mengelola; semua guru membaca.
+    // Field lanjutan: pengampuUids[], aktivitas[], deskripsiCapaian[] (template C/B/A).
+    match /ekstrakurikuler/{id} {
+      allow read: if isGuru();
+      allow write: if isAdmin();
+    }
+
+    // Pengajuan guru menjadi pengampu (satu dokumen per ekskul × uid).
+    // get: isGuru boleh (termasuk dokumen belum ada — resource null tidak dibaca).
+    // create: pengajuan pertama. update: admin setujui/tolak ATAU guru ajukan ulang setelah ditolak.
+    match /ekstrakurikuler_ajukan/{id} {
+      allow get: if isAdmin() || isGuru();
+      allow list: if isAdmin()
+                  || (isGuru() && resource.data.uid == request.auth.uid);
+      allow create: if isGuru()
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.keys().hasAll(
+                         ['ekskulId', 'ekskulNama', 'uid', 'namaGuru', 'status'])
+                    && request.resource.data.ekskulId is string
+                    && request.resource.data.ekskulId.size() > 0
+                    && request.resource.data.ekskulId.size() <= 80
+                    && request.resource.data.namaGuru is string
+                    && request.resource.data.namaGuru.size() <= 120;
+      allow update: if (isAdmin()
+                        && request.resource.data.status in ['pending', 'disetujui', 'ditolak'])
+                    || (isGuru()
+                        && resource.data.uid == request.auth.uid
+                        && request.resource.data.uid == request.auth.uid
+                        && request.resource.data.status == 'pending'
+                        && resource.data.status in ['pending', 'ditolak']
+                        && request.resource.data.ekskulId == resource.data.ekskulId);
+      allow delete: if isAdmin()
+                    || (isGuru()
+                        && resource.data.uid == request.auth.uid
+                        && resource.data.status == 'pending');
+    }
+
+    // Nilai ekskul per siswa: wali kelas ATAU pengampu kegiatan itu.
+    // Field opsional aktivitas / diisiOleh (kompatibel data lama tanpa field ini).
+    // hasOnly sengaja tidak dipakai agar field opsional tidak menolak tulis.
+    match /ekstrakurikuler_siswa/{id} {
+      allow read: if isAdmin()
+                  || waliKelasSendiri(resource.data.kelas)
+                  || isPengampuEkskul(resource.data.ekskulId);
+      allow create: if (waliKelasSendiri(request.resource.data.kelas)
+                        || isPengampuEkskul(request.resource.data.ekskulId))
+                    && request.resource.data.keys().hasAll(
+                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'ekskulId', 'nama', 'level', 'deskripsi'])
+                    && request.resource.data.level in [1, 2, 3, 4]
+                    && request.resource.data.deskripsi is string
+                    && request.resource.data.deskripsi.size() <= 500;
+      allow update: if (waliKelasSendiri(resource.data.kelas)
+                        || isPengampuEkskul(resource.data.ekskulId))
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.siswaId == resource.data.siswaId
+                    && request.resource.data.ekskulId == resource.data.ekskulId
+                    && request.resource.data.level in [1, 2, 3, 4]
+                    && request.resource.data.deskripsi is string
+                    && request.resource.data.deskripsi.size() <= 500;
+      allow delete: if waliKelasSendiri(resource.data.kelas)
+                    || isPengampuEkskul(resource.data.ekskulId);
+    }
+
+
+    // ---- Kokurikuler: DPL, Proyek STEM, nilai DPL (`kokurikuler`), 7KAIH ----
+    // Wali kelas menulis; admin membaca. Tidak menyentuh nilai_tp / SLM.
+
+    match /dpl/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(['kelas', 'tingkatan', 'nama', 'urutan', 'aktif', 'levelDeskripsi'])
+                    && request.resource.data.nama is string
+                    && request.resource.data.nama.size() > 0
+                    && request.resource.data.nama.size() <= 80;
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas;
+      allow delete: if waliKelasSendiri(resource.data.kelas);
+    }
+
+    match /proyek_stem/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['kelas', 'tingkatan', 'semester', 'tahunAjaran', 'judul', 'mapelTerlibat', 'dplId'])
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 200;
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas;
+      allow delete: if waliKelasSendiri(resource.data.kelas);
+    }
+
+    match /kokurikuler/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['siswaId', 'dplId', 'kelas', 'semester', 'tahunAjaran', 'proyekStemId', 'level'])
+                    && request.resource.data.level in [1, 2, 3, 4]
+                    && (!('deskripsi' in request.resource.data)
+                        || (request.resource.data.deskripsi is string
+                            && request.resource.data.deskripsi.size() <= 500));
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.siswaId == resource.data.siswaId
+                    && request.resource.data.proyekStemId == resource.data.proyekStemId
+                    && request.resource.data.level in [1, 2, 3, 4];
+      allow delete: if waliKelasSendiri(resource.data.kelas);
+    }
+
+    
+    match /nilai_proyek_stem/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['proyekStemId', 'siswaId', 'kelas', 'semester', 'tahunAjaran', 'nilai']);
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.siswaId == resource.data.siswaId
+                    && request.resource.data.proyekStemId == resource.data.proyekStemId;
+      allow delete: if waliKelasSendiri(resource.data.kelas);
+    }
+
+match /g7kaih/{id} {
+      allow read: if isAdmin() || waliKelasSendiri(resource.data.kelas);
+      allow create: if waliKelasSendiri(request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['siswaId', 'kelas', 'semester', 'tahunAjaran', 'kebiasaan']);
+      allow update: if waliKelasSendiri(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.siswaId == resource.data.siswaId;
+      allow delete: if waliKelasSendiri(resource.data.kelas);
+    }
+
+    match /kktp_tahsin_tahfizh/{jenjang} {
+      allow read: if isGuru();
+      allow write: if isAdmin();
+    }
+
+    // ---- Akademik (SEMENTARA) ---------------------------------------------
+    // Modul Akademik belum dimigrasi. Dua blok ini placeholder yang mengikuti
+    // keputusan v2 (admin TIDAK menulis TP/KKTP). Saat migrasi Akademik, ganti
+    // dengan rules per-kelas/per-mapel dari v2 (penugasanKelasMapel, waliKelas).
+    match /mapel/{nama} {
+      allow read: if isGuru();
+      allow write: if isAdmin();
+    }
+
+    match /tp_kktp/{id} {
+      allow read: if isGuru();
+      allow write: if isGuruAkademik();
+    }
+
+    // Semester & tahun ajaran aktif (+ profil sekolah untuk rapor). Satu dokumen.
+    match /config/akademik {
+      allow read: if isGuru();
+      allow write: if isAdmin();
+    }
+
+    // Nilai SLM: satu dokumen per (siswa x TP x semester x tahun ajaran).
+    // Query klien WAJIB menyertakan where mapel DAN kelas (ANTIREGRESI §1 / v2 §1.1).
+    match /nilai_tp/{id} {
+      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      // Guru yang mengampu mapel×kelas boleh menghapus nilai (mis. dikosongkan di input).
+      // Admin tetap tidak boleh menulis/hapus (ANTIREGRESI §17).
+      allow delete: if tulisMapelKelas(resource.data.mapel, resource.data.kelas);
+    }
+
+    // Cakupan TP STS/SAS, lalu nilainya. Admin membaca, guru kelas atau bidang studi menulis.
+    match /asesmen_cakupan/{id} {
+      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas)
+                     && request.resource.data.jenis in ['sts', 'sas'];
+      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas)
+                     && request.resource.data.jenis == resource.data.jenis;
+      allow delete: if false; // admin hanya membaca (ANTIREGRESI §17)
+    }
+
+    match /nilai_sts/{id} {
+      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow delete: if tulisMapelKelas(resource.data.mapel, resource.data.kelas);
+    }
+
+    match /nilai_sas/{id} {
+      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow create: if isLoggedIn()
+                     && request.resource.data.createdBy == request.auth.uid
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                     && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
+      allow delete: if tulisMapelKelas(resource.data.mapel, resource.data.kelas);
+    }
+
+    // Pilihan disiplin Seni Budaya per kelas — hanya wali kelas yang menulis.
+    // ID dokumen = kode kelas (mis. "5A").
+    match /seni_kelas/{kelas} {
+      allow read: if isGuru();
+      allow write: if waliKelasSendiri(kelas);
+    }
+
+
+    // ---- Periode akademik (tahun ajaran + semester) -------------------------
+    // Admin mengelola, guru membaca (untuk memilih konteks saat login).
+    // Baca periode aktif boleh tanpa login (untuk pilihan di form login).
+    // Guru/admin tetap bisa baca semua (termasuk nonaktif) via isGuru().
+    match /periode_akademik/{id} {
+      allow read: if isGuru() || resource.data.aktif == true;
+      allow write: if isAdmin();
+    }
+
+    // ---- Sarpras (koleksi berawalan sarpras_) --------------------------------
+
+    // Master data: semua staf membaca, admin mengelola.
+    match /sarpras_ruang/{id} {
+      allow read: if sarprasStaf();
+      allow write: if sarprasAdmin();
+    }
+
+    match /sarpras_kategori/{id} {
+      allow read: if sarprasStaf();
+      allow write: if sarprasAdmin();
+    }
+
+    match /sarpras_sumber/{id} {
+      allow read: if sarprasStaf();
+      allow write: if sarprasAdmin();
+    }
+
+    match /sarpras_aset/{id} {
+      allow read: if sarprasStaf();
+      allow write: if sarprasAdmin();
+    }
+
+    // Foto terkompres (string base64). Staf boleh menambah foto laporannya; tidak ada ubah.
+    match /sarpras_foto/{id} {
+      allow read: if sarprasStaf();
+      allow create: if sarprasStaf()
+                    && request.resource.data.keys().hasOnly(['data', 'createdBy', 'createdAt'])
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.data is string
+                    && request.resource.data.data.size() <= 300000;
+      allow update: if false;
+      allow delete: if sarprasAdmin();
+    }
+
+    // Laporan kerusakan: staf membuat (status awal 'baru'); admin mengelola;
+    // petugas hanya mengubah status dan penanganan. Tidak ada hapus.
+    match /sarpras_kerusakan/{id} {
+      allow read: if sarprasStaf();
+      allow create: if sarprasStaf()
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.status == 'baru';
+      allow update: if sarprasAdmin()
+                    || (akunAktif() && peranSarpras() == 'petugas'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'penanganan', 'biaya', 'tanggalSelesai', 'updatedAt'])
+                        && request.resource.data.status in ['dicek', 'dalam_perbaikan', 'selesai']);
+      allow delete: if false;
+    }
+
+    // Peminjaman: staf mengajukan atas namanya sendiri (status awal 'diajukan');
+    // admin memutuskan; peminjam boleh membatalkan pengajuan sendiri;
+    // peminjam alat yang disetujui boleh mengajukan pengembalian (status 'pengembalian').
+    match /sarpras_peminjaman/{id} {
+      allow read: if sarprasStaf();
+      allow create: if sarprasStaf()
+                    && request.resource.data.peminjamUid == request.auth.uid
+                    && request.resource.data.status == 'diajukan';
+      allow update: if sarprasAdmin()
+                    || (akunAktif() && resource.data.peminjamUid == request.auth.uid
+                        && resource.data.status == 'diajukan'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'updatedAt'])
+                        && request.resource.data.status == 'dibatalkan')
+                    || (akunAktif() && resource.data.peminjamUid == request.auth.uid
+                        && resource.data.status == 'disetujui'
+                        && resource.data.get('jenis', '') == 'alat'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'catatanPengembalian', 'updatedAt'])
+                        && request.resource.data.status == 'pengembalian');
+      allow delete: if false;
+    }
+
+    // Jadwal pemeliharaan rutin (fase 2): admin kelola penuh;
+    // petugas boleh menandai sudah dikerjakan (terakhirDilakukan, catatan, jatuhTempo, petugas*).
+    match /sarpras_pemeliharaan/{id} {
+      allow read: if sarprasStaf();
+      allow create: if sarprasAdmin()
+                    && request.resource.data.keys().hasAll(['jenis', 'kegiatan', 'periode', 'jatuhTempo']);
+      allow update: if sarprasAdmin()
+                    || (akunAktif() && peranSarpras() == 'petugas'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['terakhirDilakukan', 'catatan', 'jatuhTempo',
+                                       'petugasUid', 'petugasNama', 'updatedAt']));
+      allow delete: if sarprasAdmin();
+    }
+
+    // Usulan pengadaan/perbaikan (fase 2): staf mengajukan atas namanya;
+    // admin mengelola; pimpinan boleh setujui/tolak; pengusul boleh batalkan saat diajukan.
+    match /sarpras_usulan/{id} {
+      allow read: if sarprasStaf();
+      allow create: if sarprasStaf()
+                    && request.resource.data.pengusulUid == request.auth.uid
+                    && request.resource.data.status == 'diajukan';
+      allow update: if sarprasAdmin()
+                    || (akunAktif() && peranSarpras() == 'pimpinan'
+                        && resource.data.status == 'diajukan'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'catatanAdmin', 'updatedAt'])
+                        && request.resource.data.status in ['disetujui', 'ditolak'])
+                    || (akunAktif() && resource.data.pengusulUid == request.auth.uid
+                        && resource.data.status == 'diajukan'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'updatedAt'])
+                        && request.resource.data.status == 'dibatalkan');
+      allow delete: if false;
+    }
+
+    // Log perubahan: staf menulis atas namanya, hanya admin membaca, tidak bisa diubah.
+    match /sarpras_log/{id} {
+      allow read: if sarprasAdmin();
+      allow create: if sarprasStaf() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ---- Perpustakaan (koleksi berawalan perpus_) ----------------------------
+
+    // Kategori: semua staf membaca, admin dan pustakawan mengelola.
+    match /perpus_kategori/{id} {
+      allow read: if perpusStaf();
+      allow create, update: if perpusPustakawan();
+      allow delete: if perpusAdmin();
+    }
+
+    // Katalog buku. Staf membaca; buku bertanda `publik` boleh dibaca siapa saja (katalog publik,
+    // fase 2 — kueri wajib memakai where('publik','==',true)). Bawaan: tidak publik.
+    match /perpus_buku/{id} {
+      allow read: if perpusStaf() || resource.data.get('publik', false) == true;
+      allow create, update: if perpusPustakawan() && perpusBukuSah(request.resource.data);
+      allow delete: if perpusAdmin();
+    }
+
+    // Eksemplar: ID dokumen = kode di label (mis. PRP-000123). Status berubah lewat sirkulasi.
+    match /perpus_eksemplar/{id} {
+      allow read: if perpusStaf();
+      allow create: if perpusPustakawan()
+                    && request.resource.data.status == 'tersedia'
+                    && request.resource.data.bukuId is string;
+      allow update: if perpusPustakawan()
+                    && request.resource.data.bukuId == resource.data.bukuId
+                    && request.resource.data.status in ['tersedia', 'dipinjam', 'hilang', 'dihapus'];
+      allow delete: if perpusAdmin();
+    }
+
+    // Anggota non-siswa (guru, karyawan, kelas). Siswa dikenali dari koleksi `siswa` (ID = NIS).
+    match /perpus_anggota/{id} {
+      allow read: if perpusStaf();
+      allow create, update: if perpusPustakawan();
+      allow delete: if perpusAdmin();
+    }
+
+    // Peminjaman: hanya admin/pustakawan. Membuat peminjaman WAJIB satu batch dengan perubahan
+    // status eksemplar tersedia -> dipinjam; mengembalikan WAJIB satu batch dengan eksemplar
+    // kembali tersedia (atau hilang). Tidak ada hapus (riwayat tetap).
+    match /perpus_peminjaman/{id} {
+      // Staf penuh. Baca dokumen peminjam siswa: area siswa "Pinjaman saya" (tanpa Auth; sandi=NISN).
+      allow read: if perpusStaf()
+                  || resource.data.peminjam.tipe == 'siswa';
+      allow create: if perpusPustakawan()
+                    && request.resource.data.status == 'dipinjam'
+                    && request.resource.data.petugasUid == request.auth.uid
+                    && request.resource.data.peminjam.tipe in ['siswa', 'anggota']
+                    && perpusEksemplarSebelum(request.resource.data.eksemplarId).status == 'tersedia'
+                    && perpusEksemplarSesudah(request.resource.data.eksemplarId).status == 'dipinjam';
+      allow update: if perpusPustakawan()
+                    && resource.data.status == 'dipinjam'
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'tglKembali', 'jatuhTempo', 'jumlahPerpanjang',
+                                   'kondisiKembali', 'catatan', 'updatedAt'])
+                    && request.resource.data.status in ['dipinjam', 'dikembalikan']
+                    && (request.resource.data.status == 'dipinjam'
+                        || perpusEksemplarSesudah(resource.data.eksemplarId).status in ['tersedia', 'hilang']);
+      allow delete: if false;
+    }
+
+    // Kunjungan: dicatat pustakawan; tidak bisa diubah.
+    match /perpus_kunjungan/{id} {
+      allow read: if perpusStaf();
+      allow create: if perpusPustakawan()
+                    && request.resource.data.keys().hasAll(['tanggal', 'pengunjung']);
+      allow update: if false;
+      allow delete: if perpusAdmin();
+    }
+
+    // Sampul buku terkompres (string base64). Tidak ada ubah.
+    match /perpus_foto/{id} {
+      // Baca publik: sampul di katalog/rak baca tanpa login.
+      allow read: if true;
+      allow create: if perpusPustakawan()
+                    && request.resource.data.keys().hasOnly(['data', 'createdBy', 'createdAt'])
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.data is string
+                    && request.resource.data.data.size() <= 120000;
+      allow update: if false;
+      allow delete: if perpusAdmin();
+    }
+
+    // Pengaturan (dokumen `aturan`): staf membaca, admin mengubah.
+    // Dokumen `penomoran` (penghitung kode eksemplar PRP-000123): pustakawan boleh MENAIKKAN
+    // `terakhir` (hanya field terakhir dan updatedAt; tidak boleh turun) supaya dua petugas
+    // yang menambah buku bersamaan tidak mendapat kode yang sama.
+    match /perpus_config/{id} {
+      allow read: if perpusStaf();
+      allow write: if perpusAdmin();
+      allow create, update: if perpusPustakawan() && id == 'penomoran'
+                            && request.resource.data.keys().hasOnly(['terakhir', 'updatedAt'])
+                            && request.resource.data.terakhir is int
+                            && request.resource.data.terakhir >= 0
+                            && (request.method == 'create'
+                                || request.resource.data.terakhir >= resource.data.terakhir);
+    }
+
+    // Log perubahan: staf menulis atas namanya, hanya admin membaca, tidak bisa diubah.
+    match /perpus_log/{id} {
+      allow read: if perpusAdmin();
+      allow create: if perpusStaf() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Reservasi buku (antrian).
+    match /perpus_reservasi/{id} {
+      allow read: if perpusStaf();
+      allow create: if perpusPustakawan()
+                    && request.resource.data.status == 'antrian'
+                    && request.resource.data.petugasUid == request.auth.uid
+                    && request.resource.data.keys().hasAll(['bukuId', 'judul', 'pemesan', 'status']);
+      allow update: if perpusPustakawan()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'catatan', 'updatedAt'])
+                    && request.resource.data.status in ['antrian', 'siap', 'diambil', 'batal'];
+      allow delete: if perpusAdmin();
+    }
+
+    // Usulan pengadaan buku: staf mengajukan; pustakawan/admin memutuskan.
+    match /perpus_usulan/{id} {
+      allow read: if perpusStaf();
+      allow create: if perpusStaf()
+                    && request.resource.data.pengusulUid == request.auth.uid
+                    && request.resource.data.status == 'diajukan'
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 300;
+      allow update: if perpusPustakawan()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'catatanAdmin', 'updatedAt'])
+                    && request.resource.data.status in ['diajukan', 'disetujui', 'ditolak', 'dibatalkan']
+                    || (akunAktif() && resource.data.pengusulUid == request.auth.uid
+                        && resource.data.status == 'diajukan'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'updatedAt'])
+                        && request.resource.data.status == 'dibatalkan');
+      allow delete: if false;
+    }
+
+    // Stock opname.
+    match /perpus_opname/{id} {
+      allow read: if perpusStaf();
+      allow create: if perpusPustakawan()
+                    && request.resource.data.petugasUid == request.auth.uid
+                    && request.resource.data.status == 'berjalan';
+      allow update: if perpusPustakawan()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'selesaiAt', 'updatedAt'])
+                    && request.resource.data.status in ['berjalan', 'selesai'];
+      allow delete: if perpusAdmin();
+    }
+
+    match /perpus_opname_item/{id} {
+      allow read: if perpusStaf();
+      allow create: if perpusPustakawan()
+                    && request.resource.data.keys().hasAll(['sesiId', 'eksemplarId', 'ditemukan']);
+      allow update: if false;
+      allow delete: if perpusAdmin();
+    }
+
+    // Jurnal baca / literasi: siswa menulis tanpa Auth; staf memberi tanggapan.
+    match /perpus_jurnal/{id} {
+      allow read: if perpusStaf() || resource.data.siswaId is string;
+      allow create: if request.resource.data.keys().hasAll(['siswaId', 'siswaNama', 'kelas', 'judul', 'catatan', 'tanggalBaca'])
+                    && request.resource.data.siswaId is string
+                    && request.resource.data.siswaId.size() > 0
+                    && request.resource.data.siswaId.size() <= 40
+                    && request.resource.data.siswaNama is string
+                    && request.resource.data.siswaNama.size() > 0
+                    && request.resource.data.siswaNama.size() <= 120
+                    && request.resource.data.kelas is string
+                    && request.resource.data.kelas.size() <= 20
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 300
+                    && request.resource.data.catatan is string
+                    && request.resource.data.catatan.size() > 0
+                    && request.resource.data.catatan.size() <= 2000
+                    && request.resource.data.tanggalBaca is string
+                    && request.resource.data.tanggalBaca.size() == 10
+                    && !('tanggapanGuru' in request.resource.data)
+                    && !('guruUid' in request.resource.data);
+      allow update: if perpusStaf()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['tanggapanGuru', 'guruUid', 'guruNama', 'updatedAt'])
+                    && request.resource.data.tanggapanGuru is string
+                    && request.resource.data.tanggapanGuru.size() <= 2000;
+      allow delete: if perpusPustakawan();
+    }
+
+
+    // ---- Mutasi siswa -------------------------------------------------------
+    // Pengajuan: HANYA wali kelas (bukan admin). Admin hanya update status + baca.
+    // Arsip siswa_mutasi: HANYA admin (daftar siswa yang sudah dimutasi).
+    // ANTIREGRESI: admin tidak mengajukan; wali tidak menyetujui sendiri.
+    match /pengajuan_mutasi/{id} {
+      allow read: if isAdmin()
+                  || (akunAktif()
+                      && myRole() in ['guru_akademik', 'guru']
+                      && daftarAda('waliKelas')
+                      && resource.data.kelas in myProfile().waliKelas);
+      allow create: if akunAktif()
+                    && myRole() in ['guru_akademik', 'guru']
+                    && daftarAda('waliKelas')
+                    && request.resource.data.kelas in myProfile().waliKelas
+                    && request.resource.data.diajukanOleh == request.auth.uid
+                    && request.resource.data.status == 'diajukan'
+                    && request.resource.data.arah in ['masuk', 'keluar']
+                    && request.resource.data.tanggal is string
+                    && request.resource.data.tanggal.size() == 10
+                    && request.resource.data.alasan is string
+                    && request.resource.data.alasan.size() > 0
+                    && request.resource.data.alasan.size() <= 500
+                    && request.resource.data.siswaNama is string
+                    && request.resource.data.siswaNama.size() > 0
+                    && request.resource.data.siswaNama.size() <= 120;
+      // Wali membatalkan pengajuan sendiri; admin menyetujui/menolak (+ field proses).
+      allow update: if (akunAktif()
+                        && resource.data.diajukanOleh == request.auth.uid
+                        && resource.data.status == 'diajukan'
+                        && request.resource.data.status == 'dibatalkan'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'diprosesAt']))
+                    || (isAdmin()
+                        && resource.data.status == 'diajukan'
+                        && request.resource.data.status in ['disetujui', 'ditolak']);
+      allow delete: if false;
+    }
+
+    match /siswa_mutasi/{id} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ---- Default: tolak semuanya -------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
