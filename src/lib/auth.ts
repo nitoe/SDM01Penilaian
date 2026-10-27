@@ -51,6 +51,8 @@ export async function fetchUserProfile(uid: string): Promise<AppUser | null> {
     email: (data.email as string) || '',
     nama: (data.nama as string) || '',
     gelar: (data.gelar as string) || undefined,
+    ttdUrl: typeof data.ttdUrl === 'string' && data.ttdUrl.trim() ? data.ttdUrl.trim() : undefined,
+    nbm: typeof data.nbm === 'string' && data.nbm.trim() ? data.nbm.trim() : undefined,
     role: data.role,
     kelasAmpu: data.kelasAmpu,
     status: data.status,
