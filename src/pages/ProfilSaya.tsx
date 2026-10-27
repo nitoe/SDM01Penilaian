@@ -17,6 +17,7 @@ const field =
 export default function ProfilSaya({ profile }: Props) {
   const [nama, setNama] = useState(profile.nama)
   const [gelar, setGelar] = useState(profile.gelar ?? '')
+  const [nbm, setNbm] = useState(profile.nbm ?? '')
   const [busyProfil, setBusyProfil] = useState(false)
   const [msgProfil, setMsgProfil] = useState<string | null>(null)
 
@@ -43,6 +44,7 @@ export default function ProfilSaya({ profile }: Props) {
       await updateDoc(doc(db, 'users', profile.uid), {
         nama: nama.trim(),
         gelar: gelar.trim() || null,
+        nbm: nbm.trim() || null,
         updatedAt: new Date().toISOString(),
       })
       setMsgProfil('Profil berhasil diperbarui. Muat ulang halaman jika perlu.')
@@ -150,6 +152,18 @@ export default function ProfilSaya({ profile }: Props) {
                 value={gelar}
                 onChange={(e) => setGelar(e.target.value)}
                 placeholder="contoh: S.Pd"
+                autoComplete="off"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-medium text-slate-600">
+                NBM (opsional, tercetak di rapor STS)
+              </span>
+              <input
+                className={field}
+                value={nbm}
+                onChange={(e) => setNbm(e.target.value)}
+                placeholder="contoh: 1167327"
                 autoComplete="off"
               />
             </label>

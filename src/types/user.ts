@@ -19,6 +19,8 @@ export interface AppUser {
   gelar?: string
   /** URL unduhan gambar tanda tangan digital (Firebase Storage). Rapor STS online. */
   ttdUrl?: string
+  /** Nomor NBM (opsional) — dicetak di bawah nama pada rapor STS. */
+  nbm?: string
   role: UserRole
   /** Kelas yang diampu (untuk guru) — contoh: ["5A", "5B"] */
   kelasAmpu?: string[]

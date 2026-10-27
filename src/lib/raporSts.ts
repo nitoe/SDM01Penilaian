@@ -185,6 +185,7 @@ export async function muatDataRaporSts(ctx: {
     kota: k.kota,
     tanggal: k.tanggal,
     ttdWaliUrl: ctx.ttdWaliUrl,
+    waliNbm: ctx.waliNbm,
     ttdKepsekUrl: (ctx.ttdKepsekUrl ?? k.config.ttdKepsekUrl)?.trim() || undefined,
   }
 }
@@ -198,6 +199,7 @@ export async function muatDataRaporStsKelas(ctx: {
   waliNama: string
   role: string
   ttdWaliUrl?: string
+  waliNbm?: string
   ttdKepsekUrl?: string
   semester?: Semester
   tahunAjaran?: string
@@ -223,6 +225,7 @@ export async function muatDataRaporStsKelas(ctx: {
     kota: k.kota,
     tanggal: k.tanggal,
     ttdWaliUrl: ctx.ttdWaliUrl,
+    waliNbm: ctx.waliNbm,
     ttdKepsekUrl: ttdKepsek,
   }))
 }

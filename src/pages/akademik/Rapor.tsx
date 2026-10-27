@@ -51,6 +51,7 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
   const [galat, setGalat] = useState('')
   const [waliNama, setWaliNama] = useState(namaDenganGelar(profile))
   const [ttdWaliUrl, setTtdWaliUrl] = useState<string | undefined>(profile.ttdUrl)
+  const [waliNbm, setWaliNbm] = useState<string | undefined>(profile.nbm)
   const [cetakKelas, setCetakKelas] = useState(false)
   const [tinggiPratinjau, setTinggiPratinjau] = useState(900)
 
@@ -193,6 +194,7 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
       kelas,
       waliNama,
       ttdWaliUrl,
+      waliNbm,
       semester: periodeAk.semester,
       tahunAjaran: periodeAk.tahunAjaran,
       kotaRapor: periodeAk.periode?.kotaRapor,
@@ -211,7 +213,7 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
     return () => {
       batal = true
     }
-  }, [sas, kelasData, kelas, siswaId, siswaList, profile, waliNama, ttdWaliUrl, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran, periodeAk.periode])
+  }, [sas, kelasData, kelas, siswaId, siswaList, profile, waliNama, ttdWaliUrl, waliNbm, periodeAk.ready, periodeAk.semester, periodeAk.tahunAjaran, periodeAk.periode])
 
   if (!periodeAk.loading && !periodeAk.ready) {
     return (
@@ -249,7 +251,7 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
               kelas,
               waliNama,
               role: profile.role,
-              ...(sas ? {} : { ttdWaliUrl }),
+              ...(sas ? {} : { ttdWaliUrl, waliNbm }),
               semester: periodeAk.semester,
               tahunAjaran: periodeAk.tahunAjaran,
               kotaRapor: periodeAk.periode?.kotaRapor,

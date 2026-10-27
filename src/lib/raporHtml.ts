@@ -213,7 +213,7 @@ const tandaTangan = (d: DataRaporSts, jenis: JenisRapor): string => {
   const stempelUrl = (String((d.config as { stempelUrl?: string }).stempelUrl || '')).trim() || undefined
   const ttdKepsek = (d.ttdKepsekUrl || d.config.ttdKepsekUrl || '').trim() || undefined
   const ortu = kolom('Orang Tua/Wali', '(………………………………)')
-  const wali = kolom('Wali Kelas,', escapeHtml(d.waliNama), '', tempat, { ttdUrl: d.ttdWaliUrl })
+  const wali = kolom('Wali Kelas,', escapeHtml(d.waliNama), d.waliNbm ? `NBM. ${escapeHtml(d.waliNbm)}` : '', tempat, { ttdUrl: d.ttdWaliUrl })
   const kepsek = kolom(
     'Kepala Sekolah,',
     escapeHtml(d.config.namaKepsek || '—'),
@@ -351,8 +351,8 @@ tr{page-break-inside:avoid;break-inside:avoid}
 .rpr-ttd{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8pt;font-size:10.5pt}
 .rpr-ttd.dua{grid-template-columns:1fr 1fr;gap:80pt;padding:0 20pt}
 .rpr-ttd-col{text-align:center}
-.rpr-ttd-space{height:50pt;display:flex;align-items:flex-end;justify-content:center}
-.rpr-ttd-space--stempel{position:relative;height:68pt;align-items:center;justify-content:center;background:transparent}
+.rpr-ttd-space{height:68pt;min-height:68pt;display:flex;align-items:flex-end;justify-content:center}
+.rpr-ttd-space--stempel{position:relative;height:68pt;min-height:68pt;align-items:center;justify-content:center;background:#fff}
 .rpr-stempel{position:absolute;left:50%;top:50%;transform:translate(-50%,-48%);max-height:64pt;max-width:64pt;width:auto;height:auto;object-fit:contain;z-index:2;pointer-events:none;mix-blend-mode:multiply}
 .rpr-ttd-img{max-height:42pt;max-width:100pt;object-fit:contain;display:block;position:relative;z-index:1;background:transparent}
 .rpr-ttd-img--bawah-stempel{max-height:40pt;max-width:96pt;z-index:1}
