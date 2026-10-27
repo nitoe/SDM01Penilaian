@@ -65,6 +65,8 @@ export interface ConfigAkademik {
   nbmKepsek?: string
   /** URL unduhan gambar tanda tangan digital kepala sekolah (Firebase Storage). Rapor STS online. */
   ttdKepsekUrl?: string
+  /** URL unduhan gambar stempel sekolah (Firebase Storage). Ditumpuk di belakang TTD kepsek pada rapor STS. */
+  stempelUrl?: string
   kotaRapor?: string
   /** @deprecated Pilihan seni sekarang per-kelas di koleksi seni_kelas. */
   seniSemesterGanjil?: string

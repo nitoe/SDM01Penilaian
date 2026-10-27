@@ -210,7 +210,7 @@ const tandaTangan = (d: DataRaporSts, jenis: JenisRapor): string => {
   ) =>
     `<div class="rpr-ttd-col"><div class="rpr-ttd-tempat">${tempat || '&nbsp;'}</div><div>${peran}</div>${ruangTtd(opts || {})}<div class="rpr-ttd-name">${nama}</div><div class="rpr-ttd-nbm">${nbm}</div></div>`
   const tempat = `${escapeHtml(d.kota)}, ${escapeHtml(d.tanggal)}`
-  const stempelUrl = (d.config.stempelUrl || '').trim() || undefined
+  const stempelUrl = (String((d.config as { stempelUrl?: string }).stempelUrl || '')).trim() || undefined
   const ttdKepsek = (d.ttdKepsekUrl || d.config.ttdKepsekUrl || '').trim() || undefined
   const ortu = kolom('Orang Tua/Wali', '(………………………………)')
   const wali = kolom('Wali Kelas,', escapeHtml(d.waliNama), '', tempat, { ttdUrl: d.ttdWaliUrl })

@@ -117,3 +117,37 @@ export async function hapusTtdSendiri(): Promise<void> {
     updatedAt: new Date().toISOString(),
   })
 }
+
+function pathStempel(): string {
+  return 'tanda-tangan/stempel.png'
+}
+
+/** Upload stempel sekolah → config/akademik.stempelUrl. Hanya admin. */
+export async function unggahStempel(file: File): Promise<string> {
+  const blob = await kompresTandaTangan(file)
+  const storageRef = ref(storage, pathStempel())
+  await uploadBytes(storageRef, blob, {
+    contentType: blob.type || 'image/png',
+    cacheControl: 'public,max-age=86400',
+  })
+  const url = await getDownloadURL(storageRef)
+  await updateDoc(doc(db, 'config', 'akademik'), {
+    stempelUrl: url,
+    updatedAt: new Date().toISOString(),
+  })
+  return url
+}
+
+/** Hapus stempel sekolah. */
+export async function hapusStempel(): Promise<void> {
+  try {
+    await deleteObject(ref(storage, pathStempel()))
+  } catch {
+    /* ignore */
+  }
+  await updateDoc(doc(db, 'config', 'akademik'), {
+    stempelUrl: null,
+    updatedAt: new Date().toISOString(),
+  })
+}
+
