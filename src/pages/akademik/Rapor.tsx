@@ -89,6 +89,7 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
     if (!admin) {
       setWaliNama(namaDenganGelar(profile))
       setTtdWaliUrl(profile.ttdUrl?.trim() || undefined)
+      setWaliNbm(profile.nbm?.trim() || undefined)
       return
     }
     if (!kelas) return
@@ -97,6 +98,7 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
       if (batal) return
       setWaliNama(info.nama)
       setTtdWaliUrl(info.ttdUrl)
+      setWaliNbm(info.nbm)
     })
     return () => {
       batal = true

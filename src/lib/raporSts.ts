@@ -156,6 +156,8 @@ export async function muatDataRaporSts(ctx: {
   waliNama: string
   /** URL TTD digital wali kelas (dari profil / cariWaliKelasLengkap). */
   ttdWaliUrl?: string
+  /** NBM wali kelas (opsional). */
+  waliNbm?: string
   /** Override URL TTD kepsek; default dari config.ttdKepsekUrl. */
   ttdKepsekUrl?: string
   /** Dari PeriodeContext — wajib agar nilai sesuai periode login */

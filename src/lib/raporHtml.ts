@@ -38,6 +38,8 @@ export interface DataRaporSts {
   tanggal: string
   /** URL gambar tanda tangan digital wali kelas (STS online). */
   ttdWaliUrl?: string
+  /** NBM wali kelas (users.nbm), opsional. */
+  waliNbm?: string
   /** URL gambar tanda tangan digital kepala sekolah (STS online). */
   ttdKepsekUrl?: string
   /** Hanya dipakai rapor SAS. Bila kosong, bagian tetap tercetak sebagai isian kosong. */
