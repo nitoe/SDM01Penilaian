@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import {
   addDoc,
   collection,
@@ -884,6 +883,3 @@ export async function saveNilaiAsesmenBatch(
   }
   return n
 }
-=======
-PLACEHOLDER
->>>>>>> 6d35930d91f3682f312000ebfc080fb6d878fe52

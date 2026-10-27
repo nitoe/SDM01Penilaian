@@ -15,10 +15,6 @@ function unik<T>(items: T[], key: (item: T) => string): T[] {
   return [...seen.values()]
 }
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 6d35930d91f3682f312000ebfc080fb6d878fe52
 /** Cocokkan nama penugasan ke master mapel (termasuk alias IPAS/PJOK). */
 function temukanMapelMaster(mapel: Mapel[], namaPenugasan: string): Mapel | undefined {
   return mapel.find((m) => m.nama === namaPenugasan || ekuivalenMapel(m.nama, namaPenugasan))
