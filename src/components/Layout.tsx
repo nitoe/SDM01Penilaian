@@ -33,7 +33,7 @@ const HALAMAN_LEBAR = [
 ]
 
 /** Halaman form ringkas — kolom terbaca, tidak melebar sia-sia. */
-const HALAMAN_SEMPIT = ['/profil']
+const HALAMAN_SEMPIT: string[] = []
 
 function sectionTitle(pathname: string, admin: boolean): string {
   if (pathname.startsWith('/tahsin')) return admin ? 'Pantauan Tahsin & Tahfizh' : 'Tahsin & Tahfizh'

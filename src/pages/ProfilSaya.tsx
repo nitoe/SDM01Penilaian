@@ -113,172 +113,173 @@ export default function ProfilSaya({ profile }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-6 p-4">
+    <div className="space-y-5 pb-16">
       <PageHeader
         title="Pengaturan akun"
-        subtitle="Perbarui nama yang tampil di rapor, tanda tangan digital (STS), dan ubah password login Anda."
+        subtitle="Perbarui nama di rapor, tanda tangan digital (STS), dan password login."
       />
 
-      {/* —— Profil —— */}
-      <section className="card-soft space-y-3 p-4">
-        <h3 className="text-[14px] font-semibold text-slate-900">Data profil</h3>
-        <p className="text-[12px] text-muted">
-          Nama lengkap dengan gelar yang akan muncul di rapor:{' '}
-          <strong className="text-slate-800">{namaDenganGelar({ nama, gelar })}</strong>
-        </p>
-        <p className="text-[12px] text-muted">
-          Email login: <strong className="text-slate-700">{profile.email || '—'}</strong>
-        </p>
-
-        <form onSubmit={handleSaveProfil} className="space-y-3">
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-medium text-slate-600">Nama</span>
-            <input
-              className={field}
-              value={nama}
-              onChange={(e) => setNama(e.target.value)}
-              required
-              autoComplete="name"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-medium text-slate-600">
-              Gelar pendidikan terakhir
-            </span>
-            <input
-              className={field}
-              value={gelar}
-              onChange={(e) => setGelar(e.target.value)}
-              placeholder="contoh: S.Pd"
-              autoComplete="off"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={busyProfil}
-            className="rounded-xl bg-muh-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
-          >
-            {busyProfil ? 'Menyimpan…' : 'Simpan profil'}
-          </button>
-        </form>
-        {msgProfil && <p className="text-[12px] text-muh-800">{msgProfil}</p>}
-      </section>
-
-      {/* —— Tanda tangan digital (STS online) —— */}
-      {staf && (
-        <section className="card-soft space-y-3 p-4">
-          <h3 className="text-[14px] font-semibold text-slate-900">Tanda tangan digital</h3>
-          <p className="text-[12px] leading-snug text-muted">
-            Dipakai otomatis di cetak <strong>Rapor STS</strong> (pelaporan online). Unggah foto
-            tanda tangan di kertas putih atau hasil scan transparan (PNG/JPG). Gambar akan
-            diperkecil otomatis.
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="card-soft space-y-3 p-4 sm:p-5">
+          <h3 className="text-[14px] font-semibold text-slate-900">Data profil</h3>
+          <p className="text-[12px] text-muted">
+            Nama lengkap dengan gelar yang akan muncul di rapor:{' '}
+            <strong className="text-slate-800">{namaDenganGelar({ nama, gelar })}</strong>
           </p>
-          {ttdUrl ? (
-            <div className="flex flex-col items-start gap-2">
-              <img
-                src={ttdUrl}
-                alt="Pratinjau tanda tangan"
-                className="max-h-20 max-w-[200px] rounded border border-border bg-white object-contain p-2"
+          <p className="text-[12px] text-muted">
+            Email login: <strong className="text-slate-700">{profile.email || '—'}</strong>
+          </p>
+
+          <form onSubmit={handleSaveProfil} className="space-y-3">
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-medium text-slate-600">Nama</span>
+              <input
+                className={field}
+                value={nama}
+                onChange={(e) => setNama(e.target.value)}
+                required
+                autoComplete="name"
               />
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={busyTtd}
-                  className="rounded-xl border border-border bg-white px-3 py-1.5 text-[12px] font-medium hover:bg-slate-50 disabled:opacity-60"
-                  onClick={() => inputTtdRef.current?.click()}
-                >
-                  Ganti gambar
-                </button>
-                <button
-                  type="button"
-                  disabled={busyTtd}
-                  className="rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-[12px] font-medium text-red-700 hover:bg-red-100 disabled:opacity-60"
-                  onClick={() => void handleHapusTtd()}
-                >
-                  Hapus
-                </button>
-              </div>
-            </div>
-          ) : (
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-medium text-slate-600">
+                Gelar pendidikan terakhir
+              </span>
+              <input
+                className={field}
+                value={gelar}
+                onChange={(e) => setGelar(e.target.value)}
+                placeholder="contoh: S.Pd"
+                autoComplete="off"
+              />
+            </label>
             <button
-              type="button"
-              disabled={busyTtd}
+              type="submit"
+              disabled={busyProfil}
               className="rounded-xl bg-muh-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
-              onClick={() => inputTtdRef.current?.click()}
             >
-              {busyTtd ? 'Mengunggah…' : 'Unggah tanda tangan'}
+              {busyProfil ? 'Menyimpan…' : 'Simpan profil'}
             </button>
-          )}
-          <input
-            ref={inputTtdRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/jpg"
-            className="hidden"
-            onChange={(e) => void handleUnggahTtd(e.target.files?.[0] ?? null)}
-          />
-          {msgTtd && <p className="text-[12px] font-medium text-muh-800">{msgTtd}</p>}
-          {errTtd && <p className="text-[12px] font-medium text-red-700">{errTtd}</p>}
+          </form>
+          {msgProfil && <p className="text-[12px] text-muh-800">{msgProfil}</p>}
         </section>
-      )}
 
-      {/* —— Password —— */}
-      <section className="card-soft space-y-3 p-4">
-        <h3 className="text-[14px] font-semibold text-slate-900">Ubah password</h3>
-        <p className="text-[12px] leading-snug text-muted">
-          Masukkan password saat ini, lalu password baru (minimal 8 karakter). Password tidak
-          disimpan di Firestore — hanya di Firebase Authentication.
-        </p>
+        {staf && (
+          <section className="card-soft space-y-3 p-4 sm:p-5">
+            <h3 className="text-[14px] font-semibold text-slate-900">Tanda tangan digital</h3>
+            <p className="text-[12px] leading-snug text-muted">
+              Dipakai otomatis di cetak <strong>Rapor STS</strong> (pelaporan online). Unggah foto
+              tanda tangan di kertas putih atau hasil scan (PNG/JPG). Gambar akan diperkecil
+              otomatis.
+            </p>
+            {ttdUrl ? (
+              <div className="flex flex-col items-start gap-2">
+                <img
+                  src={ttdUrl}
+                  alt="Pratinjau tanda tangan"
+                  className="max-h-20 max-w-[200px] rounded border border-border bg-white object-contain p-2"
+                />
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={busyTtd}
+                    className="rounded-xl border border-border bg-white px-3 py-1.5 text-[12px] font-medium hover:bg-slate-50 disabled:opacity-60"
+                    onClick={() => inputTtdRef.current?.click()}
+                  >
+                    Ganti gambar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyTtd}
+                    className="rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-[12px] font-medium text-red-700 hover:bg-red-100 disabled:opacity-60"
+                    onClick={() => void handleHapusTtd()}
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={busyTtd}
+                className="rounded-xl bg-muh-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
+                onClick={() => inputTtdRef.current?.click()}
+              >
+                {busyTtd ? 'Mengunggah…' : 'Unggah tanda tangan'}
+              </button>
+            )}
+            <input
+              ref={inputTtdRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/jpg"
+              className="hidden"
+              onChange={(e) => void handleUnggahTtd(e.target.files?.[0] ?? null)}
+            />
+            {msgTtd && <p className="text-[12px] font-medium text-muh-800">{msgTtd}</p>}
+            {errTtd && <p className="text-[12px] font-medium text-red-700">{errTtd}</p>}
+          </section>
+        )}
 
-        <form onSubmit={handleUbahPassword} className="space-y-3">
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-medium text-slate-600">Password lama</span>
-            <input
-              type="password"
-              className={field}
-              value={passwordLama}
-              onChange={(e) => setPasswordLama(e.target.value)}
-              required
-              autoComplete="current-password"
-              minLength={1}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-medium text-slate-600">Password baru</span>
-            <input
-              type="password"
-              className={field}
-              value={passwordBaru}
-              onChange={(e) => setPasswordBaru(e.target.value)}
-              required
-              autoComplete="new-password"
-              minLength={8}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-medium text-slate-600">
-              Konfirmasi password baru
-            </span>
-            <input
-              type="password"
-              className={field}
-              value={passwordKonfirmasi}
-              onChange={(e) => setPasswordKonfirmasi(e.target.value)}
-              required
-              autoComplete="new-password"
-              minLength={8}
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={busySandi}
-            className="rounded-xl bg-muh-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
-          >
-            {busySandi ? 'Mengubah…' : 'Ubah password'}
-          </button>
-        </form>
-        {msgSandi && <p className="text-[12px] font-medium text-muh-800">{msgSandi}</p>}
-        {errSandi && <p className="text-[12px] font-medium text-red-700">{errSandi}</p>}
-      </section>
+        <section className={`card-soft space-y-3 p-4 sm:p-5 ${staf ? 'lg:col-span-2' : ''}`}>
+          <h3 className="text-[14px] font-semibold text-slate-900">Ubah password</h3>
+          <p className="text-[12px] leading-snug text-muted">
+            Masukkan password saat ini, lalu password baru (minimal 8 karakter). Password tidak
+            disimpan di Firestore — hanya di Firebase Authentication.
+          </p>
+
+          <form onSubmit={handleUbahPassword} className="grid max-w-xl gap-3 sm:grid-cols-2">
+            <label className="block sm:col-span-2">
+              <span className="mb-1 block text-[11px] font-medium text-slate-600">Password lama</span>
+              <input
+                type="password"
+                className={field}
+                value={passwordLama}
+                onChange={(e) => setPasswordLama(e.target.value)}
+                required
+                autoComplete="current-password"
+                minLength={1}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-medium text-slate-600">Password baru</span>
+              <input
+                type="password"
+                className={field}
+                value={passwordBaru}
+                onChange={(e) => setPasswordBaru(e.target.value)}
+                required
+                autoComplete="new-password"
+                minLength={8}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-medium text-slate-600">
+                Konfirmasi password baru
+              </span>
+              <input
+                type="password"
+                className={field}
+                value={passwordKonfirmasi}
+                onChange={(e) => setPasswordKonfirmasi(e.target.value)}
+                required
+                autoComplete="new-password"
+                minLength={8}
+              />
+            </label>
+            <div className="sm:col-span-2">
+              <button
+                type="submit"
+                disabled={busySandi}
+                className="rounded-xl bg-muh-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
+              >
+                {busySandi ? 'Mengubah…' : 'Ubah password'}
+              </button>
+            </div>
+          </form>
+          {msgSandi && <p className="text-[12px] font-medium text-muh-800">{msgSandi}</p>}
+          {errSandi && <p className="text-[12px] font-medium text-red-700">{errSandi}</p>}
+        </section>
+      </div>
     </div>
   )
 }
