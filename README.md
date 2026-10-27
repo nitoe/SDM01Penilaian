@@ -90,14 +90,17 @@ Daftar koleksi dan keputusan data: **[docs/DATA_MODEL.md](docs/DATA_MODEL.md)**.
 | Modul | Status |
 |-------|--------|
 | Scaffold (Vite, React, Tailwind, Auth, Layout) | ✅ Selesai |
-| Login + Beranda + Hub modul | ✅ Selesai |
-| Tahsin-Tahfizh: Input Setoran, Riwayat Siswa | ✅ Ada |
-| Tahsin-Tahfizh: Catat Menulis, Cetak Laporan, Target Hafalan | ⏳ Belum — placeholder |
-| Admin: Data Siswa | ✅ Ada |
-| Admin: Kelola Akun Guru | ✅ Ada |
-| Admin: akun orang tua, mutasi | ⏳ Belum — placeholder |
-| Akademik: Setup TP & KKTP, Bobot Semester TP, Input Nilai SLM | ✅ Ada |
-| Akademik: STS/SAS, rapor, absensi, kokurikuler, ekskul, mutasi | ⏳ Belum — placeholder |
+| Login + Beranda + Hub modul + periode akademik | ✅ Selesai |
+| Tahsin-Tahfizh: Input Setoran, Riwayat, Target, Catat Menulis, Cetak Laporan | ✅ Ada |
+| Admin: Data Siswa, Kelola Akun Guru, Data Sekolah | ✅ Ada |
+| Admin: mutasi siswa | ✅ Ada |
+| Akademik: Setup TP & KKTP, Bobot Semester, Input Nilai SLM | ✅ Ada |
+| Akademik: STS/SAS, Leger, Rapor STS (TTD digital + stempel) | ✅ Ada |
+| Akademik: ekstrakurikuler, kokurikuler (STEM + 7KAIH) | ✅ Ada |
+| Akademik: absensi rapor, kelengkapan rapor, rapor SAS penuh | ⏳ Sebagian / lanjut |
+| Akun orang tua (portal) | ⏳ Belum — placeholder |
+
+**Catatan (Okt 2026):** nilai SLM/STS/SAS yang dikosongkan di input dapat dihapus (guru bidang & wali kelas). Setelah ubah rules, jalankan `npm run deploy:rules`. Lihat CHANGELOG & ANTIREGRESI §29.
 
 ## Perintah berguna
 

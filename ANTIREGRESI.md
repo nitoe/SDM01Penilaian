@@ -276,3 +276,15 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 
 28.14 Pratinjau rapor memakai `iframe` + `srcDoc` dengan `sandbox` yang mencakup `allow-scripts` (konten dipercaya dari app). Tanpa itu konsol penuh peringatan `about:srcdoc` (bukan kegagalan bisnis, tetapi mengganggu diagnosis).
 
+
+## §29. Hapus nilai SLM / STS / SAS yang dikosongkan
+
+29.1 **Guru yang mengampu mapel×kelas (`tulisMapelKelas`) boleh menghapus dokumen nilai** di `nilai_tp`, `nilai_sts`, dan `nilai_sas`. Rules `allow delete: if tulisMapelKelas(...)`. Admin tetap tidak menulis/menghapus nilai (ANTIREGRESI §13 / §17).
+
+29.2 **UI wajib memperlakukan sel yang dikosongkan sebagai penghapusan**, bukan diabaikan. Bila sebelumnya ada nilai di server dan draf sel sekarang string kosong, masukkan ke daftar perubahan dengan `null` dan panggil batch yang menghapus dokumen. Jangan kembali ke perilaku lama yang melewati (`continue`) sel kosong di `perubahan`.
+
+29.3 **`saveNilaiTPBatch` / `saveNilaiAsesmenBatch` menerima `number | null`.** `null` → `batch.delete` dokumen yang sudah ada; nilai numerik → upsert seperti biasa. Jangan mengembalikan tipe hanya `number` atau melewati null tanpa hapus.
+
+29.4 **Nilai efektif di UI (total/rata/progress):** bila kunci draf untuk sel sudah terdefinisi (termasuk string kosong), jangan jatuh ke nilai server. Kosong = sengaja dihapus. Fallback ke server hanya bila kunci draf belum pernah disentuh (`undefined`).
+
+29.5 Setelah mengubah rules, wajib `npm run deploy:rules` sebelum menguji hapus di produksi. Tanpa deploy rules, hapus tetap ditolak meskipun UI sudah benar.
