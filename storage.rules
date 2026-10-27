@@ -3,8 +3,9 @@ rules_version = '2';
 // Firebase Storage — tanda tangan digital rapor STS
 // Deploy: firebase deploy --only storage
 // Path:
-//   tanda-tangan/kepsek.png          → hanya admin tulis
-//   tanda-tangan/guru/{uid}.png      → pemilik (uid) tulis
+//   tanda-tangan/kepsek.png
+//   tanda-tangan/stempel.png
+//   tanda-tangan/guru/{uid}.png   ← nama file = uid + ".png"
 
 service firebase.storage {
   match /b/{bucket}/o {
@@ -26,7 +27,6 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
     }
 
-    // Baca: semua user login (untuk pratinjau & cetak rapor)
     match /tanda-tangan/{allPaths=**} {
       allow read: if isLoggedIn();
     }
@@ -41,12 +41,15 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
-    match /tanda-tangan/guru/{uid} {
-      allow write: if isLoggedIn() && request.auth.uid == uid && gambarSah();
-      allow delete: if isLoggedIn() && request.auth.uid == uid;
+    // fileName = "{uid}.png" — jangan match {uid} saja (akan membandingkan uid dengan "uid.png")
+    match /tanda-tangan/guru/{fileName} {
+      allow write: if isLoggedIn()
+        && fileName == request.auth.uid + '.png'
+        && gambarSah();
+      allow delete: if isLoggedIn()
+        && fileName == request.auth.uid + '.png';
     }
 
-    // Tolak sisanya
     match /{allPaths=**} {
       allow read, write: if false;
     }

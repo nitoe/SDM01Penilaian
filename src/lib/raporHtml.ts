@@ -352,10 +352,10 @@ tr{page-break-inside:avoid;break-inside:avoid}
 .rpr-ttd.dua{grid-template-columns:1fr 1fr;gap:80pt;padding:0 20pt}
 .rpr-ttd-col{text-align:center}
 .rpr-ttd-space{height:50pt;display:flex;align-items:flex-end;justify-content:center}
-.rpr-ttd-space--stempel{position:relative;height:64pt;align-items:center;justify-content:center}
-.rpr-stempel{position:absolute;left:50%;top:50%;transform:translate(-50%,-48%);max-height:62pt;max-width:62pt;width:auto;height:auto;object-fit:contain;opacity:.9;z-index:2;pointer-events:none}
-.rpr-ttd-img{max-height:42pt;max-width:100pt;object-fit:contain;display:block;position:relative;z-index:1}
-.rpr-ttd-img--bawah-stempel{max-height:38pt;max-width:92pt;z-index:1}
+.rpr-ttd-space--stempel{position:relative;height:68pt;align-items:center;justify-content:center;background:transparent}
+.rpr-stempel{position:absolute;left:50%;top:50%;transform:translate(-50%,-48%);max-height:64pt;max-width:64pt;width:auto;height:auto;object-fit:contain;z-index:2;pointer-events:none;mix-blend-mode:multiply}
+.rpr-ttd-img{max-height:42pt;max-width:100pt;object-fit:contain;display:block;position:relative;z-index:1;background:transparent}
+.rpr-ttd-img--bawah-stempel{max-height:40pt;max-width:96pt;z-index:1}
 .rpr-ttd-name{font-weight:bold;border-top:1pt solid #000;padding-top:2pt}
 .rpr-ttd-nbm{font-size:9.5pt;color:#444;min-height:12pt}
 .rpr-bagian-d,.rpr-ttd-wrap,.rpr-ttd,.rpr-footer-group,.rpr-keputusan-wrap{page-break-inside:avoid;break-inside:avoid}
