@@ -403,7 +403,7 @@ export default function Rapor({ profile, jenis: jenisProp }: { profile: AppUser;
           <div className="mx-auto max-w-[760px] overflow-hidden rounded-xl border border-border bg-white shadow-sm print:hidden">
             <iframe
               title={`Pratinjau ${NAMA}`}
-              sandbox="allow-same-origin"
+              sandbox="allow-same-origin allow-scripts"
               srcDoc={dokumenPratinjauRapor([data], jenis)}
               className="block w-full"
               style={{ height: tinggiPratinjau }}

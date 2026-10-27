@@ -201,8 +201,8 @@ function ruangTtd(opts: { ttdUrl?: string; stempelUrl?: string; denganStempel?: 
 }
 
 const tandaTangan = (d: DataRaporSts, jenis: JenisRapor): string => {
-  // Tempat dan tanggal berada DI DALAM kolom Wali Kelas (rata tengah, sejajar dengan "Wali Kelas,"),
-  // bukan rata kanan halaman. Kolom lain diberi baris kosong setinggi sama agar jabatan tetap sejajar.
+  // Tempat+tanggal hanya di kolom Kepala Sekolah (atas jabatan), jarak cukup sebelum "Kepala Sekolah,".
+  // Kolom lain memakai baris kosong setinggi sama agar jabatan / garis nama tetap sejajar.
   const kolom = (
     peran: string,
     nama: string,
@@ -210,17 +210,17 @@ const tandaTangan = (d: DataRaporSts, jenis: JenisRapor): string => {
     tempat = '',
     opts?: { ttdUrl?: string; stempelUrl?: string; denganStempel?: boolean },
   ) =>
-    `<div class="rpr-ttd-col"><div class="rpr-ttd-tempat">${tempat || '&nbsp;'}</div><div>${peran}</div>${ruangTtd(opts || {})}<div class="rpr-ttd-name">${nama}</div><div class="rpr-ttd-nbm">${nbm}</div></div>`
+    `<div class="rpr-ttd-col"><div class="rpr-ttd-tempat">${tempat || '&nbsp;'}</div><div class="rpr-ttd-jabatan">${peran}</div>${ruangTtd(opts || {})}<div class="rpr-ttd-name">${nama}</div><div class="rpr-ttd-nbm">${nbm}</div></div>`
   const tempat = `${escapeHtml(d.kota)}, ${escapeHtml(d.tanggal)}`
   const stempelUrl = (String((d.config as { stempelUrl?: string }).stempelUrl || '')).trim() || undefined
   const ttdKepsek = (d.ttdKepsekUrl || d.config.ttdKepsekUrl || '').trim() || undefined
   const ortu = kolom('Orang Tua/Wali', '(………………………………)')
-  const wali = kolom('Wali Kelas,', escapeHtml(d.waliNama), d.waliNbm ? `NBM. ${escapeHtml(d.waliNbm)}` : '', tempat, { ttdUrl: d.ttdWaliUrl })
+  const wali = kolom('Wali Kelas,', escapeHtml(d.waliNama), d.waliNbm ? `NBM. ${escapeHtml(d.waliNbm)}` : '', '', { ttdUrl: d.ttdWaliUrl })
   const kepsek = kolom(
     'Kepala Sekolah,',
     escapeHtml(d.config.namaKepsek || '—'),
     d.config.nbmKepsek ? `NBM. ${escapeHtml(d.config.nbmKepsek)}` : '',
-    '',
+    tempat,
     { ttdUrl: ttdKepsek, stempelUrl, denganStempel: true },
   )
   // STS (online): Ortu + Wali + Kepsek agar TTD digital guru & kepsek ikut tercetak.
@@ -349,13 +349,15 @@ tr{page-break-inside:avoid;break-inside:avoid}
 .rpr-keputusan-wrap{margin-top:10pt}
 .rpr-keputusan{border:2pt solid #000;padding:7pt 10pt;display:inline-block;max-width:230pt;line-height:1.7}
 .rpr-ttd-wrap{margin-top:18pt}
-.rpr-ttd-tempat{min-height:14pt;margin-bottom:2pt}
+.rpr-ttd-tempat{min-height:18pt;margin-bottom:10pt;font-size:10.5pt;line-height:1.3}
+.rpr-ttd-jabatan{margin-bottom:2pt}
 .rpr-ttd{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8pt;font-size:10.5pt}
 .rpr-ttd.dua{grid-template-columns:1fr 1fr;gap:80pt;padding:0 20pt}
 .rpr-ttd-col{text-align:center}
-.rpr-ttd-space{height:68pt;min-height:68pt;display:flex;align-items:flex-end;justify-content:center}
+.rpr-ttd-space{height:68pt;min-height:68pt;display:flex;align-items:flex-end;justify-content:center;background:transparent}
 .rpr-ttd-space--stempel{position:relative;height:68pt;min-height:68pt;align-items:center;justify-content:center;background:#fff}
-.rpr-stempel{position:absolute;left:50%;top:50%;transform:translate(-50%,-48%);max-height:64pt;max-width:64pt;width:auto;height:auto;object-fit:contain;z-index:2;pointer-events:none;mix-blend-mode:multiply}
+/* Tanpa mix-blend-mode: beberapa mesin cetak menghitamkan area alpha/blend */
+.rpr-stempel{position:absolute;left:50%;top:50%;transform:translate(-50%,-48%);max-height:64pt;max-width:64pt;width:auto;height:auto;object-fit:contain;z-index:2;pointer-events:none}
 .rpr-ttd-img{max-height:42pt;max-width:100pt;object-fit:contain;display:block;position:relative;z-index:1;background:transparent}
 .rpr-ttd-img--bawah-stempel{max-height:40pt;max-width:96pt;z-index:1}
 .rpr-ttd-name{font-weight:bold;border-top:1pt solid #000;padding-top:2pt}
