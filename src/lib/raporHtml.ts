@@ -178,7 +178,7 @@ function kepala(d: DataRaporSts, jenis: JenisRapor): string {
 /**
  * Ruang tanda tangan digital.
  * - Biasa (wali/ortu): hanya TTD atau kosong.
- * - Kepsek: TTD dulu (lapisan bawah), stempel di atasnya — urutan resmi: tanda tangan lalu cap.
+ * - Kepsek: stempel di belakang, TTD di depan agar tanda tangan terbaca penuh.
  */
 function ruangTtd(opts: { ttdUrl?: string; stempelUrl?: string; denganStempel?: boolean }): string {
   const ttd = (opts.ttdUrl || '').trim()
@@ -186,9 +186,9 @@ function ruangTtd(opts: { ttdUrl?: string; stempelUrl?: string; denganStempel?: 
   const pakaiStempel = Boolean(opts.denganStempel && stempel)
 
   if (pakaiStempel) {
-    // Urutan DOM: TTD dulu (bawah), stempel kemudian (atas) — cap menindih tanda tangan.
+    // TTD di depan (z-index lebih tinggi); stempel sebagai latar di belakang.
     const imgTtd = ttd
-      ? `<img class="rpr-ttd-img rpr-ttd-img--bawah-stempel" src="${escapeHtml(ttd)}" alt="" />`
+      ? `<img class="rpr-ttd-img rpr-ttd-img--atas-stempel" src="${escapeHtml(ttd)}" alt="" />`
       : ''
     const imgStempel = `<img class="rpr-stempel" src="${escapeHtml(stempel)}" alt="" />`
     return `<div class="rpr-ttd-space rpr-ttd-space--stempel">${imgTtd}${imgStempel}</div>`
@@ -354,12 +354,12 @@ tr{page-break-inside:avoid;break-inside:avoid}
 .rpr-ttd{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8pt;font-size:10.5pt}
 .rpr-ttd.dua{grid-template-columns:1fr 1fr;gap:80pt;padding:0 20pt}
 .rpr-ttd-col{text-align:center}
-.rpr-ttd-space{height:68pt;min-height:68pt;display:flex;align-items:flex-end;justify-content:center;background:transparent}
-.rpr-ttd-space--stempel{position:relative;height:68pt;min-height:68pt;align-items:center;justify-content:center;background:#fff}
-/* Stempel digeser kiri; TTD kepsek lebih ke kanan agar tidak tertutup penuh */
-.rpr-stempel{position:absolute;left:38%;top:50%;transform:translate(-50%,-48%);max-height:62pt;max-width:62pt;width:auto;height:auto;object-fit:contain;z-index:2;pointer-events:none}
-.rpr-ttd-img{max-height:54pt;max-width:120pt;object-fit:contain;display:block;position:relative;z-index:1;background:transparent}
-.rpr-ttd-img--bawah-stempel{max-height:48pt;max-width:110pt;margin-left:14pt;z-index:1}
+.rpr-ttd-space{height:72pt;min-height:72pt;display:flex;align-items:flex-end;justify-content:center;background:transparent}
+.rpr-ttd-space--stempel{position:relative;height:72pt;min-height:72pt;align-items:center;justify-content:center;background:#fff}
+/* Stempel di belakang (z-index rendah); TTD kepsek di depan stempel */
+.rpr-stempel{position:absolute;left:40%;top:50%;transform:translate(-50%,-48%);max-height:66pt;max-width:66pt;width:auto;height:auto;object-fit:contain;z-index:1;pointer-events:none}
+.rpr-ttd-img{max-height:60pt;max-width:130pt;object-fit:contain;display:block;position:relative;z-index:2;background:transparent}
+.rpr-ttd-img--atas-stempel{max-height:60pt;max-width:130pt;margin-left:10pt;z-index:2}
 .rpr-ttd-name{font-weight:bold;border-top:1pt solid #000;padding-top:2pt}
 .rpr-ttd-nbm{font-size:9.5pt;color:#444;min-height:12pt}
 .rpr-bagian-d,.rpr-ttd-wrap,.rpr-ttd,.rpr-footer-group,.rpr-keputusan-wrap{page-break-inside:avoid;break-inside:avoid}
