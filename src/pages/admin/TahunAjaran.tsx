@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { getConfigAkademik, simpanProfilSekolah } from '../../lib/akademik'
-import { hapusTtdKepsek, unggahTtdKepsek } from '../../lib/tandaTangan'
+import { hapusStempel, hapusTtdKepsek, unggahStempel, unggahTtdKepsek } from '../../lib/tandaTangan'
 import type { Semester } from '../../types/akademik'
 import type { AppUser } from '../../types/user'
 import { PageHeader } from '../../components/ui'
@@ -32,9 +32,13 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
   const [pesan, setPesan] = useState<string | null>(null)
   const [galat, setGalat] = useState<string | null>(null)
   const [ttdKepsekUrl, setTtdKepsekUrl] = useState('')
+  const [stempelUrl, setStempelUrl] = useState('')
   const [busyTtd, setBusyTtd] = useState(false)
+  const [busyStempel, setBusyStempel] = useState(false)
   const [msgTtd, setMsgTtd] = useState<string | null>(null)
+  const [msgStempel, setMsgStempel] = useState<string | null>(null)
   const inputTtdRef = useRef<HTMLInputElement>(null)
+  const inputStempelRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     void getConfigAkademik()
@@ -46,6 +50,7 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
         if (c.namaKepsek) setKepsek(c.namaKepsek)
         if (c.nbmKepsek) setNbm(c.nbmKepsek)
         if (typeof c.ttdKepsekUrl === 'string' && c.ttdKepsekUrl) setTtdKepsekUrl(c.ttdKepsekUrl)
+        if (typeof c.stempelUrl === 'string' && c.stempelUrl) setStempelUrl(c.stempelUrl)
         if (c.tahunAjaran) setLegacyTahun(c.tahunAjaran)
         setLegacySemester(c.semesterAktif === '2' ? '2' : '1')
         if (c.tglRapor) setLegacyTglRapor(c.tglRapor)
@@ -266,6 +271,95 @@ export default function TahunAjaran({ profile }: { profile: AppUser }) {
                 }}
               />
               {msgTtd && <p className="mt-2 text-[12px] text-muh-800">{msgTtd}</p>}
+            </div>
+            <div className="pt-3 border-t border-border">
+              <p className="mb-1 text-[12px] font-medium text-slate-700">Stempel sekolah (Rapor STS)</p>
+              <p className="mb-2 text-[11px] text-muted">
+                Ditampilkan di belakang tanda tangan kepala sekolah (pola pengesahan resmi). PNG transparan disarankan.
+              </p>
+              {stempelUrl ? (
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="relative flex h-20 w-20 items-center justify-center rounded border border-border bg-white p-1">
+                    {ttdKepsekUrl ? (
+                      <img
+                        src={ttdKepsekUrl}
+                        alt=""
+                        className="pointer-events-none absolute bottom-2 z-[1] max-h-8 max-w-[4.5rem] object-contain"
+                      />
+                    ) : null}
+                    <img
+                      src={stempelUrl}
+                      alt="Stempel sekolah"
+                      className="relative z-[2] max-h-full max-w-full object-contain opacity-90"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busyStempel}
+                    className="rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium hover:bg-slate-50 disabled:opacity-60"
+                    onClick={() => inputStempelRef.current?.click()}
+                  >
+                    Ganti
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyStempel}
+                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[12px] font-medium text-red-700 disabled:opacity-60"
+                    onClick={() => {
+                      void (async () => {
+                        setBusyStempel(true)
+                        setMsgStempel(null)
+                        try {
+                          await hapusStempel()
+                          setStempelUrl('')
+                          setMsgStempel('Stempel sekolah dihapus.')
+                        } catch (e) {
+                          setGalat(e instanceof Error ? e.message : 'Gagal menghapus stempel.')
+                        } finally {
+                          setBusyStempel(false)
+                        }
+                      })()
+                    }}
+                  >
+                    Hapus
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busyStempel}
+                  className="rounded-lg bg-muh-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-muh-700 disabled:opacity-60"
+                  onClick={() => inputStempelRef.current?.click()}
+                >
+                  {busyStempel ? 'Mengunggah…' : 'Unggah stempel'}
+                </button>
+              )}
+              <input
+                ref={inputStempelRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/jpg"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (!f) return
+                  void (async () => {
+                    setBusyStempel(true)
+                    setMsgStempel(null)
+                    setGalat(null)
+                    try {
+                      const url = await unggahStempel(f)
+                      setStempelUrl(url)
+                      setMsgStempel('Stempel sekolah tersimpan.')
+                    } catch (err) {
+                      setGalat(err instanceof Error ? err.message : 'Gagal mengunggah stempel.')
+                    } finally {
+                      setBusyStempel(false)
+                      if (inputStempelRef.current) inputStempelRef.current.value = ''
+                    }
+                  })()
+                }}
+              />
+              {msgStempel && <p className="mt-2 text-[12px] text-muh-800">{msgStempel}</p>}
             </div>
           </section>
 

@@ -173,12 +173,27 @@ function kepala(d: DataRaporSts, jenis: JenisRapor): string {
 </div>`
 }
 
-/** Ruang tanda tangan: gambar digital jika ada, else kosong untuk TTD basah. */
-function ruangTtd(url?: string): string {
-  const src = (url || '').trim()
-  if (src) {
-    // Cross-origin image di iframe srcDoc / jendela cetak
-    return `<div class="rpr-ttd-space"><img class="rpr-ttd-img" src="${escapeHtml(src)}" alt="" /></div>`
+/**
+ * Ruang tanda tangan digital.
+ * - Biasa (wali/ortu): hanya TTD atau kosong.
+ * - Kepsek: TTD dulu (lapisan bawah), stempel di atasnya — urutan resmi: tanda tangan lalu cap.
+ */
+function ruangTtd(opts: { ttdUrl?: string; stempelUrl?: string; denganStempel?: boolean }): string {
+  const ttd = (opts.ttdUrl || '').trim()
+  const stempel = (opts.stempelUrl || '').trim()
+  const pakaiStempel = Boolean(opts.denganStempel && stempel)
+
+  if (pakaiStempel) {
+    // Urutan DOM: TTD dulu (bawah), stempel kemudian (atas) — cap menindih tanda tangan.
+    const imgTtd = ttd
+      ? `<img class="rpr-ttd-img rpr-ttd-img--bawah-stempel" src="${escapeHtml(ttd)}" alt="" />`
+      : ''
+    const imgStempel = `<img class="rpr-stempel" src="${escapeHtml(stempel)}" alt="" />`
+    return `<div class="rpr-ttd-space rpr-ttd-space--stempel">${imgTtd}${imgStempel}</div>`
+  }
+
+  if (ttd) {
+    return `<div class="rpr-ttd-space"><img class="rpr-ttd-img" src="${escapeHtml(ttd)}" alt="" /></div>`
   }
   return `<div class="rpr-ttd-space"></div>`
 }
@@ -186,17 +201,25 @@ function ruangTtd(url?: string): string {
 const tandaTangan = (d: DataRaporSts, jenis: JenisRapor): string => {
   // Tempat dan tanggal berada DI DALAM kolom Wali Kelas (rata tengah, sejajar dengan "Wali Kelas,"),
   // bukan rata kanan halaman. Kolom lain diberi baris kosong setinggi sama agar jabatan tetap sejajar.
-  const kolom = (peran: string, nama: string, nbm = '', tempat = '', ttdUrl?: string) =>
-    `<div class="rpr-ttd-col"><div class="rpr-ttd-tempat">${tempat || '&nbsp;'}</div><div>${peran}</div>${ruangTtd(ttdUrl)}<div class="rpr-ttd-name">${nama}</div><div class="rpr-ttd-nbm">${nbm}</div></div>`
+  const kolom = (
+    peran: string,
+    nama: string,
+    nbm = '',
+    tempat = '',
+    opts?: { ttdUrl?: string; stempelUrl?: string; denganStempel?: boolean },
+  ) =>
+    `<div class="rpr-ttd-col"><div class="rpr-ttd-tempat">${tempat || '&nbsp;'}</div><div>${peran}</div>${ruangTtd(opts || {})}<div class="rpr-ttd-name">${nama}</div><div class="rpr-ttd-nbm">${nbm}</div></div>`
   const tempat = `${escapeHtml(d.kota)}, ${escapeHtml(d.tanggal)}`
+  const stempelUrl = (d.config.stempelUrl || '').trim() || undefined
+  const ttdKepsek = (d.ttdKepsekUrl || d.config.ttdKepsekUrl || '').trim() || undefined
   const ortu = kolom('Orang Tua/Wali', '(………………………………)')
-  const wali = kolom('Wali Kelas,', escapeHtml(d.waliNama), '', tempat, d.ttdWaliUrl)
+  const wali = kolom('Wali Kelas,', escapeHtml(d.waliNama), '', tempat, { ttdUrl: d.ttdWaliUrl })
   const kepsek = kolom(
     'Kepala Sekolah,',
     escapeHtml(d.config.namaKepsek || '—'),
     d.config.nbmKepsek ? `NBM. ${escapeHtml(d.config.nbmKepsek)}` : '',
     '',
-    d.ttdKepsekUrl || d.config.ttdKepsekUrl,
+    { ttdUrl: ttdKepsek, stempelUrl, denganStempel: true },
   )
   // STS (online): Ortu + Wali + Kepsek agar TTD digital guru & kepsek ikut tercetak.
   // SAS: tetap tiga pihak (Ortu + Kepsek + Wali) — TTD digital tidak dipaksa (cetak offline).
@@ -329,7 +352,10 @@ tr{page-break-inside:avoid;break-inside:avoid}
 .rpr-ttd.dua{grid-template-columns:1fr 1fr;gap:80pt;padding:0 20pt}
 .rpr-ttd-col{text-align:center}
 .rpr-ttd-space{height:50pt;display:flex;align-items:flex-end;justify-content:center}
-.rpr-ttd-img{max-height:48pt;max-width:110pt;object-fit:contain;display:block}
+.rpr-ttd-space--stempel{position:relative;height:64pt;align-items:center;justify-content:center}
+.rpr-stempel{position:absolute;left:50%;top:50%;transform:translate(-50%,-48%);max-height:62pt;max-width:62pt;width:auto;height:auto;object-fit:contain;opacity:.9;z-index:2;pointer-events:none}
+.rpr-ttd-img{max-height:42pt;max-width:100pt;object-fit:contain;display:block;position:relative;z-index:1}
+.rpr-ttd-img--bawah-stempel{max-height:38pt;max-width:92pt;z-index:1}
 .rpr-ttd-name{font-weight:bold;border-top:1pt solid #000;padding-top:2pt}
 .rpr-ttd-nbm{font-size:9.5pt;color:#444;min-height:12pt}
 .rpr-bagian-d,.rpr-ttd-wrap,.rpr-ttd,.rpr-footer-group,.rpr-keputusan-wrap{page-break-inside:avoid;break-inside:avoid}
