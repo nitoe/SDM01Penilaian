@@ -41,6 +41,7 @@ import InputEkskul from './pages/akademik/InputEkskul'
 import Kokurikuler from './pages/akademik/Kokurikuler'
 import ProyekStemDetail from './pages/akademik/ProyekStemDetail'
 import MutasiSiswa from './pages/akademik/MutasiSiswa'
+import PublikasiSts from './pages/akademik/PublikasiSts'
 import MutasiSiswaAdmin from './pages/admin/MutasiSiswaAdmin'
 
 /** Menjaga rute per role di sisi UI. Penegakan sebenarnya tetap di firestore.rules. */
@@ -182,6 +183,7 @@ export default function App() {
             <Route path="/akademik/rapor" element={profile ? <Rapor profile={profile} /> : null} />
             <Route path="/akademik/rapor-sas" element={profile ? <Rapor profile={profile} jenis="sas" /> : null} />
             <Route path="/akademik/kelengkapan-rapor" element={profile ? <KelengkapanRapor profile={profile} /> : null} />
+            <Route path="/akademik/publikasi-sts" element={profile ? <PublikasiSts profile={profile} /> : null} />
             {/* Ekstrakurikuler: pengampu ekskul atau wali kelas */}
             <Route path="/akademik/ekskul" element={profile ? <InputEkskul profile={profile} /> : null} />
             <Route path="/akademik/kokurikuler" element={profile ? <Kokurikuler profile={profile} /> : null} />

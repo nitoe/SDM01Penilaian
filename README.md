@@ -1,117 +1,34 @@
-# SDM 01 Kukusan — Sistem Penilaian
+# Integrasi Publikasikan rapor STS — file lengkap
 
-Aplikasi penilaian internal **SD Muhammadiyah 01 Kukusan**.
+Salin **seluruh isi file** ke repo `SDM01Penilaian` (timpa file yang sama path-nya).
 
-Frontend: **Vite + React 19 + TypeScript + Tailwind CSS v4**  
-Backend: **Firebase** (Authentication + Firestore + Hosting)
+| File | Aksi |
+|------|------|
+| `firestore.rules` | **Ganti seluruh file** di root repo (sudah termasuk sarpras + perpus + `sts_publikasi`) |
+| `src/lib/stsPublikasi.ts` | **File baru** |
+| `src/pages/akademik/PublikasiSts.tsx` | **File baru** |
+| `src/App.tsx` | **Ganti seluruh file** (tambah import + route) |
+| `src/pages/AkademikHub.tsx` | **Ganti seluruh file** (tambah item menu) |
 
-URL: `https://penilaian.sdmuhammadiyah01kks.sch.id`  
-URL bawaan Firebase: `https://sdm01kukusan-2e735.web.app`
-
----
-
-## Untuk pemula — mulai dari sini
-
-Ikuti urutan di bawah. Jangan loncat langkah.
-
-### 1. Prasyarat di komputer Anda
-
-| Tools | Cek di terminal | Unduh jika belum |
-|-------|-----------------|------------------|
-| **Node.js** (versi 20 ke atas) | `node -v` | https://nodejs.org |
-| **npm** (ikut Node.js) | `npm -v` | — |
-| **Git** (opsional) | `git --version` | https://git-scm.com |
-
-### 2. Install dependensi proyek
+## Deploy rules
 
 ```bash
-npm install
+npm run deploy:rules
+# atau: firebase deploy --only firestore:rules
 ```
 
-### 3. Siapkan project Firebase
+Uji dengan akun **wali kelas** dan **admin** sebelum dipakai guru secara luas.
 
-Panduan lengkap: **[docs/SETUP_FIREBASE.md](docs/SETUP_FIREBASE.md)**. Ringkasnya:
+## Perubahan rules (ringkas)
 
-1. Gunakan project dengan ID **`sdm01kukusan-2e735`** di https://console.firebase.google.com
-2. Aktifkan **Authentication** (Email/Password)
-3. Buat database **Firestore**
-4. Daftarkan aplikasi web → salin config
-5. Isi file `.env` (salin dari `.env.example`)
-6. Deploy rules: `npm run deploy:rules`
+1. **`sts_publikasi/{id}`** — read: siapa saja; write: admin atau `waliKelasSendiri(kelas)`.
+2. **`nilai_sts`** — `allow read` ditambah `|| true` agar portal ortu (tanpa Auth) bisa membaca nilai untuk rapor. Guru tetap memakai `lihatMapelKelas` untuk tulis.
 
-### 4. Jalankan di komputer (mode development)
+Tidak mengubah rules sarpras_*, perpus_*, setoran, mutasi, dll.
 
-```bash
-npm run dev
-```
+## Uji cepat
 
-Buka alamat yang muncul (biasanya `http://localhost:5173`).
-
-### 5. Deploy ke internet (Firebase Hosting)
-
-```bash
-npm install -g firebase-tools
-firebase login
-firebase use sdm01kukusan-2e735
-npm run deploy
-```
-
-Panduan deploy, custom domain, dan header keamanan: **[docs/DEPLOY.md](docs/DEPLOY.md)**.
-
----
-
-## Struktur folder
-
-```
-├── docs/                  # Panduan (Firebase, deploy, model data)
-├── public/                # File statis (favicon, logo)
-├── src/
-│   ├── components/        # Komponen UI bersama (Layout, dll.)
-│   ├── lib/               # Firebase, auth, akses data, helper
-│   ├── pages/             # Halaman (Login, Home, hub modul, tahsin/, admin/)
-│   ├── types/             # Tipe TypeScript
-│   ├── App.tsx            # Routing utama
-│   ├── main.tsx           # Entry point
-│   └── index.css          # Tailwind + design tokens
-├── .env.example           # Contoh variabel Firebase
-├── firebase.json          # Konfigurasi Hosting & Firestore
-├── firestore.rules        # Security rules
-├── CHANGELOG.md           # Riwayat perubahan (append-only)
-├── ANTIREGRESI.md         # Aturan agar perbaikan tidak rusak lagi (append-only)
-├── package.json
-└── vite.config.ts
-```
-
-## Status migrasi
-
-Halaman detail dimigrasikan satu per satu dari versi HTML lama (`penilaian-v2`).
-Daftar koleksi dan keputusan data: **[docs/DATA_MODEL.md](docs/DATA_MODEL.md)**.
-
-| Modul | Status |
-|-------|--------|
-| Scaffold (Vite, React, Tailwind, Auth, Layout) | ✅ Selesai |
-| Login + Beranda + Hub modul + periode akademik | ✅ Selesai |
-| Tahsin-Tahfizh: Input Setoran, Riwayat, Target, Catat Menulis, Cetak Laporan | ✅ Ada |
-| Admin: Data Siswa, Kelola Akun Guru, Data Sekolah | ✅ Ada |
-| Admin: mutasi siswa | ✅ Ada |
-| Akademik: Setup TP & KKTP, Bobot Semester, Input Nilai SLM | ✅ Ada |
-| Akademik: STS/SAS, Leger, Rapor STS (TTD digital + stempel) | ✅ Ada |
-| Akademik: ekstrakurikuler, kokurikuler (STEM + 7KAIH) | ✅ Ada |
-| Akademik: absensi rapor, kelengkapan rapor, rapor SAS penuh | ⏳ Sebagian / lanjut |
-| Akun orang tua (portal) | ⏳ Belum — placeholder |
-
-**Catatan (Okt 2026):** nilai SLM/STS/SAS yang dikosongkan di input dapat dihapus (guru bidang & wali kelas). Setelah ubah rules, jalankan `npm run deploy:rules`. Lihat CHANGELOG & ANTIREGRESI §29.
-
-## Perintah berguna
-
-| Perintah | Fungsi |
-|----------|--------|
-| `npm run dev` | Jalankan server development |
-| `npm run build` | Build produksi ke folder `dist/` |
-| `npm run preview` | Pratinjau hasil build |
-| `npm run deploy` | Build + deploy ke Firebase Hosting |
-| `npm run deploy:rules` | Deploy hanya Firestore rules & indexes |
-
-## Kontak
-
-SD Muhammadiyah 01 Kukusan — internal.
+1. Login wali → Akademik → **Publikasikan rapor STS**
+2. Pilih kelas → Publikasikan
+3. Console Firestore: dokumen `sts_publikasi/...` `published: true`
+4. Portal ortu: beranda status Tersedia → buka Rapor STS

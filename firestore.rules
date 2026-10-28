@@ -570,7 +570,11 @@ match /g7kaih/{id} {
     }
 
     match /nilai_sts/{id} {
-      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
+      // lihatMapelKelas: guru/admin mapel+kelas.
+      // `true`: portal orang tua (tanpa Auth) membaca nilai anak untuk rapor STS
+      // setelah sts_publikasi.published — gerbang di aplikasi portal, bukan di rules.
+      // Sama pola dengan allow get/list siswa || true (login NISN portal).
+      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas) || true;
       allow create: if isLoggedIn()
                      && request.resource.data.createdBy == request.auth.uid
                      && tulisMapelKelas(request.resource.data.mapel, request.resource.data.kelas);
@@ -954,6 +958,19 @@ match /g7kaih/{id} {
       allow read: if isAdmin();
       allow create: if isAdmin();
       allow update, delete: if false;
+    }
+
+
+    // ---- Portal orang tua: gerbang rapor STS (bukan leger) --------------------
+    // ID dokumen: {kelas}_{tahunAjaran}_{semester} — '/' pada tahun ajaran diganti '-'.
+    // Baca: terbuka (portal ortu tanpa Auth Firebase, pola mirip roster siswa).
+    // Tulis: admin atau wali kelas dokumen tersebut (waliKelasSendiri).
+    // ANTIREGRESI: admin boleh publish semua kelas; wali hanya kelas wali.
+    match /sts_publikasi/{id} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        || waliKelasSendiri(request.resource.data.kelas);
+      allow delete: if isAdmin();
     }
 
     // ---- Default: tolak semuanya -------------------------------------------

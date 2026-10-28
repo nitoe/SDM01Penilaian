@@ -92,6 +92,14 @@ const laporan: Item[] = [
     ready: true,
   },
   {
+    to: '/akademik/publikasi-sts',
+    title: 'Publikasikan rapor STS',
+    desc: 'Bagikan rapor STS di portal orang tua — wali kelas / admin',
+    icon: 'printer',
+    tone: 'green',
+    ready: true,
+  },
+  {
     to: '/akademik/kelengkapan-rapor',
     title: 'Kelengkapan Rapor SAS',
     desc: 'Ketidakhadiran, catatan wali, keputusan, kokurikuler, ekstrakurikuler',
