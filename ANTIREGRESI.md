@@ -301,3 +301,15 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 30.4 **Jangan melonggarkan rules** hanya agar alias lolos. Perluasan baca alias untuk leger wali kelas sudah tercakup oleh `waliKelas`.
 
 30.5 Setiap perubahan alias di `tpImport.ts` (`MAPEL_ALIAS_GROUPS`) harus diuji dengan akun guru bidang studi (bukan wali kelas) untuk mapel itu: halaman STS/SAS/SLM harus memuat dan menampilkan nilai.
+
+## §31. Salinan rapor STS untuk portal orang tua
+
+31.1 **Portal tidak menghitung rapor.** Nilai akhir, kalimat capaian, identitas, TTD, dan stempel yang dilihat orang tua harus sama dengan cetak. Itu hanya boleh dihasilkan `muatDataRaporStsKelas` + `kalimatCapaian` di aplikasi penilaian, lalu disimpan di `rapor_sts_ortu`. Jangan menyalin rumus ke portal.
+
+31.2 **Urutan publikasi**: tulis salinan dulu (`published: true`), baru `sts_publikasi.published = true` beserta `snapshotIds`. Batal: salinan `published: false`, lalu gerbang `published: false`. Jangan hanya membalik gerbang tanpa menyentuh salinan — portal memeriksa keduanya.
+
+31.3 **TTD wali** pada salinan dari `cariWaliKelasLengkap(kelas, profil)`, bukan nama admin yang menekan tombol. Tanggal dari `periode.tglRaporSts` (kosong = hari ini, sama seperti halaman Rapor). Jangan memakai `tglRapor` SAS.
+
+31.4 **Rules `rapor_sts_ortu`**: `read: if true` (portal tanpa Auth, pola sama `sts_publikasi` / `nilai_sts`). Tulis hanya `isAdmin()` atau `waliKelasSendiri(kelas)`. Dokumen wajib menyimpan `kelas`. Setelah ubah rules: `npm run deploy:rules`. Tanpa deploy, portal gagal membaca dan guru gagal menulis.
+
+31.5 Publikasi yang sudah ada sebelum perubahan ini **tidak** punya salinan. Wali harus mempublikasikan ulang. Jangan membuat portal jatuh ke rata-rata `nilai_sts` sebagai pengganti.

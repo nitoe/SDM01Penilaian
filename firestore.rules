@@ -973,6 +973,16 @@ match /g7kaih/{id} {
       allow delete: if isAdmin();
     }
 
+    // Salinan rapor STS resmi untuk portal orang tua (bukan hitungan ulang).
+    // Ditulis saat publikasi, dari rumus yang sama dengan cetak rapor STS.
+    // Baca terbuka (portal tanpa Auth). Tulis: admin atau wali kelas dokumen.
+    match /rapor_sts_ortu/{id} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        || waliKelasSendiri(request.resource.data.kelas);
+      allow delete: if isAdmin();
+    }
+
     // ---- Default: tolak semuanya -------------------------------------------
     match /{document=**} {
       allow read, write: if false;

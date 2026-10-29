@@ -101,3 +101,13 @@ ID dokumen deterministik (upsert tanpa query tambahan): `{siswaId}_{tahun-ajaran
 | `ekstrakurikuler_siswa` | `siswaId, kelas, semester, tahunAjaran, ekskulId, nama, level (1 Layak, 2 Cakap, 3 Mahir, 4 Tidak Ikut), deskripsi (≤500), updatedAt`; ID `{siswaId}__{ekskulId}__{periode}` | admin, wali kelas | wali kelas saja (boleh hapus) |
 
 Query selalu memuat `kelas` + `semester` + `tahunAjaran` (kesamaan saja, tanpa indeks gabungan).
+
+## Salinan rapor STS portal orang tua
+
+Koleksi `rapor_sts_ortu`. ID `{siswaId}_{tahunAjaran}_{semester}` (slash tahun ajaran menjadi `-`).
+
+Ditulis hanya saat wali/admin mempublikasikan rapor STS. Isinya hasil `muatDataRaporStsKelas` yang sudah diratakan: identitas anak dan sekolah, `baris[]` (`mapel`, `muatan` wajib|yayasan, `nilaiAkhir`, `capaian[]` kalimat final), nama/NBM/URL TTD wali, nama/NBM/URL TTD kepsek, URL stempel, `kota`, `tanggal`, `published`.
+
+Baca: terbuka (portal tanpa Firebase Auth). Tulis: admin atau wali kelas field `kelas`. Batal publikasi hanya mengubah `published` menjadi false; dokumen nilai guru tidak dihapus.
+
+Gerbang tetap `sts_publikasi`. Field baru `snapshotIds` (array id salinan) dipakai saat batal.

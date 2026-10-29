@@ -12,8 +12,14 @@ import {
   serverTimestamp,
   setDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
+import { kalimatCapaian } from './asesmenRumus'
+import { muatDataRaporStsKelas } from './raporSts'
+import { cariWaliKelasLengkap } from './penandatangan'
+import type { AppUser } from '../types/user'
+import type { DataRaporSts } from './raporHtml'
 
 export interface StsPublikasi {
   id: string
@@ -25,7 +31,8 @@ export interface StsPublikasi {
   publishedBy: string | null
   publishedByNama: string
   revokedAt?: Date | null
-  revokedBy?: string | null
+  /** ID dokumen `rapor_sts_ortu` yang ditulis saat publikasi ini. Dipakai saat batal. */
+  snapshotIds?: string[]
 }
 
 export interface RingkasKelengkapanSts {
@@ -89,19 +96,139 @@ export async function getStsPublikasi(
     publishedByNama: String(d.publishedByNama ?? ''),
     revokedAt: toDate(d.revokedAt),
     revokedBy: d.revokedBy ? String(d.revokedBy) : null,
+    snapshotIds: Array.isArray(d.snapshotIds) ? d.snapshotIds.map(String) : [],
+  }
+}
+
+/** ID dokumen salinan rapor resmi untuk satu siswa. Slash tahun ajaran jadi '-'. */
+export function idRaporStsOrtu(siswaId: string, tahunAjaran: string, semester: string): string {
+  return `${siswaId}_${tahunAjaran}_${semester}`.replace(/\//g, '-')
+}
+
+function teks(v: unknown): string {
+  return String(v ?? '').trim()
+}
+
+/** Satu baris tabel rapor, sudah berupa kalimat capaian final (bukan bahan mentah KKTP). */
+function barisUntukOrtu(d: DataRaporSts) {
+  return d.daftarNilai.map((item) => ({
+    mapel: item.labelMapel,
+    muatan: item.muatan,
+    nilaiAkhir: item.nilaiAkhir,
+    capaian: kalimatCapaian(
+      item.capaianTerbaik,
+      item.capaianPerluBimbingan,
+      item.levelIndexTerbaik,
+      item.levelIndexTerendah,
+    ),
+  }))
+}
+
+/**
+ * Salin rapor STS yang SAMA dengan cetak aplikasi penilaian ke `rapor_sts_ortu`.
+ * Portal orang tua hanya menampilkan dokumen ini — tidak menghitung ulang rata-rata.
+ * Rumus, capaian, identitas, TTD, dan stempel diambil dari `muatDataRaporStsKelas`.
+ */
+export async function tulisSnapshotRaporOrtu(opts: {
+  kelas: string
+  tahunAjaran: string
+  semester: '1' | '2'
+  profil: AppUser
+  kotaRapor?: string
+  tanggalRapor?: string
+}): Promise<string[]> {
+  const wali = await cariWaliKelasLengkap(opts.kelas, opts.profil)
+  const daftar = await muatDataRaporStsKelas({
+    kelas: opts.kelas,
+    waliNama: wali.nama,
+    role: opts.profil.role,
+    ttdWaliUrl: wali.ttdUrl,
+    waliNbm: wali.nbm,
+    semester: opts.semester,
+    tahunAjaran: opts.tahunAjaran,
+    kotaRapor: opts.kotaRapor,
+    tanggalRapor: opts.tanggalRapor,
+  })
+
+  const ids: string[] = []
+  for (let i = 0; i < daftar.length; i += 400) {
+    const batch = writeBatch(db)
+    for (const d of daftar.slice(i, i + 400)) {
+      const id = idRaporStsOrtu(d.siswa.id, opts.tahunAjaran, opts.semester)
+      ids.push(id)
+      const cfg = d.config
+      batch.set(doc(db, 'rapor_sts_ortu', id), {
+        siswaId: d.siswa.id,
+        nama: teks(d.siswa.nama),
+        nisn: teks(d.siswa.nisn || d.siswa.nipd),
+        kelas: d.kelas,
+        fase: d.fase,
+        semester: d.semester,
+        tahunAjaran: d.tahunAjaran,
+        sekolah: teks(cfg.namaSekolah) || 'SD Muhammadiyah 01 Kukusan',
+        alamat: teks(cfg.alamatSekolah),
+        kota: teks(d.kota) || 'Depok',
+        tanggal: teks(d.tanggal),
+        waliNama: teks(d.waliNama),
+        waliNbm: teks(d.waliNbm),
+        ttdWaliUrl: teks(d.ttdWaliUrl),
+        namaKepsek: teks(cfg.namaKepsek),
+        nbmKepsek: teks(cfg.nbmKepsek),
+        ttdKepsekUrl: teks(d.ttdKepsekUrl || cfg.ttdKepsekUrl),
+        stempelUrl: teks(cfg.stempelUrl),
+        baris: barisUntukOrtu(d),
+        published: true,
+        updatedAt: serverTimestamp(),
+      })
+    }
+    await batch.commit()
+  }
+  return ids
+}
+
+async function tandaiSnapshot(ids: string[], published: boolean): Promise<void> {
+  const unik = [...new Set(ids.filter(Boolean))]
+  for (let i = 0; i < unik.length; i += 400) {
+    const batch = writeBatch(db)
+    for (const id of unik.slice(i, i + 400)) {
+      batch.set(
+        doc(db, 'rapor_sts_ortu', id),
+        { published, updatedAt: serverTimestamp() },
+        { merge: true },
+      )
+    }
+    await batch.commit()
   }
 }
 
 /**
  * Publikasikan rapor STS kelas ke portal orang tua.
+ * Menulis salinan resmi dulu, baru gerbang `sts_publikasi`.
  * @param namaPublisher nama tampilan guru/admin
+ * @param opsi profil pemanggil (wajib agar TTD wali kelas ikut tersalin) + tanggal/kota rapor
  */
 export async function publikasikanSts(
   kelas: string,
   tahunAjaran: string,
   semester: '1' | '2',
   namaPublisher: string,
+  opsi?: {
+    profil?: AppUser
+    kotaRapor?: string
+    tanggalRapor?: string
+  },
 ): Promise<void> {
+  if (!opsi?.profil) {
+    throw new Error('Profil pemanggil wajib agar salinan rapor (TTD wali kelas) bisa ditulis.')
+  }
+  const snapshotIds = await tulisSnapshotRaporOrtu({
+    kelas,
+    tahunAjaran,
+    semester,
+    profil: opsi.profil,
+    kotaRapor: opsi.kotaRapor,
+    tanggalRapor: opsi.tanggalRapor,
+  })
   const id = idStsPublikasi(kelas, tahunAjaran, semester)
   await setDoc(
     doc(db, 'sts_publikasi', id),
@@ -115,6 +242,7 @@ export async function publikasikanSts(
       publishedByNama: namaPublisher.trim() || 'Guru',
       revokedAt: null,
       revokedBy: null,
+      snapshotIds,
       updatedAt: serverTimestamp(),
     },
     { merge: true },
@@ -128,6 +256,12 @@ export async function batalkanPublikasiSts(
   semester: '1' | '2',
 ): Promise<void> {
   const id = idStsPublikasi(kelas, tahunAjaran, semester)
+  const prev = await getDoc(doc(db, 'sts_publikasi', id))
+  const snapshotIds =
+    prev.exists() && Array.isArray(prev.data().snapshotIds)
+      ? (prev.data().snapshotIds as unknown[]).map(String)
+      : []
+  if (snapshotIds.length) await tandaiSnapshot(snapshotIds, false)
   await setDoc(
     doc(db, 'sts_publikasi', id),
     {

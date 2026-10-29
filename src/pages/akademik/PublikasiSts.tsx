@@ -106,8 +106,12 @@ export default function PublikasiSts({ profile }: { profile: AppUser }) {
     setMenyimpan(true)
     try {
       const nama = [profile.nama, profile.gelar].filter(Boolean).join(', ')
-      await publikasikanSts(kelas, periode.tahunAjaran, periode.semester, nama)
-      toast.show(`Rapor STS kelas ${kelas} dipublikasikan ke portal orang tua.`)
+      await publikasikanSts(kelas, periode.tahunAjaran, periode.semester, nama, {
+        profil: profile,
+        kotaRapor: periodeAk.periode?.kotaRapor,
+        tanggalRapor: periodeAk.periode?.tglRaporSts?.trim() || undefined,
+      })
+      toast.show(`Rapor STS kelas ${kelas} dipublikasikan. Orang tua melihat lembar yang sama dengan cetak.`)
       setKonfirmasi(null)
       await muat()
     } catch (err) {

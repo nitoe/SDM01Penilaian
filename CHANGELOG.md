@@ -389,3 +389,13 @@
 - **Penyebab**: `getCakupanTP`, `getNilaiAsesmenKelas`, `getNilaiTPKelas`, `getNilaiTPUntukTP` (commit `0456102`, multi-nama alias mapel) menjalankan satu query per nama alias dengan `Promise.all`. Rules `nilai_tp` / `nilai_sts` / `nilai_sas` / `asesmen_cakupan` hanya mengizinkan baca untuk nama mapel yang persis ada di `penugasanKelasMapel` guru (wali kelas lolos lewat `waliKelas`). Nama alias lain ditolak `permission-denied`; satu penolakan menggagalkan seluruh `muat()`, `siap` tidak pernah `true`, spinner tidak berhenti.
 - **Perbaikan** (`src/lib/akademik.ts`): helper `selesaikanAlias()` memakai `Promise.allSettled`. `permission-denied` pada nama alias dilewati selama ada nama lain yang berhasil dibaca; error lain tetap dilempar; bila semua nama ditolak, penolakan dilempar. Leger/wali kelas tetap membaca semua alias.
 - **Tidak perlu** `deploy:rules`. Cukup `npm run deploy` (hosting).
+
+## Belum dirilis — Salinan rapor STS resmi untuk portal orang tua
+
+- **Beda format**: portal merata-ratakan `nilai_sts` (satu angka + predikat). Cetak rapor STS memakai nilai akhir berbobot cakupan, kalimat capaian KKTP, identitas sekolah, TTD wali, TTD + stempel kepala sekolah.
+- Portal tidak bisa menghitung itu sendiri: `mapel`, `tp_kktp`, `asesmen_cakupan`, dan `config/akademik` hanya boleh dibaca guru.
+- **Perbaikan** (`src/lib/stsPublikasi.ts`): `publikasikanSts` menulis dulu satu dokumen per siswa di `rapor_sts_ortu/{siswaId}_{tahun}_{semester}` lewat `muatDataRaporStsKelas` + `kalimatCapaian` (fungsi yang sama dengan cetak). Lalu gerbang `sts_publikasi` menyimpan `snapshotIds`. `batalkanPublikasiSts` menandai salinan `published: false`.
+- `PublikasiSts.tsx` mengirim profil pemanggil, `kotaRapor`, dan `tglRaporSts` periode. TTD wali kelas diambil `cariWaliKelasLengkap` (admin tidak menaruh TTD-nya sendiri).
+- `firestore.rules`: koleksi `rapor_sts_ortu` — baca terbuka (portal tanpa Auth), tulis admin atau wali kelas dokumen.
+- **Deploy wajib**: `npm run deploy:rules` lalu hosting. Wali kelas harus menekan **Publikasikan** lagi; publikasi lama tidak berisi salinan.
+- Rumus nilai tidak diubah.
