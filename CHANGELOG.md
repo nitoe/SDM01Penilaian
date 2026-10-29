@@ -381,3 +381,11 @@
   - `src/lib/akademik.ts`: batch menerima `null` → hapus dokumen yang sudah ada.
   - `NilaiSlm.tsx` + `NilaiStsSas.tsx`: sel yang dikosongkan setelah ada nilai masuk daftar perubahan; ringkasan total/rata memakai nilai draf (kosong = null); pesan simpan membedakan disimpan vs dihapus.
 - **Deploy wajib**: `npm run deploy:rules` lalu hosting (`npm run deploy`).
+
+
+## Belum dirilis (basis: package.json 0.1.0) — Guru bidang studi PJOK/IPAS tidak bisa memuat nilai (spinner terus)
+
+- **Bug**: halaman input STS/SAS/SLM milik guru bidang studi PJOK (dan berpotensi IPAS, PPKn, Seni Budaya) memuat tanpa akhir; nilai yang sudah diinput tidak tampil. Wali kelas tidak terkena.
+- **Penyebab**: `getCakupanTP`, `getNilaiAsesmenKelas`, `getNilaiTPKelas`, `getNilaiTPUntukTP` (commit `0456102`, multi-nama alias mapel) menjalankan satu query per nama alias dengan `Promise.all`. Rules `nilai_tp` / `nilai_sts` / `nilai_sas` / `asesmen_cakupan` hanya mengizinkan baca untuk nama mapel yang persis ada di `penugasanKelasMapel` guru (wali kelas lolos lewat `waliKelas`). Nama alias lain ditolak `permission-denied`; satu penolakan menggagalkan seluruh `muat()`, `siap` tidak pernah `true`, spinner tidak berhenti.
+- **Perbaikan** (`src/lib/akademik.ts`): helper `selesaikanAlias()` memakai `Promise.allSettled`. `permission-denied` pada nama alias dilewati selama ada nama lain yang berhasil dibaca; error lain tetap dilempar; bila semua nama ditolak, penolakan dilempar. Leger/wali kelas tetap membaca semua alias.
+- **Tidak perlu** `deploy:rules`. Cukup `npm run deploy` (hosting).

@@ -40,6 +40,31 @@ export * from './akademikRumus'
 
 const uid = () => auth.currentUser?.uid ?? null
 
+/**
+ * Jalankan query per nama alias mapel (IPAS/PJOK ↔ nama panjang) secara paralel.
+ * Rules `nilai_tp` / `nilai_sts` / `nilai_sas` / `asesmen_cakupan` hanya mengizinkan baca untuk nama mapel
+ * yang PERSIS ada di penugasan guru, sedangkan wali kelas lolos lewat `waliKelas`. Guru bidang studi
+ * karena itu akan ditolak (`permission-denied`) pada nama alias yang bukan miliknya. Penolakan itu
+ * DILEWATI selama masih ada satu nama yang berhasil dibaca; kesalahan lain (jaringan, dst.) tetap
+ * dilempar. Bila SEMUA nama ditolak, penolakan dilempar apa adanya (ANTIREGRESI §30).
+ */
+async function selesaikanAlias<T>(janji: Promise<T>[]): Promise<T[]> {
+  const hasil = await Promise.allSettled(janji)
+  const sukses: T[] = []
+  let ditolak: unknown
+  for (const h of hasil) {
+    if (h.status === 'fulfilled') {
+      sukses.push(h.value)
+      continue
+    }
+    const kode = (h.reason as { code?: string } | null)?.code
+    if (kode !== 'permission-denied') throw h.reason
+    ditolak = h.reason
+  }
+  if (!sukses.length && ditolak) throw ditolak
+  return sukses
+}
+
 function dokumenKeMapel(id: string, data: Record<string, unknown>): Mapel {
   return {
     id,
@@ -609,7 +634,7 @@ export async function getNilaiTPUntukTP(ctx: {
   // Alias mapel (IPAS ↔ nama panjang, PJOK ↔ …) agar nilai yang disimpan
   // di bawah nama penugasan guru bidang tetap terbaca saat leger/input memakai nama resmi.
   const namaKandidat = aliasNamaMapel(ctx.mapel)
-  const hasil = await Promise.all(
+  const hasil = await selesaikanAlias(
     namaKandidat.map(async (nama) => {
       const q = query(
         collection(db, 'nilai_tp'),
@@ -643,7 +668,7 @@ export async function getNilaiTPKelas(ctx: {
   tahunAjaran: string
 }): Promise<Record<string, Record<string, NilaiTpDoc>>> {
   const namaKandidat = aliasNamaMapel(ctx.mapel)
-  const hasil = await Promise.all(
+  const hasil = await selesaikanAlias(
     namaKandidat.map(async (nama) => {
       const q = query(
         collection(db, 'nilai_tp'),
@@ -724,7 +749,7 @@ export async function getCakupanTP(ctx: {
 }): Promise<AsesmenCakupan | null> {
   // Alias mapel: cakupan bisa tersimpan di bawah nama panjang dari penugasan guru bidang.
   const namaKandidat = aliasNamaMapel(ctx.mapel)
-  const hasil = await Promise.all(
+  const hasil = await selesaikanAlias(
     namaKandidat.map(async (nama) => {
       const q = query(
         collection(db, 'asesmen_cakupan'),
@@ -815,7 +840,7 @@ export async function getNilaiAsesmenKelas(ctx: {
   tahunAjaran: string
 }): Promise<Record<string, Record<string, NilaiAsesmenDoc>>> {
   const namaKandidat = aliasNamaMapel(ctx.mapel)
-  const hasil = await Promise.all(
+  const hasil = await selesaikanAlias(
     namaKandidat.map(async (nama) => {
       const q = query(
         collection(db, KOLEKSI_ASESMEN[ctx.jenis]),

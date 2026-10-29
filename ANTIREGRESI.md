@@ -288,3 +288,16 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 29.4 **Nilai efektif di UI (total/rata/progress):** bila kunci draf untuk sel sudah terdefinisi (termasuk string kosong), jangan jatuh ke nilai server. Kosong = sengaja dihapus. Fallback ke server hanya bila kunci draf belum pernah disentuh (`undefined`).
 
 29.5 Setelah mengubah rules, wajib `npm run deploy:rules` sebelum menguji hapus di produksi. Tanpa deploy rules, hapus tetap ditolak meskipun UI sudah benar.
+
+
+## §30. Query alias mapel (IPAS / PJOK / PPKn / Seni Budaya) harus tahan `permission-denied`
+
+30.1 **Rules membaca nilai per nama mapel persis.** `nilai_tp`, `nilai_sts`, `nilai_sas`, `asesmen_cakupan` memakai `lihatMapelKelas`/`tulisMapelKelas` yang mencocokkan `"kelas::mapel"` ke `penugasanKelasMapel`. Guru bidang studi hanya lolos untuk nama yang tertulis di penugasannya; wali kelas lolos lewat `waliKelas` tanpa melihat nama mapel. Query Firestore tidak menyaring: bila satu nama tidak boleh dibaca, query itu ditolak seluruhnya.
+
+30.2 **Query multi-nama alias wajib lewat `selesaikanAlias()`** (`Promise.allSettled`) di `getNilaiTPUntukTP`, `getNilaiTPKelas`, `getCakupanTP`, `getNilaiAsesmenKelas`. Jangan kembali ke `Promise.all`: satu nama alias yang ditolak akan menggagalkan seluruh pemuatan guru bidang studi dan halaman input memuat tanpa akhir.
+
+30.3 `permission-denied` dilewati hanya selama masih ada satu nama alias yang berhasil. Error lain (jaringan dst.) tetap dilempar. Bila SEMUA nama ditolak, lempar penolakan itu (guru memang tidak berhak), jangan mengembalikan data kosong diam-diam.
+
+30.4 **Jangan melonggarkan rules** hanya agar alias lolos. Perluasan baca alias untuk leger wali kelas sudah tercakup oleh `waliKelas`.
+
+30.5 Setiap perubahan alias di `tpImport.ts` (`MAPEL_ALIAS_GROUPS`) harus diuji dengan akun guru bidang studi (bukan wali kelas) untuk mapel itu: halaman STS/SAS/SLM harus memuat dan menampilkan nilai.
