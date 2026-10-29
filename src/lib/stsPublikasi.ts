@@ -34,6 +34,9 @@ export interface StsPublikasi {
   revokedBy?: string | null
   /** ID dokumen `rapor_sts_ortu` yang ditulis saat publikasi ini. Dipakai saat batal. */
   snapshotIds?: string[]
+  /** Waktu jadwal rilis otomatis. Null jika tidak dijadwalkan. */
+  jadwalAt?: Date | null
+  jadwalOlehNama?: string
 }
 
 export interface RingkasKelengkapanSts {
@@ -98,6 +101,8 @@ export async function getStsPublikasi(
     revokedAt: toDate(d.revokedAt),
     revokedBy: d.revokedBy ? String(d.revokedBy) : null,
     snapshotIds: Array.isArray(d.snapshotIds) ? d.snapshotIds.map(String) : [],
+    jadwalAt: toDate(d.jadwalAt),
+    jadwalOlehNama: d.jadwalOlehNama ? String(d.jadwalOlehNama) : '',
   }
 }
 
@@ -208,6 +213,59 @@ async function tandaiSnapshot(ids: string[], published: boolean): Promise<void> 
  * @param namaPublisher nama tampilan guru/admin
  * @param opsi profil pemanggil (wajib agar TTD wali kelas ikut tersalin) + tanggal/kota rapor
  */
+/** Jadwalkan rilis otomatis rapor STS. Tidak langsung mempublikasikan. */
+export async function jadwalkanPublikasiSts(
+  kelas: string,
+  tahunAjaran: string,
+  semester: '1' | '2',
+  jadwalAt: Date,
+  namaPublisher: string,
+): Promise<void> {
+  if (!(jadwalAt instanceof Date) || Number.isNaN(jadwalAt.getTime())) {
+    throw new Error('Waktu jadwal tidak valid.')
+  }
+  if (jadwalAt.getTime() <= Date.now() + 60_000) {
+    throw new Error('Jadwal harus minimal 1 menit dari sekarang.')
+  }
+  const id = idStsPublikasi(kelas, tahunAjaran, semester)
+  await setDoc(
+    doc(db, 'sts_publikasi', id),
+    {
+      kelas,
+      tahunAjaran,
+      semester,
+      jadwalAt,
+      jadwalOleh: uid(),
+      jadwalOlehNama: namaPublisher.trim() || 'Guru',
+      jadwalDibuatAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  )
+}
+
+/** Hapus jadwal rilis. Tidak mengubah status published. */
+export async function batalkanJadwalPublikasiSts(
+  kelas: string,
+  tahunAjaran: string,
+  semester: '1' | '2',
+): Promise<void> {
+  const id = idStsPublikasi(kelas, tahunAjaran, semester)
+  await setDoc(
+    doc(db, 'sts_publikasi', id),
+    {
+      kelas,
+      tahunAjaran,
+      semester,
+      jadwalAt: null,
+      jadwalOleh: null,
+      jadwalOlehNama: null,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  )
+}
+
 export async function publikasikanSts(
   kelas: string,
   tahunAjaran: string,
@@ -244,6 +302,9 @@ export async function publikasikanSts(
       revokedAt: null,
       revokedBy: null,
       snapshotIds,
+      jadwalAt: null,
+      jadwalOleh: null,
+      jadwalOlehNama: null,
       updatedAt: serverTimestamp(),
     },
     { merge: true },
@@ -272,6 +333,9 @@ export async function batalkanPublikasiSts(
       published: false,
       revokedAt: serverTimestamp(),
       revokedBy: uid(),
+      jadwalAt: null,
+      jadwalOleh: null,
+      jadwalOlehNama: null,
       updatedAt: serverTimestamp(),
     },
     { merge: true },

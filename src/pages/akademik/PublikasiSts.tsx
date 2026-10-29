@@ -9,8 +9,10 @@ import { getSiswaList } from '../../lib/tahsinData'
 import { usePeriodeAkademik } from '../../lib/usePeriodeAkademik'
 import { isAdminRole } from '../../lib/roles'
 import {
+  batalkanJadwalPublikasiSts,
   batalkanPublikasiSts,
   getStsPublikasi,
+  jadwalkanPublikasiSts,
   publikasikanSts,
   ringkasKelengkapanSts,
   type RingkasKelengkapanSts,
@@ -53,6 +55,8 @@ export default function PublikasiSts({ profile }: { profile: AppUser }) {
   const [galat, setGalat] = useState('')
   const [konfirmasi, setKonfirmasi] = useState<'publish' | 'revoke' | null>(null)
   const [menyimpan, setMenyimpan] = useState(false)
+  const [jadwalInput, setJadwalInput] = useState('')
+  const [menjadwalkan, setMenjadwalkan] = useState(false)
   const toast = useToast()
 
   const periode = useMemo(
@@ -85,6 +89,18 @@ export default function PublikasiSts({ profile }: { profile: AppUser }) {
       ])
       setPub(p)
       setRingkas(r)
+      // Jika jadwal sudah jatuh tempo dan belum published, jalankan publish.
+      if (p && !p.published && p.jadwalAt && p.jadwalAt.getTime() <= Date.now()) {
+        const nama = [profile.nama, profile.gelar].filter(Boolean).join(', ')
+        await publikasikanSts(kelas, periode.tahunAjaran, periode.semester, nama, {
+          profil: profile,
+          kotaRapor: periodeAk.periode?.kotaRapor,
+          tanggalRapor: periodeAk.periode?.tglRaporSts?.trim() || undefined,
+        })
+        const ulang = await getStsPublikasi(kelas, periode.tahunAjaran, periode.semester)
+        setPub(ulang)
+        toast.show(`Jadwal rilis kelas ${kelas} telah dijalankan.`)
+      }
     } catch (err) {
       console.error(err)
       setGalat(
@@ -95,11 +111,48 @@ export default function PublikasiSts({ profile }: { profile: AppUser }) {
     } finally {
       setMemuat(false)
     }
-  }, [kelas, periode, profile.role])
+  }, [kelas, periode, profile, periodeAk.periode, toast])
 
   useEffect(() => {
     void muat()
   }, [muat])
+
+  async function jalankanJadwal() {
+    if (!periode || !kelas || !jadwalInput) return
+    const t = new Date(jadwalInput)
+    if (Number.isNaN(t.getTime())) {
+      toast.show('Waktu jadwal tidak valid.', true)
+      return
+    }
+    setMenjadwalkan(true)
+    try {
+      const nama = [profile.nama, profile.gelar].filter(Boolean).join(', ')
+      await jadwalkanPublikasiSts(kelas, periode.tahunAjaran, periode.semester, t, nama)
+      toast.show(`Rapor STS kelas ${kelas} dijadwalkan.`)
+      setJadwalInput('')
+      await muat()
+    } catch (err) {
+      console.error(err)
+      toast.show(err instanceof Error ? err.message : 'Gagal menjadwalkan.', true)
+    } finally {
+      setMenjadwalkan(false)
+    }
+  }
+
+  async function batalkanJadwal() {
+    if (!periode || !kelas) return
+    setMenjadwalkan(true)
+    try {
+      await batalkanJadwalPublikasiSts(kelas, periode.tahunAjaran, periode.semester)
+      toast.show('Jadwal rilis dibatalkan.')
+      await muat()
+    } catch (err) {
+      console.error(err)
+      toast.show('Gagal membatalkan jadwal.', true)
+    } finally {
+      setMenjadwalkan(false)
+    }
+  }
 
   async function jalankanPublish() {
     if (!periode || !kelas) return
@@ -347,6 +400,54 @@ export default function PublikasiSts({ profile }: { profile: AppUser }) {
               </div>
             )}
 
+            {!sudahPublish && (
+              <div className="rounded-lg border border-border bg-slate-50/60 p-3 space-y-2">
+                <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500">
+                  Jadwalkan rilis
+                </p>
+                {pub?.jadwalAt && pub.jadwalAt.getTime() > Date.now() ? (
+                  <div className="space-y-2">
+                    <p className="text-[13px] text-slate-800">
+                      Dijadwalkan pada <strong>{FMT.format(pub.jadwalAt)}</strong>
+                      {pub.jadwalOlehNama ? ` oleh ${pub.jadwalOlehNama}` : ''}.
+                    </p>
+                    <p className="text-[12px] text-muted">
+                      Rilis otomatis berjalan saat waktu tiba dan halaman ini (atau hub Akademik) dibuka oleh wali kelas.
+                    </p>
+                    <button
+                      type="button"
+                      className={btnGhost}
+                      disabled={menjadwalkan}
+                      onClick={() => void batalkanJadwal()}
+                    >
+                      Batalkan jadwal
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-end gap-2">
+                    <label className="flex flex-col gap-1 text-[12px] text-muted">
+                      Waktu rilis
+                      <input
+                        type="datetime-local"
+                        className={selectCls}
+                        value={jadwalInput}
+                        onChange={(e) => setJadwalInput(e.target.value)}
+                        disabled={menjadwalkan || nMapel === 0}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className={btnPrimary}
+                      disabled={menjadwalkan || !jadwalInput || nMapel === 0}
+                      onClick={() => void jalankanJadwal()}
+                    >
+                      {menjadwalkan ? 'Menyimpan…' : 'Jadwalkan'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {konfirmasi === null && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {!sudahPublish ? (
@@ -356,7 +457,7 @@ export default function PublikasiSts({ profile }: { profile: AppUser }) {
                     disabled={menyimpan || nMapel === 0}
                     onClick={() => setKonfirmasi('publish')}
                   >
-                    Publikasikan rapor ke portal
+                    Publikasikan sekarang
                   </button>
                 ) : (
                   <div className="w-full space-y-2">

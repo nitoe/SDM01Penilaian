@@ -399,3 +399,12 @@
 - `firestore.rules`: koleksi `rapor_sts_ortu` — baca terbuka (portal tanpa Auth), tulis admin atau wali kelas dokumen.
 - **Deploy wajib**: `npm run deploy:rules` lalu hosting. Wali kelas harus menekan **Publikasikan** lagi; publikasi lama tidak berisi salinan.
 - Rumus nilai tidak diubah.
+
+## 2026-10-29 — Jadwal rilis rapor STS
+
+- Wali kelas dan admin dapat menjadwalkan rilis rapor STS ke portal orang tua.
+- Di halaman **Publikasikan rapor STS**: pilih tanggal & waktu, lalu **Jadwalkan**.
+- Jadwal disimpan di dokumen `sts_publikasi` (field `jadwalAt`, `jadwalOlehNama`).
+- Saat waktu tiba dan halaman Publikasikan (atau hub yang memuat status) dibuka oleh wali kelas, rilis otomatis dijalankan memakai fungsi `publikasikanSts` yang sama dengan tombol manual.
+- Tombol **Publikasikan sekarang** tetap ada. Membatalkan publikasi atau mempublikasikan manual menghapus jadwal.
+- Tidak mengubah rumus rapor, salinan `rapor_sts_ortu`, atau rules. Tidak perlu `deploy:rules`.

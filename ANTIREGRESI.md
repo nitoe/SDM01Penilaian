@@ -313,3 +313,11 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 31.4 **Rules `rapor_sts_ortu`**: `read: if true` (portal tanpa Auth, pola sama `sts_publikasi` / `nilai_sts`). Tulis hanya `isAdmin()` atau `waliKelasSendiri(kelas)`. Dokumen wajib menyimpan `kelas`. Setelah ubah rules: `npm run deploy:rules`. Tanpa deploy, portal gagal membaca dan guru gagal menulis.
 
 31.5 Publikasi yang sudah ada sebelum perubahan ini **tidak** punya salinan. Wali harus mempublikasikan ulang. Jangan membuat portal jatuh ke rata-rata `nilai_sts` sebagai pengganti.
+
+## Jadwal rilis STS
+
+- Jadwal hanya menyimpan waktu di `sts_publikasi`. Eksekusi tetap memakai `publikasikanSts` (tulis `rapor_sts_ortu` + set `published: true`).
+- Jangan membuat jalur publish kedua yang menghitung ulang nilai atau menulis snapshot secara berbeda.
+- Saat publish manual atau batal publikasi, field `jadwalAt` harus dikosongkan agar tidak terpicu ulang.
+- Auto-jalankan hanya jika `jadwalAt <= sekarang` DAN `published !== true`.
+- Rules `sts_publikasi` sudah mengizinkan update oleh admin / wali kelas; tidak perlu diubah untuk fitur ini.
