@@ -408,3 +408,15 @@
 - Saat waktu tiba dan halaman Publikasikan (atau hub yang memuat status) dibuka oleh wali kelas, rilis otomatis dijalankan memakai fungsi `publikasikanSts` yang sama dengan tombol manual.
 - Tombol **Publikasikan sekarang** tetap ada. Membatalkan publikasi atau mempublikasikan manual menghapus jadwal.
 - Tidak mengubah rumus rapor, salinan `rapor_sts_ortu`, atau rules. Tidak perlu `deploy:rules`.
+
+## 2026-10-29 — Perbaikan loop Publikasikan STS + Top STS live
+
+### Loop di halaman Publikasikan rapor STS
+- **Bug**: halaman terus menampilkan “Memuat status publikasi…” tanpa selesai (loop).
+- **Penyebab**: `muat` bergantung pada objek `toast` dari `useToast()`. Objek itu baru setiap render, sehingga `useEffect([muat])` berjalan terus.
+- **Perbaikan**: dependency diganti ke `toast.show` (stabil via `useCallback`).
+
+### Dashboard guru kelas — Top STS
+- Kartu **Top STS** di beranda guru (wali kelas) sekarang menampilkan 5 siswa dengan rata-rata nilai STS tertinggi pada periode aktif.
+- Sumber: koleksi `nilai_sts` (filter kelas + tahun ajaran + semester). Bukan placeholder lagi.
+- Top SLM dan Top SAS tetap placeholder sampai modulnya siap.

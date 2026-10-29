@@ -18,6 +18,9 @@ import { ROLE_LABEL } from '../types/user'
 import { Chip, HeroBanner, ModuleCard, SectionTitle, StatCard, Badge } from '../components/ui'
 import Icon from '../components/Icon'
 import { usePeriodeAkademik } from '../lib/usePeriodeAkademik'
+import { collection, getDocs, query, where } from 'firebase/firestore'
+import { db } from '../lib/firebase'
+import { getSiswaList } from '../lib/tahsinData'
 import AdminDashboard from './AdminDashboard'
 
 interface HomeProps {
@@ -81,8 +84,78 @@ function ProgressCard({
   )
 }
 
-/** Placeholder highlight prestasi — siap diisi data top SLM/STS/SAS. */
-function HighlightPrestasi({ kelasLabel }: { kelasLabel: string }) {
+interface TopSiswa {
+  id: string
+  nama: string
+  nilai: number
+}
+
+/** Top STS live dari nilai_sts kelas wali. SLM/SAS tetap placeholder. */
+function HighlightPrestasi({
+  kelasLabel,
+  kelasList,
+  tahunAjaran,
+  semester,
+}: {
+  kelasLabel: string
+  kelasList: string[]
+  tahunAjaran: string
+  semester: string
+}) {
+  const [topSts, setTopSts] = useState<TopSiswa[] | null>(null)
+  const [memuatSts, setMemuatSts] = useState(false)
+
+  useEffect(() => {
+    if (!kelasList.length || !tahunAjaran) {
+      setTopSts([])
+      return
+    }
+    let batal = false
+    setMemuatSts(true)
+    ;(async () => {
+      try {
+        const hasil: TopSiswa[] = []
+        for (const kelas of kelasList) {
+          const siswa = await getSiswaList(kelas, { role: 'guru', kelasAmpu: [] })
+          const aktif = siswa.filter((s) => s.aktif !== false)
+          const namaMap = new Map(aktif.map((s) => [s.id, s.nama]))
+          const q = query(collection(db, 'nilai_sts'), where('kelas', '==', kelas))
+          const snap = await getDocs(q)
+          const bySiswa = new Map<string, number[]>()
+          snap.forEach((d) => {
+            const data = d.data()
+            if (tahunAjaran && data.tahunAjaran && String(data.tahunAjaran) !== tahunAjaran) return
+            if (data.semester != null && String(data.semester) !== String(semester)) return
+            const sid = String(data.siswaId || '')
+            const n = Number(data.nilai)
+            if (!sid || !Number.isFinite(n)) return
+            if (!bySiswa.has(sid)) bySiswa.set(sid, [])
+            bySiswa.get(sid)!.push(n)
+          })
+          for (const [sid, arr] of bySiswa) {
+            if (!arr.length) continue
+            const avg = arr.reduce((s, x) => s + x, 0) / arr.length
+            hasil.push({
+              id: sid,
+              nama: namaMap.get(sid) || sid,
+              nilai: Math.round(avg * 10) / 10,
+            })
+          }
+        }
+        hasil.sort((a, b) => b.nilai - a.nilai || a.nama.localeCompare(b.nama, 'id'))
+        if (!batal) setTopSts(hasil.slice(0, 5))
+      } catch (err) {
+        console.error(err)
+        if (!batal) setTopSts([])
+      } finally {
+        if (!batal) setMemuatSts(false)
+      }
+    })()
+    return () => {
+      batal = true
+    }
+  }, [kelasList.join('|'), tahunAjaran, semester])
+
   return (
     <div>
       <SectionTitle>Highlight prestasi siswa</SectionTitle>
@@ -90,32 +163,62 @@ function HighlightPrestasi({ kelasLabel }: { kelasLabel: string }) {
         Siswa dengan capaian terbaik di {kelasLabel || 'kelas Anda'} (SLM · STS · SAS)
       </p>
       <div className="grid gap-3 md:grid-cols-3">
-        {[
-          { title: 'Top SLM', tone: 'bg-muh-600' },
-          { title: 'Top STS', tone: 'bg-emerald-600' },
-          { title: 'Top SAS', tone: 'bg-violet-600' },
-        ].map((col) => (
-          <div key={col.title} className="card-soft overflow-hidden">
-            <div className={`${col.tone} px-4 py-2.5`}>
-              <span className="text-[13px] font-semibold text-white">{col.title}</span>
-            </div>
-            <div className="px-4 py-6 text-center">
-              <p className="text-[13px] text-muted">
-                Data akan muncul setelah nilai {col.title.replace('Top ', '')} diisi untuk kelas ini.
-              </p>
-              <Link
-                to={
-                  col.title === 'Top SLM'
-                    ? '/akademik/nilai-slm'
-                    : '/akademik/nilai-sts'
-                }
-                className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-muh-700 hover:underline"
-              >
-                Input nilai <Icon name="arrow" />
-              </Link>
-            </div>
+        {/* Top SLM — placeholder */}
+        <div className="card-soft overflow-hidden">
+          <div className="bg-muh-600 px-4 py-2.5">
+            <span className="text-[13px] font-semibold text-white">Top SLM</span>
           </div>
-        ))}
+          <div className="px-4 py-6 text-center">
+            <p className="text-[13px] text-muted">Data akan muncul setelah nilai SLM diisi untuk kelas ini.</p>
+            <Link to="/akademik/nilai-slm" className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-muh-700 hover:underline">
+              Input nilai <Icon name="arrow" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Top STS — live */}
+        <div className="card-soft overflow-hidden">
+          <div className="bg-emerald-600 px-4 py-2.5">
+            <span className="text-[13px] font-semibold text-white">Top STS</span>
+          </div>
+          <div className="px-4 py-3">
+            {memuatSts && <p className="text-[13px] text-muted text-center py-4">Memuat…</p>}
+            {!memuatSts && (!topSts || topSts.length === 0) && (
+              <div className="py-4 text-center">
+                <p className="text-[13px] text-muted">Belum ada nilai STS untuk kelas ini.</p>
+                <Link to="/akademik/nilai-sts" className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-muh-700 hover:underline">
+                  Input nilai <Icon name="arrow" />
+                </Link>
+              </div>
+            )}
+            {!memuatSts && topSts && topSts.length > 0 && (
+              <ol className="divide-y divide-border">
+                {topSts.map((s, i) => (
+                  <li key={s.id} className="flex items-center justify-between gap-2 py-1.5 text-[13px]">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="tabular w-4 text-muted">{i + 1}</span>
+                      <span className="truncate font-medium text-slate-900">{s.nama}</span>
+                    </span>
+                    <span className="tabular font-semibold text-emerald-700">{s.nilai}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        </div>
+
+        {/* Top SAS — placeholder */}
+        <div className="card-soft overflow-hidden">
+          <div className="bg-violet-600 px-4 py-2.5">
+            <span className="text-[13px] font-semibold text-white">Top SAS</span>
+          </div>
+          <div className="px-4 py-6 text-center">
+            <p className="text-[13px] text-muted">Data akan muncul setelah nilai SAS diisi untuk kelas ini.</p>
+            <Link to="/akademik/nilai-sts" className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-muh-700 hover:underline">
+              Input nilai <Icon name="arrow" />
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -370,8 +473,13 @@ export default function Home({ profile }: HomeProps) {
           )}
 
           {/* Highlight prestasi — menggantikan grafik jumlah siswa & modul redundan */}
-          {guruMapel && !admin && saya.semua.length > 0 && (
-            <HighlightPrestasi kelasLabel={labelKelasSaya} />
+          {guruMapel && !admin && saya.wali.length > 0 && (
+            <HighlightPrestasi
+              kelasLabel={labelKelasSaya}
+              kelasList={saya.wali}
+              tahunAjaran={periodeAk.tahunAjaran}
+              semester={periodeAk.semester}
+            />
           )}
 
           {/* Ringkasan khusus guru Tahsin */}

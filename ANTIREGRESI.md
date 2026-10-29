@@ -321,3 +321,15 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 - Saat publish manual atau batal publikasi, field `jadwalAt` harus dikosongkan agar tidak terpicu ulang.
 - Auto-jalankan hanya jika `jadwalAt <= sekarang` DAN `published !== true`.
 - Rules `sts_publikasi` sudah mengizinkan update oleh admin / wali kelas; tidak perlu diubah untuk fitur ini.
+
+## Loop Publikasikan STS
+
+- Jangan memasukkan objek yang dibuat ulang setiap render (seperti hasil `useToast()`) ke dependency `useCallback`/`useEffect` di `PublikasiSts.tsx`.
+- Pakai fungsi stabil (`toast.show`) atau nilai primitif.
+- Auto-jalankan jadwal tetap hanya terjadi bila `jadwalAt <= sekarang` dan belum `published`.
+
+## Top STS di beranda
+
+- Ranking hanya untuk kelas wali (`saya.wali`), bukan semua kelas yang diampu bidang studi.
+- Rata-rata dihitung dari `nilai_sts` periode aktif. Jangan mencampur SLM/SAS ke kartu ini.
+- Jangan menghidupkan perbandingan antar kelas di kartu ini.

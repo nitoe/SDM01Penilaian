@@ -111,7 +111,7 @@ export default function PublikasiSts({ profile }: { profile: AppUser }) {
     } finally {
       setMemuat(false)
     }
-  }, [kelas, periode, profile, periodeAk.periode, toast])
+  }, [kelas, periode, profile, periodeAk.periode, toast.show])
 
   useEffect(() => {
     void muat()
