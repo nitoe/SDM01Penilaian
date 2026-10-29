@@ -333,3 +333,11 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 - Ranking hanya untuk kelas wali (`saya.wali`), bukan semua kelas yang diampu bidang studi.
 - Rata-rata dihitung dari `nilai_sts` periode aktif. Jangan mencampur SLM/SAS ke kartu ini.
 - Jangan menghidupkan perbandingan antar kelas di kartu ini.
+
+## Jadwal rilis otomatis (Cloud Function)
+
+- Function `jalankanJadwalPublikasiSts` hanya membalik `published: true` pada `rapor_sts_ortu` dan `sts_publikasi`. Jangan menaruh hitungan nilai atau `kalimatCapaian` di function.
+- Salinan harus sudah ada (field `snapshotIds`) saat jadwal disimpan. Jika `snapshotIds` kosong, function melewatkan dokumen itu.
+- Jadwal lama yang dibuat sebelum perbaikan ini tidak punya `snapshotIds` — wali kelas perlu menjadwalkan ulang sekali.
+- Setelah function berjalan, `jadwalAt` dikosongkan agar tidak terpicu ulang.
+- Deploy function wajib; tanpa itu jadwal tetap hanya jalan saat halaman dibuka.

@@ -127,7 +127,11 @@ export default function PublikasiSts({ profile }: { profile: AppUser }) {
     setMenjadwalkan(true)
     try {
       const nama = [profile.nama, profile.gelar].filter(Boolean).join(', ')
-      await jadwalkanPublikasiSts(kelas, periode.tahunAjaran, periode.semester, t, nama)
+      await jadwalkanPublikasiSts(kelas, periode.tahunAjaran, periode.semester, t, nama, {
+        profil: profile,
+        kotaRapor: periodeAk.periode?.kotaRapor,
+        tanggalRapor: periodeAk.periode?.tglRaporSts?.trim() || undefined,
+      })
       toast.show(`Rapor STS kelas ${kelas} dijadwalkan.`)
       setJadwalInput('')
       await muat()
@@ -412,7 +416,8 @@ export default function PublikasiSts({ profile }: { profile: AppUser }) {
                       {pub.jadwalOlehNama ? ` oleh ${pub.jadwalOlehNama}` : ''}.
                     </p>
                     <p className="text-[12px] text-muted">
-                      Rilis otomatis berjalan saat waktu tiba dan halaman ini (atau hub Akademik) dibuka oleh wali kelas.
+                      Rilis berjalan otomatis pada waktu yang dijadwalkan (Cloud Function, tanpa perlu membuka halaman ini).
+                      Data yang dirilis adalah data saat jadwal disimpan. Ubah jadwal jika nilai berubah.
                     </p>
                     <button
                       type="button"

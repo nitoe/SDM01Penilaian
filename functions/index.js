@@ -3,6 +3,8 @@ import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
 import { logger } from 'firebase-functions'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
+import { onSchedule } from 'firebase-functions/v2/scheduler'
+import { FieldValue } from 'firebase-admin/firestore'
 import { periksaPenghapusan } from './aturan.js'
 import {
   bolehPemanggilAi,
@@ -274,3 +276,65 @@ export const generateNilaiProyekAi = onCall(opsiAi, async (request) => {
     throw new HttpsError('internal', err?.message || 'Gagal mengisi nilai proyek lewat AI.')
   }
 })
+
+/**
+ * Rilis otomatis rapor STS yang sudah dijadwalkan.
+ * Berjalan setiap menit. Hanya membalik flag published pada salinan yang
+ * sudah disiapkan saat guru menekan Jadwalkan — tidak menghitung ulang nilai.
+ */
+export const jalankanJadwalPublikasiSts = onSchedule(
+  {
+    schedule: 'every 1 minutes',
+    region: 'asia-southeast2',
+    timeZone: 'Asia/Jakarta',
+    maxInstances: 1,
+  },
+  async () => {
+    const db = getFirestore()
+    const now = new Date()
+    const snap = await db.collection('sts_publikasi').get()
+    let dijalankan = 0
+
+    for (const docSnap of snap.docs) {
+      const d = docSnap.data() || {}
+      if (d.published === true) continue
+      const raw = d.jadwalAt
+      const jadwal = raw?.toDate ? raw.toDate() : raw ? new Date(raw) : null
+      if (!jadwal || Number.isNaN(jadwal.getTime()) || jadwal > now) continue
+
+      const ids = Array.isArray(d.snapshotIds) ? d.snapshotIds.map(String).filter(Boolean) : []
+      if (!ids.length) {
+        logger.warn('jadwal tanpa snapshotIds, dilewati', { id: docSnap.id })
+        continue
+      }
+
+      for (let i = 0; i < ids.length; i += 400) {
+        const batch = db.batch()
+        for (const id of ids.slice(i, i + 400)) {
+          batch.set(
+            db.doc(`rapor_sts_ortu/${id}`),
+            { published: true, updatedAt: FieldValue.serverTimestamp() },
+            { merge: true },
+          )
+        }
+        await batch.commit()
+      }
+
+      await docSnap.ref.set(
+        {
+          published: true,
+          publishedAt: FieldValue.serverTimestamp(),
+          publishedBy: d.jadwalOleh || null,
+          publishedByNama: d.jadwalOlehNama || 'Jadwal',
+          jadwalAt: null,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      )
+      dijalankan += 1
+      logger.info('jadwal publikasi dijalankan', { id: docSnap.id, n: ids.length })
+    }
+
+    if (dijalankan) logger.info('jalankanJadwalPublikasiSts selesai', { dijalankan })
+  },
+)

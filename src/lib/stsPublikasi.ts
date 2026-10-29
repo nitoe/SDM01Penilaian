@@ -142,6 +142,8 @@ export async function tulisSnapshotRaporOrtu(opts: {
   profil: AppUser
   kotaRapor?: string
   tanggalRapor?: string
+  /** false = salinan disiapkan tetapi belum terlihat di portal (untuk jadwal). */
+  published?: boolean
 }): Promise<string[]> {
   const wali = await cariWaliKelasLengkap(opts.kelas, opts.profil)
   const daftar = await muatDataRaporStsKelas({
@@ -183,7 +185,7 @@ export async function tulisSnapshotRaporOrtu(opts: {
         ttdKepsekUrl: teks(d.ttdKepsekUrl || cfg.ttdKepsekUrl),
         stempelUrl: teks(cfg.stempelUrl),
         baris: barisUntukOrtu(d),
-        published: true,
+        published: opts.published !== false,
         updatedAt: serverTimestamp(),
       })
     }
@@ -213,13 +215,23 @@ async function tandaiSnapshot(ids: string[], published: boolean): Promise<void> 
  * @param namaPublisher nama tampilan guru/admin
  * @param opsi profil pemanggil (wajib agar TTD wali kelas ikut tersalin) + tanggal/kota rapor
  */
-/** Jadwalkan rilis otomatis rapor STS. Tidak langsung mempublikasikan. */
+/**
+ * Jadwalkan rilis otomatis.
+ * Salinan rapor disiapkan sekarang (published: false).
+ * Cloud Function membalik published menjadi true pada waktu jadwal,
+ * tanpa perlu membuka halaman ini.
+ */
 export async function jadwalkanPublikasiSts(
   kelas: string,
   tahunAjaran: string,
   semester: '1' | '2',
   jadwalAt: Date,
   namaPublisher: string,
+  opsi: {
+    profil: AppUser
+    kotaRapor?: string
+    tanggalRapor?: string
+  },
 ): Promise<void> {
   if (!(jadwalAt instanceof Date) || Number.isNaN(jadwalAt.getTime())) {
     throw new Error('Waktu jadwal tidak valid.')
@@ -227,6 +239,15 @@ export async function jadwalkanPublikasiSts(
   if (jadwalAt.getTime() <= Date.now() + 60_000) {
     throw new Error('Jadwal harus minimal 1 menit dari sekarang.')
   }
+  const snapshotIds = await tulisSnapshotRaporOrtu({
+    kelas,
+    tahunAjaran,
+    semester,
+    profil: opsi.profil,
+    kotaRapor: opsi.kotaRapor,
+    tanggalRapor: opsi.tanggalRapor,
+    published: false,
+  })
   const id = idStsPublikasi(kelas, tahunAjaran, semester)
   await setDoc(
     doc(db, 'sts_publikasi', id),
@@ -234,10 +255,12 @@ export async function jadwalkanPublikasiSts(
       kelas,
       tahunAjaran,
       semester,
+      published: false,
       jadwalAt,
       jadwalOleh: uid(),
       jadwalOlehNama: namaPublisher.trim() || 'Guru',
       jadwalDibuatAt: serverTimestamp(),
+      snapshotIds,
       updatedAt: serverTimestamp(),
     },
     { merge: true },

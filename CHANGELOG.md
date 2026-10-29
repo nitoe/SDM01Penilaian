@@ -420,3 +420,13 @@
 - Kartu **Top STS** di beranda guru (wali kelas) sekarang menampilkan 5 siswa dengan rata-rata nilai STS tertinggi pada periode aktif.
 - Sumber: koleksi `nilai_sts` (filter kelas + tahun ajaran + semester). Bukan placeholder lagi.
 - Top SLM dan Top SAS tetap placeholder sampai modulnya siap.
+
+## 2026-10-29 — Jadwal rilis STS benar-benar otomatis
+
+- **Bug**: jadwal hanya berjalan saat halaman Publikasikan dibuka/di-refresh di aplikasi penilaian. Portal orang tua tidak melihat rapor sampai guru membuka halaman itu.
+- **Perbaikan**:
+  - Saat menekan **Jadwalkan**, salinan `rapor_sts_ortu` disiapkan (published: false) memakai fungsi yang sama dengan publikasi manual.
+  - Cloud Function `jalankanJadwalPublikasiSts` (setiap 1 menit, Asia/Jakarta) membalik `published` menjadi true pada salinan dan gerbang `sts_publikasi` ketika waktu tiba.
+  - Tidak menghitung ulang nilai di function — hanya membalik flag, sehingga tidak beda dengan rapor resmi.
+- **Deploy wajib**: `firebase deploy --only functions:jalankanJadwalPublikasiSts` lalu hosting.
+- Data yang dirilis adalah data saat jadwal disimpan. Jika nilai berubah, jadwalkan ulang.
