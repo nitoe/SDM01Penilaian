@@ -31,6 +31,7 @@ export interface StsPublikasi {
   publishedBy: string | null
   publishedByNama: string
   revokedAt?: Date | null
+  revokedBy?: string | null
   /** ID dokumen `rapor_sts_ortu` yang ditulis saat publikasi ini. Dipakai saat batal. */
   snapshotIds?: string[]
 }
