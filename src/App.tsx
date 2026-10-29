@@ -26,6 +26,7 @@ import CatatMenulis from './pages/tahsin/CatatMenulis'
 import RiwayatSiswa from './pages/tahsin/RiwayatSiswa'
 import TargetHafalan from './pages/tahsin/TargetHafalan'
 import DataSiswa from './pages/admin/DataSiswa'
+import DataSiswaGuru from './pages/DataSiswaGuru'
 import KelolaAkun from './pages/admin/KelolaAkun'
 import SetupMapel from './pages/admin/Mapel'
 import TahunAjaran from './pages/admin/TahunAjaran'
@@ -133,6 +134,7 @@ export default function App() {
 
           <Route element={<RoleGate allow={profile ? isStaff(profile.role) : false} />}>
             <Route path="/notifikasi" element={profile ? <Notifikasi profile={profile} /> : null} />
+            <Route path="/data-siswa" element={profile ? <DataSiswaGuru profile={profile} /> : null} />
           </Route>
 
           <Route element={<RoleGate allow={profile ? canTahsin(profile.role) : false} />}>

@@ -36,6 +36,14 @@ const harian: Item[] = [
     tone: 'green',
     ready: true,
   },
+  {
+    to: '/data-siswa',
+    title: 'Data Siswa Kelas',
+    desc: 'Lihat daftar dan informasi siswa di kelas yang Anda ampu',
+    icon: 'users',
+    tone: 'green',
+    ready: true,
+  },
 ]
 
 const targetLaporan: Item[] = [
@@ -85,7 +93,8 @@ function PanelItems({ items }: { items: Item[] }) {
 
 export default function TahsinHub({ admin = false }: { admin?: boolean }) {
   // Administrator hanya memantau: menu tulis (setoran dan penilaian menulis) milik guru (ANTIREGRESI §17).
-  const menuGuruSaja = ['/tahsin/input-setoran', '/tahsin/menulis']
+  // Data siswa guru juga tidak ditampilkan di mode admin (admin punya /admin/siswa).
+  const menuGuruSaja = ['/tahsin/input-setoran', '/tahsin/menulis', '/data-siswa']
   const harianTampil = admin ? harian.filter((i) => !menuGuruSaja.includes(i.to)) : harian
   const targetTampil = admin ? targetLaporan.filter((i) => i.ready) : targetLaporan
   return (

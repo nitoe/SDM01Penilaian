@@ -30,12 +30,14 @@ const HALAMAN_LEBAR = [
   '/akademik',
   '/admin',
   '/tahsin',
+  '/data-siswa',
 ]
 
 /** Halaman form ringkas — kolom terbaca, tidak melebar sia-sia. */
 const HALAMAN_SEMPIT: string[] = []
 
 function sectionTitle(pathname: string, admin: boolean): string {
+  if (pathname.startsWith('/data-siswa')) return 'Data Siswa'
   if (pathname.startsWith('/tahsin')) return admin ? 'Pantauan Tahsin & Tahfizh' : 'Tahsin & Tahfizh'
   if (pathname.startsWith('/akademik')) return admin ? 'Pantauan Akademik' : 'Akademik & Rapor'
   if (pathname.startsWith('/notifikasi')) return admin ? 'Notifikasi' : 'Laporan ke Admin'

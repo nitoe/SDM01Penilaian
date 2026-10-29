@@ -109,6 +109,17 @@ const laporan: Item[] = [
   },
 ]
 
+const dataKelas: Item[] = [
+  {
+    to: '/data-siswa',
+    title: 'Data Siswa Kelas',
+    desc: 'Lihat daftar dan informasi siswa di kelas yang Anda ampu',
+    icon: 'users',
+    tone: 'green',
+    ready: true,
+  },
+]
+
 const segera: Item[] = [
   {
     to: '/akademik/mutasi',
@@ -277,7 +288,8 @@ export default function AkademikHub({ admin = false }: { admin?: boolean }) {
         <HubPanel title="3 · Laporan & rapor">
           <PanelItems items={laporan} />
         </HubPanel>
-        <HubPanel title="Segera hadir">
+        <HubPanel title="Data kelas">
+          <PanelItems items={dataKelas} />
           <PanelItems items={segera} />
         </HubPanel>
       </div>
