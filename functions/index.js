@@ -24,6 +24,13 @@ import {
   susunPromptStem,
   susunPromptTp,
 } from './generateAi.js'
+import {
+  mintaModelBuku,
+  mintaSampulBuku,
+  normalisasiBukuMeta,
+  susunPromptBukuMeta,
+  susunPromptSampul,
+} from './generateBukuAi.js'
 
 initializeApp()
 
@@ -338,3 +345,80 @@ export const jalankanJadwalPublikasiSts = onSchedule(
     if (dijalankan) logger.info('jalankanJadwalPublikasiSts selesai', { dijalankan })
   },
 )
+
+
+/**
+ * Cek staf perpustakaan boleh generate AI: admin sistem, atau peranPerpus admin/pustakawan.
+ */
+async function pastikanPerpusAi(request) {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Masuk dulu.')
+  const uid = request.auth.uid
+  const db = getFirestore()
+  const snap = await db.doc(`users/${uid}`).get()
+  if (!snap.exists) {
+    throw new HttpsError('permission-denied', 'Profil pengguna tidak ditemukan.')
+  }
+  const u = snap.data() || {}
+  if (u.aktif === false) {
+    throw new HttpsError('permission-denied', 'Akun tidak aktif.')
+  }
+  const peran = u.peranPerpus
+  const ok =
+    u.role === 'admin' || peran === 'admin' || peran === 'pustakawan'
+  if (!ok) {
+    logger.warn('generateBukuAi ditolak: bukan pustakawan/admin', { uid, role: u.role, peran })
+    throw new HttpsError('permission-denied', 'Hanya admin atau pustakawan yang boleh generate AI buku.')
+  }
+  return uid
+}
+
+const opsiAiBuku = {
+  region: 'asia-southeast2',
+  maxInstances: 2,
+  timeoutSeconds: 120,
+  secrets: ['GEMINI_API_KEY'],
+}
+
+const opsiAiSampul = {
+  region: 'asia-southeast2',
+  maxInstances: 2,
+  timeoutSeconds: 180,
+  secrets: ['GEMINI_API_KEY'],
+}
+
+/** Metadata buku dari judul (opsional ISBN) via Gemini. */
+export const generateBukuMetaAi = onCall(opsiAiBuku, async (request) => {
+  const uid = await pastikanPerpusAi(request)
+  const prompt = susunPromptBukuMeta(request.data || {})
+  if (!prompt.ok) throw new HttpsError('invalid-argument', prompt.pesan)
+  try {
+    const apiKey = process.env.GEMINI_API_KEY || ''
+    const json = await mintaModelBuku(apiKey, prompt.sistem, prompt.user)
+    const meta = normalisasiBukuMeta(json, prompt.judul)
+    logger.info('generateBukuMetaAi', { uid, judul: meta.judul })
+    return meta
+  } catch (err) {
+    logger.error('generateBukuMetaAi gagal', { pesan: err?.message })
+    throw new HttpsError('internal', err?.message || 'Gagal generate metadata buku.')
+  }
+})
+
+/** Sampul buku (gambar) via gemini-3.1-flash-lite-image. Mengembalikan data URL. */
+export const generateBukuSampulAi = onCall(opsiAiSampul, async (request) => {
+  const uid = await pastikanPerpusAi(request)
+  const prompt = susunPromptSampul(request.data || {})
+  if (!prompt.ok) throw new HttpsError('invalid-argument', prompt.pesan)
+  try {
+    const apiKey = process.env.GEMINI_API_KEY || ''
+    const dataUrl = await mintaSampulBuku(apiKey, prompt.prompt)
+    // Batas perpus_foto ~120k karakter; potong peringatan di client. Server batasi ~400k base64.
+    if (dataUrl.length > 500_000) {
+      throw new Error('Gambar sampul terlalu besar. Coba lagi.')
+    }
+    logger.info('generateBukuSampulAi', { uid, judul: String(request.data?.judul || '').slice(0, 80), ukuran: dataUrl.length })
+    return { dataUrl }
+  } catch (err) {
+    logger.error('generateBukuSampulAi gagal', { pesan: err?.message })
+    throw new HttpsError('internal', err?.message || 'Gagal membuat sampul AI.')
+  }
+})

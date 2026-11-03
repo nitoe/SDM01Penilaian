@@ -1,0 +1,14 @@
+[
+  {
+    "origin": [
+      "https://perpustakaan.sdmuhammadiyah01kks.sch.id",
+      "https://sdm01kukusan-2e735.web.app",
+      "https://sdm01kukusan-2e735.firebaseapp.com",
+      "http://localhost:5173",
+      "http://127.0.0.1:5173"
+    ],
+    "method": ["GET", "HEAD"],
+    "responseHeader": ["Content-Type", "Content-Length", "Accept-Ranges"],
+    "maxAgeSeconds": 3600
+  }
+]
