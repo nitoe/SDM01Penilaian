@@ -983,6 +983,37 @@ match /g7kaih/{id} {
       allow delete: if isAdmin();
     }
 
+    // Progress baca digital: siswa (tanpa Auth) menyimpan halaman terakhir.
+    // ID dokumen disarankan: {siswaId}_{bukuId}
+    match /perpus_progress/{id} {
+      allow read: if perpusStaf() || resource.data.siswaId is string;
+      allow create: if request.resource.data.keys().hasAll(['siswaId', 'bukuId', 'halaman'])
+                    && request.resource.data.siswaId is string
+                    && request.resource.data.siswaId.size() > 0
+                    && request.resource.data.siswaId.size() <= 40
+                    && request.resource.data.bukuId is string
+                    && request.resource.data.bukuId.size() > 0
+                    && request.resource.data.bukuId.size() <= 80
+                    && request.resource.data.halaman is int
+                    && request.resource.data.halaman >= 1
+                    && request.resource.data.halaman <= 20000
+                    && (!('totalHalaman' in request.resource.data)
+                        || (request.resource.data.totalHalaman is int
+                            && request.resource.data.totalHalaman >= 1
+                            && request.resource.data.totalHalaman <= 20000))
+                    && (!('judul' in request.resource.data)
+                        || (request.resource.data.judul is string
+                            && request.resource.data.judul.size() <= 300));
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['halaman', 'totalHalaman', 'judul', 'updatedAt'])
+                    && request.resource.data.halaman is int
+                    && request.resource.data.halaman >= 1
+                    && request.resource.data.halaman <= 20000
+                    && request.resource.data.siswaId == resource.data.siswaId
+                    && request.resource.data.bukuId == resource.data.bukuId;
+      allow delete: if perpusPustakawan();
+    }
+
     // ---- Default: tolak semuanya -------------------------------------------
     match /{document=**} {
       allow read, write: if false;
