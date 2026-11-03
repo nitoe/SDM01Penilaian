@@ -1,11 +1,12 @@
 rules_version = '2';
 
-// Firebase Storage — tanda tangan digital rapor STS
+// Firebase Storage — tanda tangan digital rapor STS + PDF perpustakaan
 // Deploy: firebase deploy --only storage
 // Path:
 //   tanda-tangan/kepsek.png
 //   tanda-tangan/stempel.png
 //   tanda-tangan/guru/{uid}.png   ← nama file = uid + ".png"
+//   perpus_digital/{uid}/{file}    ← PDF bacaan digital (unggah staf, baca publik)
 
 service firebase.storage {
   match /b/{bucket}/o {
@@ -25,6 +26,11 @@ service firebase.storage {
     function gambarSah() {
       return request.resource.size < 4 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
+    }
+
+    function pdfSah() {
+      return request.resource.size < 40 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
     }
 
     match /tanda-tangan/{allPaths=**} {
@@ -48,6 +54,18 @@ service firebase.storage {
         && gambarSah();
       allow delete: if isLoggedIn()
         && fileName == request.auth.uid + '.png';
+    }
+
+    // PDF bacaan digital perpustakaan.
+    // Staf yang login hanya boleh menulis ke folder uid-nya sendiri.
+    // Baca diizinkan publik agar pembaca modal siswa (tanpa Auth) bisa memuat PDF.
+    match /perpus_digital/{uid}/{fileName} {
+      allow read: if true;
+      allow create, update: if isLoggedIn()
+        && uid == request.auth.uid
+        && pdfSah();
+      allow delete: if isLoggedIn()
+        && (uid == request.auth.uid || isAdmin());
     }
 
     match /{allPaths=**} {
