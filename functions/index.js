@@ -403,7 +403,7 @@ export const generateBukuMetaAi = onCall(opsiAiBuku, async (request) => {
   }
 })
 
-/** Sampul buku (gambar) via gemini-3.1-flash-lite-image. Mengembalikan data URL. */
+/** Sampul buku (gambar) via gemini-3.1-flash-lite-image. Mengembalikan data URL (dikompres di client). */
 export const generateBukuSampulAi = onCall(opsiAiSampul, async (request) => {
   const uid = await pastikanPerpusAi(request)
   const prompt = susunPromptSampul(request.data || {})
@@ -411,11 +411,18 @@ export const generateBukuSampulAi = onCall(opsiAiSampul, async (request) => {
   try {
     const apiKey = process.env.GEMINI_API_KEY || ''
     const dataUrl = await mintaSampulBuku(apiKey, prompt.prompt)
-    // Batas perpus_foto ~120k karakter; potong peringatan di client. Server batasi ~400k base64.
-    if (dataUrl.length > 500_000) {
-      throw new Error('Gambar sampul terlalu besar. Coba lagi.')
+    // Batas payload callable ~10MB. Jangan potong di 500k — frontend kecilkanFoto() ke ~110k untuk perpus_foto.
+    if (!dataUrl || !dataUrl.startsWith('data:image/')) {
+      throw new Error('Gemini tidak mengembalikan gambar sampul.')
     }
-    logger.info('generateBukuSampulAi', { uid, judul: String(request.data?.judul || '').slice(0, 80), ukuran: dataUrl.length })
+    if (dataUrl.length > 4_000_000) {
+      throw new Error('Gambar sampul terlalu besar dari model AI. Coba lagi atau unggah manual.')
+    }
+    logger.info('generateBukuSampulAi', {
+      uid,
+      judul: String(request.data?.judul || '').slice(0, 80),
+      ukuran: dataUrl.length,
+    })
     return { dataUrl }
   } catch (err) {
     logger.error('generateBukuSampulAi gagal', { pesan: err?.message })

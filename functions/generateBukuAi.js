@@ -108,7 +108,7 @@ export async function mintaSampulBuku(apiKey, prompt) {
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           responseModalities: ['IMAGE'],
-          // 3:4 mirip sampul buku; 1K didukung lite-image
+          // 3:4 mirip sampul buku; 1K = opsi terkecil model image (lalu dikompres di server)
           imageConfig: { aspectRatio: '3:4', imageSize: '1K' },
         },
       }),
