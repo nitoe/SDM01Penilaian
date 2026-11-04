@@ -101,6 +101,15 @@
       ]
     },
     {
+      "collectionGroup": "perpus_peminjaman",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "peminjam.tipe", "order": "ASCENDING" },
+        { "fieldPath": "peminjam.id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "perpus_jurnal",
       "queryScope": "COLLECTION",
       "fields": [
