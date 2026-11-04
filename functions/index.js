@@ -411,7 +411,7 @@ export const generateBukuSampulAi = onCall(opsiAiSampul, async (request) => {
   try {
     const apiKey = process.env.GEMINI_API_KEY || ''
     const dataUrl = await mintaSampulBuku(apiKey, prompt.prompt)
-    // Batas payload callable ~10MB. Jangan potong di 500k — frontend kecilkanFoto() ke ~110k untuk perpus_foto.
+    // Batas payload callable ~10MB. Kompres final di client (kecilkanFoto → perpus_foto ~110k).
     if (!dataUrl || !dataUrl.startsWith('data:image/')) {
       throw new Error('Gemini tidak mengembalikan gambar sampul.')
     }
@@ -421,6 +421,7 @@ export const generateBukuSampulAi = onCall(opsiAiSampul, async (request) => {
     logger.info('generateBukuSampulAi', {
       uid,
       judul: String(request.data?.judul || '').slice(0, 80),
+      gaya: prompt.gaya || null,
       ukuran: dataUrl.length,
     })
     return { dataUrl }

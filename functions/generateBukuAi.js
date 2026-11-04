@@ -194,14 +194,144 @@ export function normalisasiBukuMeta(data, judulFallback) {
   }
 }
 
-/** Prompt sampul buku anak / sekolah. */
+/** Infer gaya sampul agar satu kali generate lebih tepat (hemat biaya). */
+export function pilihGayaSampul(input) {
+  const judul = String(input?.judul || '').toLowerCase()
+  const pengarang = String(input?.pengarang || '').toLowerCase()
+  const kategori = String(input?.kategori || '').toLowerCase()
+  const jenjang = String(input?.jenjangBaca || '').toLowerCase()
+  const klasifikasi = String(input?.klasifikasi || '').toLowerCase()
+  const sinopsis = String(input?.sinopsis || '').toLowerCase()
+  const teks = `${judul} ${pengarang} ${kategori} ${jenjang} ${klasifikasi} ${sinopsis}`
+
+  const isGuru =
+    /\b(guru|pendidik|pembelajaran|pengajaran|profesional|sertifikasi|kurikulum|asesmen|penilaian|manajemen|strategi mengajar|diktat|modul ajar|ptk|penelitian tindakan)\b/.test(
+      teks,
+    ) ||
+    /\bguru\b/.test(jenjang) ||
+    /\b(dosen|mahasiswa)\b/.test(teks)
+
+  const isAnak =
+    /\b(kelas\s*[1-6]|paud|tk\b|sd\b|anak|dongeng|cerita anak|kancil|si kancil|kartun|komik anak|picture book|board book)\b/.test(
+      teks,
+    ) ||
+    /\b(kelas\s*[1-6]|paud|anak)\b/.test(jenjang)
+
+  const isFiksi =
+    /\b(fiksi|novel|dongeng|cerita|kisah|petualangan|legenda|fable|fairy|scooby|tom and jerry)\b/.test(teks) ||
+    klasifikasi === 'f' ||
+    kategori.includes('fiksi')
+
+  const isAgama =
+    /\b(agama|islam|quran|qur'an|hadis|hadits|fiqih|akhlak|wudhu|shalat|nabi|doa|muslim)\b/.test(teks) ||
+    klasifikasi.startsWith('2')
+
+  const isSains =
+    /\b(matematika|ipa|sains|fisika|kimia|biologi|ensiklopedia|kamus|geografi|astronomi)\b/.test(teks) ||
+    /^[5]/.test(klasifikasi)
+
+  const isTesProfesi =
+    /\b(tes|psikometri|aptitude|assessment|graduate|numeracy|bakat|seleksi|toefl|ujian)\b/.test(teks)
+
+  // Prioritas: guru/profesional > tes > agama non-anak > sains referensi > fiksi anak > nonfiksi anak > default
+  if (isGuru || isTesProfesi) {
+    return {
+      kode: 'tipografi_profesional',
+      deskripsi:
+        'Sampul profesional untuk guru/pendidik/referensi dewasa: dominan tipografi elegan, layout bersih, warna sober (navy, abu, hijau tua, atau krem), sedikit atau tanpa ilustrasi kartun. Boleh aksen geometris minimal. Terasa seperti buku nonfiksi akademik/profesional, BUKAN buku anak.',
+    }
+  }
+  if (isAgama && !isAnak) {
+    return {
+      kode: 'agama_tenang',
+      deskripsi:
+        'Sampul religius tenang dan bermartabat: tipografi jelas, warna lembut (hijau, biru tua, krem), ornamen islami minimal atau pola geometris halus. Hindari kartun anak kecuali judul jelas untuk anak.',
+    }
+  }
+  if (isSains && !isFiksi && !isAnak) {
+    return {
+      kode: 'sains_bersih',
+      deskripsi:
+        'Sampul nonfiksi sains/referensi: tipografi kuat, diagram atau motif ilmiah sederhana (bukan kartun), warna bersih dan kontras, kesan ensiklopedia atau buku pelajaran serius.',
+    }
+  }
+  if (isFiksi && isAnak) {
+    return {
+      kode: 'fiksi_anak',
+      deskripsi:
+        'Sampul fiksi anak: ilustrasi cerah dan ramah, karakter atau adegan sesuai tema judul, tipografi judul besar di atas, warna hidup, cocok pembaca SD.',
+    }
+  }
+  if (isAnak) {
+    return {
+      kode: 'nonfiksi_anak',
+      deskripsi:
+        'Sampul nonfiksi anak/sekolah: ilustrasi edukatif yang jelas (bukan terlalu kartun berlebihan), judul terbaca, warna cerah tetapi rapi, cocok buku pelajaran atau pengetahuan anak.',
+    }
+  }
+  if (isFiksi) {
+    return {
+      kode: 'fiksi_umum',
+      deskripsi:
+        'Sampul fiksi umum: ilustrasi atau suasana artistik sesuai tema, tipografi menarik, tidak harus gaya anak-anak kecuali judul mengisyaratkan demikian.',
+    }
+  }
+  // Default sekolah: netral, bisa tipografi + aksen, hindari default kartun anak
+  return {
+    kode: 'sekolah_netral',
+    deskripsi:
+      'Sampul katalog sekolah netral: pilih tipografi profesional bila judul terasa pendidikan/dewasa; ilustrasi ringan hanya bila judul jelas untuk anak. Hindari kartun anak generik yang tidak relevan dengan judul.',
+  }
+}
+
+/**
+ * Prompt sampul adaptif: gaya menyesuaikan jenis buku (satu kali generate, hemat biaya).
+ * Input opsional: pengarang, kategori, klasifikasi, jenjangBaca, sinopsis, penerbit, bahasa.
+ */
 export function susunPromptSampul(input) {
   const judul = potong(input?.judul, 200)
   if (judul.length < 2) return { ok: false, pesan: 'Judul minimal 2 huruf untuk membuat sampul.' }
   const pengarang = potong(input?.pengarang, 100)
-  const prompt = `Buat sampul buku anak sekolah Indonesia yang rapi dan profesional.
-Judul: "${judul}"${pengarang ? `\nPengarang: ${pengarang}` : ''}
-Gaya: ilustrasi cerah, ramah anak, komposisi vertikal (portrait), teks judul terbaca jelas di bagian atas, tanpa logo merek, tanpa watermark teks tambahan, tanpa QR code.
-Latar sederhana, fokus pada tema judul.`
-  return { ok: true, prompt }
+  const kategori = potong(input?.kategori, 80)
+  const klasifikasi = potong(input?.klasifikasi, 20)
+  const jenjangBaca = potong(input?.jenjangBaca, 40)
+  const penerbit = potong(input?.penerbit, 80)
+  const bahasa = potong(input?.bahasa, 40)
+  const sinopsis = potong(input?.sinopsis, 400)
+  const gaya = pilihGayaSampul({
+    judul,
+    pengarang,
+    kategori,
+    klasifikasi,
+    jenjangBaca,
+    sinopsis,
+  })
+
+  const meta = [
+    pengarang && `Pengarang: ${pengarang}`,
+    penerbit && `Penerbit: ${penerbit}`,
+    kategori && `Kategori: ${kategori}`,
+    klasifikasi && `Klasifikasi DDC: ${klasifikasi}`,
+    jenjangBaca && `Jenjang baca: ${jenjangBaca}`,
+    bahasa && `Bahasa: ${bahasa}`,
+    sinopsis && `Ringkas sinopsis: ${sinopsis}`,
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  const prompt = `Buat SATU sampul buku (book cover) potret vertikal 3:4 untuk katalog perpustakaan sekolah di Indonesia.
+Judul yang HARUS terbaca jelas di sampul: "${judul}"
+${meta ? meta + '\n' : ''}
+Keputusan gaya (wajib diikuti): ${gaya.deskripsi}
+
+Aturan wajib:
+- Komposisi potret (vertikal), seperti sampul buku fisik.
+- Teks judul terbaca, ejaan sesuai judul di atas; boleh tipografi saja jika gaya tipografi_profesional.
+- Sesuaikan warna, suasana, dan tingkat ilustrasi dengan keputusan gaya — JANGAN memaksa ilustrasi anak-anak jika gaya profesional/dewasa/guru.
+- Tanpa logo merek nyata, tanpa watermark, tanpa QR code, tanpa barcode, tanpa URL.
+- Tanpa teks tambahan selain judul (dan pengarang singkat hanya jika muat dan relevan).
+- Hasil akhir: sampul rapi, siap katalog, satu kali generate harus sudah cocok dengan jenis buku.`
+
+  return { ok: true, prompt, gaya: gaya.kode }
 }
+
