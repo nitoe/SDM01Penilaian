@@ -727,17 +727,20 @@ match /g7kaih/{id} {
 
     // ---- Perpustakaan (koleksi berawalan perpus_) ----------------------------
 
-    // Kategori: semua staf membaca, admin dan pustakawan mengelola.
+    // Kategori: baca terbuka (filter katalog siswa/publik); tulis admin/pustakawan.
     match /perpus_kategori/{id} {
-      allow read: if perpusStaf();
+      allow read: if true;
       allow create, update: if perpusPustakawan();
       allow delete: if perpusAdmin();
     }
 
-    // Katalog buku. Staf membaca; buku bertanda `publik` boleh dibaca siapa saja (katalog publik,
-    // fase 2 — kueri wajib memakai where('publik','==',true)). Bawaan: tidak publik.
+    // Katalog buku. Staf penuh; `publik` untuk rak baca digital; jenis cetak/keduanya
+    // untuk katalog pinjam siswa (metadata + ketersediaan, tanpa Auth).
+    // Kueri siswa: where('jenis','in',['cetak','keduanya']) atau where('publik','==',true).
     match /perpus_buku/{id} {
-      allow read: if perpusStaf() || resource.data.get('publik', false) == true;
+      allow read: if perpusStaf()
+                  || resource.data.get('publik', false) == true
+                  || resource.data.get('jenis', '') in ['cetak', 'keduanya'];
       allow create, update: if perpusPustakawan() && perpusBukuSah(request.resource.data);
       allow delete: if perpusAdmin();
     }
