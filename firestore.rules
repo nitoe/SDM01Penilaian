@@ -761,6 +761,16 @@ match /g7kaih/{id} {
       allow delete: if perpusAdmin();
     }
 
+    // Izin login area siswa (ID dokumen = NIPD / id di koleksi siswa).
+    // Baca publik: dropdown login & cek izin tanpa Firebase Auth.
+    // Tulis hanya admin/pustakawan. Tidak mengubah data di koleksi siswa (Penilaian).
+    match /perpus_izin_siswa/{id} {
+      allow read: if true;
+      allow create, update: if perpusPustakawan()
+                    && request.resource.data.aktif is bool;
+      allow delete: if perpusAdmin();
+    }
+
     // Peminjaman: hanya admin/pustakawan. Membuat peminjaman WAJIB satu batch dengan perubahan
     // status eksemplar tersedia -> dipinjam; mengembalikan WAJIB satu batch dengan eksemplar
     // kembali tersedia (atau hilang). Tidak ada hapus (riwayat tetap).
