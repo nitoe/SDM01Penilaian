@@ -99,6 +99,30 @@
         { "fieldPath": "eksemplarId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "perpus_jurnal",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "siswaId", "order": "ASCENDING" },
+        { "fieldPath": "tanggalBaca", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "perpus_jurnal",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "kelas", "order": "ASCENDING" },
+        { "fieldPath": "tanggalBaca", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "perpus_buku",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "publik", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
