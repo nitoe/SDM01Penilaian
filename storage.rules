@@ -68,6 +68,31 @@ service firebase.storage {
         && (uid == request.auth.uid || isAdmin());
     }
 
+
+    // LMS materi: PDF / gambar / video
+    // Path: lms/materi/{kelas}/{fileName}
+    // Batas: gambar/pdf 10 MB, video 50 MB. Baca: staf login; tulis: staf login.
+    // Penegakan penugasan di app + firestore.rules (metadata di lms_materi).
+    function lmsGambarAtauPdf() {
+      return request.resource.size < 10 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*')
+            || request.resource.contentType == 'application/pdf');
+    }
+    function lmsVideo() {
+      return request.resource.size < 50 * 1024 * 1024
+        && request.resource.contentType.matches('video/.*');
+    }
+
+    match /lms/materi/{kelas}/{fileName} {
+      allow read: if isLoggedIn();
+      allow create, update: if isLoggedIn()
+        && (lmsGambarAtauPdf() || lmsVideo())
+        && fileName.size() > 0
+        && fileName.size() <= 200;
+      allow delete: if isLoggedIn();
+    }
+
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

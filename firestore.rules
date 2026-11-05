@@ -1027,6 +1027,61 @@ match /g7kaih/{id} {
       allow delete: if perpusPustakawan();
     }
 
+
+    // ========================================================================
+    // LMS (Learning Management System) — repo nitoe/lms
+    // Koleksi: lms_materi, (nanti) lms_tugas, lms_pengumpulan, …
+    // Akses tulis: guru dengan penugasan kelas×mapel atau wali kelas (tulisMapelKelas).
+    // Baca: staf guru/admin. Baca siswa (tanpa Auth) ditambahkan saat tampilan siswa.
+    // ========================================================================
+
+    match /lms_materi/{id} {
+      allow read: if isGuru() || isAdmin();
+
+      allow create: if tulisMapelKelas(
+                        request.resource.data.mapel,
+                        request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['kelas', 'mapel', 'judul', 'jenis', 'urutan', 'dibuatOleh'])
+                    && request.resource.data.kelas is string
+                    && request.resource.data.kelas.size() > 0
+                    && request.resource.data.kelas.size() <= 10
+                    && request.resource.data.mapel is string
+                    && request.resource.data.mapel.size() > 0
+                    && request.resource.data.mapel.size() <= 80
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 200
+                    && request.resource.data.jenis in ['pdf', 'gambar', 'video', 'youtube', 'tautan']
+                    && request.resource.data.urutan is int
+                    && request.resource.data.dibuatOleh == request.auth.uid
+                    && (!('deskripsi' in request.resource.data)
+                        || (request.resource.data.deskripsi is string
+                            && request.resource.data.deskripsi.size() <= 2000))
+                    && (!('bab' in request.resource.data)
+                        || (request.resource.data.bab is string
+                            && request.resource.data.bab.size() <= 120))
+                    && (!('tpId' in request.resource.data)
+                        || (request.resource.data.tpId is string
+                            && request.resource.data.tpId.size() <= 80))
+                    && (!('url' in request.resource.data)
+                        || (request.resource.data.url is string
+                            && request.resource.data.url.size() <= 2000));
+
+      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.mapel == resource.data.mapel
+                    && request.resource.data.dibuatOleh == resource.data.dibuatOleh
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 200
+                    && request.resource.data.jenis in ['pdf', 'gambar', 'video', 'youtube', 'tautan'];
+
+      allow delete: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                    || isAdmin();
+    }
+
+
     // ---- Default: tolak semuanya -------------------------------------------
     match /{document=**} {
       allow read, write: if false;
