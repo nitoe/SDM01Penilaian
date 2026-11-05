@@ -1032,11 +1032,14 @@ match /g7kaih/{id} {
     // LMS (Learning Management System) — repo nitoe/lms
     // Koleksi: lms_materi, (nanti) lms_tugas, lms_pengumpulan, …
     // Akses tulis: guru dengan penugasan kelas×mapel atau wali kelas (tulisMapelKelas).
-    // Baca: staf guru/admin. Baca siswa (tanpa Auth) ditambahkan saat tampilan siswa.
+    // Baca: terbuka. Area siswa LMS tidak memakai Firebase Auth (login kelas + nama + NISN
+    // diverifikasi di klien), jadi siswa membaca materi kelasnya tanpa Auth. Yang terbaca hanya
+    // metadata materi (judul, jenis, TP, URL); biodata siswa TIDAK ada di koleksi ini.
+    // Pola sama dengan perpus_kategori / sts_publikasi. TULIS tetap hanya guru pemilik kelas×mapel.
     // ========================================================================
 
     match /lms_materi/{id} {
-      allow read: if isGuru() || isAdmin();
+      allow read: if true;
 
       allow create: if tulisMapelKelas(
                         request.resource.data.mapel,
