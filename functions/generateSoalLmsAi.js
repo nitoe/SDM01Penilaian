@@ -153,6 +153,11 @@ BAHASA
 - Bahasa Indonesia baku sederhana, sesuai kelas.
 - Hindari jebakan linguistik dan informasi langka yang tidak relevan dengan TP.
 
+NARASI (FIELD teks) — PRIORITAS UTAMA
+- Setiap soal WAJIB punya "teks" non-kosong: stimulus (sesuai level yang diminta) + stem.
+- Dilarang mengisi hanya opsi/kunci tanpa menulis ulang narasi soal.
+- Stimulus fungsional sesuai level; bukan dekorasi.
+
 KELUARAN
 - HANYA JSON valid sesuai skema. Tanpa markdown.
 - HTML terbatas saja: <p>, <strong>, <em>, <sub>, <sup>, <ul>, <ol>, <li>.
@@ -171,8 +176,23 @@ export function susunPromptSoalLms(input) {
   // Alur LMS: tinjau per nomor — selalu satu soal per permintaan.
   jumlah = 1
   const konteks = potong(input?.konteks, 800)
-  const butuhStimulus = input?.butuhStimulus === true
   const jenjang = potong(input?.jenjang || kelas.replace(/\D/g, '').slice(0, 1), 2)
+
+  // Level stimulus: tanpa | ringan | sedang | kaya (kompatibel butuhStimulus lama)
+  let levelStimulus = String(input?.levelStimulus || '').toLowerCase()
+  if (!['tanpa', 'ringan', 'sedang', 'kaya'].includes(levelStimulus)) {
+    levelStimulus = input?.butuhStimulus === true ? 'sedang' : 'tanpa'
+  }
+  const instruksiStimulus = {
+    tanpa:
+      'TANPA stimulus terpisah. Field teks hanya berisi stem (pertanyaan) yang utuh dan jelas. Jangan menambah cerita/data pembuka.',
+    ringan:
+      'Stimulus RINGAN: 1–2 kalimat konteks atau data minimal yang BENAR-BENAR dipakai menjawab. Gabungkan stimulus + stem di field teks.',
+    sedang:
+      'Stimulus SEDANG: satu paragraf pendek, dialog singkat, atau data terstruktur kecil yang fungsional. Gabungkan di field teks sebelum stem.',
+    kaya:
+      'Stimulus KAYA: teks narasi atau eksplanasi yang cukup panjang dan kohesif (cocok Bahasa Indonesia / literasi), tetap proporsional kemampuan baca kelas. Seluruh informasi yang ditanya harus dapat dilacak di stimulus. Gabungkan stimulus + stem di field teks.',
+  }[levelStimulus]
 
   if (!mapel) return { ok: false, pesan: 'Mapel wajib diisi.' }
   if (!kelas) return { ok: false, pesan: 'Kelas wajib diisi.' }
@@ -181,13 +201,18 @@ export function susunPromptSoalLms(input) {
 
   const user = `Buat tepat ${jumlah} soal untuk bank soal LMS SD${jumlah === 1 ? ' (satu soal saja — guru akan meninjau per nomor)' : ''}.
 
+WAJIB — NARASI SOAL:
+- Tulis field "teks" sebagai SOAL BARU yang lengkap (stimulus sesuai level + stem).
+- JANGAN mengosongkan teks. JANGAN mengembalikan placeholder. JANGAN menyalin soal lama guru.
+- "teks" adalah bagian paling penting; opsi/kunci mengikuti teks itu.
+
 Konteks kurikulum:
 - Mapel: ${mapel}
 - Kelas/rombel: ${kelas} (perkirakan jenjang kelas ${jenjang || 'sesuai rombel'})
 - Tujuan Pembelajaran${tpNomor != null ? ` (TP ${tpNomor})` : ''}: ${tpNama || '(tidak dicantumkan — gunakan kompetensi umum mapel & kelas)'}
 - Tipe soal: ${tipe}
 - Kompleksitas: ${kompleksitas}
-- Stimulus fungsional wajib: ${butuhStimulus ? 'YA — soal perlu stimulus yang benar-benar dipakai menjawab' : 'opsional; hanya jika membantu mengukur kompetensi'}
+- Level stimulus: ${levelStimulus.toUpperCase()} — ${instruksiStimulus}
 ${konteks ? `- Catatan guru / fokus materi: ${konteks}` : ''}
 
 OPSI PG/PGK — CEK SEBELUM KIRIM:
