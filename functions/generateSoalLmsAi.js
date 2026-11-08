@@ -405,43 +405,54 @@ export function susunPromptIlustrasiSoal(input) {
   const petunjuk = potong(input?.petunjukGambar, 500)
   const kelas = potong(input?.kelas, 10)
   const mapel = potong(input?.mapel, 80)
-  // Deskripsi pengguna opsional; cukup teks soal saja.
+  const variasi = potong(input?.variasi, 40) || `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+  const target = potong(input?.targetJawaban, 200)
   const teksBersih = teksSoal.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   if (teksBersih.length < 8 && petunjuk.length < 4) {
     return { ok: false, pesan: 'Teks soal masih kosong. Tulis soal dulu atau isi deskripsi ilustrasi.' }
   }
 
+  const fokusTarget = target
+    ? `TARGET VISUAL UTAMA: tampilkan dan/atau tunjuk dengan panah/nomor bagian yang sesuai dengan jawaban benar soal ini ("${target}"). Jangan menonjolkan organ lain secara setara.`
+    : 'Infer organ/bagian yang paling relevan dari teks soal. Fokuskan ilustrasi pada SATU bagian utama yang ditanyakan.'
+
   const prompt = `Anda membuat ILUSTRASI MURNI untuk soal asesmen Sekolah Dasar di Indonesia.
 Ini BUKAN soal, BUKAN lembar kerja, BUKAN cuplikan ujian dari internet.
 
 ════════════════════════════════════════
-LARANGAN MUTLAK (melanggar = gagal)
+FOKUS & VARIASI (WAJIB)
 ════════════════════════════════════════
-1. JANGAN menuliskan jawaban atau memberi petunjuk jawaban pada gambar.
-   - Jika soal meminta mengidentifikasi organ/bagian yang ditunjuk panah: tampilkan anatomi + panah SAJA.
-     JANGAN menulis nama organ/bagian yang ditunjuk atau label yang langsung menjawab soal.
-   - JANGAN menambah centang, lingkaran pada pilihan benar, highlight, atau teks "jawaban: …".
-2. JANGAN menampilkan teks soal, stem pertanyaan, pilihan A/B/C/D, kunci, atau nomor soal di dalam gambar.
-3. JANGAN membuat gambar yang tampak seperti screenshot / foto layar / scan lembar soal dari web
-   (hindari watermark, UI browser, kertas bergaris kotor, font soal ujian, kolom skor).
-4. JANGAN meniru layout "soal + gambar + opsi" dalam satu kanvas. Hanya ilustrasi/diagram/tabel/grafik.
+- Seed variasi: ${variasi}
+- ${fokusTarget}
+- Tampilkan SATU organ/bagian utama yang relevan. JANGAN menampilkan banyak organ dengan penekanan setara jika soal hanya menanyakan satu bagian.
+- Jika petunjuk guru menyebutkan organ atau elemen tertentu, ikuti itu sebagai prioritas utama.
+- Variasikan komposisi (tampak depan / samping / potongan / zoom) bila diminta ulang agar tidak selalu sama.
+- Panah atau nomor penanda boleh dipakai, tetapi JANGAN tulis nama organ yang menjadi jawaban.
 
 ════════════════════════════════════════
-YANG BOLEH ADA DI GAMBAR
+LARANGAN MUTLAK (melanggar = gagal)
 ════════════════════════════════════════
-- Anatomi, benda, situasi, panah penunjuk, nomor penanda (1,2,3) TANPA nama jawaban.
-- Tabel/grafik: angka dan label sumbu/header yang diperlukan untuk mengolah data (bukan label "yang benar").
-- Gaya: ilustrasi datar (flat) atau diagram ilmiah sederhana, kontras tinggi, bersih, cocok cetak SD.
+1. JANGAN menuliskan nama organ/bagian yang menjadi jawaban soal.
+2. JANGAN menampilkan teks soal, stem, pilihan A/B/C/D, atau kunci jawaban.
+3. JANGAN membuat gambar seperti screenshot/scan lembar soal.
+4. JANGAN menonjolkan banyak organ sekaligus jika soal hanya menargetkan satu bagian.
+
+════════════════════════════════════════
+YANG BOLEH ADA
+════════════════════════════════════════
+- Anatomi, diagram, panah, nomor penanda (tanpa label jawaban).
+- Gaya: ilustrasi datar atau diagram ilmiah sederhana, kontras tinggi, bersih, cocok cetak SD.
 - Kelas ${kelas || '1–6'}${mapel ? `, mapel ${mapel}` : ''}.
 
 ════════════════════════════════════════
-KONTEKS SOAL (hanya untuk memahami apa yang digambar — JANGAN digambar sebagai teks soal)
+KONTEKS SOAL (untuk memahami apa yang digambar — JANGAN digambar sebagai teks)
 ════════════════════════════════════════
 ${teksBersih || '(tidak ada teks soal)'}
 
-${petunjuk ? `Petunjuk tambahan dari guru (opsional, patuhi jika tidak bertentangan dengan LARANGAN):\n${petunjuk}` : 'Petunjuk guru: (tidak ada — infer visual dari konteks soal tanpa membocorkan jawaban.)'}
+${petunjuk ? `PETUNJUK GURU (prioritas tinggi, patuhi):\n${petunjuk}` : 'Petunjuk guru: tidak ada — gunakan teks soal untuk menentukan fokus visual.'}
+${target ? `Jawaban benar soal (hanya sebagai acuan fokus visual, JANGAN ditulis di gambar): ${target}` : ''}
 
-Hasilkan SATU gambar ilustrasi murni, siap dipasang di soal, tanpa teks soal dan tanpa membocorkan kunci.`
+Hasilkan SATU gambar ilustrasi murni yang fokus pada bagian yang ditanyakan, tanpa membocorkan nama jawaban.`
 
   return { ok: true, prompt }
 }
