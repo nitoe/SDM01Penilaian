@@ -11,11 +11,19 @@ rules_version = '2';
 //   3. Data siswa itu data pribadi anak. Orang tua hanya boleh GET anaknya
 //      sendiri (anakIds), TIDAK boleh list.
 //
-// Gabungan: aturan aplikasi Penilaian
-//   + koleksi sarpras_* (aplikasi Sarpras, repo nitoe/sarpras)
-//     termasuk sarpras_sumber, sarpras_pemeliharaan, sarpras_usulan
-//   + koleksi perpus_* (aplikasi Perpustakaan, termasuk fase 2/3 + login/jurnal siswa)
-// Bagian Sarpras/Perpustakaan ditandai komentar masing-masing.
+// PETA KEPEMILIKAN — cari banner «REPO:» (garis ####) di bawah untuk tahu bagian ini milik repo mana:
+//
+//   BERSAMA ............ fungsi dasar: isLoggedIn, isSiswaLms, akunAktif, isAdmin, isGuru, …
+//   SDM01Penilaian ..... users, siswa, identitas_siswa, Tahsin-Tahfizh, rapor, kokurikuler, ekskul,
+//                        akademik (mapel, tp_kktp, nilai_*, asesmen_cakupan), periode_akademik,
+//                        mutasi siswa, portal orang tua (sts_publikasi, rapor_sts_ortu)
+//   nitoe/sarpras ...... sarpras_*
+//   perpustakaan ....... perpus_*  (termasuk perpus_progress dan login/jurnal siswa)
+//   nitoe/lms .......... lms_*     (lms_materi, lms_paket_soal, lms_gambar, …)
+//
+// Cara kerja: file ini SATU dan dideploy dari repo SDM01Penilaian (`npm run deploy:rules`).
+// Ubah hanya bagian milik repo yang sedang dikerjakan, salin file UTUH ke SDM01Penilaian,
+// lalu deploy dari sana. Jangan menempelkan potongan; selalu kirim/salin versi lengkap.
 //
 // Catatan: file ini baru berlaku setelah `npm run deploy:rules`. Uji dulu
 // dengan akun admin, guru Tahsin-Tahfizh, dan orang tua sebelum deploy.
@@ -24,6 +32,12 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ############################################################################
+    // ##  REPO: BERSAMA (semua repo)
+    // ##  Fungsi dasar & peran umum. Ubah hanya bila benar-benar perlu — memengaruhi semua repo.
+    // ##  Perubahan di sini wajib diuji untuk Penilaian, Sarpras, Perpustakaan, dan LMS.
+    // ############################################################################
 
     // Akun STAF/orang tua (Firebase Auth email). Token siswa LMS (custom token dengan claim
     // lmsSiswa, dari Cloud Function loginSiswaLms) SENGAJA TIDAK dianggap «login» di sini,
@@ -74,6 +88,11 @@ service cloud.firestore {
       return akunAktif() && myRole() in ['guru_akademik', 'guru'];
     }
 
+    // ############################################################################
+    // ##  REPO: nitoe/sarpras
+    // ##  Fungsi peran Sarpras (harus sama dengan peranDari() di src/lib/peran.ts repo sarpras).
+    // ############################################################################
+
     // ---- Sarpras: peran ------------------------------------------------------
     // Sumber peran: admin Penilaian = admin sarpras. Selain itu field users/{uid}.peranSarpras
     // ('admin' | 'pimpinan' | 'guru' | 'petugas'), yang hanya bisa diubah admin (aturan `users`
@@ -92,6 +111,11 @@ service cloud.firestore {
     function sarprasStaf() {
       return akunAktif() && peranSarpras() in ['admin', 'pimpinan', 'guru', 'petugas'];
     }
+
+    // ############################################################################
+    // ##  REPO: perpustakaan
+    // ##  Fungsi peran & pembantu Perpustakaan (harus sama dengan peranDari() repo perpustakaan).
+    // ############################################################################
 
     // ---- Perpustakaan: peran -------------------------------------------------
     // Sumber peran: admin Penilaian = admin perpustakaan. Selain itu field
@@ -132,6 +156,14 @@ service cloud.firestore {
     function perpusEksemplarSesudah(kode) {
       return getAfter(/databases/$(database)/documents/perpus_eksemplar/$(kode)).data;
     }
+
+    // ############################################################################
+    // ##  REPO: SDM01Penilaian
+    // ##  Dari sini sampai banner berikutnya: fungsi akses akademik/wali kelas/orang tua,
+    // ##  lalu koleksi users, siswa, Tahsin-Tahfizh, rapor, kokurikuler, ekskul, akademik, periode.
+    // ##  users, siswa, identitas_siswa, mapel, tp_kktp, config/akademik, periode_akademik adalah
+    // ##  DATA MASTER yang juga dibaca repo lain (LMS, Perpustakaan, Sarpras).
+    // ############################################################################
 
     function isApprovedParent() {
       return akunAktif()
@@ -620,6 +652,11 @@ match /g7kaih/{id} {
       allow write: if isAdmin();
     }
 
+    // ############################################################################
+    // ##  REPO: nitoe/sarpras
+    // ##  Koleksi sarpras_*.
+    // ############################################################################
+
     // ---- Sarpras (koleksi berawalan sarpras_) --------------------------------
 
     // Master data: semua staf membaca, admin mengelola.
@@ -734,6 +771,11 @@ match /g7kaih/{id} {
       allow create: if sarprasStaf() && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
+
+    // ############################################################################
+    // ##  REPO: perpustakaan
+    // ##  Koleksi perpus_* (termasuk perpus_progress).
+    // ############################################################################
 
     // ---- Perpustakaan (koleksi berawalan perpus_) ----------------------------
 
@@ -939,6 +981,42 @@ match /g7kaih/{id} {
     }
 
 
+    // Progress baca digital: siswa (tanpa Auth) menyimpan halaman terakhir.
+    // ID dokumen disarankan: {siswaId}_{bukuId}
+    match /perpus_progress/{id} {
+      allow read: if perpusStaf() || resource.data.siswaId is string;
+      allow create: if request.resource.data.keys().hasAll(['siswaId', 'bukuId', 'halaman'])
+                    && request.resource.data.siswaId is string
+                    && request.resource.data.siswaId.size() > 0
+                    && request.resource.data.siswaId.size() <= 40
+                    && request.resource.data.bukuId is string
+                    && request.resource.data.bukuId.size() > 0
+                    && request.resource.data.bukuId.size() <= 80
+                    && request.resource.data.halaman is int
+                    && request.resource.data.halaman >= 1
+                    && request.resource.data.halaman <= 20000
+                    && (!('totalHalaman' in request.resource.data)
+                        || (request.resource.data.totalHalaman is int
+                            && request.resource.data.totalHalaman >= 1
+                            && request.resource.data.totalHalaman <= 20000))
+                    && (!('judul' in request.resource.data)
+                        || (request.resource.data.judul is string
+                            && request.resource.data.judul.size() <= 300));
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['halaman', 'totalHalaman', 'judul', 'updatedAt'])
+                    && request.resource.data.halaman is int
+                    && request.resource.data.halaman >= 1
+                    && request.resource.data.halaman <= 20000
+                    && request.resource.data.siswaId == resource.data.siswaId
+                    && request.resource.data.bukuId == resource.data.bukuId;
+      allow delete: if perpusPustakawan();
+    }
+
+    // ############################################################################
+    // ##  REPO: SDM01Penilaian
+    // ##  Mutasi siswa dan portal orang tua (sts_publikasi, rapor_sts_ortu).
+    // ############################################################################
+
     // ---- Mutasi siswa -------------------------------------------------------
     // Pengajuan: HANYA wali kelas (bukan admin). Admin hanya update status + baca.
     // Arsip siswa_mutasi: HANYA admin (daftar siswa yang sudah dimutasi).
@@ -1006,48 +1084,19 @@ match /g7kaih/{id} {
       allow delete: if isAdmin();
     }
 
-    // Progress baca digital: siswa (tanpa Auth) menyimpan halaman terakhir.
-    // ID dokumen disarankan: {siswaId}_{bukuId}
-    match /perpus_progress/{id} {
-      allow read: if perpusStaf() || resource.data.siswaId is string;
-      allow create: if request.resource.data.keys().hasAll(['siswaId', 'bukuId', 'halaman'])
-                    && request.resource.data.siswaId is string
-                    && request.resource.data.siswaId.size() > 0
-                    && request.resource.data.siswaId.size() <= 40
-                    && request.resource.data.bukuId is string
-                    && request.resource.data.bukuId.size() > 0
-                    && request.resource.data.bukuId.size() <= 80
-                    && request.resource.data.halaman is int
-                    && request.resource.data.halaman >= 1
-                    && request.resource.data.halaman <= 20000
-                    && (!('totalHalaman' in request.resource.data)
-                        || (request.resource.data.totalHalaman is int
-                            && request.resource.data.totalHalaman >= 1
-                            && request.resource.data.totalHalaman <= 20000))
-                    && (!('judul' in request.resource.data)
-                        || (request.resource.data.judul is string
-                            && request.resource.data.judul.size() <= 300));
-      allow update: if request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['halaman', 'totalHalaman', 'judul', 'updatedAt'])
-                    && request.resource.data.halaman is int
-                    && request.resource.data.halaman >= 1
-                    && request.resource.data.halaman <= 20000
-                    && request.resource.data.siswaId == resource.data.siswaId
-                    && request.resource.data.bukuId == resource.data.bukuId;
-      allow delete: if perpusPustakawan();
-    }
 
+    // ############################################################################
+    // ##  REPO: nitoe/lms
+    // ##  Koleksi lms_*. Bagian ini diubah dari repo LMS, lalu file disalin utuh ke SDM01Penilaian.
+    // ############################################################################
 
-    // ========================================================================
     // LMS (Learning Management System) — repo nitoe/lms
-    // Koleksi: lms_materi, (nanti) lms_tugas, lms_pengumpulan, …
+    // Koleksi: lms_materi, lms_paket_soal, lms_gambar, (nanti) lms_kuis, lms_tugas, lms_pengumpulan, …
     // Akses tulis: guru dengan penugasan kelas×mapel atau wali kelas (tulisMapelKelas).
-    // Baca: guru/admin, atau siswa LMS (token dari Cloud Function loginSiswaLms) HANYA untuk
+    // Baca lms_materi: guru/admin, atau siswa LMS (token dari Cloud Function loginSiswaLms) HANYA untuk
     // materi kelasnya sendiri (claim kelas). Klien siswa wajib query dengan where('kelas', '==', kelasnya).
-    // TULIS tetap hanya guru pemilik kelas×mapel.
     // Catatan: lms_login_gagal/{siswaId} (percobaan salah login siswa) hanya diakses Admin SDK
     // dari Cloud Function; sengaja tidak ada match, jadi klien ditolak oleh aturan default.
-    // ========================================================================
 
     match /lms_materi/{id} {
       allow read: if isGuru() || isAdmin()
@@ -1096,6 +1145,77 @@ match /g7kaih/{id} {
                     || isAdmin();
     }
 
+
+    // ---- LMS Fase 2a: Bank Soal ---------------------------------------------
+    // BARU (Fase 2a). Paket soal memuat semua soal + KUNCI JAWABAN dalam satu dokumen, jadi BACA hanya
+    // guru pemilik kelas×mapel (atau admin). Siswa (juga yang bertoken lmsSiswa) TIDAK boleh membacanya
+    // (ANTIREGRESI §38). Fase 2b: siswa membaca salinan tanpa kunci di koleksi lain.
+    // Query klien WAJIB menyertakan where kelas DAN mapel (sama seperti nilai_tp), tanpa orderBy.
+    match /lms_paket_soal/{id} {
+      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
+
+      allow create: if tulisMapelKelas(
+                        request.resource.data.mapel,
+                        request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['kelas', 'mapel', 'judul', 'status', 'acakSoal', 'soal', 'dibuatOleh'])
+                    && request.resource.data.dibuatOleh == request.auth.uid
+                    && request.resource.data.kelas is string
+                    && request.resource.data.kelas.size() > 0
+                    && request.resource.data.kelas.size() <= 10
+                    && request.resource.data.mapel is string
+                    && request.resource.data.mapel.size() > 0
+                    && request.resource.data.mapel.size() <= 80
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 200
+                    && request.resource.data.status in ['draf', 'siap']
+                    && request.resource.data.acakSoal is bool
+                    && request.resource.data.soal is list
+                    && request.resource.data.soal.size() <= 100
+                    && (!('deskripsi' in request.resource.data)
+                        || (request.resource.data.deskripsi is string
+                            && request.resource.data.deskripsi.size() <= 1000));
+
+      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.mapel == resource.data.mapel
+                    && request.resource.data.dibuatOleh == resource.data.dibuatOleh
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 200
+                    && request.resource.data.status in ['draf', 'siap']
+                    && request.resource.data.acakSoal is bool
+                    && request.resource.data.soal is list
+                    && request.resource.data.soal.size() <= 100
+                    && (!('deskripsi' in request.resource.data)
+                        || (request.resource.data.deskripsi is string
+                            && request.resource.data.deskripsi.size() <= 1000));
+
+      allow delete: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                    || isAdmin();
+    }
+
+    // BARU (Fase 2a). Gambar soal terkompres (data URL WebP/JPEG, maks 300.000 karakter), pola sama
+    // dengan perpus_foto/sarpras_foto. Baca: guru/admin dan siswa LMS (bertoken lmsSiswa) agar gambar
+    // tampil saat siswa mengerjakan; ID acak. Tulis hanya guru; tidak ada ubah.
+    match /lms_gambar/{id} {
+      allow read: if isGuru() || isSiswaLms();
+      allow create: if isGuru()
+                    && request.resource.data.keys().hasOnly(['data', 'lebar', 'tinggi', 'dibuatOleh', 'createdAt'])
+                    && request.resource.data.keys().hasAll(['data', 'dibuatOleh'])
+                    && request.resource.data.dibuatOleh == request.auth.uid
+                    && request.resource.data.data is string
+                    && request.resource.data.data.size() > 0
+                    && request.resource.data.data.size() <= 300000;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // ############################################################################
+    // ##  REPO: BERSAMA (semua repo)
+    // ##  Penutup.
+    // ############################################################################
 
     // ---- Default: tolak semuanya -------------------------------------------
     match /{document=**} {

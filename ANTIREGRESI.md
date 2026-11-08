@@ -352,3 +352,43 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 - `lms_login_gagal/{siswaId}` hanya diakses Admin SDK. Jangan menambahkan `match` untuknya di rules. Kunci 5 kali salah / 10 menit bisa dipakai pihak lain untuk mengunci satu siswa; ini disadari dan diterima.
 - **Batas keamanan saat ini:** `siswa/{id}` (memuat `nisn`) masih `allow get/list ... || true` karena dipakai login Perpustakaan. Selama itu berlaku, siapa pun bisa membaca NISN siswa lain lalu login sebagai dia. Jangan menyebut login siswa «aman» untuk data sensitif (nilai, jawaban) sebelum NISN tidak lagi terbaca publik atau digantikan PIN terpisah yang hanya bisa dibaca function.
 - Uji logika: `node scripts/cek-login-siswa-lms.mjs`. Rules belum teruji di emulator; uji dengan akun admin, guru, orang tua, dan siswa sebelum dianggap beres (§1.7).
+
+## §33. LMS Bank Soal: teks kaya = HTML, wajib dibersihkan (XSS)
+
+- Teks soal, pembahasan, dan pedoman uraian disimpan sebagai HTML terbatas dari editor. **Selalu** tampilkan lewat `RichView` / `bersihHtml()` (DOMPurify, daftar tag di `src/lib/html.ts`). Jangan `dangerouslySetInnerHTML` langsung dari data Firestore.
+- Pilihan jawaban, pernyataan, dan isian disimpan sebagai teks biasa dan dirender sebagai teks React.
+
+## §34. LMS Bank Soal: gambar ada di Firestore (`lms_gambar`), bukan Storage
+
+- Gambar dikompres di klien menjadi data URL ≤ 300.000 karakter (batas di rules; pola sama `perpus_foto`/`sarpras_foto`). Menaikkan batas berarti mengubah `firestore.rules` dan menjaga dokumen < 1 MiB.
+- Gambar **tidak dihapus** saat dilepas dari soal atau paket dihapus: satu gambar bisa dipakai bersama soal hasil duplikat. Gambar yatim dibersihkan lewat skrip admin, bukan dari klien.
+
+## §35. LMS: Firestore menolak `undefined`
+
+- Repo LMS (`src/lib/firebase.ts`) **tidak** memakai `ignoreUndefinedProperties`. Gejala bila terlewat: «Unsupported field value: undefined» saat menyimpan soal.
+- Semua data `lms_paket_soal` lewat `bersihkan()` di `src/lib/soal.ts`. Hapus field opsional dengan membuangnya dari objek, jangan mengisi `undefined`.
+
+## §36. LMS: query `lms_paket_soal`
+
+- Rules membaca `resource.data.kelas` dan `resource.data.mapel`, jadi query **wajib** `where kelas == … && where mapel == …` (equality saja), tanpa `orderBy` agar tidak perlu composite index. Pengurutan dilakukan di klien.
+- Nama `mapel` harus sama persis dengan penugasan guru.
+
+## §37. LMS: editor teks kaya harus lazy-load
+
+- `SoalEditor` diimpor dengan `React.lazy` di `App.tsx`. Jangan mengimpor `RichEditor`/TipTap dari halaman yang juga dipakai siswa. `SoalTampil` dan `RichView` tidak boleh bergantung pada TipTap.
+- TipTap v3: `shouldRerenderOnTransaction: true` wajib agar status tombol ikut berubah; `Placeholder` diimpor dari `@tiptap/extensions`.
+
+## §38. LMS: KUNCI JAWABAN tidak boleh terbaca siswa
+
+- `lms_paket_soal` memuat kunci, jadi rules hanya mengizinkan guru kelas×mapel dan admin membaca. **Jangan** membuka `read` ke siswa, walau «sementara». Ini berbeda dari `lms_materi` (§32) yang memang `read: if true`.
+- Siswa LMS kini bertoken (Cloud Function `loginSiswaLms`, claim `lmsSiswa`/`siswaId`/`kelas`/`nama`; `isSiswaLms()` di rules). Fase 2b: siswa membaca salinan soal TANPA kunci di koleksi terpisah dan penilaian dilakukan di sisi server (Cloud Function); jangan menaruh kunci di dokumen yang bisa dibaca `isSiswaLms()`.
+- `lms_gambar` dibaca `isGuru() || isSiswaLms()` (bukan `true`); siswa yang belum bertoken tidak akan melihat gambar soal.
+
+## §39. LMS Editor Soal: `key` pada kartu dan RichEditor
+
+- `RichEditor` hanya memakai `value` sebagai isi awal. `SoalEditorKartu` dipasang dengan `key={soal.id}` dan tiap `RichEditor` punya `key` turunan id soal. Bila `key` dihapus, isi soal lain ikut muncul atau tertimpa.
+
+## §40. LMS Editor Soal: simpan otomatis
+
+- Antrean simpan serial (`tertunda` + `sedangSimpan`) dengan debounce 1,2 detik. Jangan menambah `setDoc`/`updateDoc` paralel untuk dokumen yang sama (last-write-wins menimpa soal).
+- Batas 100 soal dan ±900 KB per dokumen (`BATAS_UKURAN_PAKET`); paket lebih besar harus dipecah. Syarat «Tandai siap» ada di `masalahSoal()`; tambah aturan baru di sana.

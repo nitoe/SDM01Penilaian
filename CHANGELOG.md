@@ -441,3 +441,17 @@
 - **`storage.rules`:** `isLoggedIn()` mengecualikan token siswa dengan alasan yang sama (mencegah siswa menghapus/menimpa `lms/materi` atau membaca file staf). Download URL bertoken tetap bisa dibuka siswa.
 - **Deploy wajib, berurutan:** (1) beri peran *Service Account Token Creator* pada service account runtime function (lihat ANTIREGRESI §32); (2) `firebase deploy --only functions:loginSiswaLms`; (3) deploy LMS v0.4.3; (4) `npm run deploy:rules`. Rules sebelum LMS baru di-deploy akan membuat siswa di LMS lama tidak bisa membuka materi.
 - **Keterbatasan:** koleksi `siswa` (berisi `nisn`) masih terbaca publik karena dipakai login Perpustakaan, sehingga verifikasi server belum membuat NISN rahasia. Perlu langkah lanjutan sebelum nilai siswa ditampilkan.
+
+## 2026-11-08 — LMS Fase 2a: Bank Soal & Editor Soal (repo `nitoe/lms`)
+
+- **Tab baru «Bank Soal»** di ruang kelas: daftar paket soal per kelas × mapel (status Draf/Siap, jumlah soal, total poin, TP), buat, cari, hapus.
+- **Editor soal** (`/kelas/:ruangId/soal/:paketId`): daftar soal di kiri (cari, seret untuk mengurutkan, duplikat, naik/turun, hapus, penanda soal belum lengkap) dan kartu soal di kanan, mengikuti tata letak referensi.
+- **Enam tipe soal:** pilihan ganda, pilihan ganda kompleks, menjodohkan, benar/salah (tabel pernyataan), isian singkat (kunci alternatif), uraian (pedoman penskoran, dinilai manual). Tipe bisa diganti tanpa kehilangan teks/gambar/poin.
+- Teks kaya (TipTap: tebal, miring, garis bawah, subskrip/superskrip, daftar, palet simbol matematika), gambar pada soal/pilihan/sisi kiri menjodohkan (dikompres otomatis di browser), pembahasan, poin, estimasi waktu, acak pilihan, acak soal, skor sebagian.
+- Simpan otomatis + peringatan sebelum menutup tab; pratinjau tampilan siswa dengan «Periksa jawaban» (`lib/penilaian.ts`, fungsi murni untuk dipakai penilaian kuis di Fase 2b); «Tandai siap» hanya bila semua soal lengkap.
+- Koleksi baru `lms_paket_soal` dan `lms_gambar` (lihat `docs/DATA_MODEL.md` di repo LMS). Editor dimuat malas (lazy) agar bundel siswa tidak membengkak.
+- Dependensi baru: `@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`, `@tiptap/extension-subscript`, `@tiptap/extension-superscript`, `dompurify`.
+- `firestore.rules`: dibangun di atas versi terbaru (dengan `isSiswaLms()`/`loginSiswaLms`). Blok baru `lms_paket_soal` (baca/tulis hanya guru kelas×mapel; admin hapus; memuat kunci jawaban) dan `lms_gambar` (baca guru atau siswa LMS bertoken, buat guru, tanpa ubah). Ditambah banner `REPO:` dan peta kepemilikan di header agar jelas bagian milik SDM01Penilaian, sarpras, perpustakaan, dan lms; blok `perpus_progress` dipindah ke bagian Perpustakaan. Tidak ada aturan lain yang berubah.
+- **Deploy wajib:** salin `firestore.rules` ke repo Penilaian lalu `npm run deploy:rules`, kemudian `npm run deploy` di repo LMS. Tanpa deploy rules, editor menampilkan «Missing or insufficient permissions».
+- Belum ada: kuis untuk siswa (2b), generate soal AI (2c), rumus KaTeX, impor soal dari paket lain.
+- **Catatan tumpang tindih:** modul «Kuis» (`lms_kuis`, `lms_soal`, `KuisBuilder`) yang sudah ada di repo LMS dibuat terpisah dari «Bank Soal» (`lms_paket_soal`). Keduanya hidup berdampingan sementara; penyatuan menunggu keputusan. Rules untuk `lms_kuis`/`lms_soal` **belum ada** (ditolak oleh aturan default) sampai ditulis.
