@@ -122,35 +122,41 @@ const KOMP_OK = new Set(['L1', 'L2', 'L3'])
 /** Prompt sistem: prinsip Buku Saku (validitas, CP/TP, stimulus fungsional, bentuk soal, HOTS autentik). */
 function sistemSoal() {
   return `Anda perancang soal tertulis untuk Sekolah Dasar di Indonesia.
-Anda mengikuti ketat prinsip "Buku Saku Panduan Menyusun Soal Tertulis yang Berkualitas untuk SD":
+Anda mengikuti ketat prinsip "Buku Saku Panduan Menyusun Soal Tertulis yang Berkualitas untuk SD" (Arif Azwar Anas).
 
 FONDASI
-- Soal yang baik = tepat sasaran, BUKAN yang sulit. Ukur kompetensi TP, level kognitif selaras kata kerja TP.
+- Soal yang baik = tepat sasaran, BUKAN yang sulit. Ukur kompetensi TP; level kognitif selaras kata kerja TP.
 - Jangan melampaui kompetensi / prasyarat yang belum diajarkan di kelas tersebut.
-- HOTS boleh di kelas rendah jika stimulus & bahasa disesuaikan; L3 ≠ otomatis C4–C6 tanpa dukungan TP.
-- Stem (pertanyaan) singkat, jelas, satu fokus. Stimulus boleh lebih panjang hanya jika FUNGSIONAL (diperlukan untuk menjawab), bukan dekorasi.
+- Stem (pertanyaan) singkat, jelas, satu fokus. Stimulus boleh lebih panjang HANYA jika FUNGSIONAL (diperlukan untuk menjawab), bukan dekorasi.
 
-KOMPLEKSITAS (skala sekolah — L1/L2/L3)
-- L1: mengingat / mengenali fakta atau prosedur dasar (C1–C2 ringan).
-- L2: memahami / menerapkan pada situasi familiar (C2–C3).
-- L3: menganalisis / menalar / memecahkan masalah dengan konteks (C3–C4+), tetap proporsional kelas.
+KOMPLEKSITAS (L1/L2/L3)
+- L1: mengingat / mengenali fakta atau prosedur dasar.
+- L2: memahami / menerapkan pada situasi familiar.
+- L3: menganalisis / menalar / memecahkan masalah dengan konteks — tetap proporsional kelas.
 
 BENTUK SOAL
-- pg: satu jawaban benar absolut; 4 opsi sejajar; distractor = miskonsepsi nyata; stem = pertanyaan utuh (bukan kalimat rumpang).
+- pg: satu jawaban benar absolut; 4 opsi; stem = pertanyaan utuh (bukan kalimat rumpang).
 - pgk (MCMA): beberapa benar; instruksi jelas; JANGAN sebutkan jumlah benar; tiap opsi independen.
-- jodoh: pasangan kiri–kanan yang bermakna; sisi kanan diacak saat ujian.
-- bs: pernyataan yang diuji benar/salah; hindari pernyataan ambigu ganda.
-- isian: satu jawaban spesifik / beberapa varian ejaan; tidak bisa ditebak dari pilihan.
-- uraian: stem terarah + batasan (jumlah poin/aspek); sertakan rubrik singkat di kunciJawaban.
+- jodoh / bs / isian / uraian: sesuai konvensi bank soal SD; uraian wajib rubrik di kunciJawaban.
+
+PENGECOH (DISTRAKTOR) — WAJIB DIPATUHI untuk pg dan pgk
+- Setiap opsi salah harus mewakili miskonsepsi atau kesalahan prosedur yang REAL, bukan pengisi acak.
+- Daya pembeda: siswa yang menguasai kompetensi memilih kunci; yang belum menguasai cenderung memilih pengecoh yang masuk akal.
+- PANJANG & BENTUK OPSI HARUS SEJAJAR:
+  • Jangan membuat opsi benar secara sistematis lebih panjang, lebih rinci, atau lebih "baku" daripada pengecoh.
+  • Jangan biarkan pola "narasi terpanjang = jawaban benar" — ini jebakan yang diajarkan Buku Saku untuk dihindari.
+  • Samakan kira-kira jumlah kata / struktur frasa antar opsi (semua singkat atau semua setara).
+- Hindari petunjuk permukaan: "semua di atas", "tidak ada yang benar", opsi yang saling tumpang tindih, atau kelucuan.
+- Untuk pgk: setiap opsi dievaluasi independen; jangan mengandalkan panjang teks sebagai sinyal kebenaran.
 
 BAHASA
-- Bahasa Indonesia baku sederhana, sesuai kelas (kelas 1–2 sangat pendek; 5–6 boleh stimulus lebih kaya).
-- Hindari jebakan linguistik, soal akal-akalan, atau informasi langka yang tidak relevan dengan TP.
+- Bahasa Indonesia baku sederhana, sesuai kelas.
+- Hindari jebakan linguistik dan informasi langka yang tidak relevan dengan TP.
 
 KELUARAN
-- HANYA JSON valid sesuai skema user. Tanpa markdown, tanpa penjelasan di luar JSON.
-- Teks soal/opsi/pernyataan: plain text atau HTML sangat terbatas (<p>, <strong>, <em>, <sub>, <sup>, <ul>, <ol>, <li>).
-- Jangan sertakan field di luar skema.`
+- HANYA JSON valid sesuai skema. Tanpa markdown.
+- HTML terbatas saja: <p>, <strong>, <em>, <sub>, <sup>, <ul>, <ol>, <li>.
+- Satu respons = tepat satu soal (array "soal" berisi 1 elemen) kecuali diminta lain.`
 }
 
 export function susunPromptSoalLms(input) {
@@ -162,7 +168,8 @@ export function susunPromptSoalLms(input) {
   const kompleksitas = String(input?.kompleksitas || 'L1')
   let jumlah = Number(input?.jumlah) || 1
   if (!Number.isFinite(jumlah) || jumlah < 1) jumlah = 1
-  if (jumlah > 5) jumlah = 5
+  // Alur LMS: tinjau per nomor — selalu satu soal per permintaan.
+  jumlah = 1
   const konteks = potong(input?.konteks, 800)
   const butuhStimulus = input?.butuhStimulus === true
   const jenjang = potong(input?.jenjang || kelas.replace(/\D/g, '').slice(0, 1), 2)
@@ -172,7 +179,7 @@ export function susunPromptSoalLms(input) {
   if (!TIPE_OK.has(tipe)) return { ok: false, pesan: 'Tipe soal tidak didukung.' }
   if (!KOMP_OK.has(kompleksitas)) return { ok: false, pesan: 'Kompleksitas harus L1, L2, atau L3.' }
 
-  const user = `Buat tepat ${jumlah} soal untuk bank soal LMS SD.
+  const user = `Buat tepat ${jumlah} soal untuk bank soal LMS SD${jumlah === 1 ? ' (satu soal saja — guru akan meninjau per nomor)' : ''}.
 
 Konteks kurikulum:
 - Mapel: ${mapel}
@@ -180,8 +187,14 @@ Konteks kurikulum:
 - Tujuan Pembelajaran${tpNomor != null ? ` (TP ${tpNomor})` : ''}: ${tpNama || '(tidak dicantumkan — gunakan kompetensi umum mapel & kelas)'}
 - Tipe soal: ${tipe}
 - Kompleksitas: ${kompleksitas}
-- Stimulus fungsional wajib: ${butuhStimulus ? 'YA — setiap soal perlu stimulus yang benar-benar dipakai menjawab' : 'opsional; hanya jika membantu mengukur kompetensi'}
+- Stimulus fungsional wajib: ${butuhStimulus ? 'YA — soal perlu stimulus yang benar-benar dipakai menjawab' : 'opsional; hanya jika membantu mengukur kompetensi'}
 ${konteks ? `- Catatan guru / fokus materi: ${konteks}` : ''}
+
+OPSI PG/PGK — CEK SEBELUM KIRIM:
+1) Tepat satu kunci (pg) atau ≥2 kunci (pgk) dengan benar:true.
+2) Pengecoh = miskonsepsi nyata, bukan teks acak.
+3) Panjang opsi setara — DILARANG membuat jawaban benar paling panjang/rinci.
+4) Tidak ada petunjuk gramatikal yang mengarahkan ke kunci.
 
 Skema JSON wajib:
 {
@@ -194,13 +207,13 @@ Skema JSON wajib:
       "waktuMenit": number,
       "pembahasan": "string opsional HTML terbatas",
       "butuhGambar": boolean,
-      "petunjukGambar": "string — hanya jika butuhGambar true: apa yang HARUS terlihat di ilustrasi agar siswa bisa menjawab (bukan hiasan)",
-      "opsi": [{"teks":"...","benar":boolean}] ,
+      "petunjukGambar": "string — hanya jika butuhGambar: data/elemen visual yang HARUS ada (tabel/grafik/diagram), bukan hiasan",
+      "opsi": [{"teks":"...","benar":boolean}],
       "pasangan": [{"kiri":"...","kanan":"..."}],
       "pernyataan": [{"teks":"...","benar":boolean}],
       "kunciIsian": ["varian1","varian2"],
       "abaikanKapital": boolean,
-      "kunciJawaban": "rubrik/pedoman penskoran untuk uraian",
+      "kunciJawaban": "rubrik penskoran untuk uraian",
       "nilaiParsial": boolean,
       "acakOpsi": boolean
     }
@@ -208,13 +221,10 @@ Skema JSON wajib:
 }
 
 Aturan field per tipe:
-- pg / pgk: wajib "opsi" (4–5 butir). pg: tepat satu benar:true. pgk: 2+ benar:true, nilaiParsial boleh true.
-- jodoh: wajib "pasangan" (minimal 3), nilaiParsial boleh true.
-- bs: wajib "pernyataan" (minimal 3), nilaiParsial boleh true.
-- isian: wajib "kunciIsian" (minimal 1), abaikanKapital biasanya true.
-- uraian: wajib "kunciJawaban" berisi rubrik (skor penuh / sebagian / nol).
-- Field yang tidak relevan tipe boleh dihilangkan.
-- butuhGambar=true HANYA jika tanpa gambar siswa tidak bisa menjawab dengan adil (mis. menghitung benda di gambar, membaca diagram). Jangan true sekadar mempercantik.`
+- pg / pgk: wajib "opsi" (4 butir ideal). pg: tepat satu benar:true. pgk: 2+ benar:true.
+- jodoh: "pasangan" minimal 3. bs: "pernyataan" minimal 3. isian: "kunciIsian" minimal 1.
+- uraian: "kunciJawaban" berisi rubrik (penuh / sebagian / nol).
+- butuhGambar=true HANYA jika siswa butuh membaca data visual (tabel, grafik, diagram, gambar hitung). Bukan dekorasi.`
 
   return { ok: true, sistem: sistemSoal(), user, meta: { mapel, kelas, tipe, kompleksitas, jumlah } }
 }
@@ -360,19 +370,20 @@ export function susunPromptIlustrasiSoal(input) {
   const prompt = `Buat ilustrasi edukatif untuk soal sekolah dasar (Indonesia).
 
 Syarat WAJIB:
-- Gambar adalah ALAT BANTU menjawab soal, BUKAN hiasan/dekorasi.
-- Hanya tampilkan elemen visual yang diperlukan siswa untuk menjawab.
-- Gaya: ilustrasi datar (flat) yang jelas, kontras tinggi, cocok cetak/layar, tanpa teks panjang atau watermark.
-- Hindari kekerasan, konten dewasa, logo merek, wajah tokoh terkenal, atau detail yang membingungkan.
-- Proporsional untuk anak SD kelas ${kelas || '1-6'}${mapel ? `, mapel ${mapel}` : ''}.
+- Gambar = ALAT BANTU menjawab, BUKAN hiasan.
+- Jika diminta tabel: gambar tabel dengan garis jelas, header, dan ANGKA/LABEL persis seperti petunjuk (dapat dibaca siswa).
+- Jika diminta grafik/chart/diagram batang/garis/lingkaran: sumbu berlabel, nilai terbaca, legenda sederhana bila perlu.
+- Hanya elemen yang dibutuhkan untuk menjawab; hindari dekorasi, watermark, logo, tokoh terkenal.
+- Gaya flat, kontras tinggi, cocok layar/cetak SD.
+- Kelas ${kelas || '1-6'}${mapel ? `, mapel ${mapel}` : ''}.
 
-Petunjuk visual dari perancang soal:
-${petunjuk || '(tidak ada — infer dari teks soal)'}
+Petunjuk visual (utama — patuhi angka & struktur ini):
+${petunjuk || '(tidak ada petunjuk terpisah — infer dari teks soal; utamakan data yang disebut di soal)'}
 
-Teks soal (untuk konteks; JANGAN menulis ulang seluruh soal di gambar):
+Teks soal (konteks; jangan menuliskan seluruh soal sebagai paragraf di gambar):
 ${teksSoal || '(tidak ada)'}
 
-Hasilkan SATU gambar yang langsung dapat dipasang di soal.`
+Hasilkan SATU gambar siap pakai di soal.`
 
   return { ok: true, prompt }
 }
