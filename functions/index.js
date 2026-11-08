@@ -32,6 +32,8 @@ import {
   susunPromptSampul,
 } from './generateBukuAi.js'
 
+export { loginSiswaLms } from './loginSiswaLms.js'
+
 initializeApp()
 
 /**

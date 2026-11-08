@@ -430,3 +430,14 @@
   - Tidak menghitung ulang nilai di function — hanya membalik flag, sehingga tidak beda dengan rapor resmi.
 - **Deploy wajib**: `firebase deploy --only functions:jalankanJadwalPublikasiSts` lalu hosting.
 - Data yang dirilis adalah data saat jadwal disimpan. Jika nilai berubah, jadwalkan ulang.
+
+## 2026-11-05 — Login siswa LMS lewat Cloud Function (identitas siswa di Firebase Auth)
+
+- **Latar belakang:** siswa LMS login memakai NISN yang dicocokkan **di klien**, tanpa Firebase Auth. Akibatnya rules tidak bisa membedakan siswa satu dengan lainnya, sehingga fitur Tugas (pengumpulan dan nilai per siswa) tidak bisa diamankan. Sebagai langkah sementara, commit `6ff49f4` membuka baca `lms_materi` untuk siapa saja (`allow read: if true`); perubahan ini menggantikannya.
+- **Cloud Function baru `loginSiswaLms`** (`functions/loginSiswaLms.js`, wilayah `asia-southeast2`): menerima `siswaId` + `nisn`, memverifikasi NISN di server terhadap `siswa/{id}` (hanya siswa aktif), lalu menerbitkan custom token Firebase Auth dengan claims `lmsSiswa`, `siswaId`, `kelas`, `nama`. UID siswa: `lms_siswa_{siswaId}`.
+- **Pembatasan percobaan:** 5 kali NISN salah mengunci siswa itu 10 menit (dicatat di `lms_login_gagal/{siswaId}`, hanya bisa diakses Admin SDK). Pesan gagal seragam agar tidak membocorkan siapa yang ada atau tidak.
+- Logika murni dipisah ke `functions/aturanSiswaLms.js`; uji: `node scripts/cek-login-siswa-lms.mjs`.
+- **`firestore.rules`:** `isLoggedIn()` kini **tidak** berlaku untuk token siswa (agar aturan lama yang hanya memeriksa «sudah login» tidak ikut terbuka untuk siswa); fungsi baru `isSiswaLms()`. `lms_materi` dibaca guru/admin, atau siswa hanya untuk materi kelasnya sendiri (claim `kelas`).
+- **`storage.rules`:** `isLoggedIn()` mengecualikan token siswa dengan alasan yang sama (mencegah siswa menghapus/menimpa `lms/materi` atau membaca file staf). Download URL bertoken tetap bisa dibuka siswa.
+- **Deploy wajib, berurutan:** (1) beri peran *Service Account Token Creator* pada service account runtime function (lihat ANTIREGRESI §32); (2) `firebase deploy --only functions:loginSiswaLms`; (3) deploy LMS v0.4.3; (4) `npm run deploy:rules`. Rules sebelum LMS baru di-deploy akan membuat siswa di LMS lama tidak bisa membuka materi.
+- **Keterbatasan:** koleksi `siswa` (berisi `nisn`) masih terbaca publik karena dipakai login Perpustakaan, sehingga verifikasi server belum membuat NISN rahasia. Perlu langkah lanjutan sebelum nilai siswa ditampilkan.

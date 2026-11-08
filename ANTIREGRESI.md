@@ -341,3 +341,14 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 - Jadwal lama yang dibuat sebelum perbaikan ini tidak punya `snapshotIds` — wali kelas perlu menjadwalkan ulang sekali.
 - Setelah function berjalan, `jadwalAt` dikosongkan agar tidak terpicu ulang.
 - Deploy function wajib; tanpa itu jadwal tetap hanya jalan saat halaman dibuka.
+
+## §32. Login siswa LMS (custom token) dan batas keamanannya
+
+- Siswa LMS masuk lewat Cloud Function `loginSiswaLms` dan memegang token Firebase Auth dengan claims `lmsSiswa`, `siswaId`, `kelas`, `nama`. Beri akses siswa di rules **hanya** lewat `isSiswaLms()` dan claim tersebut (mis. `resource.data.siswaId == request.auth.token.siswaId`), jangan lewat `isLoggedIn()`.
+- **Jangan menghapus** `!('lmsSiswa' in request.auth.token)` dari `isLoggedIn()` di `firestore.rules` **maupun** `storage.rules`. Tanpa itu, token siswa dianggap «login» dan bisa lolos aturan lama, termasuk `delete` pada `lms/materi` di Storage dan buat dokumen `users/{uid}`.
+- Klien siswa wajib query `lms_materi` dengan `where('kelas', '==', kelasDariToken)` (huruf besar). Rules memeriksa claim `kelas`; query tanpa filter itu akan ditolak seluruhnya.
+- **Gejala «Layanan masuk belum siap»** (log function: gagal membuat custom token / `iam.serviceAccounts.signBlob`): service account runtime function belum boleh menandatangani token. Perbaiki: aktifkan API *IAM Service Account Credentials* dan beri peran *Service Account Token Creator* (`roles/iam.serviceAccountTokenCreator`) pada service account runtime function. Pada gen 2 biasanya service account default Compute (`NOMOR_PROJECT-compute@developer.gserviceaccount.com`); periksa di Cloud Run > layanan `loginsiswalms` > Keamanan.
+- Wilayah function (`asia-southeast2`) harus sama dengan `REGION_FUNGSI` di repo LMS (`src/lib/firebase.ts`).
+- `lms_login_gagal/{siswaId}` hanya diakses Admin SDK. Jangan menambahkan `match` untuknya di rules. Kunci 5 kali salah / 10 menit bisa dipakai pihak lain untuk mengunci satu siswa; ini disadari dan diterima.
+- **Batas keamanan saat ini:** `siswa/{id}` (memuat `nisn`) masih `allow get/list ... || true` karena dipakai login Perpustakaan. Selama itu berlaku, siapa pun bisa membaca NISN siswa lain lalu login sebagai dia. Jangan menyebut login siswa «aman» untuk data sensitif (nilai, jawaban) sebelum NISN tidak lagi terbaca publik atau digantikan PIN terpisah yang hanya bisa dibaca function.
+- Uji logika: `node scripts/cek-login-siswa-lms.mjs`. Rules belum teruji di emulator; uji dengan akun admin, guru, orang tua, dan siswa sebelum dianggap beres (§1.7).

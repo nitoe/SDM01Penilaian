@@ -25,8 +25,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Akun STAF/orang tua (Firebase Auth email). Token siswa LMS (custom token dengan claim
+    // lmsSiswa, dari Cloud Function loginSiswaLms) SENGAJA TIDAK dianggap «login» di sini,
+    // supaya aturan lama yang hanya memeriksa isLoggedIn() tidak ikut terbuka untuk siswa.
     function isLoggedIn() {
-      return request.auth != null;
+      return request.auth != null && !('lmsSiswa' in request.auth.token);
+    }
+
+    // Siswa LMS yang masuk lewat Cloud Function loginSiswaLms. Claims: siswaId, kelas (huruf besar), nama.
+    function isSiswaLms() {
+      return request.auth != null
+        && 'lmsSiswa' in request.auth.token
+        && request.auth.token.lmsSiswa == true;
     }
 
     function myProfile() {
@@ -1032,14 +1042,16 @@ match /g7kaih/{id} {
     // LMS (Learning Management System) — repo nitoe/lms
     // Koleksi: lms_materi, (nanti) lms_tugas, lms_pengumpulan, …
     // Akses tulis: guru dengan penugasan kelas×mapel atau wali kelas (tulisMapelKelas).
-    // Baca: terbuka. Area siswa LMS tidak memakai Firebase Auth (login kelas + nama + NISN
-    // diverifikasi di klien), jadi siswa membaca materi kelasnya tanpa Auth. Yang terbaca hanya
-    // metadata materi (judul, jenis, TP, URL); biodata siswa TIDAK ada di koleksi ini.
-    // Pola sama dengan perpus_kategori / sts_publikasi. TULIS tetap hanya guru pemilik kelas×mapel.
+    // Baca: guru/admin, atau siswa LMS (token dari Cloud Function loginSiswaLms) HANYA untuk
+    // materi kelasnya sendiri (claim kelas). Klien siswa wajib query dengan where('kelas', '==', kelasnya).
+    // TULIS tetap hanya guru pemilik kelas×mapel.
+    // Catatan: lms_login_gagal/{siswaId} (percobaan salah login siswa) hanya diakses Admin SDK
+    // dari Cloud Function; sengaja tidak ada match, jadi klien ditolak oleh aturan default.
     // ========================================================================
 
     match /lms_materi/{id} {
-      allow read: if true;
+      allow read: if isGuru() || isAdmin()
+                  || (isSiswaLms() && resource.data.kelas == request.auth.token.kelas);
 
       allow create: if tulisMapelKelas(
                         request.resource.data.mapel,

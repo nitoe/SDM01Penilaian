@@ -10,8 +10,11 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+    // Akun STAF/orang tua (Firebase Auth email). Token siswa LMS (custom token dengan claim
+    // lmsSiswa) SENGAJA tidak dianggap «login», agar siswa tidak bisa membaca/mengubah file staf.
+    // Siswa membuka materi lewat download URL bertoken (tidak melewati rules).
     function isLoggedIn() {
-      return request.auth != null;
+      return request.auth != null && !('lmsSiswa' in request.auth.token);
     }
 
     function isAdmin() {
