@@ -388,27 +388,43 @@ export function susunPromptIlustrasiSoal(input) {
   const petunjuk = potong(input?.petunjukGambar, 500)
   const kelas = potong(input?.kelas, 10)
   const mapel = potong(input?.mapel, 80)
-  if (teksSoal.length < 8 && petunjuk.length < 8) {
-    return { ok: false, pesan: 'Sertakan teks soal atau petunjuk gambar.' }
+  // Deskripsi pengguna opsional; cukup teks soal saja.
+  const teksBersih = teksSoal.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  if (teksBersih.length < 8 && petunjuk.length < 4) {
+    return { ok: false, pesan: 'Teks soal masih kosong. Tulis soal dulu atau isi deskripsi ilustrasi.' }
   }
 
-  const prompt = `Buat ilustrasi edukatif untuk soal sekolah dasar (Indonesia).
+  const prompt = `Anda membuat ILUSTRASI MURNI untuk soal asesmen Sekolah Dasar di Indonesia.
+Ini BUKAN soal, BUKAN lembar kerja, BUKAN cuplikan ujian dari internet.
 
-Syarat WAJIB:
-- Gambar = ALAT BANTU menjawab, BUKAN hiasan.
-- Jika diminta tabel: gambar tabel dengan garis jelas, header, dan ANGKA/LABEL persis seperti petunjuk (dapat dibaca siswa).
-- Jika diminta grafik/chart/diagram batang/garis/lingkaran: sumbu berlabel, nilai terbaca, legenda sederhana bila perlu.
-- Hanya elemen yang dibutuhkan untuk menjawab; hindari dekorasi, watermark, logo, tokoh terkenal.
-- Gaya flat, kontras tinggi, cocok layar/cetak SD.
-- Kelas ${kelas || '1-6'}${mapel ? `, mapel ${mapel}` : ''}.
+════════════════════════════════════════
+LARANGAN MUTLAK (melanggar = gagal)
+════════════════════════════════════════
+1. JANGAN menuliskan jawaban atau memberi petunjuk jawaban pada gambar.
+   - Jika soal meminta mengidentifikasi organ/bagian yang ditunjuk panah: tampilkan anatomi + panah SAJA.
+     JANGAN menulis nama organ/bagian yang ditunjuk atau label yang langsung menjawab soal.
+   - JANGAN menambah centang, lingkaran pada pilihan benar, highlight, atau teks "jawaban: …".
+2. JANGAN menampilkan teks soal, stem pertanyaan, pilihan A/B/C/D, kunci, atau nomor soal di dalam gambar.
+3. JANGAN membuat gambar yang tampak seperti screenshot / foto layar / scan lembar soal dari web
+   (hindari watermark, UI browser, kertas bergaris kotor, font soal ujian, kolom skor).
+4. JANGAN meniru layout "soal + gambar + opsi" dalam satu kanvas. Hanya ilustrasi/diagram/tabel/grafik.
 
-Petunjuk visual (utama — patuhi angka & struktur ini):
-${petunjuk || '(tidak ada petunjuk terpisah — infer dari teks soal; utamakan data yang disebut di soal)'}
+════════════════════════════════════════
+YANG BOLEH ADA DI GAMBAR
+════════════════════════════════════════
+- Anatomi, benda, situasi, panah penunjuk, nomor penanda (1,2,3) TANPA nama jawaban.
+- Tabel/grafik: angka dan label sumbu/header yang diperlukan untuk mengolah data (bukan label "yang benar").
+- Gaya: ilustrasi datar (flat) atau diagram ilmiah sederhana, kontras tinggi, bersih, cocok cetak SD.
+- Kelas ${kelas || '1–6'}${mapel ? `, mapel ${mapel}` : ''}.
 
-Teks soal (konteks; jangan menuliskan seluruh soal sebagai paragraf di gambar):
-${teksSoal || '(tidak ada)'}
+════════════════════════════════════════
+KONTEKS SOAL (hanya untuk memahami apa yang digambar — JANGAN digambar sebagai teks soal)
+════════════════════════════════════════
+${teksBersih || '(tidak ada teks soal)'}
 
-Hasilkan SATU gambar siap pakai di soal.`
+${petunjuk ? `Petunjuk tambahan dari guru (opsional, patuhi jika tidak bertentangan dengan LARANGAN):\n${petunjuk}` : 'Petunjuk guru: (tidak ada — infer visual dari konteks soal tanpa membocorkan jawaban.)'}
+
+Hasilkan SATU gambar ilustrasi murni, siap dipasang di soal, tanpa teks soal dan tanpa membocorkan kunci.`
 
   return { ok: true, prompt }
 }
