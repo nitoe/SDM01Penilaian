@@ -31,6 +31,10 @@ import {
   susunPromptBukuMeta,
   susunPromptSampul,
 } from './generateBukuAi.js'
+import {
+  generateSoalLmsDenganAi,
+  generateIlustrasiSoalDenganAi,
+} from './generateSoalLmsAi.js'
 
 export { loginSiswaLms } from './loginSiswaLms.js'
 
@@ -432,3 +436,55 @@ export const generateBukuSampulAi = onCall(opsiAiSampul, async (request) => {
     throw new HttpsError('internal', err?.message || 'Gagal membuat sampul AI.')
   }
 })
+
+/** Bank soal LMS: generate teks soal (JSON). Hanya UID+email AI. */
+export const generateSoalLmsAi = onCall(opsiAi, async (request) => {
+  const provider = pastikanAi(request)
+  if (provider !== 'gemini') {
+    throw new HttpsError('invalid-argument', 'Generate soal LMS saat ini hanya mendukung Gemini.')
+  }
+  try {
+    const apiKey = kunciProvider('gemini')
+    const hasil = await generateSoalLmsDenganAi(apiKey, request.data || {})
+    logger.info('generateSoalLmsAi', {
+      uid: request.auth.uid,
+      tipe: request.data?.tipe,
+      jumlah: hasil.soal?.length,
+    })
+    return hasil
+  } catch (err) {
+    if (err?.code === 'invalid-argument') throw new HttpsError('invalid-argument', err.message)
+    logger.error('generateSoalLmsAi gagal', { pesan: err?.message })
+    throw new HttpsError('internal', err?.message || 'Gagal membuat soal AI.')
+  }
+})
+
+/** Bank soal LMS: generate ilustrasi fungsional (data URL). Terpisah dari teks soal. */
+export const generateIlustrasiSoalLmsAi = onCall(
+  { ...opsiAi, timeoutSeconds: 120 },
+  async (request) => {
+    const provider = pastikanAi(request)
+    if (provider !== 'gemini') {
+      throw new HttpsError('invalid-argument', 'Ilustrasi soal LMS saat ini hanya mendukung Gemini.')
+    }
+    try {
+      const apiKey = kunciProvider('gemini')
+      const hasil = await generateIlustrasiSoalDenganAi(apiKey, request.data || {})
+      if (!hasil.dataUrl || !hasil.dataUrl.startsWith('data:image/')) {
+        throw new Error('Gemini tidak mengembalikan gambar.')
+      }
+      if (hasil.dataUrl.length > 4_000_000) {
+        throw new Error('Gambar terlalu besar. Coba lagi dengan petunjuk lebih sederhana.')
+      }
+      logger.info('generateIlustrasiSoalLmsAi', {
+        uid: request.auth.uid,
+        ukuran: hasil.dataUrl.length,
+      })
+      return hasil
+    } catch (err) {
+      if (err?.code === 'invalid-argument') throw new HttpsError('invalid-argument', err.message)
+      logger.error('generateIlustrasiSoalLmsAi gagal', { pesan: err?.message })
+      throw new HttpsError('internal', err?.message || 'Gagal membuat ilustrasi AI.')
+    }
+  },
+)
