@@ -1309,6 +1309,47 @@ match /g7kaih/{id} {
                     && (tulisMapelKelas(kuisInduk().mapel, kuisInduk().kelas) || isAdmin());
     }
 
+
+    // ---- LMS: Tugas ---------------------------------------------------------
+    // Tugas per kelas×mapel. Pola sama seperti lms_materi / lms_kuis.
+    // Query klien WAJIB where kelas DAN mapel.
+    match /lms_tugas/{id} {
+      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
+
+      allow create: if tulisMapelKelas(
+                        request.resource.data.mapel,
+                        request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['kelas', 'mapel', 'judul', 'aktif', 'dibuatOleh'])
+                    && request.resource.data.dibuatOleh == request.auth.uid
+                    && request.resource.data.kelas is string
+                    && request.resource.data.kelas.size() > 0
+                    && request.resource.data.mapel is string
+                    && request.resource.data.mapel.size() > 0
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 200
+                    && request.resource.data.aktif is bool
+                    && (!('deskripsi' in request.resource.data)
+                        || (request.resource.data.deskripsi is string
+                            && request.resource.data.deskripsi.size() <= 2000));
+
+      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.mapel == resource.data.mapel
+                    && request.resource.data.dibuatOleh == resource.data.dibuatOleh
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 200
+                    && request.resource.data.aktif is bool
+                    && (!('deskripsi' in request.resource.data)
+                        || (request.resource.data.deskripsi is string
+                            && request.resource.data.deskripsi.size() <= 2000));
+
+      allow delete: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                    || isAdmin();
+    }
+
     // ############################################################################
     // ##  REPO: BERSAMA (semua repo)
     // ##  Penutup.
