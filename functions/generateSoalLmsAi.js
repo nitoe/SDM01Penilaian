@@ -21,7 +21,7 @@ function thinkingGemini(nama) {
 }
 
 function configGeminiJson(nama, maxOut = 8192) {
-  const cfg = { temperature: 0.45, responseMimeType: 'application/json', maxOutputTokens: maxOut }
+  const cfg = { temperature: 0.85, responseMimeType: 'application/json', maxOutputTokens: maxOut }
   const thinking = thinkingGemini(nama)
   if (thinking) cfg.thinkingConfig = thinking
   return cfg
@@ -161,7 +161,12 @@ NARASI (FIELD teks) — PRIORITAS UTAMA
 KELUARAN
 - HANYA JSON valid sesuai skema. Tanpa markdown.
 - HTML terbatas saja: <p>, <strong>, <em>, <sub>, <sup>, <ul>, <ol>, <li>.
-- Satu respons = tepat satu soal (array "soal" berisi 1 elemen) kecuali diminta lain.`
+- Satu respons = tepat satu soal (array "soal" berisi 1 elemen) kecuali diminta lain.
+
+ANTI-PENGULANGAN
+- Jika daftar soal yang harus dihindari diberikan, DILARANG menghasilkan soal yang mirip secara makna, struktur stem, atau pilihan kata dengan soal-soal tersebut.
+- Untuk kompetensi yang sama (mis. identifikasi organ), ubah sudut pandang: gunakan konteks situasi, data, eksperimen sederhana, perbandingan, atau cara bertanya yang berbeda. Jangan mengulang pola "Organ manakah yang berfungsi sebagai..." jika sudah ada di daftar hindari.
+- Variasikan struktur kalimat stem. Jangan selalu memakai frasa yang sama.`
 }
 
 export function susunPromptSoalLms(input) {
@@ -199,8 +204,20 @@ export function susunPromptSoalLms(input) {
   if (!TIPE_OK.has(tipe)) return { ok: false, pesan: 'Tipe soal tidak didukung.' }
   if (!KOMP_OK.has(kompleksitas)) return { ok: false, pesan: 'Kompleksitas harus L1, L2, atau L3.' }
 
+  const variasi = potong(input?.variasi, 80) || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const hindari = Array.isArray(input?.hindariSoal)
+    ? input.hindariSoal.map((s) => potong(s, 220)).filter(Boolean).slice(0, 12)
+    : []
+  const blokHindari = hindari.length
+    ? `\nSOAL YANG SUDAH ADA DI PAKET (DILARANG membuat yang mirip makna/struktur/frasa):\n${hindari.map((s, i) => `${i + 1}. ${s}`).join('\n')}\nBuat soal dengan sudut pandang, konteks, atau cara bertanya yang BERBEDA secara jelas.\n`
+    : ''
+
   const user = `Buat tepat ${jumlah} soal untuk bank soal LMS SD${jumlah === 1 ? ' (satu soal saja — guru akan meninjau per nomor)' : ''}.
 
+VARIASI / ANTI-PENGULANGAN (WAJIB):
+- Seed/variasi permintaan: ${variasi}
+- Hasilkan soal yang BERBEDA secara substansial. Ubah konteks, angka, nama, situasi, data, atau struktur stem.
+${blokHindari}
 WAJIB — NARASI SOAL:
 - Tulis field "teks" sebagai SOAL BARU yang lengkap (stimulus sesuai level + stem).
 - JANGAN mengosongkan teks. JANGAN mengembalikan placeholder. JANGAN menyalin soal lama guru.
