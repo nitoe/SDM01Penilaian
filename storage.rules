@@ -96,6 +96,25 @@ service firebase.storage {
     }
 
 
+
+    // Gambar soal modul Kuis (lms_soal). Hanya staf (bukan token siswa LMS).
+    // Path: lms/kuis/{kuisId}/{fileName} — maks 5 MB, image only.
+    function lmsGambarKuis() {
+      return request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /lms/kuis/{kuisId}/{fileName} {
+      allow read: if isLoggedIn();
+      allow create, update: if isLoggedIn()
+        && lmsGambarKuis()
+        && kuisId.size() > 0
+        && kuisId.size() <= 80
+        && fileName.size() > 0
+        && fileName.size() <= 200;
+      allow delete: if isLoggedIn();
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }
