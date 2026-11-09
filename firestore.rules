@@ -1241,13 +1241,7 @@ match /g7kaih/{id} {
                     && request.resource.data.jumlahSoal <= 200
                     && (!('deskripsi' in request.resource.data)
                         || (request.resource.data.deskripsi is string
-                            && request.resource.data.deskripsi.size() <= 1000))
-                    && (!('waktuMulai' in request.resource.data) || request.resource.data.waktuMulai is string)
-                    && (!('waktuSelesai' in request.resource.data) || request.resource.data.waktuSelesai is string)
-                    && (!('token' in request.resource.data) || (request.resource.data.token is string && request.resource.data.token.size() <= 40))
-                    && (!('jenisPenilaian' in request.resource.data) || request.resource.data.jenisPenilaian in ['latihan', 'slm', 'sts', 'sas'])
-                    && (!('tpIds' in request.resource.data) || request.resource.data.tpIds is list)
-                    && (!('tpNamaList' in request.resource.data) || request.resource.data.tpNamaList is list);
+                            && request.resource.data.deskripsi.size() <= 1000));
 
       allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     && request.resource.data.kelas == resource.data.kelas
@@ -1262,13 +1256,7 @@ match /g7kaih/{id} {
                     && request.resource.data.jumlahSoal <= 200
                     && (!('deskripsi' in request.resource.data)
                         || (request.resource.data.deskripsi is string
-                            && request.resource.data.deskripsi.size() <= 1000))
-                    && (!('waktuMulai' in request.resource.data) || request.resource.data.waktuMulai is string)
-                    && (!('waktuSelesai' in request.resource.data) || request.resource.data.waktuSelesai is string)
-                    && (!('token' in request.resource.data) || (request.resource.data.token is string && request.resource.data.token.size() <= 40))
-                    && (!('jenisPenilaian' in request.resource.data) || request.resource.data.jenisPenilaian in ['latihan', 'slm', 'sts', 'sas'])
-                    && (!('tpIds' in request.resource.data) || request.resource.data.tpIds is list)
-                    && (!('tpNamaList' in request.resource.data) || request.resource.data.tpNamaList is list);
+                            && request.resource.data.deskripsi.size() <= 1000));
 
       allow delete: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     || isAdmin();
@@ -1330,5 +1318,26 @@ match /g7kaih/{id} {
     match /{document=**} {
       allow read, write: if false;
     }
+
+    // Jawaban siswa untuk kuis LMS.
+    // Siswa (bertoken lmsSiswa) boleh membuat jawaban miliknya sendiri.
+    // Guru kelas×mapel dan admin boleh membaca.
+    match /lms_jawaban/{id} {
+      allow read: if isAdmin()
+                  || (isSiswaLms() && resource.data.siswaUid == request.auth.uid)
+                  || (isGuru() && tulisMapelKelas(
+                        get(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId)).data.mapel,
+                        get(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId)).data.kelas));
+
+      allow create: if isSiswaLms()
+                    && request.resource.data.siswaUid == request.auth.uid
+                    && request.resource.data.kuisId is string
+                    && request.resource.data.jawaban is map
+                    && request.resource.data.skorOtomatis is number;
+
+      allow update: if false; // hasil penilaian tidak diubah dari klien
+      allow delete: if isAdmin();
+    }
+
   }
 }
