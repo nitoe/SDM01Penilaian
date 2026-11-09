@@ -20,7 +20,6 @@ rules_version = '2';
 //   nitoe/sarpras ...... sarpras_*
 //   perpustakaan ....... perpus_*  (termasuk perpus_progress dan login/jurnal siswa)
 //   nitoe/lms .......... lms_*     (lms_materi, lms_paket_soal, lms_gambar, …)
-//                        tka_*     (TKA kelas 6: tka_soal, tka_paket, tka_token, tka_percobaan, tka_sesi_live)
 //
 // Cara kerja: file ini SATU dan dideploy dari repo SDM01Penilaian (`npm run deploy:rules`).
 // Ubah hanya bagian milik repo yang sedang dikerjakan, salin file UTUH ke SDM01Penilaian,
@@ -1092,7 +1091,7 @@ match /g7kaih/{id} {
     // ############################################################################
 
     // LMS (Learning Management System) — repo nitoe/lms
-    // Koleksi: lms_materi, lms_paket_soal, lms_gambar, lms_kuis, lms_soal, (nanti) lms_tugas, lms_pengumpulan, …
+    // Koleksi: lms_materi, lms_paket_soal, lms_gambar, lms_kuis, lms_soal, lms_tugas, lms_nilai_tugas, (nanti) lms_pengumpulan, …
     // Akses tulis: guru dengan penugasan kelas×mapel atau wali kelas (tulisMapelKelas).
     // Baca lms_materi: guru/admin, atau siswa LMS (token dari Cloud Function loginSiswaLms) HANYA untuk
     // materi kelasnya sendiri (claim kelas). Klien siswa wajib query dengan where('kelas', '==', kelasnya).
@@ -1173,7 +1172,7 @@ match /g7kaih/{id} {
                     && request.resource.data.status in ['draf', 'siap']
                     && request.resource.data.acakSoal is bool
                     && request.resource.data.soal is list
-                    && request.resource.data.soal.size() <= 300
+                    && request.resource.data.soal.size() <= 100
                     && (!('deskripsi' in request.resource.data)
                         || (request.resource.data.deskripsi is string
                             && request.resource.data.deskripsi.size() <= 1000));
@@ -1188,7 +1187,7 @@ match /g7kaih/{id} {
                     && request.resource.data.status in ['draf', 'siap']
                     && request.resource.data.acakSoal is bool
                     && request.resource.data.soal is list
-                    && request.resource.data.soal.size() <= 300
+                    && request.resource.data.soal.size() <= 100
                     && (!('deskripsi' in request.resource.data)
                         || (request.resource.data.deskripsi is string
                             && request.resource.data.deskripsi.size() <= 1000));
@@ -1219,10 +1218,7 @@ match /g7kaih/{id} {
     // jadi BACA hanya guru kelas×mapel atau admin — sama seperti lms_paket_soal (ANTIREGRESI §38).
     // Query klien WAJIB where kelas + mapel (lms_kuis) atau where kuisId (lms_soal).
     match /lms_kuis/{id} {
-      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas)
-                  || (isSiswaLms()
-                      && resource.data.kelas == request.auth.token.kelas
-                      && resource.data.aktif == true);
+      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
 
       allow create: if tulisMapelKelas(
                         request.resource.data.mapel,
@@ -1313,135 +1309,124 @@ match /g7kaih/{id} {
                     && (tulisMapelKelas(kuisInduk().mapel, kuisInduk().kelas) || isAdmin());
     }
 
-    // ############################################################################
-    // ##  REPO: nitoe/lms — TKA (Tes Kemampuan Akademik, kelas 6)
-    // ##  Koleksi tka_*. Dimigrasi dari repo nitoe/tka2026. Lihat docs/TKA.md (repo LMS) dan
-    // ##  ANTIREGRESI §76. Peran TKA:
-    // ##    tkaAdmin       = pembuat aplikasi (UID + email tetap, pola sama dengan analisis kuis AI)
-    // ##    tkaGuruKelas6  = wali kelas 6A/6B/6C (users/{uid}.waliKelas), role guru/guru_akademik
-    // ##    tkaStaf        = tkaAdmin ATAU tkaGuruKelas6
-    // ##    tkaSiswa       = siswa LMS dengan claim kelas 6A/6B/6C
-    // ##  Harus sama dengan src/lib/tkaAkses.ts di repo LMS (ubah keduanya bersamaan).
-    // ############################################################################
 
-    function tkaAdmin() {
-      return akunAktif()
-        && request.auth.uid == 'v4fQXsqCzYUtHrqcDM0u48sxIfn1'
-        && request.auth.token.email == 'arif.azwar79@gmail.com';
+    // ---- lms_tugas/{id} --------------------------------------------------
+    // Tugas mapel atau proyek. Guru: penugasan kelas×mapel (mapel utama) atau wali.
+    // Siswa LMS: baca hanya tugas aktif kelasnya sendiri.
+    match /lms_tugas/{id} {
+      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas)
+                  || (isSiswaLms()
+                      && resource.data.aktif == true
+                      && resource.data.kelas == request.auth.token.kelas);
+
+      allow create: if tulisMapelKelas(
+                        request.resource.data.mapel,
+                        request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['kelas', 'mapel', 'judul', 'jenis', 'aktif', 'dibuatOleh'])
+                    && request.resource.data.dibuatOleh == request.auth.uid
+                    && request.resource.data.kelas is string
+                    && request.resource.data.kelas.size() > 0
+                    && request.resource.data.kelas.size() <= 10
+                    && request.resource.data.mapel is string
+                    && request.resource.data.mapel.size() > 0
+                    && request.resource.data.mapel.size() <= 80
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 200
+                    && request.resource.data.jenis in ['mapel', 'proyek']
+                    && request.resource.data.aktif is bool
+                    && (!('deskripsi' in request.resource.data)
+                        || (request.resource.data.deskripsi is string
+                            && request.resource.data.deskripsi.size() <= 2000))
+                    && (!('instruksi' in request.resource.data)
+                        || (request.resource.data.instruksi is string
+                            && request.resource.data.instruksi.size() <= 20000))
+                    && (!('jumlahPengumpulan' in request.resource.data)
+                        || (request.resource.data.jumlahPengumpulan is int
+                            && request.resource.data.jumlahPengumpulan >= 0));
+
+      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                    && request.resource.data.dibuatOleh == resource.data.dibuatOleh
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 200
+                    && request.resource.data.jenis in ['mapel', 'proyek']
+                    && request.resource.data.aktif is bool
+                    && request.resource.data.kelas is string
+                    && request.resource.data.kelas.size() > 0
+                    && request.resource.data.kelas.size() <= 10
+                    && request.resource.data.mapel is string
+                    && request.resource.data.mapel.size() > 0
+                    && request.resource.data.mapel.size() <= 80
+                    && (!('deskripsi' in request.resource.data)
+                        || request.resource.data.deskripsi == null
+                        || (request.resource.data.deskripsi is string
+                            && request.resource.data.deskripsi.size() <= 2000))
+                    && (!('instruksi' in request.resource.data)
+                        || request.resource.data.instruksi == null
+                        || (request.resource.data.instruksi is string
+                            && request.resource.data.instruksi.size() <= 20000));
+
+      allow delete: if tulisMapelKelas(resource.data.mapel, resource.data.kelas) || isAdmin();
     }
 
-    function tkaGuruKelas6() {
-      return akunAktif()
-        && myRole() in ['guru', 'guru_akademik']
-        && daftarAda('waliKelas')
-        && ('6A' in myProfile().waliKelas
-            || '6B' in myProfile().waliKelas
-            || '6C' in myProfile().waliKelas);
-    }
-
-    function tkaStaf() {
-      return tkaAdmin() || tkaGuruKelas6();
-    }
-
-    function tkaSiswa() {
-      return isSiswaLms() && request.auth.token.kelas in ['6A', '6B', '6C'];
-    }
-
-    // Bank soal TKA. Memuat KUNCI JAWABAN (kunciJawaban) → siswa TIDAK boleh membaca.
-    // Soal dikirim ke siswa oleh Cloud Function (tanpa kunci). Impor/hapus: admin TKA.
-    // Edit satu soal: staf TKA. Query klien staf boleh tanpa filter (koleksi khusus TKA).
-    match /tka_soal/{id} {
-      function soalSah(d) {
-        return d.subjectId in ['matematika', 'bahasa-indonesia']
-          && d.tipe in ['pg', 'pgk', 'pgk-cat']
-          && d.pertanyaan is string
-          && d.pertanyaan.size() <= 20000
-          && d.skor is number
-          && d.skor >= 0
-          && d.skor <= 1000;
-      }
-
-      allow read: if tkaStaf();
-      allow create: if tkaAdmin() && soalSah(request.resource.data);
-      allow update: if tkaStaf() && soalSah(request.resource.data);
-      allow delete: if tkaAdmin();
-    }
-
-    // Paket latihan / try out. TOKEN TIDAK BOLEH ada di dokumen ini (siswa membacanya):
-    // token disimpan di tka_token. Siswa kelas 6 hanya membaca paket AKTIF; query siswa
-    // WAJIB where('aktif', '==', true). Aturan tulis diperketat di Tahap 3 (alur pengajuan).
-    match /tka_paket/{id} {
-      function paketSah(d) {
-        return d.nama is string
-          && d.nama.size() > 0
-          && d.nama.size() <= 200
-          && d.jenis in ['latihan', 'tryout']
-          && d.subjectId in ['matematika', 'bahasa-indonesia']
-          && d.questionIds is list
-          && d.questionIds.size() <= 300
-          && d.aktif is bool
-          && d.butuhToken is bool
-          && !('token' in d);
-      }
-
-      allow read: if tkaStaf()
-                  || (tkaSiswa() && resource.data.aktif == true);
-      allow create: if tkaStaf() && paketSah(request.resource.data);
-      allow update: if tkaStaf() && paketSah(request.resource.data);
-      allow delete: if tkaAdmin();
-    }
-
-    // Token try out. Hanya staf TKA; pemeriksaan token siswa dilakukan Cloud Function (Admin SDK).
-    match /tka_token/{id} {
-      allow read: if tkaStaf();
-      allow create, update: if tkaStaf()
-                            && request.resource.data.token is string
-                            && request.resource.data.token.size() <= 40;
-      allow delete: if tkaStaf();
-    }
-
-    // Hasil pengerjaan. Ditulis HANYA Cloud Function / skrip migrasi (Admin SDK).
-    // Siswa membaca miliknya (query WAJIB where siswaId == siswaId sendiri); staf TKA membaca semua.
-    // Delete = reset percobaan oleh staf TKA (seperti TKA lama).
-    match /tka_percobaan/{id} {
-      allow read: if tkaStaf()
+    // ---- lms_nilai_tugas/{id} ---------------------------------------------
+    // Nilai manual per siswa. ID disarankan: tugasId + '_' + siswaId.
+    // Baca/tulis guru: penugasan mapel×kelas (mapel utama tugas).
+    // Siswa: baca nilai sendiri saja.
+    match /lms_nilai_tugas/{id} {
+      allow read: if (resource.data.keys().hasAll(['tugasId', 'siswaId', 'kelas', 'mapel'])
+                      && lihatMapelKelas(resource.data.mapel, resource.data.kelas))
                   || (isSiswaLms()
                       && resource.data.siswaId == request.auth.token.siswaId);
-      allow create, update: if false;
-      allow delete: if tkaStaf();
+
+      allow create: if request.resource.data.keys().hasAll(
+                         ['tugasId', 'siswaId', 'siswaNama', 'kelas', 'mapel', 'nilai', 'dinilaiOleh'])
+                    && tulisMapelKelas(
+                         request.resource.data.mapel,
+                         request.resource.data.kelas)
+                    && request.resource.data.dinilaiOleh == request.auth.uid
+                    && request.resource.data.tugasId is string
+                    && request.resource.data.tugasId.size() > 0
+                    && request.resource.data.siswaId is string
+                    && request.resource.data.siswaId.size() > 0
+                    && request.resource.data.siswaNama is string
+                    && request.resource.data.siswaNama.size() <= 120
+                    && request.resource.data.kelas is string
+                    && request.resource.data.kelas.size() <= 10
+                    && request.resource.data.mapel is string
+                    && request.resource.data.mapel.size() <= 80
+                    && request.resource.data.nilai is number
+                    && request.resource.data.nilai >= 0
+                    && request.resource.data.nilai <= 1000
+                    && (!('komentar' in request.resource.data)
+                        || (request.resource.data.komentar is string
+                            && request.resource.data.komentar.size() <= 2000));
+
+      allow update: if resource.data.keys().hasAll(['tugasId', 'siswaId', 'kelas', 'mapel'])
+                    && tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                    && request.resource.data.tugasId == resource.data.tugasId
+                    && request.resource.data.siswaId == resource.data.siswaId
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.mapel == resource.data.mapel
+                    && request.resource.data.nilai is number
+                    && request.resource.data.nilai >= 0
+                    && request.resource.data.nilai <= 1000
+                    && (!('komentar' in request.resource.data)
+                        || request.resource.data.komentar == null
+                        || (request.resource.data.komentar is string
+                            && request.resource.data.komentar.size() <= 2000));
+
+      allow delete: if resource.data.keys().hasAll(['mapel', 'kelas'])
+                    && (tulisMapelKelas(resource.data.mapel, resource.data.kelas) || isAdmin());
     }
 
-    // Pemantauan langsung. ID dokumen = paketId_siswaId. Siswa menulis HANYA dokumennya sendiri.
-    match /tka_sesi_live/{sesiId} {
-      allow read: if tkaStaf();
-      allow create, update: if tkaSiswa()
-                            && request.resource.data.paketId is string
-                            && request.resource.data.siswaId == request.auth.token.siswaId
-                            && request.resource.data.kelas == request.auth.token.kelas
-                            && sesiId == request.resource.data.paketId + '_' + request.auth.token.siswaId;
-      allow delete: if tkaStaf()
-                    || (tkaSiswa() && resource.data.siswaId == request.auth.token.siswaId);
-    }
 
     // ############################################################################
     // ##  REPO: BERSAMA (semua repo)
     // ##  Penutup.
     // ############################################################################
-
-
-    // Hasil pengerjaan kuis siswa (satu dokumen per percobaan/kirim).
-    // Hanya Cloud Function (Admin SDK) yang menulis. Klien: siswa baca miliknya;
-    // guru baca menurut kelas×mapel pada dokumen.
-    match /lms_jawaban/{id} {
-      allow read: if (isSiswaLms()
-                      && resource.data.siswaId == request.auth.token.siswaId)
-                  || (isGuru()
-                      && resource.data.kelas is string
-                      && resource.data.mapel is string
-                      && lihatMapelKelas(resource.data.mapel, resource.data.kelas))
-                  || isAdmin();
-      allow create, update, delete: if false;
-    }
 
     // ---- Default: tolak semuanya -------------------------------------------
     match /{document=**} {
