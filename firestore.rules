@@ -20,6 +20,7 @@ rules_version = '2';
 //   nitoe/sarpras ...... sarpras_*
 //   perpustakaan ....... perpus_*  (termasuk perpus_progress dan login/jurnal siswa)
 //   nitoe/lms .......... lms_*     (lms_materi, lms_paket_soal, lms_gambar, …)
+//                        tka_*     (TKA kelas 6: tka_soal, tka_paket, tka_token, tka_percobaan, tka_sesi_live)
 //
 // Cara kerja: file ini SATU dan dideploy dari repo SDM01Penilaian (`npm run deploy:rules`).
 // Ubah hanya bagian milik repo yang sedang dikerjakan, salin file UTUH ke SDM01Penilaian,
@@ -1310,6 +1311,116 @@ match /g7kaih/{id} {
       allow delete: if resource.data.kuisId is string
                     && exists(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId))
                     && (tulisMapelKelas(kuisInduk().mapel, kuisInduk().kelas) || isAdmin());
+    }
+
+    // ############################################################################
+    // ##  REPO: nitoe/lms — TKA (Tes Kemampuan Akademik, kelas 6)
+    // ##  Koleksi tka_*. Dimigrasi dari repo nitoe/tka2026. Lihat docs/TKA.md (repo LMS) dan
+    // ##  ANTIREGRESI §76. Peran TKA:
+    // ##    tkaAdmin       = pembuat aplikasi (UID + email tetap, pola sama dengan analisis kuis AI)
+    // ##    tkaGuruKelas6  = wali kelas 6A/6B/6C (users/{uid}.waliKelas), role guru/guru_akademik
+    // ##    tkaStaf        = tkaAdmin ATAU tkaGuruKelas6
+    // ##    tkaSiswa       = siswa LMS dengan claim kelas 6A/6B/6C
+    // ##  Harus sama dengan src/lib/tkaAkses.ts di repo LMS (ubah keduanya bersamaan).
+    // ############################################################################
+
+    function tkaAdmin() {
+      return akunAktif()
+        && request.auth.uid == 'v4fQXsqCzYUtHrqcDM0u48sxIfn1'
+        && request.auth.token.email == 'arif.azwar79@gmail.com';
+    }
+
+    function tkaGuruKelas6() {
+      return akunAktif()
+        && myRole() in ['guru', 'guru_akademik']
+        && daftarAda('waliKelas')
+        && ('6A' in myProfile().waliKelas
+            || '6B' in myProfile().waliKelas
+            || '6C' in myProfile().waliKelas);
+    }
+
+    function tkaStaf() {
+      return tkaAdmin() || tkaGuruKelas6();
+    }
+
+    function tkaSiswa() {
+      return isSiswaLms() && request.auth.token.kelas in ['6A', '6B', '6C'];
+    }
+
+    // Bank soal TKA. Memuat KUNCI JAWABAN (kunciJawaban) → siswa TIDAK boleh membaca.
+    // Soal dikirim ke siswa oleh Cloud Function (tanpa kunci). Impor/hapus: admin TKA.
+    // Edit satu soal: staf TKA. Query klien staf boleh tanpa filter (koleksi khusus TKA).
+    match /tka_soal/{id} {
+      function soalSah(d) {
+        return d.subjectId in ['matematika', 'bahasa-indonesia']
+          && d.tipe in ['pg', 'pgk', 'pgk-cat']
+          && d.pertanyaan is string
+          && d.pertanyaan.size() <= 20000
+          && d.skor is number
+          && d.skor >= 0
+          && d.skor <= 1000;
+      }
+
+      allow read: if tkaStaf();
+      allow create: if tkaAdmin() && soalSah(request.resource.data);
+      allow update: if tkaStaf() && soalSah(request.resource.data);
+      allow delete: if tkaAdmin();
+    }
+
+    // Paket latihan / try out. TOKEN TIDAK BOLEH ada di dokumen ini (siswa membacanya):
+    // token disimpan di tka_token. Siswa kelas 6 hanya membaca paket AKTIF; query siswa
+    // WAJIB where('aktif', '==', true). Aturan tulis diperketat di Tahap 3 (alur pengajuan).
+    match /tka_paket/{id} {
+      function paketSah(d) {
+        return d.nama is string
+          && d.nama.size() > 0
+          && d.nama.size() <= 200
+          && d.jenis in ['latihan', 'tryout']
+          && d.subjectId in ['matematika', 'bahasa-indonesia']
+          && d.questionIds is list
+          && d.questionIds.size() <= 300
+          && d.aktif is bool
+          && d.butuhToken is bool
+          && !('token' in d);
+      }
+
+      allow read: if tkaStaf()
+                  || (tkaSiswa() && resource.data.aktif == true);
+      allow create: if tkaStaf() && paketSah(request.resource.data);
+      allow update: if tkaStaf() && paketSah(request.resource.data);
+      allow delete: if tkaAdmin();
+    }
+
+    // Token try out. Hanya staf TKA; pemeriksaan token siswa dilakukan Cloud Function (Admin SDK).
+    match /tka_token/{id} {
+      allow read: if tkaStaf();
+      allow create, update: if tkaStaf()
+                            && request.resource.data.token is string
+                            && request.resource.data.token.size() <= 40;
+      allow delete: if tkaStaf();
+    }
+
+    // Hasil pengerjaan. Ditulis HANYA Cloud Function / skrip migrasi (Admin SDK).
+    // Siswa membaca miliknya (query WAJIB where siswaId == siswaId sendiri); staf TKA membaca semua.
+    // Delete = reset percobaan oleh staf TKA (seperti TKA lama).
+    match /tka_percobaan/{id} {
+      allow read: if tkaStaf()
+                  || (isSiswaLms()
+                      && resource.data.siswaId == request.auth.token.siswaId);
+      allow create, update: if false;
+      allow delete: if tkaStaf();
+    }
+
+    // Pemantauan langsung. ID dokumen = paketId_siswaId. Siswa menulis HANYA dokumennya sendiri.
+    match /tka_sesi_live/{sesiId} {
+      allow read: if tkaStaf();
+      allow create, update: if tkaSiswa()
+                            && request.resource.data.paketId is string
+                            && request.resource.data.siswaId == request.auth.token.siswaId
+                            && request.resource.data.kelas == request.auth.token.kelas
+                            && sesiId == request.resource.data.paketId + '_' + request.auth.token.siswaId;
+      allow delete: if tkaStaf()
+                    || (tkaSiswa() && resource.data.siswaId == request.auth.token.siswaId);
     }
 
     // ############################################################################

@@ -459,3 +459,8 @@
 ## 2026-11-09 — Tambah skeleton function nilaiKuisLms
 - Export `nilaiKuisLms` dari `functions/index.js` agar bisa di-deploy.
 - File: `functions/index.js` (lengkap) + `functions/nilaiKuisLms.js`.
+
+## 2026-11-10 — TKA Tahap 1: rules tka_* dan skrip migrasi dari tka2026
+- `firestore.rules` (lengkap): fungsi `tkaAdmin`, `tkaGuruKelas6`, `tkaStaf`, `tkaSiswa` dan koleksi `tka_soal`, `tka_paket`, `tka_token`, `tka_percobaan`, `tka_sesi_live` (bagian «REPO: nitoe/lms — TKA»). Basis: salinan terbaru di repo ini.
+- `scripts/migrasi-tka.mjs`: migrasi `questionPool`/`packages`/`attempts` dari project `tka2026-sdm01` ke `sdm01kukusan-2e735` (dry-run bawaan). Uji logika: `scripts/cek-migrasi-tka.mjs`.
+- Langkah lengkap: `docs/TKA.md` di repo LMS.
