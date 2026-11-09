@@ -1213,12 +1213,17 @@ match /g7kaih/{id} {
     }
 
 
-    // BARU — modul Kuis lama (lms_kuis + lms_soal). Hidup berdampingan dengan Bank Soal
-    // (lms_paket_soal). Dokumen soal memuat kunci (opsi.benar / jawabanIsian / kunciUraian),
-    // jadi BACA hanya guru kelas×mapel atau admin — sama seperti lms_paket_soal (ANTIREGRESI §38).
-    // Query klien WAJIB where kelas + mapel (lms_kuis) atau where kuisId (lms_soal).
+    // Modul Kuis (snapshot soal di dokumen lms_kuis). Model lama lms_soal tetap ada.
+    // Snapshot memuat kunci jawaban. Untuk pengerjaan online siswa, baca diizinkan
+    // HANYA kuis aktif kelas siswa (claim token). Ini memaparkan kunci ke klien siswa
+    // (cukup untuk latihan; ujian berisiko tinggi nanti lewat CF yang menyaring kunci).
+    // Query siswa WAJIB where('kelas','==',kelasnya) + where('aktif','==',true).
+    // Guru tetap lewat lihatMapelKelas (kelas+mapel).
     match /lms_kuis/{id} {
-      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas)
+                  || (isSiswaLms()
+                      && resource.data.kelas == request.auth.token.kelas
+                      && resource.data.aktif == true);
 
       allow create: if tulisMapelKelas(
                         request.resource.data.mapel,
@@ -1318,26 +1323,5 @@ match /g7kaih/{id} {
     match /{document=**} {
       allow read, write: if false;
     }
-
-    // Jawaban siswa untuk kuis LMS.
-    // Siswa (bertoken lmsSiswa) boleh membuat jawaban miliknya sendiri.
-    // Guru kelas×mapel dan admin boleh membaca.
-    match /lms_jawaban/{id} {
-      allow read: if isAdmin()
-                  || (isSiswaLms() && resource.data.siswaUid == request.auth.uid)
-                  || (isGuru() && tulisMapelKelas(
-                        get(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId)).data.mapel,
-                        get(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId)).data.kelas));
-
-      allow create: if isSiswaLms()
-                    && request.resource.data.siswaUid == request.auth.uid
-                    && request.resource.data.kuisId is string
-                    && request.resource.data.jawaban is map
-                    && request.resource.data.skorOtomatis is number;
-
-      allow update: if false; // hasil penilaian tidak diubah dari klien
-      allow delete: if isAdmin();
-    }
-
   }
 }
