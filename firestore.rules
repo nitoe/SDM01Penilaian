@@ -1172,7 +1172,7 @@ match /g7kaih/{id} {
                     && request.resource.data.status in ['draf', 'siap']
                     && request.resource.data.acakSoal is bool
                     && request.resource.data.soal is list
-                    && request.resource.data.soal.size() <= 100
+                    && request.resource.data.soal.size() <= 300
                     && (!('deskripsi' in request.resource.data)
                         || (request.resource.data.deskripsi is string
                             && request.resource.data.deskripsi.size() <= 1000));
@@ -1187,7 +1187,7 @@ match /g7kaih/{id} {
                     && request.resource.data.status in ['draf', 'siap']
                     && request.resource.data.acakSoal is bool
                     && request.resource.data.soal is list
-                    && request.resource.data.soal.size() <= 100
+                    && request.resource.data.soal.size() <= 300
                     && (!('deskripsi' in request.resource.data)
                         || (request.resource.data.deskripsi is string
                             && request.resource.data.deskripsi.size() <= 1000));
@@ -1213,10 +1213,10 @@ match /g7kaih/{id} {
     }
 
 
-    // Kuis disusun dari paket bank soal (snapshot di field `soal`).
-    // Model lama lms_soal terpisah dihentikan untuk kuis baru; match di bawah
-    // tetap ada agar dokumen lama (jika ada) masih bisa dibaca/dihapus admin.
-    // Query klien WAJIB where kelas + mapel. Soal memuat kunci → siswa tidak boleh baca.
+    // BARU — modul Kuis lama (lms_kuis + lms_soal). Hidup berdampingan dengan Bank Soal
+    // (lms_paket_soal). Dokumen soal memuat kunci (opsi.benar / jawabanIsian / kunciUraian),
+    // jadi BACA hanya guru kelas×mapel atau admin — sama seperti lms_paket_soal (ANTIREGRESI §38).
+    // Query klien WAJIB where kelas + mapel (lms_kuis) atau where kuisId (lms_soal).
     match /lms_kuis/{id} {
       allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
 
@@ -1224,7 +1224,7 @@ match /g7kaih/{id} {
                         request.resource.data.mapel,
                         request.resource.data.kelas)
                     && request.resource.data.keys().hasAll(
-                         ['kelas', 'mapel', 'judul', 'aktif', 'dibuatOleh', 'jumlahSoal', 'soal'])
+                         ['kelas', 'mapel', 'judul', 'aktif', 'dibuatOleh', 'jumlahSoal'])
                     && request.resource.data.dibuatOleh == request.auth.uid
                     && request.resource.data.kelas is string
                     && request.resource.data.kelas.size() > 0
@@ -1238,9 +1238,7 @@ match /g7kaih/{id} {
                     && request.resource.data.aktif is bool
                     && request.resource.data.jumlahSoal is int
                     && request.resource.data.jumlahSoal >= 0
-                    && request.resource.data.jumlahSoal <= 100
-                    && request.resource.data.soal is list
-                    && request.resource.data.soal.size() <= 100
+                    && request.resource.data.jumlahSoal <= 200
                     && (!('deskripsi' in request.resource.data)
                         || (request.resource.data.deskripsi is string
                             && request.resource.data.deskripsi.size() <= 1000));
@@ -1255,9 +1253,7 @@ match /g7kaih/{id} {
                     && request.resource.data.aktif is bool
                     && request.resource.data.jumlahSoal is int
                     && request.resource.data.jumlahSoal >= 0
-                    && request.resource.data.jumlahSoal <= 100
-                    && request.resource.data.soal is list
-                    && request.resource.data.soal.size() <= 100
+                    && request.resource.data.jumlahSoal <= 200
                     && (!('deskripsi' in request.resource.data)
                         || (request.resource.data.deskripsi is string
                             && request.resource.data.deskripsi.size() <= 1000));
@@ -1266,10 +1262,14 @@ match /g7kaih/{id} {
                     || isAdmin();
     }
 
-    // LEGACY — lms_soal terpisah (model kuis lama). Hanya baca/hapus; jangan create baru.
+    // Soal per kuis. Kunci jawaban ada di dokumen (opsi.benar dll), jadi tidak boleh dibaca siswa.
+    // Create/update: guru yang boleh menulis kuis induk (cek lewat get ke lms_kuis).
     match /lms_soal/{id} {
       function kuisInduk() {
         return get(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId)).data;
+      }
+      function kuisIndukBaru() {
+        return get(/databases/$(database)/documents/lms_kuis/$(request.resource.data.kuisId)).data;
       }
 
       allow read: if resource.data.kuisId is string
@@ -1277,9 +1277,32 @@ match /g7kaih/{id} {
                   && exists(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId))
                   && lihatMapelKelas(kuisInduk().mapel, kuisInduk().kelas);
 
-      allow create: if false;
+      allow create: if request.resource.data.keys().hasAll(
+                         ['kuisId', 'urutan', 'jenis', 'pertanyaan', 'skor'])
+                    && request.resource.data.kuisId is string
+                    && request.resource.data.kuisId.size() > 0
+                    && exists(/databases/$(database)/documents/lms_kuis/$(request.resource.data.kuisId))
+                    && tulisMapelKelas(kuisIndukBaru().mapel, kuisIndukBaru().kelas)
+                    && request.resource.data.urutan is int
+                    && request.resource.data.jenis in [
+                         'pg', 'pg_kompleks', 'menjodohkan', 'benar_salah', 'isian', 'uraian']
+                    && request.resource.data.pertanyaan is string
+                    && request.resource.data.pertanyaan.size() <= 10000
+                    && request.resource.data.skor is number
+                    && request.resource.data.skor >= 0
+                    && request.resource.data.skor <= 1000;
 
-      allow update: if false;
+      allow update: if resource.data.kuisId is string
+                    && exists(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId))
+                    && tulisMapelKelas(kuisInduk().mapel, kuisInduk().kelas)
+                    && request.resource.data.kuisId == resource.data.kuisId
+                    && request.resource.data.jenis in [
+                         'pg', 'pg_kompleks', 'menjodohkan', 'benar_salah', 'isian', 'uraian']
+                    && request.resource.data.pertanyaan is string
+                    && request.resource.data.pertanyaan.size() <= 10000
+                    && request.resource.data.skor is number
+                    && request.resource.data.skor >= 0
+                    && request.resource.data.skor <= 1000;
 
       allow delete: if resource.data.kuisId is string
                     && exists(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId))
