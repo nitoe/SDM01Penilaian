@@ -455,3 +455,7 @@
 - **Deploy wajib:** salin `firestore.rules` ke repo Penilaian lalu `npm run deploy:rules`, kemudian `npm run deploy` di repo LMS. Tanpa deploy rules, editor menampilkan «Missing or insufficient permissions».
 - Belum ada: kuis untuk siswa (2b), generate soal AI (2c), rumus KaTeX, impor soal dari paket lain.
 - **Catatan tumpang tindih:** modul «Kuis» (`lms_kuis`, `lms_soal`, `KuisBuilder`) yang sudah ada di repo LMS dibuat terpisah dari «Bank Soal» (`lms_paket_soal`). Keduanya hidup berdampingan sementara; penyatuan menunggu keputusan. Rules untuk `lms_kuis`/`lms_soal` **belum ada** (ditolak oleh aturan default) sampai ditulis.
+
+## 2026-11-09 — Tambah skeleton function nilaiKuisLms
+- Export `nilaiKuisLms` dari `functions/index.js` agar bisa di-deploy.
+- File: `functions/index.js` (lengkap) + `functions/nilaiKuisLms.js`.

@@ -488,3 +488,5 @@ export const generateIlustrasiSoalLmsAi = onCall(
     }
   },
 )
+
+export { nilaiKuisLms } from './nilaiKuisLms.js'
