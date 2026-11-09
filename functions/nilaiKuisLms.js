@@ -8,8 +8,6 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { getFirestore } from 'firebase-admin/firestore'
 import { logger } from 'firebase-functions'
 
-const db = getFirestore()
-
 export const nilaiKuisLms = onCall(
   { region: 'asia-southeast2', maxInstances: 10 },
   async (request) => {
@@ -21,6 +19,9 @@ export const nilaiKuisLms = onCall(
     if (!kuisId || typeof jawaban !== 'object') {
       throw new HttpsError('invalid-argument', 'kuisId dan jawaban wajib diisi.')
     }
+
+    // Inisialisasi Firestore di dalam handler (bukan di level modul)
+    const db = getFirestore()
 
     // TODO: validasi bahwa pemanggil adalah siswa yang berhak (claim lmsSiswa)
     // TODO: baca dokumen lms_kuis/{kuisId}, ambil soal + kunci
