@@ -1172,7 +1172,7 @@ match /g7kaih/{id} {
                     && request.resource.data.status in ['draf', 'siap']
                     && request.resource.data.acakSoal is bool
                     && request.resource.data.soal is list
-                    && request.resource.data.soal.size() <= 100
+                    && request.resource.data.soal.size() <= 300  // BATAS_SOAL_PER_PAKET di types/soal.ts
                     && (!('deskripsi' in request.resource.data)
                         || (request.resource.data.deskripsi is string
                             && request.resource.data.deskripsi.size() <= 1000));
@@ -1187,7 +1187,7 @@ match /g7kaih/{id} {
                     && request.resource.data.status in ['draf', 'siap']
                     && request.resource.data.acakSoal is bool
                     && request.resource.data.soal is list
-                    && request.resource.data.soal.size() <= 100
+                    && request.resource.data.soal.size() <= 300  // BATAS_SOAL_PER_PAKET di types/soal.ts
                     && (!('deskripsi' in request.resource.data)
                         || (request.resource.data.deskripsi is string
                             && request.resource.data.deskripsi.size() <= 1000));
