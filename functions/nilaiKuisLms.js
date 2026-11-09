@@ -15,6 +15,13 @@ function normalisasi(s) {
   return String(s ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
+/** Angka dari teks (koma atau titik). null jika bukan angka murni. */
+function sebagaiAngka(s) {
+  const t = String(s ?? '').trim().replace(/\s/g, '').replace(',', '.')
+  if (!/^-?\d+(\.\d+)?$/.test(t)) return null
+  return Number(t)
+}
+
 function nilaiSatuSoal(soal, jawabanSiswa) {
   const poin = Number(soal.poin) || 1
   const tipe = soal.tipe
@@ -41,10 +48,15 @@ function nilaiSatuSoal(soal, jawabanSiswa) {
 
   if (tipe === 'isian') {
     const kunci = Array.isArray(soal.kunci) ? soal.kunci : []
-    const j = soal.abaikanKapital !== false ? normalisasi(jawabanSiswa) : String(jawabanSiswa ?? '').trim()
+    const mentah = String(jawabanSiswa ?? '').trim()
+    const j = soal.abaikanKapital !== false ? normalisasi(mentah) : mentah
+    const angkaJ = sebagaiAngka(mentah)
     const cocok = kunci.some((k) => {
+      if (k == null || String(k).trim() === '') return false
       const kk = soal.abaikanKapital !== false ? normalisasi(k) : String(k).trim()
-      return kk === j
+      if (kk === j) return true
+      const angkaK = sebagaiAngka(k)
+      return angkaJ !== null && angkaK !== null && angkaJ === angkaK
     })
     return { benar: cocok, skor: cocok ? poin : 0, butuhManual: false }
   }

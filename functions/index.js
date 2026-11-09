@@ -490,3 +490,4 @@ export const generateIlustrasiSoalLmsAi = onCall(
 )
 
 export { nilaiKuisLms } from './nilaiKuisLms.js'
+export { nilaiManualKuisLms } from './nilaiManualKuisLms.js'
