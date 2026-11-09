@@ -291,7 +291,7 @@ export function normalisasiSoalLms(data, meta) {
     const waktuMenit = Math.min(60, Math.max(0, Number(raw.waktuMenit) || (tipe === 'uraian' ? 5 : 1)))
     const pembahasan = potong(raw.pembahasan, 4000) || undefined
     const butuhGambar = raw.butuhGambar === true
-    const petunjukGambar = butuhGambar ? potong(raw.petunjukGambar, 500) : undefined
+    const petunjukGambar = butuhGambar ? potong(raw.petunjukGambar, 3000) : undefined
 
     const dasar = {
       tipe,
@@ -402,7 +402,7 @@ export async function generateSoalLmsDenganAi(apiKey, input) {
 
 export function susunPromptIlustrasiSoal(input) {
   const teksSoal = potong(input?.teksSoal, 2000)
-  const petunjuk = potong(input?.petunjukGambar, 500)
+  const petunjuk = potong(input?.petunjukGambar, 3000)
   const kelas = potong(input?.kelas, 10)
   const mapel = potong(input?.mapel, 80)
   const variasi = potong(input?.variasi, 40) || `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
