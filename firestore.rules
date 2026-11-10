@@ -1141,7 +1141,7 @@ match /g7kaih/{id} {
     // ############################################################################
 
     // LMS (Learning Management System) — repo nitoe/lms
-    // Koleksi: lms_materi, lms_paket_soal, lms_gambar, lms_kuis, lms_soal, lms_tugas, lms_nilai_tugas, (nanti) lms_pengumpulan, …
+    // Koleksi: lms_materi, lms_paket_soal, lms_gambar, lms_kuis, lms_soal, lms_tugas, lms_nilai_tugas, lms_bobot_slm, (nanti) lms_pengumpulan, …
     // Akses tulis: guru dengan penugasan kelas×mapel atau wali kelas (tulisMapelKelas).
     // Baca lms_materi: guru/admin, atau siswa LMS (token dari Cloud Function loginSiswaLms) HANYA untuk
     // materi kelasnya sendiri (claim kelas). Klien siswa wajib query dengan where('kelas', '==', kelasnya).
@@ -1498,6 +1498,44 @@ match /g7kaih/{id} {
 
       allow delete: if resource.data.keys().hasAll(['mapel', 'kelas'])
                     && (lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas) || isAdmin());
+    }
+
+
+
+    // ---- lms_bobot_slm/{id} -----------------------------------------------
+    // Bobot sumber SLM per TP. ID: {kelas}__{mapelSlug}__{tpId}.
+    // Baca: guru/admin. Tulis: lmsTulisMapelKelas (mapel × kelas).
+    match /lms_bobot_slm/{id} {
+      allow read: if isGuru() || isAdmin();
+
+      allow create: if lmsTulisMapelKelas(
+                        request.resource.data.mapel,
+                        request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['kelas', 'mapel', 'tpId', 'sumber', 'diubahOleh'])
+                    && request.resource.data.kelas is string
+                    && request.resource.data.kelas.size() > 0
+                    && request.resource.data.kelas.size() <= 10
+                    && request.resource.data.mapel is string
+                    && request.resource.data.mapel.size() > 0
+                    && request.resource.data.mapel.size() <= 80
+                    && request.resource.data.tpId is string
+                    && request.resource.data.tpId.size() > 0
+                    && request.resource.data.tpId.size() <= 80
+                    && request.resource.data.sumber is list
+                    && request.resource.data.sumber.size() <= 40
+                    && request.resource.data.diubahOleh == request.auth.uid;
+
+      allow update: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.mapel == resource.data.mapel
+                    && request.resource.data.tpId == resource.data.tpId
+                    && request.resource.data.sumber is list
+                    && request.resource.data.sumber.size() <= 40
+                    && request.resource.data.diubahOleh == request.auth.uid;
+
+      allow delete: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                    || isAdmin();
     }
 
 
