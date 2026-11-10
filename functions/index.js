@@ -35,6 +35,10 @@ import {
   generateSoalLmsDenganAi,
   generateIlustrasiSoalDenganAi,
 } from './generateSoalLmsAi.js'
+import {
+  generateKategoriTugasDenganAi,
+  generateIsiTugasDenganAi,
+} from './generateTugasLmsAi.js'
 
 export { loginSiswaLms } from './loginSiswaLms.js'
 
@@ -488,6 +492,49 @@ export const generateIlustrasiSoalLmsAi = onCall(
     }
   },
 )
+
+
+/** LMS Tugas: generate kategori rubrik (4–6) dari isi tugas. */
+export const generateKategoriTugasLmsAi = onCall(opsiAi, async (request) => {
+  const provider = pastikanAi(request)
+  if (provider !== 'gemini') {
+    throw new HttpsError('invalid-argument', 'Generate kategori tugas hanya mendukung Gemini.')
+  }
+  try {
+    const apiKey = kunciProvider('gemini')
+    const hasil = await generateKategoriTugasDenganAi(apiKey, request.data || {})
+    logger.info('generateKategoriTugasLmsAi', {
+      uid: request.auth.uid,
+      n: hasil.kategori?.length,
+    })
+    return hasil
+  } catch (err) {
+    if (err?.code === 'invalid-argument') throw new HttpsError('invalid-argument', err.message)
+    logger.error('generateKategoriTugasLmsAi gagal', { pesan: err?.message })
+    throw new HttpsError('internal', err?.message || 'Gagal generate kategori tugas.')
+  }
+})
+
+/** LMS Tugas: generate deskripsi + instruksi dari pengaturan (judul wajib). */
+export const generateIsiTugasLmsAi = onCall(opsiAi, async (request) => {
+  const provider = pastikanAi(request)
+  if (provider !== 'gemini') {
+    throw new HttpsError('invalid-argument', 'Generate isi tugas hanya mendukung Gemini.')
+  }
+  try {
+    const apiKey = kunciProvider('gemini')
+    const hasil = await generateIsiTugasDenganAi(apiKey, request.data || {})
+    logger.info('generateIsiTugasLmsAi', {
+      uid: request.auth.uid,
+      len: hasil.instruksi?.length,
+    })
+    return hasil
+  } catch (err) {
+    if (err?.code === 'invalid-argument') throw new HttpsError('invalid-argument', err.message)
+    logger.error('generateIsiTugasLmsAi gagal', { pesan: err?.message })
+    throw new HttpsError('internal', err?.message || 'Gagal generate isi tugas.')
+  }
+})
 
 export { nilaiKuisLms } from './nilaiKuisLms.js'
 export { nilaiManualKuisLms } from './nilaiManualKuisLms.js'
