@@ -464,3 +464,7 @@
 - `firestore.rules` (lengkap): fungsi `tkaAdmin`, `tkaGuruKelas6`, `tkaStaf`, `tkaSiswa` dan koleksi `tka_soal`, `tka_paket`, `tka_token`, `tka_percobaan`, `tka_sesi_live` (bagian «REPO: nitoe/lms — TKA»). Basis: salinan terbaru di repo ini.
 - `scripts/migrasi-tka.mjs`: migrasi `questionPool`/`packages`/`attempts` dari project `tka2026-sdm01` ke `sdm01kukusan-2e735` (dry-run bawaan). Uji logika: `scripts/cek-migrasi-tka.mjs`.
 - Langkah lengkap: `docs/TKA.md` di repo LMS.
+
+## 2026-11-10 — TKA Tahap 1 (revisi arah): rules ruang TKA + migrasi bank soal
+- `firestore.rules` (lengkap): blok `tka_*` pada entri sebelumnya DIGANTI helper `tkaEmailKhusus`, `tkaGuruKelas6`, `ruangTka`, `lmsTulisMapelKelas`, `lmsLihatMapelKelas`. Hanya koleksi `lms_*` yang memakainya; `tulisMapelKelas`/`lihatMapelKelas` (Penilaian) tidak diubah.
+- `scripts/migrasi-tka-soal.mjs` (menggantikan `migrasi-tka.mjs`): hanya `questionPool` → `lms_paket_soal` + `lms_gambar`. Uji: `scripts/cek-migrasi-tka-soal.mjs`. Langkah: `docs/TKA.md` (repo LMS).

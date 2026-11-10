@@ -20,6 +20,8 @@ rules_version = '2';
 //   nitoe/sarpras ...... sarpras_*
 //   perpustakaan ....... perpus_*  (termasuk perpus_progress dan login/jurnal siswa)
 //   nitoe/lms .......... lms_*     (lms_materi, lms_paket_soal, lms_gambar, …)
+//                        (+ ruang TKA kelas 6: mapel «TKA Matematika»/«TKA Bahasa Indonesia» lewat ruangTka(), lihat bagian nitoe/lms)
+//                        (+ ruang TKA kelas 6: mapel «TKA Matematika»/«TKA Bahasa Indonesia» lewat ruangTka(), lihat bagian nitoe/lms)
 //
 // Cara kerja: file ini SATU dan dideploy dari repo SDM01Penilaian (`npm run deploy:rules`).
 // Ubah hanya bagian milik repo yang sedang dikerjakan, salin file UTUH ke SDM01Penilaian,
@@ -1086,6 +1088,54 @@ match /g7kaih/{id} {
 
 
     // ############################################################################
+    // ##  REPO: nitoe/lms — helper akses (termasuk ruang TKA kelas 6)
+    // ##  TKA (Tes Kemampuan Akademik) dikelola sebagai RUANG KHUSUS di pipeline kuis LMS:
+    // ##  kelas 6A/6B/6C × mapel «TKA Matematika» / «TKA Bahasa Indonesia». Tidak ada koleksi
+    // ##  baru; bank soal = lms_paket_soal, kuis = lms_kuis, hasil = lms_jawaban.
+    // ##    tkaEmailKhusus  = akun arif.azwar79@gmail.com (wali kelas 5A; pengecualian untuk uji
+    // ##                      sistem; boleh di semua kelas 6)
+    // ##    tkaGuruKelas6   = wali kelas yang bersangkutan (users/{uid}.waliKelas), hanya kelasnya
+    // ##  Harus sama dengan src/lib/tkaAkses.ts di repo LMS (ubah keduanya bersamaan).
+    // ##  lmsTulisMapelKelas / lmsLihatMapelKelas HANYA dipakai koleksi lms_*; helper bersama
+    // ##  tulisMapelKelas / lihatMapelKelas (dipakai Penilaian) sengaja TIDAK diubah.
+    // ############################################################################
+
+    function tkaEmailKhusus() {
+      return akunAktif()
+        && request.auth.token.email == 'arif.azwar79@gmail.com';
+    }
+
+    function tkaKelas6(kelas) {
+      return kelas in ['6A', '6B', '6C'];
+    }
+
+    function tkaGuruKelas6(kelas) {
+      return akunAktif()
+        && myRole() in ['guru', 'guru_akademik']
+        && daftarAda('waliKelas')
+        && tkaKelas6(kelas)
+        && kelas in myProfile().waliKelas;
+    }
+
+    function mapelTka(mapel) {
+      return mapel in ['TKA Matematika', 'TKA Bahasa Indonesia'];
+    }
+
+    function ruangTka(mapel, kelas) {
+      return mapelTka(mapel)
+        && tkaKelas6(kelas)
+        && (tkaEmailKhusus() || tkaGuruKelas6(kelas));
+    }
+
+    function lmsTulisMapelKelas(mapel, kelas) {
+      return tulisMapelKelas(mapel, kelas) || ruangTka(mapel, kelas);
+    }
+
+    function lmsLihatMapelKelas(mapel, kelas) {
+      return lihatMapelKelas(mapel, kelas) || ruangTka(mapel, kelas);
+    }
+
+    // ############################################################################
     // ##  REPO: nitoe/lms
     // ##  Koleksi lms_*. Bagian ini diubah dari repo LMS, lalu file disalin utuh ke SDM01Penilaian.
     // ############################################################################
@@ -1102,7 +1152,7 @@ match /g7kaih/{id} {
       allow read: if isGuru() || isAdmin()
                   || (isSiswaLms() && resource.data.kelas == request.auth.token.kelas);
 
-      allow create: if tulisMapelKelas(
+      allow create: if lmsTulisMapelKelas(
                         request.resource.data.mapel,
                         request.resource.data.kelas)
                     && request.resource.data.keys().hasAll(
@@ -1132,7 +1182,7 @@ match /g7kaih/{id} {
                         || (request.resource.data.url is string
                             && request.resource.data.url.size() <= 2000));
 
-      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+      allow update: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     && request.resource.data.kelas == resource.data.kelas
                     && request.resource.data.mapel == resource.data.mapel
                     && request.resource.data.dibuatOleh == resource.data.dibuatOleh
@@ -1141,7 +1191,7 @@ match /g7kaih/{id} {
                     && request.resource.data.judul.size() <= 200
                     && request.resource.data.jenis in ['pdf', 'gambar', 'video', 'youtube', 'tautan'];
 
-      allow delete: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+      allow delete: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     || isAdmin();
     }
 
@@ -1152,9 +1202,9 @@ match /g7kaih/{id} {
     // (ANTIREGRESI §38). Fase 2b: siswa membaca salinan tanpa kunci di koleksi lain.
     // Query klien WAJIB menyertakan where kelas DAN mapel (sama seperti nilai_tp), tanpa orderBy.
     match /lms_paket_soal/{id} {
-      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow read: if lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas);
 
-      allow create: if tulisMapelKelas(
+      allow create: if lmsTulisMapelKelas(
                         request.resource.data.mapel,
                         request.resource.data.kelas)
                     && request.resource.data.keys().hasAll(
@@ -1177,7 +1227,7 @@ match /g7kaih/{id} {
                         || (request.resource.data.deskripsi is string
                             && request.resource.data.deskripsi.size() <= 1000));
 
-      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+      allow update: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     && request.resource.data.kelas == resource.data.kelas
                     && request.resource.data.mapel == resource.data.mapel
                     && request.resource.data.dibuatOleh == resource.data.dibuatOleh
@@ -1192,7 +1242,7 @@ match /g7kaih/{id} {
                         || (request.resource.data.deskripsi is string
                             && request.resource.data.deskripsi.size() <= 1000));
 
-      allow delete: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+      allow delete: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     || isAdmin();
     }
 
@@ -1218,9 +1268,9 @@ match /g7kaih/{id} {
     // jadi BACA hanya guru kelas×mapel atau admin — sama seperti lms_paket_soal (ANTIREGRESI §38).
     // Query klien WAJIB where kelas + mapel (lms_kuis) atau where kuisId (lms_soal).
     match /lms_kuis/{id} {
-      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas);
+      allow read: if lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas);
 
-      allow create: if tulisMapelKelas(
+      allow create: if lmsTulisMapelKelas(
                         request.resource.data.mapel,
                         request.resource.data.kelas)
                     && request.resource.data.keys().hasAll(
@@ -1243,7 +1293,7 @@ match /g7kaih/{id} {
                         || (request.resource.data.deskripsi is string
                             && request.resource.data.deskripsi.size() <= 1000));
 
-      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+      allow update: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     && request.resource.data.kelas == resource.data.kelas
                     && request.resource.data.mapel == resource.data.mapel
                     && request.resource.data.dibuatOleh == resource.data.dibuatOleh
@@ -1258,7 +1308,7 @@ match /g7kaih/{id} {
                         || (request.resource.data.deskripsi is string
                             && request.resource.data.deskripsi.size() <= 1000));
 
-      allow delete: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+      allow delete: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     || isAdmin();
     }
 
@@ -1275,14 +1325,14 @@ match /g7kaih/{id} {
       allow read: if resource.data.kuisId is string
                   && resource.data.kuisId.size() > 0
                   && exists(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId))
-                  && lihatMapelKelas(kuisInduk().mapel, kuisInduk().kelas);
+                  && lmsLihatMapelKelas(kuisInduk().mapel, kuisInduk().kelas);
 
       allow create: if request.resource.data.keys().hasAll(
                          ['kuisId', 'urutan', 'jenis', 'pertanyaan', 'skor'])
                     && request.resource.data.kuisId is string
                     && request.resource.data.kuisId.size() > 0
                     && exists(/databases/$(database)/documents/lms_kuis/$(request.resource.data.kuisId))
-                    && tulisMapelKelas(kuisIndukBaru().mapel, kuisIndukBaru().kelas)
+                    && lmsTulisMapelKelas(kuisIndukBaru().mapel, kuisIndukBaru().kelas)
                     && request.resource.data.urutan is int
                     && request.resource.data.jenis in [
                          'pg', 'pg_kompleks', 'menjodohkan', 'benar_salah', 'isian', 'uraian']
@@ -1294,7 +1344,7 @@ match /g7kaih/{id} {
 
       allow update: if resource.data.kuisId is string
                     && exists(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId))
-                    && tulisMapelKelas(kuisInduk().mapel, kuisInduk().kelas)
+                    && lmsTulisMapelKelas(kuisInduk().mapel, kuisInduk().kelas)
                     && request.resource.data.kuisId == resource.data.kuisId
                     && request.resource.data.jenis in [
                          'pg', 'pg_kompleks', 'menjodohkan', 'benar_salah', 'isian', 'uraian']
@@ -1306,7 +1356,7 @@ match /g7kaih/{id} {
 
       allow delete: if resource.data.kuisId is string
                     && exists(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId))
-                    && (tulisMapelKelas(kuisInduk().mapel, kuisInduk().kelas) || isAdmin());
+                    && (lmsTulisMapelKelas(kuisInduk().mapel, kuisInduk().kelas) || isAdmin());
     }
 
 
@@ -1314,12 +1364,12 @@ match /g7kaih/{id} {
     // Tugas mapel atau proyek. Guru: penugasan kelas×mapel (mapel utama) atau wali.
     // Siswa LMS: baca hanya tugas aktif kelasnya sendiri.
     match /lms_tugas/{id} {
-      allow read: if lihatMapelKelas(resource.data.mapel, resource.data.kelas)
+      allow read: if lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas)
                   || (isSiswaLms()
                       && resource.data.aktif == true
                       && resource.data.kelas == request.auth.token.kelas);
 
-      allow create: if tulisMapelKelas(
+      allow create: if lmsTulisMapelKelas(
                         request.resource.data.mapel,
                         request.resource.data.kelas)
                     && request.resource.data.keys().hasAll(
@@ -1346,7 +1396,7 @@ match /g7kaih/{id} {
                         || (request.resource.data.jumlahPengumpulan is int
                             && request.resource.data.jumlahPengumpulan >= 0));
 
-      allow update: if tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+      allow update: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     && request.resource.data.dibuatOleh == resource.data.dibuatOleh
                     && request.resource.data.judul is string
                     && request.resource.data.judul.size() > 0
@@ -1368,7 +1418,7 @@ match /g7kaih/{id} {
                         || (request.resource.data.instruksi is string
                             && request.resource.data.instruksi.size() <= 20000));
 
-      allow delete: if tulisMapelKelas(resource.data.mapel, resource.data.kelas) || isAdmin();
+      allow delete: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas) || isAdmin();
     }
 
     // ---- lms_nilai_tugas/{id} ---------------------------------------------
@@ -1377,13 +1427,13 @@ match /g7kaih/{id} {
     // Siswa: baca nilai sendiri saja.
     match /lms_nilai_tugas/{id} {
       allow read: if (resource.data.keys().hasAll(['tugasId', 'siswaId', 'kelas', 'mapel'])
-                      && lihatMapelKelas(resource.data.mapel, resource.data.kelas))
+                      && lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas))
                   || (isSiswaLms()
                       && resource.data.siswaId == request.auth.token.siswaId);
 
       allow create: if request.resource.data.keys().hasAll(
                          ['tugasId', 'siswaId', 'siswaNama', 'kelas', 'mapel', 'nilai', 'dinilaiOleh'])
-                    && tulisMapelKelas(
+                    && lmsTulisMapelKelas(
                          request.resource.data.mapel,
                          request.resource.data.kelas)
                     && request.resource.data.dinilaiOleh == request.auth.uid
@@ -1405,7 +1455,7 @@ match /g7kaih/{id} {
                             && request.resource.data.komentar.size() <= 2000));
 
       allow update: if resource.data.keys().hasAll(['tugasId', 'siswaId', 'kelas', 'mapel'])
-                    && tulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                    && lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     && request.resource.data.tugasId == resource.data.tugasId
                     && request.resource.data.siswaId == resource.data.siswaId
                     && request.resource.data.kelas == resource.data.kelas
@@ -1419,7 +1469,7 @@ match /g7kaih/{id} {
                             && request.resource.data.komentar.size() <= 2000));
 
       allow delete: if resource.data.keys().hasAll(['mapel', 'kelas'])
-                    && (tulisMapelKelas(resource.data.mapel, resource.data.kelas) || isAdmin());
+                    && (lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas) || isAdmin());
     }
 
 
