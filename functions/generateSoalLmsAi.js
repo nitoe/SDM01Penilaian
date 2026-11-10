@@ -1,32 +1,34 @@
 /**
- * generateSoalLmsAi.js — Cloud Functions helper untuk generate soal + ilustrasi LMS.
- * Dipakai oleh generateSoalLmsAi & generateIlustrasiSoalLmsAi (index.js).
+ * generateSoalLmsAi.js
+ * Helper generate soal + ilustrasi LMS (Cloud Functions).
  *
- * ANTIREGRESI §67, §87:
- * - Batas petunjukGambar ≥ 3000 karakter.
- * - Cabang TKA (mapel diawali "TKA ") memakai prompt terpisah:
- *   petunjuk guru prioritas mutlak, gaya vektor naratif/scene, larangan diagram ilmiah/anatomi
- *   kecuali petunjuk eksplisit meminta, dukungan multi-panel + caption.
- * - Cabang non-TKA tidak diubah perilakunya.
+ * PENTING:
+ * - JANGAN impor @google/generative-ai (tidak ada di package.json functions).
+ * - Semua panggilan Gemini lewat fetch REST (pola sama dengan generateBukuAi / generateAi).
+ * - Cabang TKA (mapel diawali "TKA ") memakai prompt terpisah (ANTIREGRESI §87).
+ *
+ * Export yang dipakai index.js:
+ *   - generateSoalLmsDenganAi
+ *   - generateIlustrasiSoalDenganAi
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { logger } from 'firebase-functions'
 
 const BATAS_PETUNJUK = 3000
 const MODEL_TEKS = 'gemini-2.0-flash'
+/** Model native image generation Gemini (sesuaikan jika di produksi sudah beda). */
 const MODEL_GAMBAR = 'gemini-2.0-flash-preview-image-generation'
-
-/** Mapel TKA: diawali "TKA " (TKA Matematika, TKA Bahasa Indonesia, TKA IPA). */
-function adalahMapelTka(mapel) {
-  const m = String(mapel || '').trim()
-  return m.startsWith('TKA ') || m === 'TKA IPA' || m === 'TKA Matematika' || m === 'TKA Bahasa Indonesia'
-}
 
 function potong(s, n) {
   const t = String(s || '').trim()
   if (t.length <= n) return t
   return t.slice(0, n)
+}
+
+/** Mapel TKA: diawali "TKA ". */
+function adalahMapelTka(mapel) {
+  const m = String(mapel || '').trim()
+  return m.startsWith('TKA ')
 }
 
 /**
@@ -44,8 +46,6 @@ export function susunPromptIlustrasiSoal(data = {}) {
 
   if (tka) {
     // ========== CABANG TKA ==========
-    // Petunjuk guru = prioritas mutlak. teksSoal hanya konteks sekunder.
-    // Gaya: ilustrasi vektor naratif/scene edukatif SD, BUKAN diagram ilmiah.
     const system = [
       'You are an illustrator for Indonesian elementary-school (SD) academic ability tests (TKA).',
       'Your ONLY job is to produce ONE clean educational illustration image that follows the teacher illustration guide EXACTLY.',
@@ -67,13 +67,18 @@ export function susunPromptIlustrasiSoal(data = {}) {
       `VARIATION_SEED: ${variasi}`,
       '',
       '=== PETUNJUK ILUSTRASI GURU (PRIORITY #1 — FOLLOW THIS EXACTLY) ===',
-      petunjuk || '(tidak ada petunjuk khusus; buat ilustrasi vektor naratif yang relevan dengan soal, gaya edukatif SD, BUKAN diagram ilmiah)',
+      petunjuk ||
+        '(tidak ada petunjuk khusus; buat ilustrasi vektor naratif yang relevan dengan soal, gaya edukatif SD, BUKAN diagram ilmiah)',
       '',
       '=== KONTEKS SOAL (hanya referensi sekunder, jangan mengalahkan petunjuk di atas) ===',
       teksSoal || '(tidak ada)',
     ]
     if (targetJawaban) {
-      userParts.push('', '=== CATATAN JAWABAN (opsional, jangan menampilkan kunci di gambar) ===', targetJawaban)
+      userParts.push(
+        '',
+        '=== CATATAN JAWABAN (opsional, jangan menampilkan kunci di gambar) ===',
+        targetJawaban,
+      )
     }
     userParts.push(
       '',
@@ -88,7 +93,7 @@ export function susunPromptIlustrasiSoal(data = {}) {
     }
   }
 
-  // ========== CABANG NON-TKA (perilaku lama dipertahankan) ==========
+  // ========== CABANG NON-TKA (perilaku lama / diagram fungsional) ==========
   const systemNon = [
     'You are an educational illustrator for Indonesian primary-school quiz questions.',
     'Produce ONE clear functional illustration that helps a student understand the question.',
@@ -120,77 +125,101 @@ export function susunPromptIlustrasiSoal(data = {}) {
 }
 
 /**
- * Generate ilustrasi soal via Gemini native image generation.
- * Mengembalikan { dataUrl: 'data:image/png;base64,...' } atau melempar.
+ * Panggil Gemini native image generation via REST (tanpa package @google/generative-ai).
+ * Mengembalikan data URL base64.
+ */
+async function mintaGambarGemini(apiKey, model, promptText) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
+  const body = {
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: promptText }],
+      },
+    ],
+    generationConfig: {
+      responseModalities: ['TEXT', 'IMAGE'],
+    },
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+  const raw = await res.text()
+  let json
+  try {
+    json = JSON.parse(raw)
+  } catch {
+    throw new Error(`Gemini merespons non-JSON (HTTP ${res.status}): ${raw.slice(0, 200)}`)
+  }
+
+  if (!res.ok) {
+    const msg =
+      json?.error?.message ||
+      json?.error?.status ||
+      `HTTP ${res.status}`
+    throw new Error(`Gemini gambar gagal: ${msg}`)
+  }
+
+  const parts = json?.candidates?.[0]?.content?.parts || []
+  for (const part of parts) {
+    if (part.inlineData?.data) {
+      const mime = part.inlineData.mimeType || 'image/png'
+      return `data:${mime};base64,${part.inlineData.data}`
+    }
+  }
+
+  const teks = parts.map((p) => p.text || '').join(' ').trim()
+  throw new Error(
+    teks
+      ? `Gemini tidak mengembalikan gambar. Respons: ${teks.slice(0, 240)}`
+      : 'Gemini tidak mengembalikan gambar.',
+  )
+}
+
+/**
+ * Generate ilustrasi soal. Dipakai oleh export generateIlustrasiSoalLmsAi di index.js.
+ * Mengembalikan { dataUrl }.
  */
 export async function generateIlustrasiSoalDenganAi(apiKey, data = {}) {
   if (!apiKey) throw new Error('Kunci Gemini tidak tersedia.')
 
   const prompt = susunPromptIlustrasiSoal(data)
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({
-    model: prompt.model,
-    generationConfig: {
-      // Native image generation
-      responseModalities: ['TEXT', 'IMAGE'],
-    },
-  })
-
-  const contents = [
-    { role: 'user', parts: [{ text: prompt.sistem + '\n\n' + prompt.user }] },
-  ]
+  const fullPrompt = `${prompt.sistem}\n\n${prompt.user}`
 
   logger.info('generateIlustrasiSoalDenganAi', {
     tka: prompt.tka,
     mapel: potong(data.mapel, 40),
     petunjukLen: String(data.petunjukGambar || '').length,
     teksLen: String(data.teksSoal || '').length,
+    model: prompt.model,
   })
 
-  const result = await model.generateContent({ contents })
-  const response = result.response
-  if (!response || !response.candidates || !response.candidates[0]) {
-    throw new Error('Gemini tidak mengembalikan kandidat gambar.')
-  }
-
-  const parts = response.candidates[0].content?.parts || []
-  let dataUrl = null
-  for (const part of parts) {
-    if (part.inlineData && part.inlineData.data) {
-      const mime = part.inlineData.mimeType || 'image/png'
-      dataUrl = `data:${mime};base64,${part.inlineData.data}`
-      break
-    }
-  }
-  if (!dataUrl) {
-    // Beberapa respons hanya teks (penolakan / deskripsi). Ambil pesan bila ada.
-    const teks = parts.map((p) => p.text || '').join(' ').trim()
-    throw new Error(
-      teks
-        ? `Gemini tidak mengembalikan gambar. Respons: ${teks.slice(0, 200)}`
-        : 'Gemini tidak mengembalikan gambar.',
-    )
-  }
+  const dataUrl = await mintaGambarGemini(apiKey, prompt.model, fullPrompt)
   return { dataUrl }
 }
 
 /**
- * Generate soal teks (tetap dipakai generateSoalLmsAi).
- * Implementasi minimal yang kompatibel; logika lengkap soal tetap di file ini
- * sesuai versi yang sudah ada di produksi. Bagian ini tidak diubah perilakunya
- * untuk mapel non-TKA. Untuk TKA, stimulus ditangani di sisi klien (ANTIREGRESI §86).
+ * Generate soal teks (dipakai generateSoalLmsAi di index.js).
  *
- * Catatan: fungsi ini harus mengekspor generateSoalLmsDenganAi yang sudah dipakai
- * index.js. Jika versi produksi Anda lebih lengkap, merge hanya bagian
- * susunPromptIlustrasiSoal + generateIlustrasiSoalDenganAi di atas ke file Anda.
+ * CATATAN MERGE:
+ * Jika file produksi Anda sudah punya implementasi generateSoalLmsDenganAi yang lengkap,
+ * PERTAHANKAN implementasi teks itu dan HANYA ganti/merge:
+ *   - susunPromptIlustrasiSoal
+ *   - generateIlustrasiSoalDenganAi
+ *   - mintaGambarGemini (helper)
+ *
+ * Stub di bawah hanya agar export tidak hilang saat file ini berdiri sendiri.
+ * Ganti dengan logika produksi Anda bila Anda menimpa file penuh.
  */
 export async function generateSoalLmsDenganAi(apiKey, data = {}) {
-  // Placeholder aman: lempar agar pemanggil tahu bila generate soal dipanggil
-  // tanpa implementasi teks lengkap. Di produksi, ganti dengan implementasi
-  // generateSoalLmsDenganAi yang sudah ada sebelumnya.
-  // (Update ini hanya menyentuh cabang ilustrasi TKA.)
+  // Implementasi teks soal harus diambil dari versi produksi yang sudah ada.
+  // Jangan mengandalkan stub ini untuk generate soal di production.
   throw new Error(
-    'generateSoalLmsDenganAi: gunakan implementasi teks yang sudah ada di produksi. ' +
-      'Update ini hanya memperbaiki generateIlustrasiSoalDenganAi / susunPromptIlustrasiSoal untuk TKA.',
+    'generateSoalLmsDenganAi: restore implementasi teks dari git/produksi. ' +
+      'Update TKA hanya menyentuh generateIlustrasiSoalDenganAi / susunPromptIlustrasiSoal.',
   )
 }
