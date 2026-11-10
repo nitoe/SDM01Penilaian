@@ -20,8 +20,8 @@ rules_version = '2';
 //   nitoe/sarpras ...... sarpras_*
 //   perpustakaan ....... perpus_*  (termasuk perpus_progress dan login/jurnal siswa)
 //   nitoe/lms .......... lms_*     (lms_materi, lms_paket_soal, lms_gambar, …)
-//                        (+ ruang TKA kelas 6: mapel «TKA Matematika»/«TKA Bahasa Indonesia» lewat ruangTka(), lihat bagian nitoe/lms)
-//                        (+ ruang TKA kelas 6: mapel «TKA Matematika»/«TKA Bahasa Indonesia» lewat ruangTka(), lihat bagian nitoe/lms)
+//                        (+ ruang TKA kelas 6: mapel «TKA Matematika»/«TKA Bahasa Indonesia»/«TKA IPA» lewat ruangTka(), lihat bagian nitoe/lms)
+//                        (+ ruang TKA kelas 6: mapel «TKA Matematika»/«TKA Bahasa Indonesia»/«TKA IPA» lewat ruangTka(), lihat bagian nitoe/lms)
 //
 // Cara kerja: file ini SATU dan dideploy dari repo SDM01Penilaian (`npm run deploy:rules`).
 // Ubah hanya bagian milik repo yang sedang dikerjakan, salin file UTUH ke SDM01Penilaian,
@@ -1090,7 +1090,7 @@ match /g7kaih/{id} {
     // ############################################################################
     // ##  REPO: nitoe/lms — helper akses (termasuk ruang TKA kelas 6)
     // ##  TKA (Tes Kemampuan Akademik) dikelola sebagai RUANG KHUSUS di pipeline kuis LMS:
-    // ##  kelas 6A/6B/6C × mapel «TKA Matematika» / «TKA Bahasa Indonesia». Tidak ada koleksi
+    // ##  kelas 6 (bersama) × mapel «TKA Matematika» / «TKA Bahasa Indonesia» / «TKA IPA». Tidak ada koleksi
     // ##  baru; bank soal = lms_paket_soal, kuis = lms_kuis, hasil = lms_jawaban.
     // ##    tkaEmailKhusus  = akun arif.azwar79@gmail.com (wali kelas 5A; pengecualian untuk uji
     // ##                      sistem; boleh di semua kelas 6)
@@ -1105,26 +1105,35 @@ match /g7kaih/{id} {
         && request.auth.token.email == 'arif.azwar79@gmail.com';
     }
 
+    // TKA bank bersama: kelas kanonik «6» + rombel 6A/6B (6C tidak dipakai).
+    // Guru wali 6A atau 6B (atau email khusus) boleh kelola semua ruang TKA.
+    // Sinkron dengan src/lib/tkaAkses.ts (ANTIREGRESI §85).
     function tkaKelas6(kelas) {
-      return kelas in ['6A', '6B', '6C'];
+      return kelas in ['6', '6A', '6B'];
     }
 
-    function tkaGuruKelas6(kelas) {
+    function tkaGuruKelas6Any() {
       return akunAktif()
         && myRole() in ['guru', 'guru_akademik']
         && daftarAda('waliKelas')
-        && tkaKelas6(kelas)
-        && kelas in myProfile().waliKelas;
+        && ( '6A' in myProfile().waliKelas || '6B' in myProfile().waliKelas );
+    }
+
+    function tkaGuruKelas6(kelas) {
+      // Bank bersama (kelas «6»): cukup wali salah satu 6A/6B.
+      return tkaKelas6(kelas) && (tkaGuruKelas6Any()
+        || (daftarAda('waliKelas') && kelas in myProfile().waliKelas
+            && myRole() in ['guru', 'guru_akademik'] && akunAktif()));
     }
 
     function mapelTka(mapel) {
-      return mapel in ['TKA Matematika', 'TKA Bahasa Indonesia'];
+      return mapel in ['TKA Matematika', 'TKA Bahasa Indonesia', 'TKA IPA'];
     }
 
     function ruangTka(mapel, kelas) {
       return mapelTka(mapel)
         && tkaKelas6(kelas)
-        && (tkaEmailKhusus() || tkaGuruKelas6(kelas));
+        && (tkaEmailKhusus() || tkaGuruKelas6Any());
     }
 
     function lmsTulisMapelKelas(mapel, kelas) {
@@ -1268,10 +1277,17 @@ match /g7kaih/{id} {
     // jadi BACA hanya guru kelas×mapel atau admin — sama seperti lms_paket_soal (ANTIREGRESI §38).
     // Query klien WAJIB where kelas + mapel (lms_kuis) atau where kuisId (lms_soal).
     match /lms_kuis/{id} {
-      // Baca: penugasan/wali/admin, ATAU pembuat (kuis lama tetap terlihat).
+      // Baca: penugasan/wali/admin, pembuat, ATAU siswa LMS untuk kuis aktif kelasnya.
+      // TKA: siswa 6A/6B juga boleh baca kuis bank bersama (kelas «6» + mapel TKA).
       allow read: if isAdmin()
                   || lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas)
-                  || (isLoggedIn() && resource.data.dibuatOleh == request.auth.uid);
+                  || (isLoggedIn() && resource.data.dibuatOleh == request.auth.uid)
+                  || (isSiswaLms()
+                      && resource.data.aktif == true
+                      && (resource.data.kelas == request.auth.token.kelas
+                          || (resource.data.kelas == '6'
+                              && mapelTka(resource.data.mapel)
+                              && request.auth.token.kelas in ['6A', '6B'])));
 
       allow create: if lmsTulisMapelKelas(
                         request.resource.data.mapel,
