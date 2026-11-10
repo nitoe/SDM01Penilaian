@@ -1092,9 +1092,8 @@ match /g7kaih/{id} {
     // ##  TKA (Tes Kemampuan Akademik) dikelola sebagai RUANG KHUSUS di pipeline kuis LMS:
     // ##  kelas 6 (bersama) × mapel «TKA Matematika» / «TKA Bahasa Indonesia» / «TKA IPA». Tidak ada koleksi
     // ##  baru; bank soal = lms_paket_soal, kuis = lms_kuis, hasil = lms_jawaban.
-    // ##    tkaEmailKhusus  = akun arif.azwar79@gmail.com (wali kelas 5A; pengecualian untuk uji
-    // ##                      sistem; boleh di semua kelas 6)
-    // ##    tkaGuruKelas6   = wali kelas yang bersangkutan (users/{uid}.waliKelas), hanya kelasnya
+    // ##    tkaEmailKhusus     = akun arif.azwar79@gmail.com (wali kelas 5A; pengecualian uji sistem)
+    // ##    tkaGuruKelas6Any   = wali 6A atau 6B → boleh kelola bank TKA bersama (kelas «6»)
     // ##  Harus sama dengan src/lib/tkaAkses.ts di repo LMS (ubah keduanya bersamaan).
     // ##  lmsTulisMapelKelas / lmsLihatMapelKelas HANYA dipakai koleksi lms_*; helper bersama
     // ##  tulisMapelKelas / lihatMapelKelas (dipakai Penilaian) sengaja TIDAK diubah.
@@ -1117,13 +1116,6 @@ match /g7kaih/{id} {
         && myRole() in ['guru', 'guru_akademik']
         && daftarAda('waliKelas')
         && ( '6A' in myProfile().waliKelas || '6B' in myProfile().waliKelas );
-    }
-
-    function tkaGuruKelas6(kelas) {
-      // Bank bersama (kelas «6»): cukup wali salah satu 6A/6B.
-      return tkaKelas6(kelas) && (tkaGuruKelas6Any()
-        || (daftarAda('waliKelas') && kelas in myProfile().waliKelas
-            && myRole() in ['guru', 'guru_akademik'] && akunAktif()));
     }
 
     function mapelTka(mapel) {
