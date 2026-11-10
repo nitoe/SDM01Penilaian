@@ -284,17 +284,17 @@ export function normalisasiSoalLms(data, meta) {
     if (!raw || typeof raw !== 'object') continue
     const tipe = TIPE_OK.has(raw.tipe) ? raw.tipe : tipeWajib
     if (!TIPE_OK.has(tipe)) continue
-    const kompleksitas = KOMP_OK.has(raw.kompleksitas) ? raw.kompleksitas : meta?.kompleksitas || 'L1'
     const teks = potong(raw.teks, 8000)
     if (!teks) continue
-    const poin = Math.min(100, Math.max(0.5, Number(raw.poin) || (tipe === 'uraian' ? 5 : 1)))
-    const waktuMenit = Math.min(60, Math.max(0, Number(raw.waktuMenit) || (tipe === 'uraian' ? 5 : 1)))
+    const kompleksitas = KOMP_OK.has(raw.kompleksitas) ? raw.kompleksitas : meta?.kompleksitas || 'L1'
+    const poin = Number.isFinite(Number(raw.poin)) ? Number(raw.poin) : 1
+    const waktuMenit = Number.isFinite(Number(raw.waktuMenit)) ? Number(raw.waktuMenit) : 1
     const pembahasan = potong(raw.pembahasan, 4000) || undefined
     const butuhGambar = raw.butuhGambar === true
-    const petunjukGambar = butuhGambar ? potong(raw.petunjukGambar, 3000) : undefined
+    const petunjukGambar = potong(raw.petunjukGambar, 3000) || undefined
 
     const dasar = {
-      tipe,
+      id: idSementara(),
       teks,
       kompleksitas,
       poin,
@@ -400,6 +400,11 @@ export async function generateSoalLmsDenganAi(apiKey, input) {
   return { soal }
 }
 
+function adalahMapelTka(mapel) {
+  const m = String(mapel || '').trim()
+  return m.startsWith('TKA ')
+}
+
 export function susunPromptIlustrasiSoal(input) {
   const teksSoal = potong(input?.teksSoal, 2000)
   const petunjuk = potong(input?.petunjukGambar, 3000)
@@ -412,6 +417,61 @@ export function susunPromptIlustrasiSoal(input) {
     return { ok: false, pesan: 'Teks soal masih kosong. Tulis soal dulu atau isi deskripsi ilustrasi.' }
   }
 
+  // ===== CABANG KHUSUS TKA (hanya mapel TKA *) =====
+  if (adalahMapelTka(mapel)) {
+    const prompt = `Anda membuat ILUSTRASI EDUKATIF untuk soal TKA (Tes Kompetensi Akademik) Sekolah Dasar.
+Gaya default: ilustrasi vektor digital yang bersih, penuh warna, naratif/scene (bukan diagram ilmiah atau anatomi kecuali secara eksplisit diminta).
+
+════════════════════════════════════════
+PRIORITAS MUTLAK (WAJIB DIPATUHI)
+════════════════════════════════════════
+1. PETUNJUK ILUSTRASI GURU adalah prioritas tertinggi dan harus diikuti secara ketat (gaya, subjek, komposisi, suasana, elemen yang digambar).
+2. Teks soal hanya sebagai konteks pendukung. JANGAN biarkan teks soal mengesampingkan petunjuk guru.
+3. JANGAN secara otomatis menggambar diagram organ, pembuluh darah, atau ilustrasi ilmiah hanya karena teks soal menyebut sistem organ / peredaran darah / tubuh manusia — kecuali petunjuk guru secara jelas meminta diagram tersebut.
+4. Jika petunjuk guru mendeskripsikan scene naratif (karakter, situasi sehari-hari, lingkungan), gambarlah scene itu persis seperti yang diminta.
+
+════════════════════════════════════════
+GAYA & TEKNIK
+════════════════════════════════════════
+- Ilustrasi vektor digital bersih, garis tepi halus, warna pastel atau kontras tinggi sesuai permintaan.
+- Cocok untuk materi pembelajaran sekolah dasar.
+- Latar belakang solid atau sederhana, bukan foto realistis kecuali diminta.
+- Tepi tajam, tidak kabur.
+- Seed variasi: ${variasi}
+
+════════════════════════════════════════
+BEBERAPA GAMBAR BERDAMPINGAN
+════════════════════════════════════════
+Jika petunjuk guru atau konteks memerlukan beberapa gambar/scene yang berbeda (misalnya perbandingan, pilihan visual, atau beberapa kondisi):
+- Susun beberapa panel berdampingan (kiri-kanan atau grid).
+- Di bawah setiap panel, tulis keterangan singkat/nama gambar yang jelas dan tepat (caption).
+- Pastikan setiap panel berbeda dan sesuai deskripsi masing-masing.
+- Caption tidak boleh membocorkan jawaban soal secara langsung.
+
+════════════════════════════════════════
+LARANGAN
+════════════════════════════════════════
+- Jangan menuliskan teks soal, pilihan A/B/C/D, atau kunci jawaban di dalam gambar.
+- Jangan membuat tampilan seperti screenshot lembar soal.
+- Jangan menambahkan label yang secara langsung mengungkapkan jawaban yang ditanyakan soal.
+
+════════════════════════════════════════
+KONTEKS (hanya pendukung — jangan menimpa petunjuk)
+════════════════════════════════════════
+Kelas: ${kelas || '6'} | Mapel: ${mapel}
+Teks soal (untuk memahami konteks saja): ${teksBersih || '(tidak ada)'}
+
+PETUNJUK ILUSTRASI GURU (IKUTI INI SECARA KETAT):
+${petunjuk || 'Tidak ada petunjuk khusus — buat ilustrasi naratif sederhana yang mendukung teks soal, dengan gaya vektor edukatif.'}
+
+${target ? `Catatan fokus visual (opsional, jangan ditulis sebagai teks di gambar): ${target}` : ''}
+
+Hasilkan SATU gambar (boleh berisi beberapa panel berdampingan jika diperlukan) yang mengikuti petunjuk guru di atas.`
+
+    return { ok: true, prompt }
+  }
+
+  // ===== PROMPT ASLI UNTUK MAPEL BIASA (TIDAK DIUBAH) =====
   const fokusTarget = target
     ? `TARGET VISUAL UTAMA: tampilkan dan/atau tunjuk dengan panah/nomor bagian yang sesuai dengan jawaban benar soal ini ("${target}"). Jangan menonjolkan organ lain secara setara.`
     : 'Infer organ/bagian yang paling relevan dari teks soal. Fokuskan ilustrasi pada SATU bagian utama yang ditanyakan.'
