@@ -1426,16 +1426,19 @@ match /g7kaih/{id} {
     // Baca/tulis guru: penugasan mapel×kelas (mapel utama tugas).
     // Siswa: baca nilai sendiri saja.
     match /lms_nilai_tugas/{id} {
-      allow read: if (resource.data.keys().hasAll(['tugasId', 'siswaId', 'kelas', 'mapel'])
-                      && lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas))
+      // Baca: guru/admin (list query); siswa hanya milik sendiri.
+      // Tulis: penugasan mapel×kelas ATAU admin (admin tidak lolos tulisMapelKelas).
+      // Field opsional (komentar, predikat, nilaiPerKategori, …) boleh string/map/null.
+      allow read: if isGuru() || isAdmin()
                   || (isSiswaLms()
+                      && 'siswaId' in resource.data
                       && resource.data.siswaId == request.auth.token.siswaId);
 
       allow create: if request.resource.data.keys().hasAll(
                          ['tugasId', 'siswaId', 'siswaNama', 'kelas', 'mapel', 'nilai', 'dinilaiOleh'])
-                    && lmsTulisMapelKelas(
-                         request.resource.data.mapel,
-                         request.resource.data.kelas)
+                    && (lmsTulisMapelKelas(
+                          request.resource.data.mapel,
+                          request.resource.data.kelas) || isAdmin())
                     && request.resource.data.dinilaiOleh == request.auth.uid
                     && request.resource.data.tugasId is string
                     && request.resource.data.tugasId.size() > 0
@@ -1451,11 +1454,24 @@ match /g7kaih/{id} {
                     && request.resource.data.nilai >= 0
                     && request.resource.data.nilai <= 1000
                     && (!('komentar' in request.resource.data)
+                        || request.resource.data.komentar == null
                         || (request.resource.data.komentar is string
-                            && request.resource.data.komentar.size() <= 2000));
+                            && request.resource.data.komentar.size() <= 2000))
+                    && (!('predikat' in request.resource.data)
+                        || request.resource.data.predikat == null
+                        || (request.resource.data.predikat is string
+                            && request.resource.data.predikat.size() <= 20))
+                    && (!('nilaiRataRata' in request.resource.data)
+                        || request.resource.data.nilaiRataRata == null
+                        || (request.resource.data.nilaiRataRata is number
+                            && request.resource.data.nilaiRataRata >= 0
+                            && request.resource.data.nilaiRataRata <= 1000))
+                    && (!('nilaiPerKategori' in request.resource.data)
+                        || request.resource.data.nilaiPerKategori == null
+                        || request.resource.data.nilaiPerKategori is map);
 
       allow update: if resource.data.keys().hasAll(['tugasId', 'siswaId', 'kelas', 'mapel'])
-                    && lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                    && (lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas) || isAdmin())
                     && request.resource.data.tugasId == resource.data.tugasId
                     && request.resource.data.siswaId == resource.data.siswaId
                     && request.resource.data.kelas == resource.data.kelas
@@ -1466,7 +1482,19 @@ match /g7kaih/{id} {
                     && (!('komentar' in request.resource.data)
                         || request.resource.data.komentar == null
                         || (request.resource.data.komentar is string
-                            && request.resource.data.komentar.size() <= 2000));
+                            && request.resource.data.komentar.size() <= 2000))
+                    && (!('predikat' in request.resource.data)
+                        || request.resource.data.predikat == null
+                        || (request.resource.data.predikat is string
+                            && request.resource.data.predikat.size() <= 20))
+                    && (!('nilaiRataRata' in request.resource.data)
+                        || request.resource.data.nilaiRataRata == null
+                        || (request.resource.data.nilaiRataRata is number
+                            && request.resource.data.nilaiRataRata >= 0
+                            && request.resource.data.nilaiRataRata <= 1000))
+                    && (!('nilaiPerKategori' in request.resource.data)
+                        || request.resource.data.nilaiPerKategori == null
+                        || request.resource.data.nilaiPerKategori is map);
 
       allow delete: if resource.data.keys().hasAll(['mapel', 'kelas'])
                     && (lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas) || isAdmin());
