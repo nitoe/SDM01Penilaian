@@ -1268,7 +1268,10 @@ match /g7kaih/{id} {
     // jadi BACA hanya guru kelas×mapel atau admin — sama seperti lms_paket_soal (ANTIREGRESI §38).
     // Query klien WAJIB where kelas + mapel (lms_kuis) atau where kuisId (lms_soal).
     match /lms_kuis/{id} {
-      allow read: if lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas);
+      // Baca: penugasan/wali/admin, ATAU pembuat (kuis lama tetap terlihat).
+      allow read: if isAdmin()
+                  || lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas)
+                  || (isLoggedIn() && resource.data.dibuatOleh == request.auth.uid);
 
       allow create: if lmsTulisMapelKelas(
                         request.resource.data.mapel,
@@ -1364,7 +1367,11 @@ match /g7kaih/{id} {
     // Tugas mapel atau proyek. Guru: penugasan kelas×mapel (mapel utama) atau wali.
     // Siswa LMS: baca hanya tugas aktif kelasnya sendiri.
     match /lms_tugas/{id} {
-      allow read: if lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas)
+      // Baca: penugasan/wali/admin, ATAU pembuat dokumen (agar tugas lama tetap terlihat
+      // meski string mapel/penugasan berubah), ATAU siswa aktif kelas sendiri.
+      allow read: if isAdmin()
+                  || lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas)
+                  || (isLoggedIn() && resource.data.dibuatOleh == request.auth.uid)
                   || (isSiswaLms()
                       && resource.data.aktif == true
                       && resource.data.kelas == request.auth.token.kelas);
