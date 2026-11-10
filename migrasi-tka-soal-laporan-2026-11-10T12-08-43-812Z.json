@@ -1,0 +1,3293 @@
+{
+  "apply": false,
+  "overwrite": false,
+  "kelas": [
+    "6A",
+    "6B"
+  ],
+  "dilewati": [
+    {
+      "id": "BI-193",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-194",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-196",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-197",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-223",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-224",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-226",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-227",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-253",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-254",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-256",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-257",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-271",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-272",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-274",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-275",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-283",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-284",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-286",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-287",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-10",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-12",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-14",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-16",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-17",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-18",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-19",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-20",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-3",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-6",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-8",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P1-9",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P10-10",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P10-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P10-19",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P10-20",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P10-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P10-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P10-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P10-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P10-28",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P10-29",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P10-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P10-8",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-10",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-12",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-15",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-16",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-20",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-21",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-27",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-29",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-3",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-8",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P2-9",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-10",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-12",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-15",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-16",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-18",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-19",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-20",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-24",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-27",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-29",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-6",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P3-8",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-10",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-14",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-17",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-18",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-19",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-20",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-24",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-29",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-30",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-6",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P4-8",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-10",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-14",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-17",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-18",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-19",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-20",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-29",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-30",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P5-9",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-10",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-14",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-16",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-17",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-18",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-20",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-21",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-28",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-29",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-6",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P6-9",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-10",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-19",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-20",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-27",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-28",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-29",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P7-9",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-10",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-20",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-21",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-28",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-29",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P8-8",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-10",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-12",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-19",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-20",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-28",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-29",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "BI-OLD-P9-8",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-12",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-14",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-15",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-16",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-17",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-21",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-24",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-3",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-6",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P1-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-12",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-14",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-15",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-16",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-17",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-21",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-24",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-3",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-6",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P10-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-12",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-14",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-15",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-16",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-17",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-21",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-24",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-3",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-6",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P2-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-12",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-14",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-15",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-16",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-17",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-21",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-24",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-3",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-6",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P3-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-12",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-14",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-15",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-16",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-17",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-21",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-24",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-3",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-6",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P4-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-12",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-14",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-15",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-16",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-17",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-21",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-24",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-3",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-6",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P5-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-12",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-14",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-15",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-16",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-17",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-21",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-24",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-3",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-6",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P6-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-12",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-14",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-15",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-16",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-17",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-21",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-24",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-3",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-6",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P7-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-12",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-14",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-15",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-16",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-17",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-21",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-24",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-3",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-6",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P8-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-1",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-11",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-12",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-13",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-14",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-15",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-16",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-17",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-2",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-21",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-22",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-23",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-24",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-25",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-26",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-3",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-4",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-5",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-6",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    },
+    {
+      "id": "MTK-OLD-P9-7",
+      "tipe": "pg",
+      "masalah": [
+        "kunci kosong",
+        "pg harus punya tepat 1 kunci (ada 0)"
+      ]
+    }
+  ],
+  "peringatan": [],
+  "paket": [
+    {
+      "id": "tka-6A-tka-bahasa-indonesia-evaluasi-dan-apresiasi-1",
+      "kelas": "6A",
+      "mapel": "TKA Bahasa Indonesia",
+      "judul": "Bank TKA — Evaluasi dan Apresiasi",
+      "jumlahSoal": 68,
+      "aksi": "baru"
+    },
+    {
+      "id": "tka-6A-tka-bahasa-indonesia-pemahaman-inferensial-1",
+      "kelas": "6A",
+      "mapel": "TKA Bahasa Indonesia",
+      "judul": "Bank TKA — Pemahaman Inferensial",
+      "jumlahSoal": 21,
+      "aksi": "baru"
+    },
+    {
+      "id": "tka-6A-tka-bahasa-indonesia-pemahaman-tekstual-1",
+      "kelas": "6A",
+      "mapel": "TKA Bahasa Indonesia",
+      "judul": "Bank TKA — Pemahaman Tekstual",
+      "jumlahSoal": 14,
+      "aksi": "baru"
+    },
+    {
+      "id": "tka-6A-tka-matematika-bilangan-1",
+      "kelas": "6A",
+      "mapel": "TKA Matematika",
+      "judul": "Bank TKA — Bilangan",
+      "jumlahSoal": 30,
+      "aksi": "baru"
+    },
+    {
+      "id": "tka-6A-tka-matematika-data-1",
+      "kelas": "6A",
+      "mapel": "TKA Matematika",
+      "judul": "Bank TKA — Data",
+      "jumlahSoal": 40,
+      "aksi": "baru"
+    },
+    {
+      "id": "tka-6A-tka-matematika-geometri-dan-pengukuran-1",
+      "kelas": "6A",
+      "mapel": "TKA Matematika",
+      "judul": "Bank TKA — Geometri dan Pengukuran",
+      "jumlahSoal": 30,
+      "aksi": "baru"
+    },
+    {
+      "id": "tka-6B-tka-bahasa-indonesia-evaluasi-dan-apresiasi-1",
+      "kelas": "6B",
+      "mapel": "TKA Bahasa Indonesia",
+      "judul": "Bank TKA — Evaluasi dan Apresiasi",
+      "jumlahSoal": 68,
+      "aksi": "baru"
+    },
+    {
+      "id": "tka-6B-tka-bahasa-indonesia-pemahaman-inferensial-1",
+      "kelas": "6B",
+      "mapel": "TKA Bahasa Indonesia",
+      "judul": "Bank TKA — Pemahaman Inferensial",
+      "jumlahSoal": 21,
+      "aksi": "baru"
+    },
+    {
+      "id": "tka-6B-tka-bahasa-indonesia-pemahaman-tekstual-1",
+      "kelas": "6B",
+      "mapel": "TKA Bahasa Indonesia",
+      "judul": "Bank TKA — Pemahaman Tekstual",
+      "jumlahSoal": 14,
+      "aksi": "baru"
+    },
+    {
+      "id": "tka-6B-tka-matematika-bilangan-1",
+      "kelas": "6B",
+      "mapel": "TKA Matematika",
+      "judul": "Bank TKA — Bilangan",
+      "jumlahSoal": 30,
+      "aksi": "baru"
+    },
+    {
+      "id": "tka-6B-tka-matematika-data-1",
+      "kelas": "6B",
+      "mapel": "TKA Matematika",
+      "judul": "Bank TKA — Data",
+      "jumlahSoal": 40,
+      "aksi": "baru"
+    },
+    {
+      "id": "tka-6B-tka-matematika-geometri-dan-pengukuran-1",
+      "kelas": "6B",
+      "mapel": "TKA Matematika",
+      "judul": "Bank TKA — Geometri dan Pengukuran",
+      "jumlahSoal": 30,
+      "aksi": "baru"
+    }
+  ],
+  "gambar": 11,
+  "ringkasan": {
+    "gambarBaru": 11,
+    "gambarAda": 0,
+    "paketBaru": 12,
+    "paketSama": 0,
+    "paketBeda": 0
+  }
+}
