@@ -1094,7 +1094,7 @@ match /g7kaih/{id} {
     // ##  baru; bank soal = lms_paket_soal, kuis = lms_kuis, hasil = lms_jawaban.
     // ##    tkaEmailKhusus  = akun arif.azwar79@gmail.com (wali kelas 5A; pengecualian untuk uji
     // ##                      sistem; boleh di semua kelas 6)
-    // ##    tkaGuruKelas6   = wali kelas yang bersangkutan (users/{uid}.waliKelas), hanya kelasnya
+    // ##    tkaWaliKelas6Any = wali 6A atau 6B (bank bersama kelas kanonik «6»)
     // ##  Harus sama dengan src/lib/tkaAkses.ts di repo LMS (ubah keduanya bersamaan).
     // ##  lmsTulisMapelKelas / lmsLihatMapelKelas HANYA dipakai koleksi lms_*; helper bersama
     // ##  tulisMapelKelas / lihatMapelKelas (dipakai Penilaian) sengaja TIDAK diubah.
@@ -1116,14 +1116,6 @@ match /g7kaih/{id} {
         && myRole() in ['guru', 'guru_akademik']
         && daftarAda('waliKelas')
         && myProfile().waliKelas.hasAny(['6A', '6B']);
-    }
-
-    function tkaGuruKelas6(kelas) {
-      return akunAktif()
-        && myRole() in ['guru', 'guru_akademik']
-        && daftarAda('waliKelas')
-        && tkaKelas6(kelas)
-        && (kelas in myProfile().waliKelas || tkaWaliKelas6Any());
     }
 
     function mapelTka(mapel) {
