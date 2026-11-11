@@ -1118,6 +1118,18 @@ match /g7kaih/{id} {
         && myProfile().waliKelas.hasAny(['6A', '6B']);
     }
 
+    // Rekap TKA / hasil per rombel:
+    // - tkaEmailKhusus (arif.azwar79@gmail.com, mis. wali 5A): boleh 6A dan 6B.
+    // - Wali 6A: HANYA kelas 6A; wali 6B: HANYA 6B (hasAny([kelas]) = rombel tepat).
+    function tkaBolehRombelRekap(kelas) {
+      return akunAktif()
+        && kelas in ['6A', '6B']
+        && (tkaEmailKhusus()
+            || (myRole() in ['guru', 'guru_akademik']
+                && daftarAda('waliKelas')
+                && myProfile().waliKelas.hasAny([kelas])));
+    }
+
     function mapelTka(mapel) {
       return mapel in ['TKA Matematika', 'TKA Bahasa Indonesia', 'TKA IPA'];
     }
@@ -1142,7 +1154,7 @@ match /g7kaih/{id} {
     // ############################################################################
 
     // LMS (Learning Management System) — repo nitoe/lms
-    // Koleksi: lms_materi, lms_paket_soal, lms_gambar, lms_kuis, lms_soal, lms_tugas, lms_nilai_tugas, lms_bobot_slm, (nanti) lms_pengumpulan, …
+    // Koleksi: lms_materi, lms_paket_soal, lms_gambar, lms_kuis, lms_soal, lms_tugas, lms_nilai_tugas, lms_bobot_slm, lms_rekap_tka, (nanti) lms_pengumpulan, …
     // Akses tulis: guru dengan penugasan kelas×mapel atau wali kelas (tulisMapelKelas).
     // Baca lms_materi: guru/admin, atau siswa LMS (token dari Cloud Function loginSiswaLms) HANYA untuk
     // materi kelasnya sendiri (claim kelas). Klien siswa wajib query dengan where('kelas', '==', kelasnya).
@@ -1584,6 +1596,46 @@ match /g7kaih/{id} {
 
       allow delete: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     || isAdmin();
+    }
+
+
+    // ---- lms_rekap_tka/{id} -----------------------------------------------
+    // Rekap nilai Try Out TKA per siswa × tahap × rombel (6A/6B).
+    // ID disarankan: {kelas}_{tahap}_{siswaId}  contoh 6A_I_abc123
+    // Baca/tulis: wali 6A/6B (hanya rombelnya) atau email khusus TKA.
+    // Query klien: where tahap + kelas (wajib agar lolos rules list).
+    match /lms_rekap_tka/{id} {
+      allow read: if isAdmin()
+                  || (isGuru()
+                      && resource.data.keys().hasAll(['kelas', 'tahap', 'siswaId'])
+                      && tkaBolehRombelRekap(resource.data.kelas));
+
+      allow create: if isGuru()
+                    && tkaBolehRombelRekap(request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['kelas', 'tahap', 'siswaId', 'siswaNama', 'nilai', 'sumber', 'diubahOleh'])
+                    && request.resource.data.kelas is string
+                    && request.resource.data.kelas in ['6A', '6B']
+                    && request.resource.data.tahap in ['I', 'II', 'III', 'IV', 'V']
+                    && request.resource.data.siswaId is string
+                    && request.resource.data.siswaId.size() > 0
+                    && request.resource.data.siswaId.size() <= 80
+                    && request.resource.data.siswaNama is string
+                    && request.resource.data.nilai is map
+                    && request.resource.data.sumber is map
+                    && request.resource.data.diubahOleh == request.auth.uid;
+
+      allow update: if isGuru()
+                    && tkaBolehRombelRekap(resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.tahap == resource.data.tahap
+                    && request.resource.data.siswaId == resource.data.siswaId
+                    && request.resource.data.nilai is map
+                    && request.resource.data.sumber is map
+                    && request.resource.data.diubahOleh == request.auth.uid;
+
+      allow delete: if isAdmin()
+                    || (isGuru() && tkaBolehRombelRekap(resource.data.kelas));
     }
 
 
