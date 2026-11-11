@@ -1269,25 +1269,23 @@ match /g7kaih/{id} {
     // jadi BACA hanya guru kelas×mapel atau admin — sama seperti lms_paket_soal (ANTIREGRESI §38).
     // Query klien WAJIB where kelas + mapel (lms_kuis) atau where kuisId (lms_soal).
     match /lms_kuis/{id} {
-      // Baca: penugasan/wali/admin, ATAU pembuat (kuis lama tetap terlihat),
-      // ATAU siswa LMS untuk kuis aktif di kelasnya (termasuk bank TKA kelas «6»).
-      // Klien siswa: where('kelas','==',kelasSiswa) + where('aktif','==',true)
-      //   atau TKA: where('kelas','==','6') + where('aktif','==',true) (ANTIREGRESI §99).
-      // Catatan: snapshot soal di dokumen masih memuat kunci; penilaian tetap lewat CF.
-      // Fase strip kunci (koleksi terpisah) tetap rencana terpisah — jangan blokir akses siswa.
+      // Baca: penugasan/wali/admin, ATAU pembuat, ATAU siswa LMS (kuis aktif).
+      // ANTIREGRESI §99 — cabang siswa DIPISAH agar list query Firestore lolos:
+      //   A) where kelas==token.kelas + aktif==true  → rombel siswa (kuis mapel / TKA per-rombel)
+      //   B) where kelas=='6' + aktif==true          → bank TKA bersama (tanpa cek mapel di rules;
+      //      filter mapel TKA di klien). JANGAN gabungkan mapelTka() ke cabang B: query tanpa
+      //      where mapel akan ditolak permission (evaluasi rules konservatif).
+      // Pembuat kuis (mis. admin TKA / wali 5A) TIDAK mempengaruhi cabang siswa.
       allow read: if isAdmin()
                   || lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas)
                   || (isLoggedIn() && resource.data.dibuatOleh == request.auth.uid)
                   || (isSiswaLms()
                       && resource.data.aktif == true
-                      && (
-                        resource.data.kelas == request.auth.token.kelas
-                        || (
-                          mapelTka(resource.data.mapel)
-                          && tkaKelas6(request.auth.token.kelas)
-                          && resource.data.kelas == '6'
-                        )
-                      ));
+                      && resource.data.kelas == request.auth.token.kelas)
+                  || (isSiswaLms()
+                      && resource.data.aktif == true
+                      && resource.data.kelas == '6'
+                      && request.auth.token.kelas in ['6A', '6B']);
 
       allow create: if lmsTulisMapelKelas(
                         request.resource.data.mapel,
