@@ -1539,6 +1539,17 @@ match /g7kaih/{id} {
       allow create, update, delete: if false;
     }
 
+
+    // ---- lms_tka_progress_reset/{id} --------------------------------------
+    // Marker reset draf TKA (Admin SDK tulis). ID: {kuisId}_{siswaId}.
+    // Siswa baca milik sendiri agar klien menghapus localStorage setelah reset guru.
+    match /lms_tka_progress_reset/{id} {
+      allow read: if isSiswaLms()
+                  && 'siswaId' in resource.data
+                  && resource.data.siswaId == request.auth.token.siswaId;
+      allow create, update, delete: if false;
+    }
+
     // ---- lms_bobot_slm/{id} -----------------------------------------------
     // Bobot sumber SLM per TP. ID: {kelas}__{mapelSlug}__{tpId}.
     // Baca: guru/admin. Tulis: lmsTulisMapelKelas (mapel × kelas).

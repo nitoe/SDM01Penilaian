@@ -1,13 +1,15 @@
 /**
- * Cloud Function: reset attempt siswa pada kuis TKA.
- * Menghapus semua dokumen lms_jawaban untuk pasangan (kuisId, siswaId).
- * Hanya mapel TKA; hanya guru/wali yang berhak / admin / email khusus.
+ * Cloud Function: reset attempt / draf progress siswa pada kuis TKA.
+ *
+ * mode:
+ *   - 'attempt'  → hapus lms_jawaban (boleh mengerjakan ulang)
+ *   - 'progress' → tandai reset draf (klien hapus localStorage saat buka kuis)
+ *   - 'semua'    → keduanya (default)
  *
  * Deploy: firebase deploy --only functions:resetJawabanKuisLms
- * (dari repo SDM01Penilaian)
  */
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
-import { getFirestore } from 'firebase-admin/firestore'
+import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { logger } from 'firebase-functions'
 
 const MAPEL_TKA = ['TKA Matematika', 'TKA Bahasa Indonesia', 'TKA IPA']
@@ -18,13 +20,6 @@ function profilGuru(db, uid) {
   return db.doc(`users/${uid}`).get()
 }
 
-/**
- * Izin reset attempt TKA:
- * - admin LMS, atau
- * - email khusus TKA, atau
- * - wali kelas 6A/6B (role guru/guru_akademik) untuk rombel jawaban siswa.
- * Tidak memakai penugasan mapel (TKA tidak ada di penugasan akademik biasa).
- */
 function bolehResetTka(profil, email, kelasSiswa) {
   if (!profil || profil.aktif === false) return false
   if (profil.role === 'admin') return true
@@ -34,6 +29,14 @@ function bolehResetTka(profil, email, kelasSiswa) {
   if (!KELAS_TKA.includes(k)) return false
   const wali = Array.isArray(profil.waliKelas) ? profil.waliKelas : []
   return wali.includes(k)
+}
+
+/** Admin / email khusus TKA: boleh tanpa cek rombel. */
+function bolehResetTkaGlobal(profil, email) {
+  if (!profil || profil.aktif === false) return false
+  if (profil.role === 'admin') return true
+  if (String(email || '').toLowerCase() === EMAIL_AKSES_KHUSUS_TKA) return true
+  return false
 }
 
 export const resetJawabanKuisLms = onCall(
@@ -46,7 +49,12 @@ export const resetJawabanKuisLms = onCall(
       throw new HttpsError('permission-denied', 'Akun siswa tidak boleh mereset jawaban.')
     }
 
-    const { kuisId, siswaId } = request.data || {}
+    const { kuisId, siswaId, kelasSiswa: kelasSiswaArg } = request.data || {}
+    let mode = request.data?.mode
+    if (mode !== 'attempt' && mode !== 'progress' && mode !== 'semua') {
+      mode = 'semua'
+    }
+
     if (typeof kuisId !== 'string' || !kuisId.trim()) {
       throw new HttpsError('invalid-argument', 'kuisId wajib.')
     }
@@ -72,53 +80,82 @@ export const resetJawabanKuisLms = onCall(
     if (!MAPEL_TKA.includes(mapel)) {
       throw new HttpsError(
         'failed-precondition',
-        'Reset attempt hanya untuk kuis TKA (Matematika / Bahasa Indonesia / IPA).',
+        'Reset hanya untuk kuis TKA (Matematika / Bahasa Indonesia / IPA).',
       )
     }
 
-    // Ambil semua attempt siswa pada kuis ini
     const q = await db
       .collection('lms_jawaban')
       .where('kuisId', '==', kuisId)
       .where('siswaId', '==', siswaId)
       .get()
 
-    if (q.empty) {
-      return { ok: true, dihapus: 0, siswaId, kuisId }
-    }
-
-    // Validasi izin terhadap kelas di dokumen jawaban (rombel aktual siswa)
     const kelasSet = new Set()
     for (const d of q.docs) {
       const k = String(d.data().kelas || '').toUpperCase()
       if (k) kelasSet.add(k)
     }
-    for (const k of kelasSet) {
-      if (!bolehResetTka(profil, email, k)) {
+    const kelasArg = String(kelasSiswaArg || '').trim().toUpperCase()
+    if (kelasArg) kelasSet.add(kelasArg)
+
+    if (!bolehResetTkaGlobal(profil, email)) {
+      if (kelasSet.size === 0) {
         throw new HttpsError(
           'permission-denied',
-          `Anda tidak berhak mereset jawaban siswa kelas ${k}.`,
+          'Tidak ada data kelas siswa. Sertakan kelasSiswa atau gunakan akun admin TKA.',
         )
+      }
+      for (const k of kelasSet) {
+        if (!bolehResetTka(profil, email, k)) {
+          throw new HttpsError(
+            'permission-denied',
+            `Anda tidak berhak mereset jawaban siswa kelas ${k}.`,
+          )
+        }
       }
     }
 
-    const batch = db.batch()
-    for (const d of q.docs) {
-      batch.delete(d.ref)
+    let dihapus = 0
+    if (mode === 'attempt' || mode === 'semua') {
+      if (!q.empty) {
+        const batch = db.batch()
+        for (const d of q.docs) {
+          batch.delete(d.ref)
+        }
+        await batch.commit()
+        dihapus = q.size
+      }
     }
-    await batch.commit()
+
+    let progressDitandai = false
+    if (mode === 'progress' || mode === 'semua') {
+      const resetId = `${kuisId}_${siswaId}`.slice(0, 150)
+      await db.doc(`lms_tka_progress_reset/${resetId}`).set({
+        kuisId,
+        siswaId,
+        resetAt: FieldValue.serverTimestamp(),
+        resetAtMs: Date.now(),
+        by: uid,
+        mode,
+      })
+      progressDitandai = true
+    }
 
     logger.info('resetJawabanKuisLms', {
       kuisId,
       siswaId,
-      dihapus: q.size,
+      mode,
+      dihapus,
+      progressDitandai,
       uid,
       mapel,
     })
 
     return {
       ok: true,
-      dihapus: q.size,
+      dihapus,
+      progressDitandai,
+      mode,
       siswaId,
       kuisId,
     }
