@@ -1269,10 +1269,25 @@ match /g7kaih/{id} {
     // jadi BACA hanya guru kelas×mapel atau admin — sama seperti lms_paket_soal (ANTIREGRESI §38).
     // Query klien WAJIB where kelas + mapel (lms_kuis) atau where kuisId (lms_soal).
     match /lms_kuis/{id} {
-      // Baca: penugasan/wali/admin, ATAU pembuat (kuis lama tetap terlihat).
+      // Baca: penugasan/wali/admin, ATAU pembuat (kuis lama tetap terlihat),
+      // ATAU siswa LMS untuk kuis aktif di kelasnya (termasuk bank TKA kelas «6»).
+      // Klien siswa: where('kelas','==',kelasSiswa) + where('aktif','==',true)
+      //   atau TKA: where('kelas','==','6') + where('aktif','==',true) (ANTIREGRESI §99).
+      // Catatan: snapshot soal di dokumen masih memuat kunci; penilaian tetap lewat CF.
+      // Fase strip kunci (koleksi terpisah) tetap rencana terpisah — jangan blokir akses siswa.
       allow read: if isAdmin()
                   || lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas)
-                  || (isLoggedIn() && resource.data.dibuatOleh == request.auth.uid);
+                  || (isLoggedIn() && resource.data.dibuatOleh == request.auth.uid)
+                  || (isSiswaLms()
+                      && resource.data.aktif == true
+                      && (
+                        resource.data.kelas == request.auth.token.kelas
+                        || (
+                          mapelTka(resource.data.mapel)
+                          && tkaKelas6(request.auth.token.kelas)
+                          && resource.data.kelas == '6'
+                        )
+                      ));
 
       allow create: if lmsTulisMapelKelas(
                         request.resource.data.mapel,
