@@ -195,6 +195,13 @@ export const nilaiKuisLms = onCall(
         .where('kuisId', '==', kuisId)
         .where('siswaId', '==', siswaId)
         .get()
+      // TKA: hanya 1× pengerjaan (ANTIREGRESI §99.11). Reset lewat CF resetJawabanKuisLms.
+      if (isSiswa && adalahMapelTka(kuis.mapel) && prev.size >= 1) {
+        throw new HttpsError(
+          'failed-precondition',
+          'TKA hanya dapat dikerjakan satu kali. Hubungi guru jika perlu reset.',
+        )
+      }
       percobaan = prev.size + 1
     }
 
