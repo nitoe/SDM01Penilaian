@@ -102,6 +102,32 @@ function nilaiSatuSoal(soal, jawabanSiswa) {
   return { benar: false, skor: 0, butuhManual: true }
 }
 
+
+const MAPEL_TKA = ['TKA Matematika', 'TKA Bahasa Indonesia', 'TKA IPA']
+const KELAS_TKA_SISWA = ['6A', '6B']
+const KELAS_TKA_BANK = '6'
+
+function adalahMapelTka(mapel) {
+  return MAPEL_TKA.includes(String(mapel || '').trim())
+}
+
+/**
+ * Siswa boleh mengerjakan kuis bila:
+ * - kelas kuis == kelas siswa (mapel biasa / TKA per-rombel), atau
+ * - kuis TKA bank kelas «6» dan siswa di 6A/6B (ANTIREGRESI §99.10)
+ * Pembuat kuis (admin TKA / wali 5A) tidak relevan.
+ */
+function siswaBolehKerjakanKuis(kuis, kelasSiswa) {
+  const kSiswa = String(kelasSiswa || '').trim().toUpperCase()
+  const kKuis = String(kuis?.kelas || '').trim().toUpperCase()
+  if (!kSiswa || !kKuis) return false
+  if (kKuis === kSiswa) return true
+  if (adalahMapelTka(kuis?.mapel) && kKuis === KELAS_TKA_BANK && KELAS_TKA_SISWA.includes(kSiswa)) {
+    return true
+  }
+  return false
+}
+
 export const nilaiKuisLms = onCall(
   { region: 'asia-southeast2', maxInstances: 10 },
   async (request) => {
@@ -130,8 +156,11 @@ export const nilaiKuisLms = onCall(
     if (kuis.aktif !== true) {
       throw new HttpsError('failed-precondition', 'Kuis ini tidak aktif.')
     }
-    if (isSiswa && token.kelas && kuis.kelas !== token.kelas) {
-      throw new HttpsError('permission-denied', 'Kuis bukan untuk kelasmu.')
+    if (isSiswa) {
+      const kelasSiswa = typeof token.kelas === 'string' ? token.kelas : ''
+      if (!siswaBolehKerjakanKuis(kuis, kelasSiswa)) {
+        throw new HttpsError('permission-denied', 'Kuis bukan untuk kelasmu.')
+      }
     }
 
     const soalList = Array.isArray(kuis.soal) ? kuis.soal : []
@@ -174,7 +203,8 @@ export const nilaiKuisLms = onCall(
       siswaUid: request.auth.uid,
       siswaId: siswaId || null,
       siswaNama: typeof token.nama === 'string' ? token.nama : '',
-      kelas: kuis.kelas || '',
+      // Siswa: simpan rombel token (6A/6B), bukan kelas bank «6» — roster hasil TKA
+      kelas: isSiswa && token.kelas ? String(token.kelas).trim().toUpperCase() : (kuis.kelas || ''),
       mapel: kuis.mapel || '',
       judulKuis: kuis.judul || '',
       jenisPenilaian: kuis.jenisPenilaian || 'latihan',
