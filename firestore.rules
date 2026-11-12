@@ -1102,7 +1102,8 @@ match /g7kaih/{id} {
 
     function tkaEmailKhusus() {
       return akunAktif()
-        && request.auth.token.email == 'arif.azwar79@gmail.com';
+        && request.auth.token.email is string
+        && request.auth.token.email.lower() == 'arif.azwar79@gmail.com';
     }
 
     // Selaras src/lib/tkaAkses.ts (ANTIREGRESI §85–§91):
@@ -1602,23 +1603,28 @@ match /g7kaih/{id} {
     // Query list: where tahap + kelas. get dokumen baru: resource == null diizinkan
     // agar klien bisa setDoc create setelah cek keberadaan.
     match /lms_rekap_tka/{id} {
+      // Baca: admin LMS, admin TKA (email khusus), atau guru/wali rombel.
+      // tkaEmailKhusus TIDAK boleh bergantung isGuru() — profil bisa wali 5A / role non-standar.
       allow get: if isAdmin()
+                 || tkaEmailKhusus()
                  || (isGuru() && resource == null)
                  || (isGuru()
                      && resource != null
-                     && resource.data.keys().hasAll(['kelas', 'tahap', 'siswaId'])
+                     && resource.data.kelas is string
                      && tkaBolehRombelRekap(resource.data.kelas));
 
+      // List: jangan keys().hasAll — dokumen tanpa field lengkap menggagalkan seluruh query.
+      // Query klien: where('kelas'=='6A'|'6B') selaras tkaBolehRombelRekap / email khusus.
       allow list: if isAdmin()
+                  || tkaEmailKhusus()
                   || (isGuru()
-                      && resource.data.keys().hasAll(['kelas', 'tahap', 'siswaId'])
+                      && resource.data.kelas is string
                       && tkaBolehRombelRekap(resource.data.kelas));
 
-      // Admin LMS boleh bulk-import (tool /tka/import-rekap). Guru/wali tetap lewat tkaBolehRombelRekap.
-      allow create: if (
-                      isAdmin()
-                      || (isGuru() && tkaBolehRombelRekap(request.resource.data.kelas))
-                    )
+      // Bulk import: admin LMS + admin TKA (email khusus). Input manual rekap: guru/wali via tkaBolehRombelRekap.
+      allow create: if (isAdmin()
+                        || tkaEmailKhusus()
+                        || (isGuru() && tkaBolehRombelRekap(request.resource.data.kelas)))
                     && request.resource.data.keys().hasAll(
                          ['kelas', 'tahap', 'siswaId', 'siswaNama', 'nilai', 'sumber', 'diubahOleh'])
                     && request.resource.data.kelas is string
@@ -1632,10 +1638,9 @@ match /g7kaih/{id} {
                     && request.resource.data.sumber is map
                     && request.resource.data.diubahOleh == request.auth.uid;
 
-      allow update: if (
-                      isAdmin()
-                      || (isGuru() && tkaBolehRombelRekap(resource.data.kelas))
-                    )
+      allow update: if (isAdmin()
+                        || tkaEmailKhusus()
+                        || (isGuru() && tkaBolehRombelRekap(resource.data.kelas)))
                     && request.resource.data.kelas == resource.data.kelas
                     && request.resource.data.tahap == resource.data.tahap
                     && request.resource.data.siswaId == resource.data.siswaId
@@ -1644,6 +1649,7 @@ match /g7kaih/{id} {
                     && request.resource.data.diubahOleh == request.auth.uid;
 
       allow delete: if isAdmin()
+                    || tkaEmailKhusus()
                     || (isGuru() && tkaBolehRombelRekap(resource.data.kelas));
     }
 
