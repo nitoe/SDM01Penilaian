@@ -1654,6 +1654,53 @@ match /g7kaih/{id} {
     }
 
 
+
+    // ---- lms_tka_publikasi / lms_tka_hasil_ortu / lms_tka_peringkat ------------
+    // Snapshot hasil Try Out TKA untuk portal orang tua (khusus kelas 6).
+    // Baca terbuka (portal tanpa Auth Firebase, pola rapor_sts_ortu).
+    // Tulis: admin, email TKA, atau wali kelas rombel dokumen.
+    // ANTIREGRESI §106.
+
+    function tkaBolehPublishKelas(kelas) {
+      return isAdmin()
+        || tkaEmailKhusus()
+        || (akunAktif()
+            && myRole() in ['guru', 'guru_akademik']
+            && daftarAda('waliKelas')
+            && kelas in myProfile().waliKelas
+            && kelas in ['6A', '6B']);
+    }
+
+    match /lms_tka_publikasi/{id} {
+      allow read: if true;
+      allow create, update: if tkaBolehPublishKelas(request.resource.data.kelas)
+                            && request.resource.data.kelas in ['6A', '6B']
+                            && request.resource.data.tahap in ['I', 'II', 'III', 'IV', 'V']
+                            && request.resource.data.published is bool;
+      allow delete: if isAdmin();
+    }
+
+    match /lms_tka_hasil_ortu/{id} {
+      allow read: if true;
+      allow create, update: if tkaBolehPublishKelas(request.resource.data.kelas)
+                            && request.resource.data.kelas in ['6A', '6B']
+                            && request.resource.data.tahap in ['I', 'II', 'III', 'IV', 'V']
+                            && request.resource.data.siswaId is string;
+      allow delete: if isAdmin() || tkaEmailKhusus();
+    }
+
+    match /lms_tka_peringkat/{id} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+                            || tkaEmailKhusus()
+                            || (akunAktif()
+                                && myRole() in ['guru', 'guru_akademik']
+                                && daftarAda('waliKelas')
+                                && myProfile().waliKelas.hasAny(['6A', '6B']));
+      allow delete: if isAdmin();
+    }
+
+
     // ############################################################################
     // ##  REPO: BERSAMA (semua repo)
     // ##  Penutup.
