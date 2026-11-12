@@ -1118,9 +1118,7 @@ match /g7kaih/{id} {
         && myProfile().waliKelas.hasAny(['6A', '6B']);
     }
 
-    // Rekap / hasil per rombel 6A|6B:
-    // - tkaEmailKhusus (arif.azwar79@gmail.com, mis. wali 5A): boleh 6A dan 6B.
-    // - Wali 6A: HANYA 6A; wali 6B: HANYA 6B.
+    // Rekap TKA per rombel: email khusus → 6A+6B; wali hanya rombelnya.
     function tkaBolehRombelRekap(kelas) {
       return akunAktif()
         && kelas in ['6A', '6B']
@@ -1600,13 +1598,18 @@ match /g7kaih/{id} {
 
 
     // ---- lms_rekap_tka/{id} -----------------------------------------------
-    // Rekap nilai Try Out TKA per siswa × tahap × rombel (6A/6B).
-    // ID disarankan: {kelas}_{tahap}_{siswaId}  contoh 6A_I_abc123
-    // Baca/tulis: wali 6A/6B (hanya rombelnya) ATAU email khusus TKA (6A+6B).
-    // Query klien WAJIB: where('tahap','==',…) + where('kelas','==','6A'|'6B')
-    // agar list lolos evaluasi rules.
+    // Rekap nilai Try Out TKA. ID: {kelas}_{tahap}_{siswaId}
+    // Query list: where tahap + kelas. get dokumen baru: resource == null diizinkan
+    // agar klien bisa setDoc create setelah cek keberadaan.
     match /lms_rekap_tka/{id} {
-      allow read: if isAdmin()
+      allow get: if isAdmin()
+                 || (isGuru() && resource == null)
+                 || (isGuru()
+                     && resource != null
+                     && resource.data.keys().hasAll(['kelas', 'tahap', 'siswaId'])
+                     && tkaBolehRombelRekap(resource.data.kelas));
+
+      allow list: if isAdmin()
                   || (isGuru()
                       && resource.data.keys().hasAll(['kelas', 'tahap', 'siswaId'])
                       && tkaBolehRombelRekap(resource.data.kelas));
