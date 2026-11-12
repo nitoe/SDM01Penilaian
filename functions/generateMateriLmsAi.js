@@ -3,6 +3,7 @@
  *
  * Export (dipakai index.js):
  *   - generateMateriHalamanDenganAi
+ *   - generateIlustrasiMateriDenganAi
  *
  * Generate teks **satu halaman** materi LMS (HTML aman + opsi petunjuk gambar).
  * Konteks halaman sebelumnya WAJIB dipakai agar kelanjutan, bukan pengulangan.
@@ -281,4 +282,112 @@ export async function generateMateriHalamanDenganAi(apiKey, data = {}) {
   })
   const json = await mintaGeminiJson(apiKey, MODEL_TEKS, prompt.sistem, prompt.user)
   return normalisasiHasil(json, { ...data, isiMeta: prompt.isiMeta })
+}
+
+
+// ---------------------------------------------------------------------------
+// Generate ilustrasi materi (TERPISAH dari teks — Fase C)
+// ---------------------------------------------------------------------------
+
+const MODEL_GAMBAR_CANDIDATES = [
+  'gemini-2.5-flash-image',
+  'gemini-3.1-flash-image',
+  'gemini-3-pro-image',
+  'gemini-nano-banana-2.1',
+]
+
+async function mintaGambarGemini(apiKey, promptText) {
+  let lastError = null
+  for (const model of MODEL_GAMBAR_CANDIDATES) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
+    const body = {
+      contents: [{ role: 'user', parts: [{ text: promptText }] }],
+      generationConfig: {
+        responseModalities: ['TEXT', 'IMAGE'],
+      },
+    }
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const raw = await res.text()
+      let json
+      try {
+        json = JSON.parse(raw)
+      } catch {
+        lastError = `HTTP ${res.status} non-JSON`
+        continue
+      }
+      if (!res.ok) {
+        lastError = json?.error?.message || `HTTP ${res.status}`
+        if (res.status === 404) continue
+        if ([429, 500, 503].includes(res.status)) continue
+        throw new Error(`Gemini gambar gagal: ${lastError}`)
+      }
+      const parts = json?.candidates?.[0]?.content?.parts || []
+      for (const part of parts) {
+        const inline = part.inlineData || part.inline_data
+        if (inline?.data) {
+          const mime = inline.mimeType || inline.mime_type || 'image/png'
+          return `data:${mime};base64,${inline.data}`
+        }
+      }
+      lastError = 'Tidak ada data gambar di respons'
+    } catch (e) {
+      lastError = e?.message || String(e)
+    }
+  }
+  throw new Error(lastError || 'Gagal generate gambar materi.')
+}
+
+function susunPromptIlustrasiMateri(data = {}) {
+  const petunjuk = potong(data.petunjukGambar, 2000)
+  const konteks = potong(data.konteksHalaman, 800)
+  const kelas = potong(data.kelas, 20) || '4'
+  const mapel = potong(data.mapel, 80) || ''
+  const variasi = potong(data.variasi, 40) || String(Date.now())
+
+  const system = [
+    'You are an educational illustrator for Indonesian primary-school (SD) learning materials.',
+    'Produce ONE clear illustration or simple infographic that supports the lesson content.',
+    'Style: clean colorful educational vector illustration, soft outlines, solid or soft pastel background, high contrast, sharp (not blurry), wholesome, age-appropriate.',
+    'Prefer concrete objects, scenes, or simple labeled diagrams suitable for children.',
+    'No watermarks, no logos, no UI chrome. Minimal text labels only if essential and readable.',
+    'Follow the teacher illustration guide as the primary instruction.',
+  ].join(' ')
+
+  const user = [
+    `KELAS: ${kelas}`,
+    `MAPEL: ${mapel || 'umum'}`,
+    `VARIATION_SEED: ${variasi}`,
+    '',
+    '=== PETUNJUK ILUSTRASI (UTAMA) ===',
+    petunjuk || '(tidak ada — buat ilustrasi generik mendukung konteks halaman)',
+    '',
+    konteks ? `Konteks teks halaman (jangan tulis ulang sebagai teks di gambar):\n${konteks}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  return `${system}\n\n${user}`
+}
+
+/**
+ * Generate satu ilustrasi untuk blok gambar materi.
+ * @returns {{ dataUrl: string }}
+ */
+export async function generateIlustrasiMateriDenganAi(apiKey, data = {}) {
+  if (!apiKey) throw new Error('Kunci Gemini tidak tersedia.')
+  if (!potong(data.petunjukGambar, 2000)) {
+    throw Object.assign(new Error('Petunjuk gambar wajib diisi.'), { code: 'invalid-argument' })
+  }
+  const fullPrompt = susunPromptIlustrasiMateri(data)
+  logger.info('generateIlustrasiMateriDenganAi', {
+    mapel: potong(data.mapel, 40),
+    petunjukLen: String(data.petunjukGambar || '').length,
+  })
+  const dataUrl = await mintaGambarGemini(apiKey, fullPrompt)
+  return { dataUrl }
 }

@@ -35,7 +35,10 @@ import {
   generateSoalLmsDenganAi,
   generateIlustrasiSoalDenganAi,
 } from './generateSoalLmsAi.js'
-import { generateMateriHalamanDenganAi } from './generateMateriLmsAi.js'
+import {
+  generateMateriHalamanDenganAi,
+  generateIlustrasiMateriDenganAi,
+} from './generateMateriLmsAi.js'
 import {
   generateKategoriTugasDenganAi,
   generateIsiTugasDenganAi,
@@ -517,6 +520,37 @@ export const generateMateriLmsAi = onCall(opsiAi, async (request) => {
     throw new HttpsError('internal', err?.message || 'Gagal membuat materi AI.')
   }
 })
+
+/** LMS Materi: generate ilustrasi blok gambar (data URL). Terpisah dari teks halaman. */
+export const generateIlustrasiMateriLmsAi = onCall(
+  { ...opsiAi, timeoutSeconds: 120 },
+  async (request) => {
+    const provider = pastikanAi(request)
+    if (provider !== 'gemini') {
+      throw new HttpsError('invalid-argument', 'Ilustrasi materi LMS saat ini hanya mendukung Gemini.')
+    }
+    try {
+      const apiKey = kunciProvider('gemini')
+      const hasil = await generateIlustrasiMateriDenganAi(apiKey, request.data || {})
+      if (!hasil.dataUrl || !hasil.dataUrl.startsWith('data:image/')) {
+        throw new Error('Gemini tidak mengembalikan gambar.')
+      }
+      if (hasil.dataUrl.length > 4_000_000) {
+        throw new Error('Gambar terlalu besar. Coba petunjuk lebih sederhana.')
+      }
+      logger.info('generateIlustrasiMateriLmsAi', {
+        uid: request.auth.uid,
+        ukuran: hasil.dataUrl.length,
+      })
+      return hasil
+    } catch (err) {
+      if (err?.code === 'invalid-argument') throw new HttpsError('invalid-argument', err.message)
+      logger.error('generateIlustrasiMateriLmsAi gagal', { pesan: err?.message })
+      throw new HttpsError('internal', err?.message || 'Gagal membuat ilustrasi materi AI.')
+    }
+  },
+)
+
 
 /** LMS Tugas: generate kategori rubrik (4–6) dari isi tugas. */
 export const generateKategoriTugasLmsAi = onCall(opsiAi, async (request) => {
