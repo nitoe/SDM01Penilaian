@@ -72,9 +72,9 @@ service firebase.storage {
     }
 
 
-    // LMS materi: PDF / gambar / video
+    // LMS materi: PDF / gambar / video / audio
     // Path: lms/materi/{kelas}/{fileName}
-    // Batas: gambar/pdf 10 MB, video 50 MB. Baca: staf login; tulis: staf login.
+    // Batas: gambar/pdf 10 MB, audio 15 MB, video 50 MB. Baca: staf login; tulis: staf login.
     // Penegakan penugasan di app + firestore.rules (metadata di lms_materi).
     function lmsGambarAtauPdf() {
       return request.resource.size < 10 * 1024 * 1024
@@ -85,11 +85,16 @@ service firebase.storage {
       return request.resource.size < 50 * 1024 * 1024
         && request.resource.contentType.matches('video/.*');
     }
+    // Audio untuk materi tulis-sendiri (narasi, lagu, bacaan). Maks 15 MB.
+    function lmsAudio() {
+      return request.resource.size < 15 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*');
+    }
 
     match /lms/materi/{kelas}/{fileName} {
       allow read: if isLoggedIn();
       allow create, update: if isLoggedIn()
-        && (lmsGambarAtauPdf() || lmsVideo())
+        && (lmsGambarAtauPdf() || lmsVideo() || lmsAudio())
         && fileName.size() > 0
         && fileName.size() <= 200;
       allow delete: if isLoggedIn();
