@@ -1199,7 +1199,9 @@ match /g7kaih/{id} {
                     && (!('status' in request.resource.data)
                         || request.resource.data.status in ['draf', 'terbit'])
                     && (!('jumlahHalaman' in request.resource.data)
-                        || request.resource.data.jumlahHalaman is int);
+                        || (request.resource.data.jumlahHalaman is int
+                            && request.resource.data.jumlahHalaman >= 0
+                            && request.resource.data.jumlahHalaman <= 20));
 
       allow update: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     && request.resource.data.kelas == resource.data.kelas
@@ -1208,7 +1210,16 @@ match /g7kaih/{id} {
                     && request.resource.data.judul is string
                     && request.resource.data.judul.size() > 0
                     && request.resource.data.judul.size() <= 200
-                    && request.resource.data.jenis in ['pdf', 'gambar', 'video', 'youtube', 'tautan', 'halaman'];
+                    && request.resource.data.jenis in ['pdf', 'gambar', 'video', 'youtube', 'tautan', 'halaman']
+                    && (!('halaman' in request.resource.data)
+                        || (request.resource.data.halaman is list
+                            && request.resource.data.halaman.size() <= 20))
+                    && (!('status' in request.resource.data)
+                        || request.resource.data.status in ['draf', 'terbit'])
+                    && (!('jumlahHalaman' in request.resource.data)
+                        || (request.resource.data.jumlahHalaman is int
+                            && request.resource.data.jumlahHalaman >= 0
+                            && request.resource.data.jumlahHalaman <= 20));
 
       allow delete: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     || isAdmin();

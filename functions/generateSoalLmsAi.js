@@ -16,7 +16,7 @@
 import { logger } from 'firebase-functions'
 
 const BATAS_PETUNJUK = 3000
-const MODEL_TEKS = 'gemini-2.0-flash'
+const MODEL_TEKS = 'gemini-3.8-flash'
 
 /** Model gambar valid (Nov 2026). Urutan = prioritas. */
 const MODEL_GAMBAR_CANDIDATES = [

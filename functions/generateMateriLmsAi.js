@@ -37,7 +37,7 @@
 
 import { logger } from 'firebase-functions'
 
-const MODEL_TEKS = 'gemini-2.0-flash'
+const MODEL_TEKS = 'gemini-3.8-flash'
 const BATAS_KONTEKS_HALAMAN = 8
 const BATAS_RINGKASAN = 400
 
@@ -143,13 +143,15 @@ function susunPromptMateriHalaman(data = {}) {
   const system = [
     'Anda penulis materi ajar untuk siswa sekolah dasar Indonesia (Kurikulum Merdeka).',
     'Tulis SATU halaman materi dalam Bahasa Indonesia yang jelas, ramah anak, akurat, tanpa kekerasan.',
+    'Tampilan harus menarik, informatif, dan jelas: paragraf pendek, strong/em pada istilah penting, daftar berpoin bila membantu.',
     'Gunakan HTML terbatas saja: p, br, strong, em, u, sub, sup, ul, ol, li, h2, h3, table, thead, tbody, tr, th, td, caption.',
     'Atribut hanya boleh colspan, rowspan, scope pada sel tabel. JANGAN style, class, script, atau tautan.',
     mapelMatematika
       ? 'Untuk Matematika: gunakan rumus KaTeX inline $...$ atau blok $$...$$ bila perlu (contoh $a^2+b^2=c^2$).'
       : 'Rumus matematika opsional dengan notasi $...$ bila relevan.',
-    'Struktur halaman: judul bagian (h2) bila perlu, paragraf pendek, daftar bila membantu, tabel hanya jika data numerik/perbandingan jelas.',
-    'JANGAN mengulang isi halaman sebelumnya. Lanjutkan konsep, naikkan kedalaman, atau berikan contoh baru.',
+    'Struktur halaman: judulHalaman wajib singkat; isi pakai h2/h3 bila perlu, paragraf pendek, daftar bila membantu, tabel hanya jika data numerik/perbandingan jelas.',
+    'Halaman harus saling berkaitan: JANGAN mengulang isi halaman sebelumnya. Lanjutkan konsep, naikkan kedalaman, atau berikan contoh/latihan baru yang menyambung.',
+    'Sisipkan blok gambar (tipe gambar atau butuhGambar pada teks) di posisi yang tepat — setelah konsep yang perlu divisualkan, bukan di awal/akhir sembarangan. petunjukGambar harus spesifik (ilustrasi/infografis/diagram untuk SD).',
     'Jika butuh ilustrasi (diagram, infografis sederhana, benda konkret), set butuhGambar true dan tulis petunjukGambar deskriptif (bukan teks soal).',
     'Kembalikan HANYA JSON valid sesuai skema. Tanpa markdown.',
   ].join(' ')
