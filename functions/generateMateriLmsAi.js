@@ -152,7 +152,7 @@ function susunPromptMateriHalaman(data = {}) {
     'Struktur halaman: judulHalaman wajib singkat; isi pakai h2/h3 bila perlu, paragraf pendek, daftar bila membantu, tabel hanya jika data numerik/perbandingan jelas.',
     'Halaman harus saling berkaitan: JANGAN mengulang isi halaman sebelumnya. Lanjutkan konsep, naikkan kedalaman, atau berikan contoh/latihan baru yang menyambung.',
     'Sisipkan blok gambar (tipe gambar atau butuhGambar pada teks) di posisi yang tepat — setelah konsep yang perlu divisualkan, bukan di awal/akhir sembarangan. petunjukGambar harus spesifik (ilustrasi/infografis/diagram untuk SD).',
-    'Jika butuh ilustrasi (diagram, infografis sederhana, benda konkret), set butuhGambar true dan tulis petunjukGambar deskriptif (bukan teks soal).',
+    'Jika butuh ilustrasi (diagram, infografis sederhana, benda konkret), set butuhGambar true dan tulis petunjukGambar deskriptif visual (bukan teks soal). Petunjuk gambar: sebutkan adegan/objek, gaya kartun edukasi SD, dan bila perlu label singkat — tulis ejaan Indonesia yang benar; hindari meminta kalimat panjang di dalam gambar.',
     'Kembalikan HANYA JSON valid sesuai skema. Tanpa markdown.',
   ].join(' ')
 
@@ -292,10 +292,12 @@ export async function generateMateriHalamanDenganAi(apiKey, data = {}) {
 // ---------------------------------------------------------------------------
 
 const MODEL_GAMBAR_CANDIDATES = [
-  'gemini-2.5-flash-image',
+  // Hemat & bagus untuk ilustrasi edukasi SD (urut prioritas)
   'gemini-3.1-flash-image',
-  'gemini-3-pro-image',
   'gemini-nano-banana-2.1',
+  'gemini-2.5-flash-image',
+  // Cadangan kualitas lebih tinggi bila yang di atas gagal
+  'gemini-3-pro-image',
 ]
 
 async function mintaGambarGemini(apiKey, promptText) {
@@ -354,9 +356,15 @@ function susunPromptIlustrasiMateri(data = {}) {
   const system = [
     'You are an educational illustrator for Indonesian primary-school (SD) learning materials.',
     'Produce ONE clear illustration or simple infographic that supports the lesson content.',
-    'Style: clean colorful educational vector illustration, soft outlines, solid or soft pastel background, high contrast, sharp (not blurry), wholesome, age-appropriate.',
-    'Prefer concrete objects, scenes, or simple labeled diagrams suitable for children.',
-    'No watermarks, no logos, no UI chrome. Minimal text labels only if essential and readable.',
+    'Style: clean colorful educational vector illustration, soft outlines, solid or soft pastel background, high contrast, sharp (not blurry), wholesome, age-appropriate for ages 6–12.',
+    'Prefer concrete objects, scenes, characters in Indonesian school uniform, or simple diagrams suitable for children.',
+    'TEXT ON IMAGE RULES (strict):',
+    '- Prefer ZERO text on the image when the meaning is clear visually.',
+    '- If labels are essential (e.g. question words, diagram parts), use SHORT Indonesian words only (1–3 words per label).',
+    '- Spelling must be PERFECT Indonesian. Never invent or misspell words (e.g. write «Mengapa» not «Di mgapa»).',
+    '- Do not put long slogans, paragraphs, or English unless the teacher guide explicitly asks for that exact phrase.',
+    '- Any required caption/slogan must match the teacher guide exactly, character for character.',
+    'No watermarks, no logos, no UI chrome, no extra decorative text.',
     'Follow the teacher illustration guide as the primary instruction.',
   ].join(' ')
 

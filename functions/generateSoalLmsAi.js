@@ -20,10 +20,10 @@ const MODEL_TEKS = 'gemini-3.8-flash'
 
 /** Model gambar valid (Nov 2026). Urutan = prioritas. */
 const MODEL_GAMBAR_CANDIDATES = [
-  'gemini-2.5-flash-image',
   'gemini-3.1-flash-image',
-  'gemini-3-pro-image',
   'gemini-nano-banana-2.1',
+  'gemini-2.5-flash-image',
+  'gemini-3-pro-image',
 ]
 
 function potong(s, n) {
