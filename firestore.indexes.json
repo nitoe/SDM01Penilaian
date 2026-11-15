@@ -1,136 +1,27 @@
 {
   "indexes": [
     {
-      "collectionGroup": "tp_kktp",
+      "collectionGroup": "lms_tugas",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "mapel", "order": "ASCENDING" },
-        { "fieldPath": "kelas", "order": "ASCENDING" }
+        { "fieldPath": "kelasList", "arrayConfig": "CONTAINS" }
       ]
     },
     {
-      "collectionGroup": "tp_kktp",
+      "collectionGroup": "lms_kuis",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "mapel", "order": "ASCENDING" },
-        { "fieldPath": "tingkatan", "order": "ASCENDING" }
+        { "fieldPath": "kelasList", "arrayConfig": "CONTAINS" }
       ]
     },
     {
-      "collectionGroup": "nilai_tp",
+      "collectionGroup": "lms_materi",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "mapel", "order": "ASCENDING" },
-        { "fieldPath": "kelas", "order": "ASCENDING" },
-        { "fieldPath": "semester", "order": "ASCENDING" },
-        { "fieldPath": "tahunAjaran", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "nilai_tp",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "tpId", "order": "ASCENDING" },
-        { "fieldPath": "mapel", "order": "ASCENDING" },
-        { "fieldPath": "kelas", "order": "ASCENDING" },
-        { "fieldPath": "semester", "order": "ASCENDING" },
-        { "fieldPath": "tahunAjaran", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "asesmen_cakupan",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "mapel", "order": "ASCENDING" },
-        { "fieldPath": "kelas", "order": "ASCENDING" },
-        { "fieldPath": "semester", "order": "ASCENDING" },
-        { "fieldPath": "tahunAjaran", "order": "ASCENDING" },
-        { "fieldPath": "jenis", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "nilai_sts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "mapel", "order": "ASCENDING" },
-        { "fieldPath": "kelas", "order": "ASCENDING" },
-        { "fieldPath": "semester", "order": "ASCENDING" },
-        { "fieldPath": "tahunAjaran", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "nilai_sas",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "mapel", "order": "ASCENDING" },
-        { "fieldPath": "kelas", "order": "ASCENDING" },
-        { "fieldPath": "semester", "order": "ASCENDING" },
-        { "fieldPath": "tahunAjaran", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "siswa",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "kelas", "order": "ASCENDING" },
-        { "fieldPath": "aktif", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "notifikasi",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "dariUid", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "perpus_peminjaman",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "peminjam.id", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "perpus_peminjaman",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "eksemplarId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "perpus_peminjaman",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "peminjam.tipe", "order": "ASCENDING" },
-        { "fieldPath": "peminjam.id", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "perpus_jurnal",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "siswaId", "order": "ASCENDING" },
-        { "fieldPath": "tanggalBaca", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "perpus_jurnal",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "kelas", "order": "ASCENDING" },
-        { "fieldPath": "tanggalBaca", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "perpus_buku",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "publik", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        { "fieldPath": "kelasList", "arrayConfig": "CONTAINS" }
       ]
     }
   ],
