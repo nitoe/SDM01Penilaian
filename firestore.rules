@@ -1161,6 +1161,24 @@ match /g7kaih/{id} {
         && (list.size() < 6 || lmsTulisMapelKelas(mapel, list[5]));
     }
 
+    // Baca via berbagi: guru boleh baca bila punya akses lihat ke *salah satu* kelas dalam kelasList
+    // (untuk mapel itu). Memungkinkan query where('kelasList','array-contains', kelasSaya) lolos
+    // (ANTIREGRESI §128). Evaluasi list konservatif: selama user ampu kelas yang di-query,
+    // setiap dokumen yang match punya kelas itu di list → salah satu cabang OR benar.
+    function lmsLihatViaKelasList(mapel, list) {
+      return list is list
+        && list.size() > 0
+        && list.size() <= 6
+        && (
+             (list.size() >= 1 && lmsLihatMapelKelas(mapel, list[0]))
+          || (list.size() >= 2 && lmsLihatMapelKelas(mapel, list[1]))
+          || (list.size() >= 3 && lmsLihatMapelKelas(mapel, list[2]))
+          || (list.size() >= 4 && lmsLihatMapelKelas(mapel, list[3]))
+          || (list.size() >= 5 && lmsLihatMapelKelas(mapel, list[4]))
+          || (list.size() >= 6 && lmsLihatMapelKelas(mapel, list[5]))
+        );
+    }
+
 
     // ############################################################################
     // ##  REPO: nitoe/lms
@@ -1197,7 +1215,7 @@ match /g7kaih/{id} {
                     && request.resource.data.judul is string
                     && request.resource.data.judul.size() > 0
                     && request.resource.data.judul.size() <= 200
-                    && request.resource.data.jenis in ['pdf', 'gambar', 'video', 'youtube', 'tautan', 'halaman']
+                    && request.resource.data.jenis in ['pdf', 'gambar', 'video', 'youtube', 'tautan']
                     && request.resource.data.urutan is int
                     && request.resource.data.dibuatOleh == request.auth.uid
                     && (!('deskripsi' in request.resource.data)
@@ -1211,16 +1229,7 @@ match /g7kaih/{id} {
                             && request.resource.data.tpId.size() <= 80))
                     && (!('url' in request.resource.data)
                         || (request.resource.data.url is string
-                            && request.resource.data.url.size() <= 2000))
-                    && (!('halaman' in request.resource.data)
-                        || (request.resource.data.halaman is list
-                            && request.resource.data.halaman.size() <= 20))
-                    && (!('status' in request.resource.data)
-                        || request.resource.data.status in ['draf', 'terbit'])
-                    && (!('jumlahHalaman' in request.resource.data)
-                        || (request.resource.data.jumlahHalaman is int
-                            && request.resource.data.jumlahHalaman >= 0
-                            && request.resource.data.jumlahHalaman <= 20));
+                            && request.resource.data.url.size() <= 2000));
 
       allow update: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     && request.resource.data.kelas == resource.data.kelas
@@ -1236,16 +1245,7 @@ match /g7kaih/{id} {
                     && request.resource.data.judul is string
                     && request.resource.data.judul.size() > 0
                     && request.resource.data.judul.size() <= 200
-                    && request.resource.data.jenis in ['pdf', 'gambar', 'video', 'youtube', 'tautan', 'halaman']
-                    && (!('halaman' in request.resource.data)
-                        || (request.resource.data.halaman is list
-                            && request.resource.data.halaman.size() <= 20))
-                    && (!('status' in request.resource.data)
-                        || request.resource.data.status in ['draf', 'terbit'])
-                    && (!('jumlahHalaman' in request.resource.data)
-                        || (request.resource.data.jumlahHalaman is int
-                            && request.resource.data.jumlahHalaman >= 0
-                            && request.resource.data.jumlahHalaman <= 20));
+                    && request.resource.data.jenis in ['pdf', 'gambar', 'video', 'youtube', 'tautan'];
 
       allow delete: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     || isAdmin();
@@ -1334,6 +1334,9 @@ match /g7kaih/{id} {
       allow read: if isAdmin()
                   || lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas)
                   || (isLoggedIn() && resource.data.dibuatOleh == request.auth.uid)
+                  || (isGuru()
+                      && 'kelasList' in resource.data
+                      && lmsLihatViaKelasList(resource.data.mapel, resource.data.kelasList))
                   || (isSiswaLms()
                       && resource.data.aktif == true
                       && resource.data.kelas == request.auth.token.kelas)
@@ -1452,6 +1455,9 @@ match /g7kaih/{id} {
       allow read: if isAdmin()
                   || lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas)
                   || (isLoggedIn() && resource.data.dibuatOleh == request.auth.uid)
+                  || (isGuru()
+                      && 'kelasList' in resource.data
+                      && lmsLihatViaKelasList(resource.data.mapel, resource.data.kelasList))
                   || (isSiswaLms()
                       && resource.data.aktif == true
                       && resource.data.kelas == request.auth.token.kelas)
