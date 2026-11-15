@@ -1147,6 +1147,21 @@ match /g7kaih/{id} {
       return lihatMapelKelas(mapel, kelas) || ruangTka(mapel, kelas);
     }
 
+
+    // Berbagi materi/kuis/tugas: kelasList max 6; setiap kelas wajib lmsTulisMapelKelas (hanya yang diampu).
+    function lmsKelasListBoleh(mapel, list) {
+      return list is list
+        && list.size() > 0
+        && list.size() <= 6
+        && (list.size() < 1 || lmsTulisMapelKelas(mapel, list[0]))
+        && (list.size() < 2 || lmsTulisMapelKelas(mapel, list[1]))
+        && (list.size() < 3 || lmsTulisMapelKelas(mapel, list[2]))
+        && (list.size() < 4 || lmsTulisMapelKelas(mapel, list[3]))
+        && (list.size() < 5 || lmsTulisMapelKelas(mapel, list[4]))
+        && (list.size() < 6 || lmsTulisMapelKelas(mapel, list[5]));
+    }
+
+
     // ############################################################################
     // ##  REPO: nitoe/lms
     // ##  Koleksi lms_*. Bagian ini diubah dari repo LMS, lalu file disalin utuh ke SDM01Penilaian.
@@ -1161,8 +1176,12 @@ match /g7kaih/{id} {
     // dari Cloud Function; sengaja tidak ada match, jadi klien ditolak oleh aturan default.
 
     match /lms_materi/{id} {
+      // Siswa: kelas utama ATAU anggota kelasList (share ke paralel yang diampu).
       allow read: if isGuru() || isAdmin()
-                  || (isSiswaLms() && resource.data.kelas == request.auth.token.kelas);
+                  || (isSiswaLms() && resource.data.kelas == request.auth.token.kelas)
+                  || (isSiswaLms()
+                      && 'kelasList' in resource.data
+                      && request.auth.token.kelas in resource.data.kelasList);
 
       allow create: if lmsTulisMapelKelas(
                         request.resource.data.mapel,
@@ -1207,6 +1226,13 @@ match /g7kaih/{id} {
                     && request.resource.data.kelas == resource.data.kelas
                     && request.resource.data.mapel == resource.data.mapel
                     && request.resource.data.dibuatOleh == resource.data.dibuatOleh
+                    && (
+                         !('kelasList' in request.resource.data)
+                         || (
+                           resource.data.kelas in request.resource.data.kelasList
+                           && lmsKelasListBoleh(resource.data.mapel, request.resource.data.kelasList)
+                         )
+                       )
                     && request.resource.data.judul is string
                     && request.resource.data.judul.size() > 0
                     && request.resource.data.judul.size() <= 200
@@ -1313,6 +1339,10 @@ match /g7kaih/{id} {
                       && resource.data.kelas == request.auth.token.kelas)
                   || (isSiswaLms()
                       && resource.data.aktif == true
+                      && 'kelasList' in resource.data
+                      && request.auth.token.kelas in resource.data.kelasList)
+                  || (isSiswaLms()
+                      && resource.data.aktif == true
                       && resource.data.kelas == '6'
                       && request.auth.token.kelas in ['6A', '6B']);
 
@@ -1343,6 +1373,13 @@ match /g7kaih/{id} {
                     && request.resource.data.kelas == resource.data.kelas
                     && request.resource.data.mapel == resource.data.mapel
                     && request.resource.data.dibuatOleh == resource.data.dibuatOleh
+                    && (
+                         !('kelasList' in request.resource.data)
+                         || (
+                           resource.data.kelas in request.resource.data.kelasList
+                           && lmsKelasListBoleh(resource.data.mapel, request.resource.data.kelasList)
+                         )
+                       )
                     && request.resource.data.judul is string
                     && request.resource.data.judul.size() > 0
                     && request.resource.data.judul.size() <= 200
@@ -1417,7 +1454,11 @@ match /g7kaih/{id} {
                   || (isLoggedIn() && resource.data.dibuatOleh == request.auth.uid)
                   || (isSiswaLms()
                       && resource.data.aktif == true
-                      && resource.data.kelas == request.auth.token.kelas);
+                      && resource.data.kelas == request.auth.token.kelas)
+                  || (isSiswaLms()
+                      && resource.data.aktif == true
+                      && 'kelasList' in resource.data
+                      && request.auth.token.kelas in resource.data.kelasList);
 
       allow create: if lmsTulisMapelKelas(
                         request.resource.data.mapel,
@@ -1448,6 +1489,15 @@ match /g7kaih/{id} {
 
       allow update: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     && request.resource.data.dibuatOleh == resource.data.dibuatOleh
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.mapel == resource.data.mapel
+                    && (
+                         !('kelasList' in request.resource.data)
+                         || (
+                           resource.data.kelas in request.resource.data.kelasList
+                           && lmsKelasListBoleh(resource.data.mapel, request.resource.data.kelasList)
+                         )
+                       )
                     && request.resource.data.judul is string
                     && request.resource.data.judul.size() > 0
                     && request.resource.data.judul.size() <= 200
