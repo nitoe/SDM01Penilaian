@@ -1775,6 +1775,82 @@ match /g7kaih/{id} {
     }
 
 
+
+    // ---- lms_lomba -----------------------------------------------------------
+    // Modul Lomba (Tahap 1): meta lomba, guru pengampu, peserta max 20.
+    // Create/update/delete meta: admin saja.
+    // Read: admin; guru pengampu (guruPengampuUid); siswa peserta (siswaIds contains claim).
+    // List: admin (semua); guru (where guruPengampuUid==uid); siswa (array-contains siswaId).
+    // ANTIREGRESI §Lomba.1–§Lomba.3.
+
+    function lombaAdmin() {
+      return isAdmin();
+    }
+
+    function lombaPengampuDoc() {
+      return resource.data.guruPengampuUid == request.auth.uid;
+    }
+
+    function lombaPengampuReq() {
+      return request.resource.data.guruPengampuUid == request.auth.uid;
+    }
+
+    function lombaSiswaPeserta() {
+      return isSiswaLms()
+        && resource.data.siswaIds is list
+        && request.auth.token.siswaId in resource.data.siswaIds;
+    }
+
+    match /lms_lomba/{id} {
+      allow get: if lombaAdmin()
+                 || (isGuru() && lombaPengampuDoc())
+                 || lombaSiswaPeserta();
+
+      // List: klien admin tanpa filter; guru where guruPengampuUid; siswa array-contains.
+      // Rules mengevaluasi per dokumen yang lolos query.
+      allow list: if lombaAdmin()
+                  || (isGuru()
+                      && resource.data.guruPengampuUid == request.auth.uid)
+                  || (isSiswaLms()
+                      && resource.data.siswaIds is list
+                      && request.auth.token.siswaId in resource.data.siswaIds);
+
+      allow create: if lombaAdmin()
+                    && request.resource.data.keys().hasAll([
+                         'nama', 'tingkat', 'mapelTerkait', 'status',
+                         'guruPengampuUid', 'guruPengampuNama',
+                         'siswaIds', 'siswaList', 'dibuatOleh'])
+                    && request.resource.data.dibuatOleh == request.auth.uid
+                    && request.resource.data.nama is string
+                    && request.resource.data.nama.size() > 0
+                    && request.resource.data.nama.size() <= 120
+                    && request.resource.data.tingkat is string
+                    && request.resource.data.status in ['draf', 'aktif', 'selesai', 'arsip']
+                    && request.resource.data.mapelTerkait is list
+                    && request.resource.data.mapelTerkait.size() > 0
+                    && request.resource.data.mapelTerkait.size() <= 20
+                    && request.resource.data.guruPengampuUid is string
+                    && request.resource.data.guruPengampuUid.size() > 0
+                    && request.resource.data.siswaIds is list
+                    && request.resource.data.siswaIds.size() <= 20
+                    && request.resource.data.siswaList is list
+                    && request.resource.data.siswaList.size() <= 20;
+
+      allow update: if lombaAdmin()
+                    && request.resource.data.nama is string
+                    && request.resource.data.nama.size() > 0
+                    && request.resource.data.nama.size() <= 120
+                    && request.resource.data.status in ['draf', 'aktif', 'selesai', 'arsip']
+                    && request.resource.data.mapelTerkait is list
+                    && request.resource.data.mapelTerkait.size() > 0
+                    && request.resource.data.siswaIds is list
+                    && request.resource.data.siswaIds.size() <= 20
+                    && request.resource.data.siswaList is list
+                    && request.resource.data.siswaList.size() <= 20;
+
+      allow delete: if lombaAdmin();
+    }
+
     // ############################################################################
     // ##  REPO: BERSAMA (semua repo)
     // ##  Penutup.
