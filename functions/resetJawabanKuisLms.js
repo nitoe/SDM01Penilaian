@@ -97,7 +97,9 @@ export const resetJawabanKuisLms = onCall(
         throw new HttpsError('not-found', 'Lomba tidak ditemukan.')
       }
       const lomba = lombaSnap.data()
-      const pengampu = lomba.guruPengampuUid === uid
+      const uids = Array.isArray(lomba.guruPengampuUids) ? lomba.guruPengampuUids.map(String) : []
+      const pengampu =
+        lomba.guruPengampuUid === uid || uids.includes(uid)
       const adminOk = profil.role === 'admin' || String(email || '').toLowerCase() === 'arif.nitoe@gmail.com'
       if (!pengampu && !adminOk) {
         throw new HttpsError('permission-denied', 'Hanya pengampu lomba atau admin yang boleh mereset.')

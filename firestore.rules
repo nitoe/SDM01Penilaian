@@ -1834,8 +1834,8 @@ match /g7kaih/{id} {
     // ---- lms_lomba -----------------------------------------------------------
     // Modul Lomba (Tahap 1): meta lomba, guru pengampu, peserta max 20.
     // Create/update/delete meta: admin saja.
-    // Read: admin; guru pengampu (guruPengampuUid); siswa peserta (siswaIds contains claim).
-    // List: admin (semua); guru (where guruPengampuUid==uid); siswa (array-contains siswaId).
+    // Read: admin; guru pengampu (guruPengampuUid | guruPengampuUids); siswa peserta.
+    // List: admin (semua); guru (uid equality legacy ATAU array-contains); siswa array-contains.
     // ANTIREGRESI §Lomba.1–§Lomba.3.
 
     // Admin LMS = role admin ATAU email admin LMS (selaras adalahAdminLms() di src/lib/lombaAkses.ts).
@@ -1855,8 +1855,12 @@ match /g7kaih/{id} {
       return list is list && list.size() == 1 && list[0] == 'LB';
     }
 
+    // Pengampu: field tunggal legacy ATAU array guruPengampuUids (ANTIREGRESI §Lomba.28).
     function lombaPengampuDoc() {
-      return resource.data.guruPengampuUid == request.auth.uid;
+      return resource.data.guruPengampuUid == request.auth.uid
+        || (resource.data.keys().hasAll(['guruPengampuUids'])
+            && resource.data.guruPengampuUids is list
+            && request.auth.uid in resource.data.guruPengampuUids);
     }
 
     function lombaSiswaPeserta() {
@@ -1879,6 +1883,11 @@ match /g7kaih/{id} {
         && (
           lombaAdmin()
           || get(/databases/$(database)/documents/lms_lomba/$(lombaId)).data.guruPengampuUid == request.auth.uid
+          || (
+            get(/databases/$(database)/documents/lms_lomba/$(lombaId)).data.keys().hasAll(['guruPengampuUids'])
+            && get(/databases/$(database)/documents/lms_lomba/$(lombaId)).data.guruPengampuUids is list
+            && request.auth.uid in get(/databases/$(database)/documents/lms_lomba/$(lombaId)).data.guruPengampuUids
+          )
         );
     }
 
@@ -1890,9 +1899,14 @@ match /g7kaih/{id} {
       // List: klien admin tanpa filter; guru where guruPengampuUid; siswa array-contains.
       // Cabang siswa JANGAN diberi predikat tipe (`resource.data.siswaIds is list`): query list tidak bisa
       // membuktikannya dari filter array-contains → permission-denied. ANTIREGRESI §Lomba.21.
+      // List guru: equality legacy ATAU array-contains guruPengampuUids (klien menggabung 2 query).
       allow list: if lombaAdmin()
                   || (isGuru()
                       && resource.data.guruPengampuUid == request.auth.uid)
+                  || (isGuru()
+                      && resource.data.keys().hasAll(['guruPengampuUids'])
+                      && resource.data.guruPengampuUids is list
+                      && request.auth.uid in resource.data.guruPengampuUids)
                   || (isSiswaLms()
                       && request.auth.token.siswaId in resource.data.siswaIds);
 
@@ -1900,6 +1914,7 @@ match /g7kaih/{id} {
                     && request.resource.data.keys().hasAll([
                          'nama', 'tingkat', 'mapelTerkait', 'status',
                          'guruPengampuUid', 'guruPengampuNama',
+                         'guruPengampuUids', 'guruPengampuList',
                          'siswaIds', 'siswaList', 'dibuatOleh'])
                     && request.resource.data.dibuatOleh == request.auth.uid
                     && request.resource.data.nama is string
@@ -1912,6 +1927,12 @@ match /g7kaih/{id} {
                     && request.resource.data.mapelTerkait.size() <= 20
                     && request.resource.data.guruPengampuUid is string
                     && request.resource.data.guruPengampuUid.size() > 0
+                    && request.resource.data.guruPengampuUids is list
+                    && request.resource.data.guruPengampuUids.size() > 0
+                    && request.resource.data.guruPengampuUids.size() <= 10
+                    && request.resource.data.guruPengampuList is list
+                    && request.resource.data.guruPengampuList.size() > 0
+                    && request.resource.data.guruPengampuList.size() <= 10
                     && request.resource.data.siswaIds is list
                     && request.resource.data.siswaIds.size() <= 20
                     && request.resource.data.siswaList is list
