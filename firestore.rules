@@ -1368,12 +1368,14 @@ match /g7kaih/{id} {
                       && resource.data.kelas == '6'
                       && request.auth.token.kelas in ['6A', '6B']);
 
-      allow create: if (lmsTulisMapelKelas(
-                        request.resource.data.mapel,
-                        request.resource.data.kelas)
-                    || (lombaKelasBank(request.resource.data.kelas)
+      // Lomba (kelas LB + lombaId) didahulukan agar kuis Gabungan / mapel non-penugasan
+      // tidak bergantung pada evaluasi lmsTulisMapelKelas terlebih dahulu. ANTIREGRESI §Lomba.15.
+      allow create: if ((lombaKelasBank(request.resource.data.kelas)
                         && 'lombaId' in request.resource.data
-                        && lombaKontenBoleh(request.resource.data.lombaId)))
+                        && lombaKontenBoleh(request.resource.data.lombaId))
+                    || lmsTulisMapelKelas(
+                        request.resource.data.mapel,
+                        request.resource.data.kelas))
                     && request.resource.data.keys().hasAll(
                          ['kelas', 'mapel', 'judul', 'aktif', 'dibuatOleh', 'jumlahSoal'])
                     && request.resource.data.dibuatOleh == request.auth.uid
