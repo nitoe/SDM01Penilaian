@@ -1870,12 +1870,12 @@ match /g7kaih/{id} {
                  || lombaSiswaPeserta();
 
       // List: klien admin tanpa filter; guru where guruPengampuUid; siswa array-contains.
-      // Rules mengevaluasi per dokumen yang lolos query.
+      // Cabang siswa JANGAN diberi predikat tipe (`resource.data.siswaIds is list`): query list tidak bisa
+      // membuktikannya dari filter array-contains → permission-denied. ANTIREGRESI §Lomba.21.
       allow list: if lombaAdmin()
                   || (isGuru()
                       && resource.data.guruPengampuUid == request.auth.uid)
                   || (isSiswaLms()
-                      && resource.data.siswaIds is list
                       && request.auth.token.siswaId in resource.data.siswaIds);
 
       allow create: if lombaAdmin()
