@@ -1791,10 +1791,6 @@ match /g7kaih/{id} {
       return resource.data.guruPengampuUid == request.auth.uid;
     }
 
-    function lombaPengampuReq() {
-      return request.resource.data.guruPengampuUid == request.auth.uid;
-    }
-
     function lombaSiswaPeserta() {
       return isSiswaLms()
         && resource.data.siswaIds is list
