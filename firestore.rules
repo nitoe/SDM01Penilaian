@@ -1366,7 +1366,17 @@ match /g7kaih/{id} {
                   || (isSiswaLms()
                       && resource.data.aktif == true
                       && resource.data.kelas == '6'
-                      && request.auth.token.kelas in ['6A', '6B']);
+                      && request.auth.token.kelas in ['6A', '6B'])
+                  // Lomba: siswa peserta boleh baca kuis aktif milik lombanya (kelas bank LB).
+                  // Query klien: where lombaId + aktif==true (tanpa mapel). ANTIREGRESI §Lomba.23.
+                  || (isSiswaLms()
+                      && resource.data.aktif == true
+                      && 'lombaId' in resource.data
+                      && resource.data.lombaId is string
+                      && resource.data.lombaId.size() > 0
+                      && resource.data.lombaId.size() <= 128
+                      && exists(/databases/$(database)/documents/lms_lomba/$(resource.data.lombaId))
+                      && request.auth.token.siswaId in get(/databases/$(database)/documents/lms_lomba/$(resource.data.lombaId)).data.siswaIds);
 
       allow create: if ((lombaKelasBank(request.resource.data.kelas)
                         && 'lombaId' in request.resource.data
