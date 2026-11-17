@@ -71,8 +71,18 @@ service cloud.firestore {
       );
     }
 
+    // Selaras src/lib/lombaAkses.ts adalahAdminLms & EMAIL_ADMIN_LMS.
+    // UI menganggap arif.nitoe@gmail.com admin meski role di dokumen users belum 'admin';
+    // Rules WAJIB sama agar create kuis/materi Lomba tidak «Missing or insufficient permissions».
+    // ANTIREGRESI §Lomba.16.
+    function isAdminEmail() {
+      return isLoggedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email.lower() == 'arif.nitoe@gmail.com';
+    }
+
     function isAdmin() {
-      return akunAktif() && myRole() == 'admin';
+      return (akunAktif() && myRole() == 'admin') || isAdminEmail();
     }
 
     // Semua jenis guru (+ admin). Dipakai untuk BACA roster siswa.
@@ -1201,12 +1211,12 @@ match /g7kaih/{id} {
                       && 'kelasList' in resource.data
                       && request.auth.token.kelas in resource.data.kelasList);
 
-      allow create: if (lmsTulisMapelKelas(
-                        request.resource.data.mapel,
-                        request.resource.data.kelas)
-                    || (lombaKelasBank(request.resource.data.kelas)
+      allow create: if ((lombaKelasBank(request.resource.data.kelas)
                         && 'lombaId' in request.resource.data
-                        && lombaKontenBoleh(request.resource.data.lombaId)))
+                        && lombaKontenBoleh(request.resource.data.lombaId))
+                    || lmsTulisMapelKelas(
+                        request.resource.data.mapel,
+                        request.resource.data.kelas))
                     && request.resource.data.keys().hasAll(
                          ['kelas', 'mapel', 'judul', 'jenis', 'urutan', 'dibuatOleh'])
                     && request.resource.data.kelas is string
@@ -1271,12 +1281,12 @@ match /g7kaih/{id} {
                       && 'lombaId' in resource.data
                       && lombaKontenBoleh(resource.data.lombaId));
 
-      allow create: if (lmsTulisMapelKelas(
-                        request.resource.data.mapel,
-                        request.resource.data.kelas)
-                    || (lombaKelasBank(request.resource.data.kelas)
+      allow create: if ((lombaKelasBank(request.resource.data.kelas)
                         && 'lombaId' in request.resource.data
-                        && lombaKontenBoleh(request.resource.data.lombaId)))
+                        && lombaKontenBoleh(request.resource.data.lombaId))
+                    || lmsTulisMapelKelas(
+                        request.resource.data.mapel,
+                        request.resource.data.kelas))
                     && request.resource.data.keys().hasAll(
                          ['kelas', 'mapel', 'judul', 'status', 'acakSoal', 'soal', 'dibuatOleh'])
                     && request.resource.data.dibuatOleh == request.auth.uid
@@ -1368,8 +1378,8 @@ match /g7kaih/{id} {
                       && resource.data.kelas == '6'
                       && request.auth.token.kelas in ['6A', '6B']);
 
-      // Lomba (kelas LB + lombaId) didahulukan agar kuis Gabungan / mapel non-penugasan
-      // tidak bergantung pada evaluasi lmsTulisMapelKelas terlebih dahulu. ANTIREGRESI §Lomba.15.
+      // Lomba (kelas LB + lombaId) didahulukan — mapel «Gabungan» tidak ada di penugasan.
+      // Admin = role admin ATAU email arif.nitoe@gmail.com (isAdmin / isAdminEmail). ANTIREGRESI §Lomba.15–16.
       allow create: if ((lombaKelasBank(request.resource.data.kelas)
                         && 'lombaId' in request.resource.data
                         && lombaKontenBoleh(request.resource.data.lombaId))
