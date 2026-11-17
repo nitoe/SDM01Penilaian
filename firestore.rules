@@ -1186,7 +1186,7 @@ match /g7kaih/{id} {
     // ############################################################################
 
     // LMS (Learning Management System) — repo nitoe/lms
-    // Koleksi: lms_materi, lms_paket_soal, lms_gambar, lms_kuis, lms_soal, lms_tugas, lms_nilai_tugas, lms_bobot_slm, lms_rekap_tka, (nanti) lms_pengumpulan, …
+    // Koleksi: lms_materi, lms_paket_soal, lms_gambar, lms_kuis, lms_soal, lms_tugas, lms_nilai_tugas, lms_bobot_slm, lms_rekap_tka, lms_pengumpulan, lms_pengumpulan_foto, …
     // Akses tulis: guru dengan penugasan kelas×mapel atau wali kelas (tulisMapelKelas).
     // Baca lms_materi: guru/admin, atau siswa LMS (token dari Cloud Function loginSiswaLms) HANYA untuk
     // materi kelasnya sendiri (claim kelas). Klien siswa wajib query dengan where('kelas', '==', kelasnya).
@@ -1648,6 +1648,142 @@ match /g7kaih/{id} {
                     && (lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas) || isAdmin());
     }
 
+
+
+    // ---- lms_pengumpulan / lms_pengumpulan_foto ------------------------------
+    // Pengumpulan tugas siswa berupa FOTO terkompres (ANTIREGRESI §132).
+    //  - lms_pengumpulan/{tugasId_siswaId}            : meta (catatan, fotoIds, waktu).
+    //  - lms_pengumpulan_foto/{tugasId_siswaId_slot}  : satu foto (data URL ≤ 300.000 karakter, slot '1'..'3').
+    // Siswa LMS: buat/ubah HANYA miliknya sendiri, hanya untuk tugas AKTIF rombelnya (kelas utama atau
+    // kelasList), dan terkunci setelah ada lms_nilai_tugas/{tugasId_siswaId}. Tenggat TIDAK ditegakkan di
+    // rules (terlambat hanya ditandai di UI guru). Siswa tidak boleh menghapus meta.
+    // Guru/admin: baca (lmsLihatMapelKelas) dan hapus. Query guru WAJIB where tugasId + mapel + kelas;
+    // query siswa WAJIB where siswaId == miliknya. Foto disimpan di Firestore, BUKAN Storage.
+    function lmsTugasDoc(tugasId) {
+      return get(/databases/$(database)/documents/lms_tugas/$(tugasId)).data;
+    }
+
+    function lmsSiswaBolehKumpul(tugasId, kelas, mapel) {
+      return isSiswaLms()
+        && tugasId is string
+        && tugasId.size() > 0
+        && tugasId.size() <= 100
+        && kelas is string
+        && kelas == request.auth.token.kelas
+        && mapel is string
+        && exists(/databases/$(database)/documents/lms_tugas/$(tugasId))
+        && lmsTugasDoc(tugasId).aktif == true
+        && lmsTugasDoc(tugasId).mapel == mapel
+        && (lmsTugasDoc(tugasId).kelas == kelas
+            || ('kelasList' in lmsTugasDoc(tugasId)
+                && kelas in lmsTugasDoc(tugasId).kelasList));
+    }
+
+    function lmsSudahDinilai(tugasId, siswaId) {
+      return exists(/databases/$(database)/documents/lms_nilai_tugas/$(tugasId + '_' + siswaId));
+    }
+
+    match /lms_pengumpulan/{id} {
+      allow read: if isAdmin()
+                  || (resource.data.keys().hasAll(['mapel', 'kelas'])
+                      && lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas))
+                  || (isSiswaLms()
+                      && 'siswaId' in resource.data
+                      && resource.data.siswaId == request.auth.token.siswaId);
+
+      allow create: if request.resource.data.keys().hasOnly(
+                         ['tugasId', 'siswaId', 'siswaNama', 'kelas', 'mapel', 'catatan',
+                          'fotoIds', 'jumlahFoto', 'createdAt', 'updatedAt'])
+                    && request.resource.data.keys().hasAll(
+                         ['tugasId', 'siswaId', 'siswaNama', 'kelas', 'mapel',
+                          'fotoIds', 'jumlahFoto', 'createdAt', 'updatedAt'])
+                    && lmsSiswaBolehKumpul(
+                         request.resource.data.tugasId,
+                         request.resource.data.kelas,
+                         request.resource.data.mapel)
+                    && request.resource.data.siswaId == request.auth.token.siswaId
+                    && id == request.resource.data.tugasId + '_' + request.resource.data.siswaId
+                    && request.resource.data.siswaNama is string
+                    && request.resource.data.siswaNama.size() <= 120
+                    && request.resource.data.fotoIds is list
+                    && request.resource.data.fotoIds.size() >= 1
+                    && request.resource.data.fotoIds.size() <= 3
+                    && request.resource.data.jumlahFoto is int
+                    && request.resource.data.jumlahFoto == request.resource.data.fotoIds.size()
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.updatedAt == request.time
+                    && (!('catatan' in request.resource.data)
+                        || (request.resource.data.catatan is string
+                            && request.resource.data.catatan.size() <= 500));
+
+      allow update: if isSiswaLms()
+                    && resource.data.siswaId == request.auth.token.siswaId
+                    && lmsSiswaBolehKumpul(resource.data.tugasId, resource.data.kelas, resource.data.mapel)
+                    && !lmsSudahDinilai(resource.data.tugasId, resource.data.siswaId)
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['catatan', 'fotoIds', 'jumlahFoto', 'updatedAt'])
+                    && request.resource.data.fotoIds is list
+                    && request.resource.data.fotoIds.size() >= 1
+                    && request.resource.data.fotoIds.size() <= 3
+                    && request.resource.data.jumlahFoto is int
+                    && request.resource.data.jumlahFoto == request.resource.data.fotoIds.size()
+                    && request.resource.data.updatedAt == request.time
+                    && (!('catatan' in request.resource.data)
+                        || (request.resource.data.catatan is string
+                            && request.resource.data.catatan.size() <= 500));
+
+      allow delete: if isAdmin()
+                    || (resource.data.keys().hasAll(['mapel', 'kelas'])
+                        && lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas));
+    }
+
+    match /lms_pengumpulan_foto/{id} {
+      allow read: if isAdmin()
+                  || (resource.data.keys().hasAll(['mapel', 'kelas'])
+                      && lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas))
+                  || (isSiswaLms()
+                      && 'siswaId' in resource.data
+                      && resource.data.siswaId == request.auth.token.siswaId);
+
+      allow create: if request.resource.data.keys().hasOnly(
+                         ['tugasId', 'siswaId', 'kelas', 'mapel', 'slot', 'data', 'createdAt', 'updatedAt'])
+                    && request.resource.data.keys().hasAll(
+                         ['tugasId', 'siswaId', 'kelas', 'mapel', 'slot', 'data', 'createdAt', 'updatedAt'])
+                    && lmsSiswaBolehKumpul(
+                         request.resource.data.tugasId,
+                         request.resource.data.kelas,
+                         request.resource.data.mapel)
+                    && request.resource.data.siswaId == request.auth.token.siswaId
+                    && request.resource.data.slot in ['1', '2', '3']
+                    && id == request.resource.data.tugasId + '_' + request.resource.data.siswaId
+                             + '_' + request.resource.data.slot
+                    && !lmsSudahDinilai(request.resource.data.tugasId, request.resource.data.siswaId)
+                    && request.resource.data.data is string
+                    && request.resource.data.data.size() > 0
+                    && request.resource.data.data.size() <= 300000
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.updatedAt == request.time;
+
+      allow update: if isSiswaLms()
+                    && resource.data.siswaId == request.auth.token.siswaId
+                    && lmsSiswaBolehKumpul(resource.data.tugasId, resource.data.kelas, resource.data.mapel)
+                    && !lmsSudahDinilai(resource.data.tugasId, resource.data.siswaId)
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['data', 'updatedAt'])
+                    && request.resource.data.data is string
+                    && request.resource.data.data.size() > 0
+                    && request.resource.data.data.size() <= 300000
+                    && request.resource.data.updatedAt == request.time;
+
+      // Siswa hanya menghapus fotonya sendiri (slot yang tidak dipakai lagi) sebelum dinilai.
+      allow delete: if isAdmin()
+                    || (isSiswaLms()
+                        && resource.data.siswaId == request.auth.token.siswaId
+                        && lmsSiswaBolehKumpul(resource.data.tugasId, resource.data.kelas, resource.data.mapel)
+                        && !lmsSudahDinilai(resource.data.tugasId, resource.data.siswaId))
+                    || (resource.data.keys().hasAll(['mapel', 'kelas'])
+                        && lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas));
+    }
 
 
     // ---- lms_jawaban/{id} -------------------------------------------------
