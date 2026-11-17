@@ -71,18 +71,8 @@ service cloud.firestore {
       );
     }
 
-    // Selaras src/lib/lombaAkses.ts adalahAdminLms & EMAIL_ADMIN_LMS.
-    // UI menganggap arif.nitoe@gmail.com admin meski role di dokumen users belum 'admin';
-    // Rules WAJIB sama agar create kuis/materi Lomba tidak «Missing or insufficient permissions».
-    // ANTIREGRESI §Lomba.16.
-    function isAdminEmail() {
-      return isLoggedIn()
-        && request.auth.token.email is string
-        && request.auth.token.email.lower() == 'arif.nitoe@gmail.com';
-    }
-
     function isAdmin() {
-      return (akunAktif() && myRole() == 'admin') || isAdminEmail();
+      return akunAktif() && myRole() == 'admin';
     }
 
     // Semua jenis guru (+ admin). Dipakai untuk BACA roster siswa.
@@ -1205,7 +1195,7 @@ match /g7kaih/{id} {
 
     match /lms_materi/{id} {
       // Siswa: kelas utama ATAU anggota kelasList (share ke paralel yang diampu).
-      allow read: if isGuru() || isAdmin()
+      allow read: if isGuru() || isAdmin() || lombaAdmin()
                   || (isSiswaLms() && resource.data.kelas == request.auth.token.kelas)
                   || (isSiswaLms()
                       && 'kelasList' in resource.data
@@ -1251,6 +1241,8 @@ match /g7kaih/{id} {
                     && request.resource.data.dibuatOleh == resource.data.dibuatOleh
                     && (
                          !('kelasList' in request.resource.data)
+                         || ('lombaId' in resource.data
+                             && lombaKelasListSah(request.resource.data.kelasList))
                          || (
                            resource.data.kelas in request.resource.data.kelasList
                            && lmsKelasListBoleh(resource.data.mapel, request.resource.data.kelasList)
@@ -1277,8 +1269,7 @@ match /g7kaih/{id} {
       // Cabang Lomba wajib: kelas bank «LB» tidak masuk penugasanKelasMapel guru mana pun.
       // Query klien Lomba: where lombaId + mapel (daftarPaketLomba) — ANTIREGRESI §Lomba.10.
       allow read: if lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas)
-                  || (isGuru()
-                      && 'lombaId' in resource.data
+                  || ('lombaId' in resource.data
                       && lombaKontenBoleh(resource.data.lombaId));
 
       allow create: if ((lombaKelasBank(request.resource.data.kelas)
@@ -1363,8 +1354,7 @@ match /g7kaih/{id} {
                   || (isGuru()
                       && 'kelasList' in resource.data
                       && lmsLihatViaKelasList(resource.data.mapel, resource.data.kelasList))
-                  || (isGuru()
-                      && 'lombaId' in resource.data
+                  || ('lombaId' in resource.data
                       && lombaKontenBoleh(resource.data.lombaId))
                   || (isSiswaLms()
                       && resource.data.aktif == true
@@ -1378,8 +1368,6 @@ match /g7kaih/{id} {
                       && resource.data.kelas == '6'
                       && request.auth.token.kelas in ['6A', '6B']);
 
-      // Lomba (kelas LB + lombaId) didahulukan — mapel «Gabungan» tidak ada di penugasan.
-      // Admin = role admin ATAU email arif.nitoe@gmail.com (isAdmin / isAdminEmail). ANTIREGRESI §Lomba.15–16.
       allow create: if ((lombaKelasBank(request.resource.data.kelas)
                         && 'lombaId' in request.resource.data
                         && lombaKontenBoleh(request.resource.data.lombaId))
@@ -1413,6 +1401,8 @@ match /g7kaih/{id} {
                     && request.resource.data.dibuatOleh == resource.data.dibuatOleh
                     && (
                          !('kelasList' in request.resource.data)
+                         || ('lombaId' in resource.data
+                             && lombaKelasListSah(request.resource.data.kelasList))
                          || (
                            resource.data.kelas in request.resource.data.kelasList
                            && lmsKelasListBoleh(resource.data.mapel, request.resource.data.kelasList)
@@ -1502,12 +1492,12 @@ match /g7kaih/{id} {
                       && 'kelasList' in resource.data
                       && request.auth.token.kelas in resource.data.kelasList);
 
-      allow create: if (lmsTulisMapelKelas(
-                        request.resource.data.mapel,
-                        request.resource.data.kelas)
-                    || (lombaKelasBank(request.resource.data.kelas)
+      allow create: if ((lombaKelasBank(request.resource.data.kelas)
                         && 'lombaId' in request.resource.data
-                        && lombaKontenBoleh(request.resource.data.lombaId)))
+                        && lombaKontenBoleh(request.resource.data.lombaId))
+                    || lmsTulisMapelKelas(
+                        request.resource.data.mapel,
+                        request.resource.data.kelas))
                     && request.resource.data.keys().hasAll(
                          ['kelas', 'mapel', 'judul', 'jenis', 'aktif', 'dibuatOleh'])
                     && request.resource.data.dibuatOleh == request.auth.uid
@@ -1539,6 +1529,8 @@ match /g7kaih/{id} {
                     && request.resource.data.mapel == resource.data.mapel
                     && (
                          !('kelasList' in request.resource.data)
+                         || ('lombaId' in resource.data
+                             && lombaKelasListSah(request.resource.data.kelasList))
                          || (
                            resource.data.kelas in request.resource.data.kelasList
                            && lmsKelasListBoleh(resource.data.mapel, request.resource.data.kelasList)
@@ -1681,12 +1673,12 @@ match /g7kaih/{id} {
     match /lms_bobot_slm/{id} {
       allow read: if isGuru() || isAdmin();
 
-      allow create: if (lmsTulisMapelKelas(
-                        request.resource.data.mapel,
-                        request.resource.data.kelas)
-                    || (lombaKelasBank(request.resource.data.kelas)
+      allow create: if ((lombaKelasBank(request.resource.data.kelas)
                         && 'lombaId' in request.resource.data
-                        && lombaKontenBoleh(request.resource.data.lombaId)))
+                        && lombaKontenBoleh(request.resource.data.lombaId))
+                    || lmsTulisMapelKelas(
+                        request.resource.data.mapel,
+                        request.resource.data.kelas))
                     && request.resource.data.keys().hasAll(
                          ['kelas', 'mapel', 'tpId', 'sumber', 'diubahOleh'])
                     && request.resource.data.kelas is string
@@ -1828,8 +1820,21 @@ match /g7kaih/{id} {
     // List: admin (semua); guru (where guruPengampuUid==uid); siswa (array-contains siswaId).
     // ANTIREGRESI §Lomba.1–§Lomba.3.
 
+    // Admin LMS = role admin ATAU email admin LMS (selaras adalahAdminLms() di src/lib/lombaAkses.ts).
+    // Email fallback hanya berlaku untuk modul Lomba; isAdmin() global TIDAK diubah (repo lain memakainya).
+    function isAdminLmsEmail() {
+      return akunAktif()
+        && request.auth.token.email is string
+        && request.auth.token.email.lower() == 'arif.nitoe@gmail.com';
+    }
+
     function lombaAdmin() {
-      return isAdmin();
+      return isAdmin() || isAdminLmsEmail();
+    }
+
+    // Konten Lomba tidak dibagikan ke rombel: kelasList wajib persis ['LB'] (ANTIREGRESI §Lomba.17).
+    function lombaKelasListSah(list) {
+      return list is list && list.size() == 1 && list[0] == 'LB';
     }
 
     function lombaPengampuDoc() {
@@ -1852,8 +1857,9 @@ match /g7kaih/{id} {
         && lombaId.size() > 0
         && lombaId.size() <= 128
         && exists(/databases/$(database)/documents/lms_lomba/$(lombaId))
+        && akunAktif()
         && (
-          isAdmin()
+          lombaAdmin()
           || get(/databases/$(database)/documents/lms_lomba/$(lombaId)).data.guruPengampuUid == request.auth.uid
         );
     }
