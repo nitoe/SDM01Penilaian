@@ -1263,7 +1263,13 @@ match /g7kaih/{id} {
     // (ANTIREGRESI §38). Fase 2b: siswa membaca salinan tanpa kunci di koleksi lain.
     // Query klien WAJIB menyertakan where kelas DAN mapel (sama seperti nilai_tp), tanpa orderBy.
     match /lms_paket_soal/{id} {
-      allow read: if lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas);
+      // Baca: penugasan/wali/admin, ATAU (Lomba) admin / guru pengampu lomba pemilik paket.
+      // Cabang Lomba wajib: kelas bank «LB» tidak masuk penugasanKelasMapel guru mana pun.
+      // Query klien Lomba: where lombaId + mapel (daftarPaketLomba) — ANTIREGRESI §Lomba.10.
+      allow read: if lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas)
+                  || (isGuru()
+                      && 'lombaId' in resource.data
+                      && lombaKontenBoleh(resource.data.lombaId));
 
       allow create: if (lmsTulisMapelKelas(
                         request.resource.data.mapel,
@@ -1347,6 +1353,9 @@ match /g7kaih/{id} {
                   || (isGuru()
                       && 'kelasList' in resource.data
                       && lmsLihatViaKelasList(resource.data.mapel, resource.data.kelasList))
+                  || (isGuru()
+                      && 'lombaId' in resource.data
+                      && lombaKontenBoleh(resource.data.lombaId))
                   || (isSiswaLms()
                       && resource.data.aktif == true
                       && resource.data.kelas == request.auth.token.kelas)
