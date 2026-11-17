@@ -1656,12 +1656,20 @@ match /g7kaih/{id} {
     //       atau siswa LMS milik sendiri (claim siswaId).
     // Query guru WAJIB where kuisId + kelas + mapel (lihat daftarJawabanKuis).
     match /lms_jawaban/{id} {
+      // Baca: admin; guru mapel×kelas; siswa milik sendiri;
+      // Lomba: admin/pengampu lewat lombaId denormalisasi (ANTIREGRESI §Lomba.26).
+      // Query hasil Lomba: where kuisId + lombaId (tanpa kelas — jawaban menyimpan rombel siswa).
       allow read: if isAdmin()
                   || (resource.data.keys().hasAll(['mapel', 'kelas'])
                       && lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas))
                   || (isSiswaLms()
                       && 'siswaId' in resource.data
-                      && resource.data.siswaId == request.auth.token.siswaId);
+                      && resource.data.siswaId == request.auth.token.siswaId)
+                  || ('lombaId' in resource.data
+                      && resource.data.lombaId is string
+                      && resource.data.lombaId.size() > 0
+                      && resource.data.lombaId.size() <= 128
+                      && lombaKontenBoleh(resource.data.lombaId));
 
       allow create, update, delete: if false;
     }

@@ -77,11 +77,31 @@ export const resetJawabanKuisLms = onCall(
     }
     const kuis = kuisSnap.data()
     const mapel = String(kuis.mapel || '').trim()
-    if (!MAPEL_TKA.includes(mapel)) {
+    const lombaId = typeof kuis.lombaId === 'string' ? kuis.lombaId.trim() : ''
+    const isTka = MAPEL_TKA.includes(mapel)
+    const isLomba = !!lombaId && String(kuis.kelas || '').toUpperCase() === 'LB'
+
+    // TKA: admin / email khusus / wali 6A·6B (dicek di bawah).
+    // Lomba: admin LMS atau guruPengampuUid lomba.
+    // Lainnya: admin saja (mapel biasa pakai alur guru di UI; CF ini historis TKA).
+    if (!isTka && !isLomba && profil.role !== 'admin') {
       throw new HttpsError(
         'failed-precondition',
-        'Reset hanya untuk kuis TKA (Matematika / Bahasa Indonesia / IPA).',
+        'Reset attempt lewat fungsi ini untuk kuis TKA atau Lomba (atau admin).',
       )
+    }
+
+    if (isLomba) {
+      const lombaSnap = await db.doc(`lms_lomba/${lombaId}`).get()
+      if (!lombaSnap.exists) {
+        throw new HttpsError('not-found', 'Lomba tidak ditemukan.')
+      }
+      const lomba = lombaSnap.data()
+      const pengampu = lomba.guruPengampuUid === uid
+      const adminOk = profil.role === 'admin' || String(email || '').toLowerCase() === 'arif.nitoe@gmail.com'
+      if (!pengampu && !adminOk) {
+        throw new HttpsError('permission-denied', 'Hanya pengampu lomba atau admin yang boleh mereset.')
+      }
     }
 
     const q = await db
@@ -98,7 +118,8 @@ export const resetJawabanKuisLms = onCall(
     const kelasArg = String(kelasSiswaArg || '').trim().toUpperCase()
     if (kelasArg) kelasSet.add(kelasArg)
 
-    if (!bolehResetTkaGlobal(profil, email)) {
+    // Lomba: sudah dicek pengampu/admin di atas. TKA: wali/admin.
+    if (!isLomba && !bolehResetTkaGlobal(profil, email)) {
       if (kelasSet.size === 0) {
         throw new HttpsError(
           'permission-denied',

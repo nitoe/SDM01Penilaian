@@ -114,7 +114,9 @@ function adalahMapelTka(mapel) {
 /**
  * Siswa boleh mengerjakan kuis bila:
  * - kelas kuis == kelas siswa (mapel biasa / TKA per-rombel), atau
- * - kuis TKA bank kelas «6» dan siswa di 6A/6B (ANTIREGRESI §99.10)
+ * - kuis TKA bank kelas «6» dan siswa di 6A/6B (ANTIREGRESI §99.10), atau
+ * - (di handler) kuis Lomba kelas LB + siswaId ∈ lomba.siswaIds, atau
+ * - kelas siswa ada di kuis.kelasList
  * Pembuat kuis (admin TKA / wali 5A) tidak relevan.
  */
 function siswaBolehKerjakanKuis(kuis, kelasSiswa) {
@@ -158,7 +160,22 @@ export const nilaiKuisLms = onCall(
     }
     if (isSiswa) {
       const kelasSiswa = typeof token.kelas === 'string' ? token.kelas : ''
-      if (!siswaBolehKerjakanKuis(kuis, kelasSiswa)) {
+      const okKelas = siswaBolehKerjakanKuis(kuis, kelasSiswa)
+      let okLomba = false
+      if (!okKelas && kuis.lombaId && String(kuis.kelas || '').toUpperCase() === 'LB') {
+        // Lomba: bank LB + peserta di lomba.siswaIds (ANTIREGRESI §Lomba.26)
+        const lombaSnap = await db.doc(`lms_lomba/${kuis.lombaId}`).get()
+        if (lombaSnap.exists) {
+          const ids = Array.isArray(lombaSnap.data().siswaIds) ? lombaSnap.data().siswaIds : []
+          okLomba = ids.map(String).includes(String(siswaId))
+        }
+      }
+      // kelasList berbagi paralel
+      let okList = false
+      if (!okKelas && !okLomba && Array.isArray(kuis.kelasList)) {
+        okList = kuis.kelasList.map((x) => String(x).toUpperCase()).includes(String(kelasSiswa).toUpperCase())
+      }
+      if (!okKelas && !okLomba && !okList) {
         throw new HttpsError('permission-denied', 'Kuis bukan untuk kelasmu.')
       }
     }
@@ -211,6 +228,7 @@ export const nilaiKuisLms = onCall(
       siswaId: siswaId || null,
       siswaNama: typeof token.nama === 'string' ? token.nama : '',
       // Siswa: simpan rombel token (6A/6B), bukan kelas bank «6» — roster hasil TKA
+      // Lomba: tetap rombel nyata; lombaId denormalisasi untuk query hasil pengampu
       kelas: isSiswa && token.kelas ? String(token.kelas).trim().toUpperCase() : (kuis.kelas || ''),
       mapel: kuis.mapel || '',
       judulKuis: kuis.judul || '',
@@ -222,6 +240,9 @@ export const nilaiKuisLms = onCall(
       percobaan,
       status: butuhManual ? 'sebagian_manual' : 'selesai',
       createdAt: FieldValue.serverTimestamp(),
+    }
+    if (kuis.lombaId) {
+      payload.lombaId = String(kuis.lombaId)
     }
 
     const jawabanRef = db.collection('lms_jawaban').doc()
