@@ -1195,11 +1195,24 @@ match /g7kaih/{id} {
 
     match /lms_materi/{id} {
       // Siswa: kelas utama ATAU anggota kelasList (share ke paralel yang diampu).
+      // Lomba: hanya peserta (siswaId ∈ lomba.siswaIds) — kelas bank LB tidak boleh
+      // dibaca lewat cabang kelas biasa. Query klien: where lombaId == … ANTIREGRESI §Lomba.Materi.
       allow read: if isGuru() || isAdmin() || lombaAdmin()
-                  || (isSiswaLms() && resource.data.kelas == request.auth.token.kelas)
                   || (isSiswaLms()
+                      && !('lombaId' in resource.data)
+                      && resource.data.kelas == request.auth.token.kelas)
+                  || (isSiswaLms()
+                      && !('lombaId' in resource.data)
                       && 'kelasList' in resource.data
-                      && request.auth.token.kelas in resource.data.kelasList);
+                      && request.auth.token.kelas in resource.data.kelasList)
+                  || (isSiswaLms()
+                      && 'lombaId' in resource.data
+                      && resource.data.lombaId is string
+                      && resource.data.lombaId.size() > 0
+                      && resource.data.lombaId.size() <= 128
+                      && exists(/databases/$(database)/documents/lms_lomba/$(resource.data.lombaId))
+                      && request.auth.token.siswaId in get(/databases/$(database)/documents/lms_lomba/$(resource.data.lombaId)).data.siswaIds)
+                  || ('lombaId' in resource.data && lombaKontenBoleh(resource.data.lombaId));
 
       allow create: if ((lombaKelasBank(request.resource.data.kelas)
                         && 'lombaId' in request.resource.data
