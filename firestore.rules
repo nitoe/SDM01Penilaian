@@ -1218,7 +1218,7 @@ match /g7kaih/{id} {
                     && request.resource.data.judul is string
                     && request.resource.data.judul.size() > 0
                     && request.resource.data.judul.size() <= 200
-                    && request.resource.data.jenis in ['pdf', 'gambar', 'video', 'youtube', 'tautan']
+                    && request.resource.data.jenis in ['pdf', 'gambar', 'video', 'youtube', 'tautan', 'halaman', 'html']
                     && request.resource.data.urutan is int
                     && request.resource.data.dibuatOleh == request.auth.uid
                     && (!('deskripsi' in request.resource.data)
@@ -1232,7 +1232,14 @@ match /g7kaih/{id} {
                             && request.resource.data.tpId.size() <= 80))
                     && (!('url' in request.resource.data)
                         || (request.resource.data.url is string
-                            && request.resource.data.url.size() <= 2000));
+                            && request.resource.data.url.size() <= 2000))
+                    && (!('kontenHtml' in request.resource.data)
+                        || (request.resource.data.kontenHtml is string
+                            && request.resource.data.kontenHtml.size() > 0
+                            && request.resource.data.kontenHtml.size() <= 400000))
+                    && (!('halaman' in request.resource.data)
+                        || (request.resource.data.halaman is list
+                            && request.resource.data.halaman.size() <= 20));
 
       allow update: if (lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     || ('lombaId' in resource.data && lombaKontenBoleh(resource.data.lombaId)))
@@ -1251,7 +1258,13 @@ match /g7kaih/{id} {
                     && request.resource.data.judul is string
                     && request.resource.data.judul.size() > 0
                     && request.resource.data.judul.size() <= 200
-                    && request.resource.data.jenis in ['pdf', 'gambar', 'video', 'youtube', 'tautan'];
+                    && request.resource.data.jenis in ['pdf', 'gambar', 'video', 'youtube', 'tautan', 'halaman', 'html']
+                    && (!('kontenHtml' in request.resource.data)
+                        || (request.resource.data.kontenHtml is string
+                            && request.resource.data.kontenHtml.size() <= 400000))
+                    && (!('halaman' in request.resource.data)
+                        || (request.resource.data.halaman is list
+                            && request.resource.data.halaman.size() <= 20));
 
       allow delete: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
                     || isAdmin()
