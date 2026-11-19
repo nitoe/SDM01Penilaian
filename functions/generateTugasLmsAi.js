@@ -125,17 +125,25 @@ export function susunPromptKategoriTugas(input) {
   }
 
   const sistem = `Anda ahli asesmen kinerja Kurikulum Merdeka untuk SD di Indonesia.
-Tugas Anda: merumuskan kategori/aspek RUBRIK penilaian kinerja berdasarkan ISI TUGAS yang diberikan guru.
+Tugas Anda: merumuskan kategori/aspek RUBRIK penilaian kinerja DAN daftar BUKTI foto yang perlu dikumpulkan siswa, berdasarkan ISI TUGAS dari guru.
+Penilaian harus melihat PROSES, bukan hanya laporan akhir: persiapan, pelaksanaan, dan hasil akhir.
 Keluarkan HANYA JSON valid tanpa markdown.`
 
-  const user = `Buat 4 sampai 6 kategori penilaian (aspek rubrik) yang RELEVAN dan SPESIFIK terhadap isi tugas berikut.
+  const user = `Buat 4 sampai 6 kategori penilaian (aspek rubrik) yang RELEVAN dan SPESIFIK terhadap isi tugas berikut, lalu susun bukti foto yang mendukungnya.
 
-Aturan:
-- Jumlah kategori: minimal 4, maksimal 6.
-- Setiap kategori: nama singkat (2–6 kata) + deskripsi indikator 1 kalimat.
+Aturan kategori:
+- Jumlah kategori: minimal 4, maksimal 6. Nama singkat (2–6 kata) + deskripsi indikator 1 kalimat.
+- Sebar kategori pada tiga tahap: "persiapan" (mis. menyiapkan alat/bahan, memahami langkah), "pelaksanaan" (proses mengerjakan/mengukur/mengamati) dan "hasil" (produk/laporan/refleksi). Bila tugas memang tidak punya salah satu tahap, boleh dilewati, tetapi JANGAN semua kategori berada di tahap "hasil".
 - Jangan kategori generik kosong seperti hanya "Kerapian" tanpa kaitan isi, kecuali memang inti tugas.
-- Cocok untuk siswa SD kelas ${kelas || '1–6'}.
-- Bahasa Indonesia.
+- Cocok untuk siswa SD kelas ${kelas || '1–6'}. Bahasa Indonesia.
+- Setiap kategori punya "sumber": "bukti" bila dapat dilihat dari foto/hasil tulisan siswa; "observasi" bila hanya tampak saat guru mengamati atau bertanya langsung (mis. sikap, kerja sama, penjelasan lisan).
+
+Aturan bukti:
+- Maksimal 6 bukti; satu bukti = satu foto. Gabungkan kategori yang buktinya sama ke satu bukti (mis. laporan akhir untuk struktur laporan, bahasa, dan refleksi) — jangan membuat bukti duplikat.
+- Utamakan bukti PROSES yang sulit dipalsukan: foto catatan data mentah tulisan tangan saat kegiatan, foto saat siswa melakukan kegiatan (cukup tangan/alat, tidak wajib memperlihatkan wajah anak), selain foto laporan akhir.
+- Label bukti ≤ 8 kata. Petunjuk 1 kalimat: apa yang harus terlihat jelas di foto.
+- Setiap kategori bersumber "bukti" harus tertaut ke tepat satu bukti lewat "buktiKey". Kategori "observasi" tidak punya buktiKey.
+- Setiap bukti punya "tahap" (persiapan/pelaksanaan/hasil) dan "wajib" (true/false).
 
 Konteks:
 - Judul: ${judul || '(tanpa judul)'}
@@ -147,26 +155,74 @@ ISI TUGAS (sumber utama analisis):
 ${isi}
 
 Format JSON:
-{"kategori":[{"nama":"...","deskripsi":"..."}, ...]}`
+{"kategori":[{"nama":"...","deskripsi":"...","tahap":"persiapan|pelaksanaan|hasil","sumber":"bukti|observasi","buktiKey":"b1"}],
+ "bukti":[{"key":"b1","label":"...","petunjuk":"...","tahap":"persiapan|pelaksanaan|hasil","wajib":true}]}`
 
   return { ok: true, sistem, user }
 }
 
+const TAHAP_VALID = new Set(['persiapan', 'pelaksanaan', 'hasil'])
+
+function tahapValid(t) {
+  const x = typeof t === 'string' ? t.trim().toLowerCase() : ''
+  return TAHAP_VALID.has(x) ? x : undefined
+}
+
+/**
+ * Hasil: { kategori: [{id,nama,deskripsi,tahap?,sumber}], bukti: [{label,petunjuk?,tahap?,wajib,kategoriIds}] }.
+ * `kategori` minimal 4 (aturan lama). `bukti` boleh kosong; maksimal 6 (batas slot foto rules LMS).
+ * Kategori «bukti» tanpa buktiKey valid tetap dikembalikan (klien memperingatkan guru).
+ */
 export function normalisasiKategoriTugas(data) {
   const raw = Array.isArray(data?.kategori) ? data.kategori : []
+  const rawBukti = Array.isArray(data?.bukti) ? data.bukti : []
+
+  const bukti = []
+  const petaKey = new Map()
+  const seenBukti = new Set()
+  for (const b of rawBukti) {
+    const label = potong(b?.label, 120)
+    const key = potong(b?.key, 40)
+    if (!label || !key) continue
+    const lk = label.toLowerCase()
+    if (seenBukti.has(lk) || petaKey.has(key)) continue
+    seenBukti.add(lk)
+    const item = {
+      label,
+      wajib: b?.wajib !== false,
+      kategoriIds: [],
+    }
+    const petunjuk = potong(b?.petunjuk, 300)
+    if (petunjuk) item.petunjuk = petunjuk
+    const tahap = tahapValid(b?.tahap)
+    if (tahap) item.tahap = tahap
+    petaKey.set(key, item)
+    bukti.push(item)
+    if (bukti.length >= 6) break
+  }
+
   const out = []
   const seen = new Set()
   for (const k of raw) {
     const nama = potong(k?.nama, 80)
     if (!nama) continue
-    const key = nama.toLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-    out.push({
+    const keyNama = nama.toLowerCase()
+    if (seen.has(keyNama)) continue
+    seen.add(keyNama)
+    const sumber = k?.sumber === 'observasi' ? 'observasi' : 'bukti'
+    const kat = {
       id: idSementara(),
       nama,
       deskripsi: potong(k?.deskripsi, 300) || undefined,
-    })
+      sumber,
+    }
+    const tahap = tahapValid(k?.tahap)
+    if (tahap) kat.tahap = tahap
+    if (sumber === 'bukti') {
+      const tertaut = petaKey.get(potong(k?.buktiKey, 40))
+      if (tertaut) tertaut.kategoriIds.push(kat.id)
+    }
+    out.push(kat)
     if (out.length >= 6) break
   }
   if (out.length < 4) {
@@ -174,7 +230,8 @@ export function normalisasiKategoriTugas(data) {
       `AI hanya menghasilkan ${out.length} kategori valid (minimal 4). Coba lagi atau perjelas isi tugas.`,
     )
   }
-  return out
+  // Bukti tanpa kategori tertaut tidak berguna bagi penilaian: buang.
+  return { kategori: out, bukti: bukti.filter((b) => b.kategoriIds.length > 0) }
 }
 
 export async function generateKategoriTugasDenganAi(apiKey, input) {
@@ -185,8 +242,8 @@ export async function generateKategoriTugasDenganAi(apiKey, input) {
     throw err
   }
   const data = await panggilGeminiJson(apiKey, prompt.sistem, prompt.user)
-  const kategori = normalisasiKategoriTugas(data)
-  return { kategori }
+  const { kategori, bukti } = normalisasiKategoriTugas(data)
+  return { kategori, bukti }
 }
 
 /**

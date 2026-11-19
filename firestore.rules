@@ -1701,7 +1701,7 @@ match /g7kaih/{id} {
     // ---- lms_pengumpulan / lms_pengumpulan_foto ------------------------------
     // Pengumpulan tugas siswa berupa FOTO terkompres (ANTIREGRESI §132).
     //  - lms_pengumpulan/{tugasId_siswaId}            : meta (catatan, fotoIds, waktu).
-    //  - lms_pengumpulan_foto/{tugasId_siswaId_slot}  : satu foto (data URL ≤ 300.000 karakter, slot '1'..'3').
+    //  - lms_pengumpulan_foto/{tugasId_siswaId_slot}  : satu foto (data URL ≤ 300.000 karakter, slot '1'..'6').
     // Siswa LMS: buat/ubah HANYA miliknya sendiri, hanya untuk tugas AKTIF rombelnya (kelas utama atau
     // kelasList), dan terkunci setelah ada lms_nilai_tugas/{tugasId_siswaId}. Tenggat TIDAK ditegakkan di
     // rules (terlambat hanya ditandai di UI guru). Siswa tidak boleh menghapus meta.
@@ -1755,7 +1755,7 @@ match /g7kaih/{id} {
                     && request.resource.data.siswaNama.size() <= 120
                     && request.resource.data.fotoIds is list
                     && request.resource.data.fotoIds.size() >= 1
-                    && request.resource.data.fotoIds.size() <= 3
+                    && request.resource.data.fotoIds.size() <= 6
                     && request.resource.data.jumlahFoto is int
                     && request.resource.data.jumlahFoto == request.resource.data.fotoIds.size()
                     && request.resource.data.createdAt == request.time
@@ -1772,7 +1772,7 @@ match /g7kaih/{id} {
                          .hasOnly(['catatan', 'fotoIds', 'jumlahFoto', 'updatedAt'])
                     && request.resource.data.fotoIds is list
                     && request.resource.data.fotoIds.size() >= 1
-                    && request.resource.data.fotoIds.size() <= 3
+                    && request.resource.data.fotoIds.size() <= 6
                     && request.resource.data.jumlahFoto is int
                     && request.resource.data.jumlahFoto == request.resource.data.fotoIds.size()
                     && request.resource.data.updatedAt == request.time
@@ -1802,7 +1802,7 @@ match /g7kaih/{id} {
                          request.resource.data.kelas,
                          request.resource.data.mapel)
                     && request.resource.data.siswaId == request.auth.token.siswaId
-                    && request.resource.data.slot in ['1', '2', '3']
+                    && request.resource.data.slot in ['1', '2', '3', '4', '5', '6']
                     && id == request.resource.data.tugasId + '_' + request.resource.data.siswaId
                              + '_' + request.resource.data.slot
                     && !lmsSudahDinilai(request.resource.data.tugasId, request.resource.data.siswaId)

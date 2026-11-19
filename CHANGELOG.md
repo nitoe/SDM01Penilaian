@@ -468,3 +468,8 @@
 ## 2026-11-10 — TKA Tahap 1 (revisi arah): rules ruang TKA + migrasi bank soal
 - `firestore.rules` (lengkap): blok `tka_*` pada entri sebelumnya DIGANTI helper `tkaEmailKhusus`, `tkaGuruKelas6`, `ruangTka`, `lmsTulisMapelKelas`, `lmsLihatMapelKelas`. Hanya koleksi `lms_*` yang memakainya; `tulisMapelKelas`/`lihatMapelKelas` (Penilaian) tidak diubah.
 - `scripts/migrasi-tka-soal.mjs` (menggantikan `migrasi-tka.mjs`): hanya `questionPool` → `lms_paket_soal` + `lms_gambar`. Uji: `scripts/cek-migrasi-tka-soal.mjs`. Langkah: `docs/TKA.md` (repo LMS).
+
+## §LMS Tugas: bukti foto per tahap (2026-11-19)
+
+- `firestore.rules`: foto pengumpulan tugas LMS naik dari 3 ke 6 slot — `lms_pengumpulan.fotoIds` ≤ 6 (create & update) dan `lms_pengumpulan_foto.slot` ∈ `'1'..'6'`. Salinan identik ada di repo LMS. **Deploy rules SEBELUM hosting LMS.**
+- `functions/generateTugasLmsAi.js`: `generateKategoriTugasLmsAi` kini merumuskan kategori rubrik bertahap (persiapan/pelaksanaan/hasil) dengan `sumber` (`bukti`/`observasi`) dan saran daftar bukti foto (maks. 6, tertaut ke kategori). Keluaran: `{kategori, bukti}`; `kategori` tetap minimal 4. Perlu deploy functions (`generateKategoriTugasLmsAi`).

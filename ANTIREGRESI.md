@@ -392,3 +392,8 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 
 - Antrean simpan serial (`tertunda` + `sedangSimpan`) dengan debounce 1,2 detik. Jangan menambah `setDoc`/`updateDoc` paralel untuk dokumen yang sama (last-write-wins menimpa soal).
 - Batas 100 soal dan ±900 KB per dokumen (`BATAS_UKURAN_PAKET`); paket lebih besar harus dipecah. Syarat «Tandai siap» ada di `masalahSoal()`; tambah aturan baru di sana.
+
+## §LMS.Tugas.Bukti — 6 slot foto & keluaran AI rubrik (2026-11-19)
+
+- Batas foto pengumpulan LMS = 6 di rules (`fotoIds.size() <= 6`, slot `'1'..'6'`) HARUS selaras dengan `BATAS_BUKTI_TUGAS`/`BATAS_SLOT_FOTO` di repo LMS. Mengubah salah satu tanpa yang lain membuat unggahan ditolak diam-diam. Salinan `firestore.rules` LMS dan SDM01Penilaian harus identik.
+- `normalisasiKategoriTugas` mengembalikan objek `{kategori, bukti}` (bukan array lagi). Jangan memakainya sebagai array; bukti tanpa kategori tertaut dibuang; `kategori` minimal 4 tetap berlaku.
