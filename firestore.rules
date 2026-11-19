@@ -1294,7 +1294,12 @@ match /g7kaih/{id} {
       // Baca: penugasan/wali/admin, ATAU (Lomba) admin / guru pengampu lomba pemilik paket.
       // Cabang Lomba wajib: kelas bank «LB» tidak masuk penugasanKelasMapel guru mana pun.
       // Query klien Lomba: where lombaId + mapel (daftarPaketLomba) — ANTIREGRESI §Lomba.10.
-      allow read: if lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas)
+      // Cabang Lomba DIDAHULUKAN + kelas LB: query klien where lombaId (+ kelas=='LB').
+      // Tanpa ini, evaluasi list bersama lmsLihatMapelKelas(LB) sering menolak pengampu. §Lomba.31.
+      allow read: if (resource.data.kelas == 'LB'
+                      && 'lombaId' in resource.data
+                      && lombaKontenBoleh(resource.data.lombaId))
+                  || lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas)
                   || ('lombaId' in resource.data
                       && lombaKontenBoleh(resource.data.lombaId));
 
@@ -1374,7 +1379,12 @@ match /g7kaih/{id} {
       //      filter mapel TKA di klien). JANGAN gabungkan mapelTka() ke cabang B: query tanpa
       //      where mapel akan ditolak permission (evaluasi rules konservatif).
       // Pembuat kuis (mis. admin TKA / wali 5A) TIDAK mempengaruhi cabang siswa.
+      // Cabang Lomba + kelas LB di depan (setelah isAdmin): pengampu harus bisa list SEMUA
+      // kuis se-lomba, termasuk yang dibuat admin — bukan hanya dibuatOleh sendiri. §Lomba.31.
       allow read: if isAdmin()
+                  || (resource.data.kelas == 'LB'
+                      && 'lombaId' in resource.data
+                      && lombaKontenBoleh(resource.data.lombaId))
                   || lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas)
                   || (isLoggedIn() && resource.data.dibuatOleh == request.auth.uid)
                   || (isGuru()
@@ -1473,14 +1483,21 @@ match /g7kaih/{id} {
       allow read: if resource.data.kuisId is string
                   && resource.data.kuisId.size() > 0
                   && exists(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId))
-                  && lmsLihatMapelKelas(kuisInduk().mapel, kuisInduk().kelas);
+                  && (
+                       lmsLihatMapelKelas(kuisInduk().mapel, kuisInduk().kelas)
+                       || ('lombaId' in kuisInduk()
+                           && lombaKontenBoleh(kuisInduk().lombaId))
+                       || (isLoggedIn() && kuisInduk().dibuatOleh == request.auth.uid)
+                     );
 
       allow create: if request.resource.data.keys().hasAll(
                          ['kuisId', 'urutan', 'jenis', 'pertanyaan', 'skor'])
                     && request.resource.data.kuisId is string
                     && request.resource.data.kuisId.size() > 0
                     && exists(/databases/$(database)/documents/lms_kuis/$(request.resource.data.kuisId))
-                    && lmsTulisMapelKelas(kuisIndukBaru().mapel, kuisIndukBaru().kelas)
+                    && (lmsTulisMapelKelas(kuisIndukBaru().mapel, kuisIndukBaru().kelas)
+                        || ('lombaId' in kuisIndukBaru()
+                            && lombaKontenBoleh(kuisIndukBaru().lombaId)))
                     && request.resource.data.urutan is int
                     && request.resource.data.jenis in [
                          'pg', 'pg_kompleks', 'menjodohkan', 'benar_salah', 'isian', 'uraian']
@@ -1492,7 +1509,9 @@ match /g7kaih/{id} {
 
       allow update: if resource.data.kuisId is string
                     && exists(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId))
-                    && lmsTulisMapelKelas(kuisInduk().mapel, kuisInduk().kelas)
+                    && (lmsTulisMapelKelas(kuisInduk().mapel, kuisInduk().kelas)
+                        || ('lombaId' in kuisInduk()
+                            && lombaKontenBoleh(kuisInduk().lombaId)))
                     && request.resource.data.kuisId == resource.data.kuisId
                     && request.resource.data.jenis in [
                          'pg', 'pg_kompleks', 'menjodohkan', 'benar_salah', 'isian', 'uraian']
@@ -1504,7 +1523,10 @@ match /g7kaih/{id} {
 
       allow delete: if resource.data.kuisId is string
                     && exists(/databases/$(database)/documents/lms_kuis/$(resource.data.kuisId))
-                    && (lmsTulisMapelKelas(kuisInduk().mapel, kuisInduk().kelas) || isAdmin());
+                    && (lmsTulisMapelKelas(kuisInduk().mapel, kuisInduk().kelas)
+                        || isAdmin()
+                        || ('lombaId' in kuisInduk()
+                            && lombaKontenBoleh(kuisInduk().lombaId)));
     }
 
 
@@ -2036,6 +2058,9 @@ match /g7kaih/{id} {
     function lombaKelasBank(kelas) {
       return kelas is string && kelas == 'LB';
     }
+    // Pengampu lomba: field legacy guruPengampuUid ATAU array guruPengampuUids.
+    // Pakai .get(..., default) agar field absen tidak menggagalkan evaluasi list.
+    // Dipakai baca/tulis konten LB (materi/paket/kuis/jawaban). ANTIREGRESI §Lomba.31.
     function lombaKontenBoleh(lombaId) {
       return lombaId is string
         && lombaId.size() > 0
@@ -2044,12 +2069,10 @@ match /g7kaih/{id} {
         && akunAktif()
         && (
           lombaAdmin()
-          || get(/databases/$(database)/documents/lms_lomba/$(lombaId)).data.guruPengampuUid == request.auth.uid
-          || (
-            get(/databases/$(database)/documents/lms_lomba/$(lombaId)).data.keys().hasAll(['guruPengampuUids'])
-            && get(/databases/$(database)/documents/lms_lomba/$(lombaId)).data.guruPengampuUids is list
-            && request.auth.uid in get(/databases/$(database)/documents/lms_lomba/$(lombaId)).data.guruPengampuUids
-          )
+          || get(/databases/$(database)/documents/lms_lomba/$(lombaId)).data.get('guruPengampuUid', '')
+               == request.auth.uid
+          || request.auth.uid in get(/databases/$(database)/documents/lms_lomba/$(lombaId)).data
+               .get('guruPengampuUids', [])
         );
     }
 

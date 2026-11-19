@@ -1,5 +1,7 @@
 /**
  * Guru menyimpan jawaban kuis offline → nilai otomatis (kunci server) → lms_jawaban.
+ * Berlaku untuk kuis mapel biasa, TKA, dan Lomba (pengampu).
+ *
  * Deploy: firebase deploy --only functions:simpanJawabanOfflineKuis
  */
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
@@ -58,13 +60,15 @@ function nilaiSatuSoal(soal, jawabanSiswa) {
       return { benar: false, skor: 0, butuhManual: false }
     }
     const j = jawabanSiswa
-    const benarN = pasangan.filter((p) => j[p.id] === p.id).length
-    if (pasangan.length === 0) return { benar: false, skor: 0, butuhManual: false }
-    if (soal.nilaiParsial) {
-      const skor = (benarN / pasangan.length) * poin
-      return { benar: benarN === pasangan.length, skor: Math.round(skor * 100) / 100, butuhManual: false }
+    let ok = true
+    for (const p of pasangan) {
+      if (!p || p.id == null) continue
+      if (String(j[p.id] ?? '') !== String(p.pasanganId ?? p.kunci ?? '')) {
+        ok = false
+        break
+      }
     }
-    const ok = benarN === pasangan.length
+    if (pasangan.length === 0) ok = false
     return { benar: ok, skor: ok ? poin : 0, butuhManual: false }
   }
   if (tipe === 'bs') {
@@ -73,7 +77,7 @@ function nilaiSatuSoal(soal, jawabanSiswa) {
       return { benar: false, skor: 0, butuhManual: false }
     }
     const j = jawabanSiswa
-    const benarN = pernyataan.filter((p) => j[p.id] === p.benar).length
+    const benarN = pernyataan.filter((p) => p && j[p.id] === p.benar).length
     if (pernyataan.length === 0) return { benar: false, skor: 0, butuhManual: false }
     if (soal.nilaiParsial) {
       const skor = (benarN / pernyataan.length) * poin
@@ -84,7 +88,6 @@ function nilaiSatuSoal(soal, jawabanSiswa) {
   }
   if (tipe === 'uraian') {
     const ada = typeof jawabanSiswa === 'string' && jawabanSiswa.trim().length > 0
-    // skor opsional dari guru/AI
     if (typeof jawabanSiswa === 'object' && jawabanSiswa && 'teks' in jawabanSiswa) {
       const teks = String(jawabanSiswa.teks || '')
       const skorManual = Number(jawabanSiswa.skor)
@@ -103,10 +106,12 @@ function bolehMapelKelas(profil, mapel, kelas) {
   if (!profil || profil.aktif === false) return false
   if (profil.role === 'admin') return true
   if (!['guru', 'guru_akademik', 'guru_tahsin_tahfizh'].includes(profil.role)) return false
+  const k = String(kelas || '').toUpperCase()
+  const m = String(mapel || '').trim()
   const pk = Array.isArray(profil.penugasanKelasMapel) ? profil.penugasanKelasMapel : []
-  if (pk.includes(`${kelas}::${mapel}`)) return true
+  if (pk.includes(`${k}::${m}`)) return true
   const wali = Array.isArray(profil.waliKelas) ? profil.waliKelas : []
-  return wali.includes(kelas)
+  return wali.includes(k)
 }
 
 export const simpanJawabanOfflineKuis = onCall(
@@ -124,6 +129,7 @@ export const simpanJawabanOfflineKuis = onCall(
 
     const db = getFirestore()
     const uid = request.auth.uid
+    const email = request.auth.token?.email || ''
     const profilSnap = await db.doc(`users/${uid}`).get()
     if (!profilSnap.exists) throw new HttpsError('permission-denied', 'Profil tidak ditemukan.')
     const profil = profilSnap.data()
@@ -131,14 +137,55 @@ export const simpanJawabanOfflineKuis = onCall(
     const kuisSnap = await db.doc(`lms_kuis/${kuisId}`).get()
     if (!kuisSnap.exists) throw new HttpsError('not-found', 'Kuis tidak ditemukan.')
     const kuis = kuisSnap.data()
-    const kelas = String(kuis.kelas || '')
-    const mapel = String(kuis.mapel || '')
-    if (!bolehMapelKelas(profil, mapel, kelas)) {
-      throw new HttpsError('permission-denied', 'Bukan pengampu kelas×mapel ini.')
+    const kelas = String(kuis.kelas || '').toUpperCase()
+    const mapel = String(kuis.mapel || '').trim()
+    const lombaId = typeof kuis.lombaId === 'string' ? kuis.lombaId.trim() : ''
+    const isLomba = !!lombaId && kelas === 'LB'
+
+    // Izin: mapel biasa / TKA via penugasan·wali; Lomba via pengampu
+    if (isLomba) {
+      const lombaSnap = await db.doc(`lms_lomba/${lombaId}`).get()
+      if (!lombaSnap.exists) throw new HttpsError('not-found', 'Lomba tidak ditemukan.')
+      const lomba = lombaSnap.data()
+      const uids = Array.isArray(lomba.guruPengampuUids)
+        ? lomba.guruPengampuUids.map(String)
+        : []
+      const pengampu =
+        lomba.guruPengampuUid === uid || uids.includes(uid)
+      const adminOk =
+        profil.role === 'admin' ||
+        String(email || '').toLowerCase() === 'arif.nitoe@gmail.com'
+      if (!pengampu && !adminOk) {
+        throw new HttpsError(
+          'permission-denied',
+          'Hanya pengampu lomba atau admin yang boleh input offline.',
+        )
+      }
+    } else {
+      // Cek kelas utama + kelasList (berbagi paralel)
+      const kandidat = new Set()
+      if (kelas) kandidat.add(kelas)
+      if (Array.isArray(kuis.kelasList)) {
+        for (const k of kuis.kelasList) {
+          const kk = String(k || '').toUpperCase()
+          if (kk) kandidat.add(kk)
+        }
+      }
+      let ok = profil.role === 'admin'
+      if (!ok) {
+        for (const k of kandidat) {
+          if (bolehMapelKelas(profil, mapel, k)) {
+            ok = true
+            break
+          }
+        }
+      }
+      if (!ok) {
+        throw new HttpsError('permission-denied', 'Bukan pengampu kelas×mapel ini.')
+      }
     }
 
     const mode = kuis.modePelaksanaan === 'offline' ? 'offline' : 'online'
-    // Izinkan input offline juga jika guru memaksa (mis. cadangan), tapi sarankan mode offline
     const soalList = Array.isArray(kuis.soal) ? kuis.soal : []
     const override =
       skorOverride && typeof skorOverride === 'object' ? skorOverride : {}
@@ -150,21 +197,23 @@ export const simpanJawabanOfflineKuis = onCall(
     const jawabanBersih = {}
 
     for (const soal of soalList) {
-      let jawab = jawaban[soal.id]
+      if (!soal || typeof soal !== 'object' || !soal.id) continue
+      const sid = String(soal.id)
+      let jawab = jawaban[sid]
       // skorOverride untuk isian/uraian (AI atau guru)
       if (
         (soal.tipe === 'uraian' || soal.tipe === 'isian') &&
-        override[soal.id] != null &&
-        typeof override[soal.id] === 'number'
+        override[sid] != null &&
+        typeof override[sid] === 'number'
       ) {
         const maks = Number(soal.poin) || 1
-        const skor = Math.min(maks, Math.max(0, Math.round(Number(override[soal.id]) * 2) / 2))
+        const skor = Math.min(maks, Math.max(0, Math.round(Number(override[sid]) * 2) / 2))
         const teks = typeof jawab === 'string' ? jawab : ''
-        jawabanBersih[soal.id] = teks
+        jawabanBersih[sid] = teks
         totalSkor += skor
         totalPoin += maks
         detail.push({
-          soalId: soal.id,
+          soalId: sid,
           tipe: soal.tipe,
           benar: skor >= maks,
           skor,
@@ -174,16 +223,19 @@ export const simpanJawabanOfflineKuis = onCall(
         continue
       }
 
-      if (soal.tipe === 'uraian' && typeof jawab === 'string') {
-        // plain text
+      jawabanBersih[sid] = jawab
+      let hasil
+      try {
+        hasil = nilaiSatuSoal(soal, jawab)
+      } catch (e) {
+        logger.warn('nilaiSatuSoal gagal', { soalId: sid, tipe: soal.tipe, err: String(e) })
+        hasil = { benar: false, skor: 0, butuhManual: true }
       }
-      jawabanBersih[soal.id] = jawab
-      const hasil = nilaiSatuSoal(soal, jawab)
       totalSkor += hasil.skor
       totalPoin += Number(soal.poin) || 1
       if (hasil.butuhManual) butuhManual = true
       detail.push({
-        soalId: soal.id,
+        soalId: sid,
         tipe: soal.tipe,
         benar: hasil.benar,
         skor: hasil.skor,
@@ -205,7 +257,7 @@ export const simpanJawabanOfflineKuis = onCall(
       siswaUid: null,
       siswaId,
       siswaNama: typeof siswaNama === 'string' ? siswaNama : '',
-      kelas,
+      kelas: kelas || String(kuis.kelas || ''),
       mapel,
       judulKuis: kuis.judul || '',
       jenisPenilaian: kuis.jenisPenilaian || 'latihan',
@@ -220,9 +272,16 @@ export const simpanJawabanOfflineKuis = onCall(
       diinputOlehNama: typeof profil.nama === 'string' ? profil.nama : '',
       createdAt: FieldValue.serverTimestamp(),
     }
+    if (lombaId) payload.lombaId = lombaId
 
     const ref = await db.collection('lms_jawaban').add(payload)
-    logger.info('simpanJawabanOfflineKuis', { kuisId, siswaId, skor: skorAkhir, mode })
+    logger.info('simpanJawabanOfflineKuis', {
+      kuisId,
+      siswaId,
+      skor: skorAkhir,
+      mode,
+      isLomba,
+    })
 
     return {
       ok: true,
