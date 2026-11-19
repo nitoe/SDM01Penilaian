@@ -18,6 +18,26 @@ function sebagaiAngka(s) {
   return Number(t)
 }
 
+/** Firestore menolak undefined. Ubah undefined → null; bersihkan objek nested. */
+function untukFirestore(v) {
+  if (v === undefined) return null
+  if (v === null) return null
+  if (Array.isArray(v)) return v.map(untukFirestore)
+  if (typeof v === 'object') {
+    const out = {}
+    for (const [k, val] of Object.entries(v)) {
+      // kunci dengan nilai undefined dihilangkan; nilai nested dibersihkan
+      if (val === undefined) {
+        out[k] = null
+        continue
+      }
+      out[k] = untukFirestore(val)
+    }
+    return out
+  }
+  return v
+}
+
 function nilaiSatuSoal(soal, jawabanSiswa) {
   const poin = Number(soal.poin) || 1
   const tipe = soal.tipe
@@ -227,7 +247,8 @@ export const simpanJawabanOfflineKuis = onCall(
         continue
       }
 
-      jawabanBersih[sid] = jawab
+      // Jangan tulis undefined — Firestore menolak (error 500).
+      jawabanBersih[sid] = jawab === undefined ? null : untukFirestore(jawab)
       let hasil
       try {
         hasil = nilaiSatuSoal(soal, jawab)
@@ -265,7 +286,7 @@ export const simpanJawabanOfflineKuis = onCall(
       mapel,
       judulKuis: kuis.judul || '',
       jenisPenilaian: kuis.jenisPenilaian || 'latihan',
-      jawaban: jawabanBersih,
+      jawaban: untukFirestore(jawabanBersih),
       skorOtomatis: skorAkhir,
       totalPoin,
       detail,
