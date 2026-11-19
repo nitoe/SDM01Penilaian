@@ -60,15 +60,18 @@ function nilaiSatuSoal(soal, jawabanSiswa) {
       return { benar: false, skor: 0, butuhManual: false }
     }
     const j = jawabanSiswa
-    let ok = true
-    for (const p of pasangan) {
-      if (!p || p.id == null) continue
-      if (String(j[p.id] ?? '') !== String(p.pasanganId ?? p.kunci ?? '')) {
-        ok = false
-        break
+    // Selaras nilaiKuisLms.js: kunci pasangan = id item kanan yang cocok (p.id)
+    const benarN = pasangan.filter((p) => p && j[p.id] === p.id).length
+    if (pasangan.length === 0) return { benar: false, skor: 0, butuhManual: false }
+    if (soal.nilaiParsial) {
+      const skor = (benarN / pasangan.length) * poin
+      return {
+        benar: benarN === pasangan.length,
+        skor: Math.round(skor * 100) / 100,
+        butuhManual: false,
       }
     }
-    if (pasangan.length === 0) ok = false
+    const ok = benarN === pasangan.length
     return { benar: ok, skor: ok ? poin : 0, butuhManual: false }
   }
   if (tipe === 'bs') {
@@ -117,6 +120,7 @@ function bolehMapelKelas(profil, mapel, kelas) {
 export const simpanJawabanOfflineKuis = onCall(
   { region: 'asia-southeast2', maxInstances: 10 },
   async (request) => {
+    try {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Harus login sebagai guru.')
     if (request.auth.token?.lmsSiswa === true) {
       throw new HttpsError('permission-denied', 'Akun siswa tidak boleh input offline.')
@@ -291,6 +295,16 @@ export const simpanJawabanOfflineKuis = onCall(
       percobaan,
       status: payload.status,
       detail,
+    }
+    } catch (err) {
+      if (err instanceof HttpsError) throw err
+      logger.error('simpanJawabanOfflineKuis uncaught', {
+        message: err && err.message,
+        stack: err && err.stack,
+        name: err && err.name,
+      })
+      const msg = err && err.message ? String(err.message) : 'Kesalahan server saat menyimpan jawaban offline.'
+      throw new HttpsError('internal', msg.slice(0, 500))
     }
   },
 )
