@@ -25,6 +25,26 @@ function bolehMapelKelas(profil, mapel, kelas) {
   return wali.includes(kelas)
 }
 
+const EMAIL_ADMIN_LMS = 'arif.nitoe@gmail.com'
+
+/**
+ * Kuis Lomba (kelas bank «LB» + lombaId): hak menilai ditentukan keanggotaan pengampu lomba
+ * (guruPengampuUid legacy ATAU guruPengampuUids), BUKAN penugasan kelas×mapel dan BUKAN pembuat kuis.
+ * Selaras rules `lombaKontenBoleh` dan CF resetJawabanKuisLms / simpanJawabanOfflineKuis.
+ * jawaban.kelas pada Lomba = rombel nyata siswa, jawaban.mapel bisa «Gabungan» → cek bolehMapelKelas
+ * hampir selalu gagal untuk pengampu non-admin.
+ */
+async function bolehPengampuLomba(db, profil, uid, email, lombaId) {
+  if (!profil || profil.aktif === false) return false
+  if (profil.role === 'admin') return true
+  if (String(email || '').toLowerCase() === EMAIL_ADMIN_LMS) return true
+  const lombaSnap = await db.doc(`lms_lomba/${lombaId}`).get()
+  if (!lombaSnap.exists) return false
+  const lomba = lombaSnap.data()
+  const uids = Array.isArray(lomba.guruPengampuUids) ? lomba.guruPengampuUids.map(String) : []
+  return lomba.guruPengampuUid === uid || uids.includes(uid)
+}
+
 export const nilaiManualKuisLms = onCall(
   { region: 'asia-southeast2', maxInstances: 10 },
   async (request) => {
@@ -62,15 +82,29 @@ export const nilaiManualKuisLms = onCall(
     const jaw = jawSnap.data()
     const kelas = String(jaw.kelas || '')
     const mapel = String(jaw.mapel || '')
-    if (!bolehMapelKelas(profil, mapel, kelas)) {
+    // Kuis dimuat dulu agar tahu apakah ini kuis Lomba (otorisasi berbeda).
+    const kuisSnap = await db.doc(`lms_kuis/${jaw.kuisId}`).get()
+    const kuisData = kuisSnap.exists ? kuisSnap.data() : null
+    const lombaId =
+      kuisData && typeof kuisData.lombaId === 'string' ? kuisData.lombaId.trim() : ''
+    const isLomba = !!lombaId && String(kuisData.kelas || '').toUpperCase() === 'LB'
+
+    if (isLomba) {
+      const email = request.auth.token?.email || ''
+      if (!(await bolehPengampuLomba(db, profil, uid, email, lombaId))) {
+        throw new HttpsError(
+          'permission-denied',
+          'Hanya pengampu lomba atau admin yang boleh menilai.',
+        )
+      }
+    } else if (!bolehMapelKelas(profil, mapel, kelas)) {
       throw new HttpsError('permission-denied', 'Anda bukan pengampu kelas×mapel ini.')
     }
 
-    const kuisSnap = await db.doc(`lms_kuis/${jaw.kuisId}`).get()
-    if (!kuisSnap.exists) {
+    if (!kuisData) {
       throw new HttpsError('not-found', 'Kuis tidak ditemukan.')
     }
-    const kuis = kuisSnap.data()
+    const kuis = kuisData
     const soalList = Array.isArray(kuis.soal) ? kuis.soal : []
     const soal = soalList.find((s) => s && s.id === soalId)
     if (!soal) {
