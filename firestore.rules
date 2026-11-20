@@ -1731,6 +1731,15 @@ match /g7kaih/{id} {
       return exists(/databases/$(database)/documents/lms_nilai_tugas/$(tugasId + '_' + siswaId));
     }
 
+    // Video bukti tugas (≤ 2 per pengumpulan): meta hanya menyimpan peta slot → info berkas di Storage
+    // (lms/pengumpulan/{tugasId}/{siswaId}_{slot}.{webm|mp4}); berkasnya sendiri dijaga storage.rules.
+    function lmsVideosSah(d) {
+      return !('videos' in d) || (d.videos is map && d.videos.size() <= 2);
+    }
+    function lmsAdaVideo(d) {
+      return 'videos' in d && d.videos is map && d.videos.size() >= 1;
+    }
+
     match /lms_pengumpulan/{id} {
       allow read: if isAdmin()
                   || (resource.data.keys().hasAll(['mapel', 'kelas'])
@@ -1741,7 +1750,7 @@ match /g7kaih/{id} {
 
       allow create: if request.resource.data.keys().hasOnly(
                          ['tugasId', 'siswaId', 'siswaNama', 'kelas', 'mapel', 'catatan',
-                          'fotoIds', 'jumlahFoto', 'createdAt', 'updatedAt'])
+                          'fotoIds', 'jumlahFoto', 'videos', 'createdAt', 'updatedAt'])
                     && request.resource.data.keys().hasAll(
                          ['tugasId', 'siswaId', 'siswaNama', 'kelas', 'mapel',
                           'fotoIds', 'jumlahFoto', 'createdAt', 'updatedAt'])
@@ -1754,7 +1763,9 @@ match /g7kaih/{id} {
                     && request.resource.data.siswaNama is string
                     && request.resource.data.siswaNama.size() <= 120
                     && request.resource.data.fotoIds is list
-                    && request.resource.data.fotoIds.size() >= 1
+                    && (request.resource.data.fotoIds.size() >= 1
+                        || lmsAdaVideo(request.resource.data))
+                    && lmsVideosSah(request.resource.data)
                     && request.resource.data.fotoIds.size() <= 6
                     && request.resource.data.jumlahFoto is int
                     && request.resource.data.jumlahFoto == request.resource.data.fotoIds.size()
@@ -1769,9 +1780,11 @@ match /g7kaih/{id} {
                     && lmsSiswaBolehKumpul(resource.data.tugasId, resource.data.kelas, resource.data.mapel)
                     && !lmsSudahDinilai(resource.data.tugasId, resource.data.siswaId)
                     && request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['catatan', 'fotoIds', 'jumlahFoto', 'updatedAt'])
+                         .hasOnly(['catatan', 'fotoIds', 'jumlahFoto', 'videos', 'updatedAt'])
                     && request.resource.data.fotoIds is list
-                    && request.resource.data.fotoIds.size() >= 1
+                    && (request.resource.data.fotoIds.size() >= 1
+                        || lmsAdaVideo(request.resource.data))
+                    && lmsVideosSah(request.resource.data)
                     && request.resource.data.fotoIds.size() <= 6
                     && request.resource.data.jumlahFoto is int
                     && request.resource.data.jumlahFoto == request.resource.data.fotoIds.size()

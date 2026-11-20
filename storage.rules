@@ -7,6 +7,7 @@ rules_version = '2';
 //   tanda-tangan/stempel.png
 //   tanda-tangan/guru/{uid}.png   ← nama file = uid + ".png"
 //   perpus_digital/{uid}/{file}    ← PDF bacaan digital (unggah staf, baca publik)
+//   lms/pengumpulan/{tugasId}/{siswaId}_{slot}.{webm|mp4} ← video bukti tugas LMS (unggah siswa, baca guru + pemilik)
 
 service firebase.storage {
   match /b/{bucket}/o {
@@ -118,6 +119,60 @@ service firebase.storage {
         && fileName.size() > 0
         && fileName.size() <= 200;
       allow delete: if isLoggedIn();
+    }
+
+    // Video bukti tugas LMS (siswa unggah sendiri; ≤ 1 menit, dikecilkan di HP, maks 15 MB).
+    // Path: lms/pengumpulan/{tugasId}/{siswaId}_{slot}.{webm|mp4}, slot 1..6.
+    // Tulis/hapus: hanya siswa pemilik (claim siswaId), tugas aktif, kelas cocok, BELUM dinilai.
+    // Baca: pemilik + guru/admin (BUKAN akun orang tua/staf lain). Durasi tidak bisa dicek di rules
+    // (dijaga klien); ukuran dan tipe dijaga di sini. Hapus otomatis lewat lifecycle bucket.
+    function lmsSiswaStorage() {
+      return request.auth != null
+        && 'lmsSiswa' in request.auth.token
+        && request.auth.token.lmsSiswa == true
+        && 'siswaId' in request.auth.token;
+    }
+
+    function videoTugasSah() {
+      return request.resource.size < 15 * 1024 * 1024
+        && request.resource.contentType.matches('video/(webm|mp4)');
+    }
+
+    function namaVideoMilikSiswa(fileName) {
+      return fileName.matches(request.auth.token.siswaId + '_[1-6]\\.(webm|mp4)');
+    }
+
+    function siswaBolehKelolaVideo(tugasId) {
+      let t = firestore.get(/databases/(default)/documents/lms_tugas/$(tugasId)).data;
+      return t.aktif == true
+        && (t.kelas == request.auth.token.kelas
+            || ('kelasList' in t && request.auth.token.kelas in t.kelasList))
+        && !firestore.exists(/databases/(default)/documents/lms_nilai_tugas/$(tugasId + '_' + request.auth.token.siswaId));
+    }
+
+    function guruStorage() {
+      return isLoggedIn()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role
+             in ['admin', 'guru', 'guru_tahsin_tahfizh', 'guru_akademik']
+        && (
+          !('aktif' in firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data)
+          || firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.aktif == true
+        );
+    }
+
+    match /lms/pengumpulan/{tugasId}/{fileName} {
+      allow read: if (lmsSiswaStorage() && namaVideoMilikSiswa(fileName))
+                  || guruStorage();
+      allow create, update: if lmsSiswaStorage()
+                            && namaVideoMilikSiswa(fileName)
+                            && videoTugasSah()
+                            && tugasId.size() > 0
+                            && tugasId.size() <= 100
+                            && siswaBolehKelolaVideo(tugasId);
+      allow delete: if (lmsSiswaStorage()
+                        && namaVideoMilikSiswa(fileName)
+                        && siswaBolehKelolaVideo(tugasId))
+                    || guruStorage();
     }
 
     match /{allPaths=**} {
