@@ -137,6 +137,7 @@ Aturan kategori:
 - Jangan kategori generik kosong seperti hanya "Kerapian" tanpa kaitan isi, kecuali memang inti tugas.
 - Cocok untuk siswa SD kelas ${kelas || '1–6'}. Bahasa Indonesia.
 - Setiap kategori punya "sumber": "bukti" bila dapat dilihat dari foto/hasil tulisan siswa; "observasi" bila hanya tampak saat guru mengamati atau bertanya langsung (mis. sikap, kerja sama, penjelasan lisan).
+- Setiap kategori WAJIB punya "bobot" (bilangan bulat positif). Total bobot SEMUA kategori harus tepat 100. Bobot mencerminkan kompleksitas dan pentingnya aspek terhadap tujuan tugas — aspek inti (mis. ketepatan prosedur, kualitas hasil utama, kedalaman gagasan) mendapat bobot lebih tinggi; aspek pendukung (kelengkapan alat, kerapian minor, sikap) lebih rendah. Jangan memberi bobot sama rata kecuali semua aspek benar-benar setara.
 
 Aturan bukti:
 - Maksimal 6 bukti; satu bukti = satu foto. Gabungkan kategori yang buktinya sama ke satu bukti (mis. laporan akhir untuk struktur laporan, bahasa, dan refleksi) — jangan membuat bukti duplikat.
@@ -155,7 +156,7 @@ ISI TUGAS (sumber utama analisis):
 ${isi}
 
 Format JSON:
-{"kategori":[{"nama":"...","deskripsi":"...","tahap":"persiapan|pelaksanaan|hasil","sumber":"bukti|observasi","buktiKey":"b1"}],
+{"kategori":[{"nama":"...","deskripsi":"...","tahap":"persiapan|pelaksanaan|hasil","sumber":"bukti|observasi","buktiKey":"b1","bobot":25}],
  "bukti":[{"key":"b1","label":"...","petunjuk":"...","tahap":"persiapan|pelaksanaan|hasil","wajib":true}]}`
 
   return { ok: true, sistem, user }
@@ -169,9 +170,10 @@ function tahapValid(t) {
 }
 
 /**
- * Hasil: { kategori: [{id,nama,deskripsi,tahap?,sumber}], bukti: [{label,petunjuk?,tahap?,wajib,kategoriIds}] }.
+ * Hasil: { kategori: [{id,nama,deskripsi,tahap?,sumber,bobot}], bukti: [{label,petunjuk?,tahap?,wajib,kategoriIds}] }.
  * `kategori` minimal 4 (aturan lama). `bukti` boleh kosong; maksimal 6 (batas slot foto rules LMS).
  * Kategori «bukti» tanpa buktiKey valid tetap dikembalikan (klien memperingatkan guru).
+ * Bobot dinormalisasi agar total tepat 100 (bilangan bulat ≥ 1).
  */
 export function normalisasiKategoriTugas(data) {
   const raw = Array.isArray(data?.kategori) ? data.kategori : []
@@ -210,11 +212,15 @@ export function normalisasiKategoriTugas(data) {
     if (seen.has(keyNama)) continue
     seen.add(keyNama)
     const sumber = k?.sumber === 'observasi' ? 'observasi' : 'bukti'
+    let bobot = Number(k?.bobot)
+    if (!Number.isFinite(bobot) || bobot <= 0) bobot = 0
+    else bobot = Math.min(100, Math.round(bobot))
     const kat = {
       id: idSementara(),
       nama,
       deskripsi: potong(k?.deskripsi, 300) || undefined,
       sumber,
+      bobot,
     }
     const tahap = tahapValid(k?.tahap)
     if (tahap) kat.tahap = tahap
@@ -230,6 +236,39 @@ export function normalisasiKategoriTugas(data) {
       `AI hanya menghasilkan ${out.length} kategori valid (minimal 4). Coba lagi atau perjelas isi tugas.`,
     )
   }
+
+  // Pastikan total bobot = 100 (bilangan bulat ≥ 1 per kategori).
+  // Jika AI tidak memberi bobot valid, bagi rata; jika ada, skala proporsional lalu perbaiki sisa pembulatan.
+  const totalMentah = out.reduce((s, k) => s + (k.bobot > 0 ? k.bobot : 0), 0)
+  if (totalMentah <= 0) {
+    const n = out.length
+    const dasar = Math.floor(100 / n)
+    let sisa = 100 - dasar * n
+    for (let i = 0; i < n; i++) {
+      out[i].bobot = dasar + (sisa > 0 ? 1 : 0)
+      if (sisa > 0) sisa--
+    }
+  } else {
+    const skala = out.map((k) => ({
+      kat: k,
+      prop: (k.bobot > 0 ? k.bobot : 0) / totalMentah,
+    }))
+    let sisa = 100
+    const hasil = skala.map((x, i) => {
+      if (i === skala.length - 1) return Math.max(1, sisa)
+      const b = Math.max(1, Math.round(x.prop * 100))
+      sisa -= b
+      return b
+    })
+    // Perbaiki jika pembulatan membuat sisa negatif atau total != 100
+    let total = hasil.reduce((a, b) => a + b, 0)
+    if (total !== 100) {
+      const beda = 100 - total
+      hasil[hasil.length - 1] = Math.max(1, hasil[hasil.length - 1] + beda)
+    }
+    for (let i = 0; i < out.length; i++) out[i].bobot = hasil[i]
+  }
+
   // Bukti tanpa kategori tertaut tidak berguna bagi penilaian: buang.
   return { kategori: out, bukti: bukti.filter((b) => b.kategoriIds.length > 0) }
 }
