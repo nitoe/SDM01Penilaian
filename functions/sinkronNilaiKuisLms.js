@@ -1,7 +1,8 @@
 /**
  * Sinkron skor kuis LMS (online/offline) → nilai Penilaian.
  * - latihan: ditolak
- * - slm → nilai_tp.slm  (AGREGAT rata-rata semua tugas+kuis SLM terkait TP yang sama)
+ * - slm → nilai_tp.slm  (AGREGAT rata-rata semua tugas+kuis SLM terkait TP yang sama; rincian di
+ *         slmKomponen — lihat agregasiSlmLms.js v2)
  * - sts → nilai_sts.nilai
  * - sas → nilai_sas.nilai
  *
@@ -10,7 +11,14 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { logger } from 'firebase-functions'
-import { kumpulkanSkorSlm, nilaiAgregat } from './agregasiSlmLms.js'
+import {
+  jawabanTerbaruPerSiswa,
+  kumpulkanSkorSlm,
+  normNama,
+  resolveTpIds,
+  tingkatanDariKelas,
+  tulisNilaiTpSlm,
+} from './agregasiSlmLms.js'
 
 function bolehMapelKelas(profil, mapel, kelas) {
   if (!profil || profil.aktif === false) return false
@@ -25,71 +33,6 @@ function bolehMapelKelas(profil, mapel, kelas) {
 function skor100(skor, total) {
   if (!total || total <= 0) return 0
   return Math.round((Number(skor) / Number(total)) * 1000) / 10
-}
-
-function tingkatanDariKelas(kelas) {
-  const m = String(kelas || '').match(/^(\d+)/)
-  return m ? m[1] : String(kelas || '')
-}
-
-function perSiswaTerbaru(docs) {
-  const map = new Map()
-  for (const j of docs) {
-    const key = j.siswaId || j.siswaUid || j._id
-    if (!key) continue
-    const prev = map.get(key)
-    const t = j.createdAt?.toMillis?.() || (j.createdAt?._seconds || 0) * 1000 || 0
-    const tp = prev?.createdAt?.toMillis?.() || (prev?.createdAt?._seconds || 0) * 1000 || 0
-    if (!prev || t > tp || (j.percobaan || 0) > (prev.percobaan || 0)) map.set(key, j)
-  }
-  return [...map.values()]
-}
-
-async function resolveTpIds(db, mapel, kelas, labels) {
-  const out = []
-  const seen = new Set()
-  const tingkatan = tingkatanDariKelas(kelas)
-  // labels bisa id dokumen atau nama TP
-  for (const label of labels) {
-    const s = String(label || '').trim()
-    if (!s || seen.has(s)) continue
-    // coba sebagai id
-    const byId = await db.doc(`tp_kktp/${s}`).get()
-    if (byId.exists) {
-      seen.add(s)
-      out.push({ id: s, nama: String(byId.data().namaTp || byId.data().nama || s) })
-      continue
-    }
-  }
-  // query by kelas + mapel, match nama
-  const q = await db
-    .collection('tp_kktp')
-    .where('kelas', '==', kelas)
-    .where('mapel', '==', mapel)
-    .get()
-  // juga coba tingkatan-only if empty
-  let docs = q.docs
-  if (docs.length === 0) {
-    const q2 = await db.collection('tp_kktp').where('mapel', '==', mapel).get()
-    docs = q2.docs.filter((d) => {
-      const k = String(d.data().kelas || '')
-      return k === kelas || k === tingkatan || k.startsWith(tingkatan)
-    })
-  }
-  for (const label of labels) {
-    const s = String(label || '').trim()
-    if (!s || seen.has(s)) continue
-    const found = docs.find((d) => {
-      const nama = String(d.data().namaTp || d.data().nama || '').trim()
-      return nama === s || nama.toLowerCase() === s.toLowerCase()
-    })
-    if (found) {
-      seen.add(s)
-      seen.add(found.id)
-      out.push({ id: found.id, nama: String(found.data().namaTp || found.data().nama || s) })
-    }
-  }
-  return out
 }
 
 export const sinkronNilaiKuisLms = onCall(
@@ -163,7 +106,7 @@ export const sinkronNilaiKuisLms = onCall(
 
     const jawSnap = await db.collection('lms_jawaban').where('kuisId', '==', kuisId).get()
     const semua = jawSnap.docs.map((d) => ({ _id: d.id, ...d.data() }))
-    const terbaru = perSiswaTerbaru(semua).filter((j) => j.siswaId)
+    const terbaru = jawabanTerbaruPerSiswa(semua).filter((j) => j.siswaId)
 
     if (terbaru.length === 0) {
       throw new HttpsError('failed-precondition', 'Belum ada jawaban siswa untuk disinkronkan.')
@@ -175,116 +118,95 @@ export const sinkronNilaiKuisLms = onCall(
     let ditulis = 0
     let dilewati = 0
     const koleksi = jenis === 'slm' ? 'nilai_tp' : jenis === 'sts' ? 'nilai_sts' : 'nilai_sas'
-
-    // SLM: agregasi lintas tugas+kuis terkait TP (bukan skor kuis ini saja)
-    let skorAgregat = null
-    let agregatMeta = null
-    if (jenis === 'slm') {
-      const { skor, meta } = await kumpulkanSkorSlm(db, {
-        kelas,
-        mapel,
-        tpTargets: tpList,
-      })
-      skorAgregat = skor
-      agregatMeta = meta
-      logger.info('sinkronNilaiKuisLms agregasi SLM', meta)
+    const namaBySiswa = new Map()
+    for (const j of terbaru) {
+      if (j.siswaId && j.siswaNama) namaBySiswa.set(String(j.siswaId), String(j.siswaNama))
     }
 
-    for (const tp of tpList) {
-      // existing docs for this tp
-      const existingSnap = await db
-        .collection(koleksi)
-        .where('tpId', '==', tp.id)
-        .where('mapel', '==', mapel)
-        .where('kelas', '==', kelas)
-        .where('semester', '==', semester)
-        .where('tahunAjaran', '==', tahunAjaran)
-        .get()
-      const existingBySiswa = new Map()
-      existingSnap.docs.forEach((d) => {
-        const sid = d.data().siswaId
-        if (sid) existingBySiswa.set(sid, d.id)
+    let agregatMeta = null
+    if (jenis === 'slm') {
+      // SLM: rata-rata semua tugas+kuis SLM kelas ini yang terkait TP (bukan skor kuis ini saja)
+      const hasil = await kumpulkanSkorSlm(db, { kelas, tpTargets: tpList })
+      agregatMeta = hasil.meta
+      logger.info('sinkronNilaiKuisLms agregasi SLM', hasil.meta)
+      const r = await tulisNilaiTpSlm(db, {
+        tpList,
+        mapelUtama: mapel,
+        hasil,
+        kelas,
+        semester,
+        tahunAjaran,
+        uid,
+        overwrite,
+        sumber: { sumberKuisId: kuisId },
+        namaBySiswa,
       })
-
-      let batch = db.batch()
-      let ops = 0
-
-      for (const j of terbaru) {
-        const siswaId = String(j.siswaId)
-                const foundId = existingBySiswa.get(siswaId)
-        if (foundId && !overwrite) {
-          dilewati++
-          continue
-        }
-
-        let nilai
-        if (jenis === 'slm' && skorAgregat) {
-          nilai = nilaiAgregat(skorAgregat, siswaId, tp.id)
-          if (nilai == null) {
-            // fallback skor kuis ini
-            nilai = skor100(j.skorOtomatis, j.totalPoin)
-            if (nilaiPerTpKuis) {
-              const byNama = nilaiPerTpKuis[tp.nama]
-              if (typeof byNama === 'number' && Number.isFinite(byNama)) nilai = byNama
-            }
-            nilai = Math.round(Math.max(0, Math.min(100, Number(nilai) || 0)) * 100) / 100
+      ditulis = r.ditulis
+      dilewati = r.dilewati
+    } else {
+      const npMap = new Map()
+      if (nilaiPerTpKuis) for (const [key, v] of Object.entries(nilaiPerTpKuis)) npMap.set(normNama(key), v)
+      for (const tp of tpList) {
+        const existingSnap = await db
+          .collection(koleksi)
+          .where('tpId', '==', tp.id)
+          .where('mapel', '==', mapel)
+          .where('kelas', '==', kelas)
+          .where('semester', '==', semester)
+          .where('tahunAjaran', '==', tahunAjaran)
+          .get()
+        const existingBySiswa = new Map()
+        existingSnap.docs.forEach((d) => {
+          const sid = d.data().siswaId
+          if (sid) existingBySiswa.set(String(sid), d.id)
+        })
+        let batch = db.batch()
+        let ops = 0
+        for (const j of terbaru) {
+          const siswaId = String(j.siswaId)
+          const kj = String(j.kelas || '').toUpperCase()
+          if (kj && kj !== kelas) {
+            dilewati++ // rombel lain (kuis dibagikan)
+            continue
           }
-        } else {
-          nilai = skor100(j.skorOtomatis, j.totalPoin)
-          if (nilaiPerTpKuis) {
-            const byNama = nilaiPerTpKuis[tp.nama]
-            if (typeof byNama === 'number' && Number.isFinite(byNama)) nilai = byNama
+          const foundId = existingBySiswa.get(siswaId)
+          if (foundId && !overwrite) {
+            dilewati++
+            continue
           }
+          let nilai = skor100(j.skorOtomatis, j.totalPoin)
+          const manual = npMap.get(normNama(tp.nama)) ?? npMap.get(normNama(tp.id))
+          if (typeof manual === 'number' && Number.isFinite(manual)) nilai = manual
           nilai = Math.round(Math.max(0, Math.min(100, Number(nilai) || 0)) * 100) / 100
-        }
-
-        const base = {
-          tpId: tp.id,
-          siswaId,
-          mapel,
-          kelas,
-          tingkatan,
-          semester,
-          tahunAjaran,
-          updatedAt: FieldValue.serverTimestamp(),
-          updatedBy: request.auth.uid,
-          sumberKuisId: kuisId,
-        }
-        if (j.siswaNama) base.siswaNama = String(j.siswaNama)
-
-        if (jenis === 'slm') {
-          base.slm = nilai
-          if (agregatMeta) {
-            base.slmAgregat = {
-              metode: 'rata',
-              nTugas: agregatMeta.nTugas,
-              nKuis: agregatMeta.nKuis,
-              nKomponen: skorAgregat?.get?.(String(siswaId))?.get?.(tp.id)?.length || 1,
-            }
+          const base = {
+            tpId: tp.id,
+            siswaId,
+            mapel,
+            kelas,
+            tingkatan,
+            semester,
+            tahunAjaran,
+            nilai,
+            updatedAt: FieldValue.serverTimestamp(),
+            updatedBy: uid,
+            sumberKuisId: kuisId,
           }
-        } else {
-          base.nilai = nilai
+          if (j.siswaNama) base.siswaNama = String(j.siswaNama)
+          if (foundId) {
+            batch.update(db.doc(`${koleksi}/${foundId}`), base)
+          } else {
+            batch.set(db.collection(koleksi).doc(), { ...base, createdAt: FieldValue.serverTimestamp(), createdBy: uid })
+          }
+          ditulis++
+          ops++
+          if (ops >= 400) {
+            await batch.commit()
+            batch = db.batch()
+            ops = 0
+          }
         }
-
-
-        if (foundId) {
-          batch.update(db.doc(`${koleksi}/${foundId}`), base)
-        } else {
-          batch.set(db.collection(koleksi).doc(), {
-            ...base,
-            createdAt: FieldValue.serverTimestamp(),
-            createdBy: uid,
-          })
-        }
-        ditulis++
-        ops++
-        if (ops >= 400) {
-          await batch.commit()
-          batch = db.batch()
-          ops = 0
-        }
+        if (ops > 0) await batch.commit()
       }
-      if (ops > 0) await batch.commit()
     }
 
     // tandai kuis

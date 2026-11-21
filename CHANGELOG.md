@@ -473,3 +473,13 @@
 
 - `firestore.rules`: foto pengumpulan tugas LMS naik dari 3 ke 6 slot — `lms_pengumpulan.fotoIds` ≤ 6 (create & update) dan `lms_pengumpulan_foto.slot` ∈ `'1'..'6'`. Salinan identik ada di repo LMS. **Deploy rules SEBELUM hosting LMS.**
 - `functions/generateTugasLmsAi.js`: `generateKategoriTugasLmsAi` kini merumuskan kategori rubrik bertahap (persiapan/pelaksanaan/hasil) dengan `sumber` (`bukti`/`observasi`) dan saran daftar bukti foto (maks. 6, tertaut ke kategori). Keluaran: `{kategori, bukti}`; `kategori` tetap minimal 4. Perlu deploy functions (`generateKategoriTugasLmsAi`).
+
+## 2026-11-21 — SLM LMS → Penilaian: agregasi benar (tugas + kuis), rincian komponen, peringkat Leger adil
+
+- **Temuan audit:** `agregasiSlmLms.js` (v1) (a) tidak pernah menghitung KUIS karena membaca `tpList/tpId/tpNama`, sedangkan kuis menyimpan TP di `tpIds`/`tpNamaList` → SLM dari kuis praktis «input terakhir»; (b) membuang tugas yang diarsipkan (`arsip`) → nilai hilang setelah guru menandai selesai/arsip; (c) memfilter mapel = mapel tugas yang disinkron → proyek lintas mapel (mis. IPAS + Bahasa Indonesia) menimpa/melewatkan nilai mapel lain; (d) rekaman siswa rombel lain (tugas dibagikan) ikut ditulis ke kelas tugas; (e) hanya menyimpan jumlah komponen, tanpa judul/nilai.
+- `functions/agregasiSlmLms.js` (v2): TP dokumen di-resolve per dokumen dalam mapelnya sendiri (cache `tp_kktp`), kuis dibaca lewat `tpIds/tpNamaList`, tugas diarsipkan tetap dihitung, rekaman rombel lain diabaikan, `nilaiPerTp` kuis dicocokkan dengan nama TP ternormalisasi (awalan «TP n.» dibuang). Satu penulis bersama `tulisNilaiTpSlm` untuk kedua CF; menyimpan `slmKomponen` (jenis, id, judul, nilai) + `slmAgregat` per siswa.
+- `functions/sinkronNilaiTugasLms.js`, `functions/sinkronNilaiKuisLms.js`: SLM memakai agregator/penulis bersama; STS/SAS tetap last-write-wins per TP tetapi melewati rekaman rombel lain. `resolveTpIds` & `tingkatanDariKelas` kini diimpor dari agregator (tidak ada salinan ganda).
+- `src/pages/akademik/NilaiSlm.tsx`, `src/types/akademik.ts`: sel SLM hasil sinkron menampilkan «dari n nilai»; ketuk membuka rincian tugas/kuis penyusun nilai (dan penanda bila sel sudah diubah manual).
+- `src/pages/akademik/Leger.tsx`: peringkat dari total HANYA untuk siswa yang mapelnya lengkap; siswa dengan mapel belum terisi diberi «–» (n/N), bukan peringkat rendah. Seri tetap berbagi peringkat.
+- `scripts/cek-agregasi-slm.mjs` (baru): uji agregasi dengan Firestore tiruan.
+- Deploy: `firebase deploy --only functions:sinkronNilaiTugasLms,functions:sinkronNilaiKuisLms` lalu hosting. `firestore.rules` TIDAK berubah. Setelah deploy, guru menekan sinkron ulang (overwrite) agar nilai lama dihitung ulang.

@@ -88,6 +88,9 @@ export interface NilaiTpDoc {
   semester: Semester
   tahunAjaran: string
   slm: number
+  /** Rincian asal nilai bila SLM disinkron dari LMS (rata-rata tugas + kuis). */
+  slmKomponen?: { jenis: 'tugas' | 'kuis'; id: string; judul: string; nilai: number }[]
+  slmAgregat?: { metode?: string; nTugas?: number; nKuis?: number; nKomponen?: number }
 }
 
 export type JenisAsesmen = 'sts' | 'sas'

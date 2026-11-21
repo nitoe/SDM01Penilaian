@@ -397,3 +397,20 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 
 - Batas foto pengumpulan LMS = 6 di rules (`fotoIds.size() <= 6`, slot `'1'..'6'`) HARUS selaras dengan `BATAS_BUKTI_TUGAS`/`BATAS_SLOT_FOTO` di repo LMS. Mengubah salah satu tanpa yang lain membuat unggahan ditolak diam-diam. Salinan `firestore.rules` LMS dan SDM01Penilaian harus identik.
 - `normalisasiKategoriTugas` mengembalikan objek `{kategori, bukti}` (bukan array lagi). Jangan memakainya sebagai array; bukti tanpa kategori tertaut dibuang; `kategori` minimal 4 tetap berlaku.
+
+## §SLM.Agregasi — nilai_tp.slm = rata-rata SEMUA tugas + kuis SLM (2026-11-21)
+
+1. `nilai_tp.slm` hasil sinkron LMS adalah rata-rata semua komponen SLM kelas itu yang terkait TP — bukan nilai sinkron terakhir. Hanya `functions/agregasiSlmLms.js` (`kumpulkanSkorSlm` + `tulisNilaiTpSlm`) yang boleh menghitung/menulisnya; jangan menyalin logika ke CF lain.
+2. Kuis menyimpan TP di `tpIds`/`tpNamaList` (bisa id ATAU nama, kadang berawalan «TP 3.»). Jangan mencocokkan TP kuis hanya lewat `tpList/tpId`. Gunakan `buatPenyelesaiTp` (id dulu, lalu nama ternormalisasi `normNama`).
+3. `arsip`/`selesai` pada tugas hanya mengatur tampilan dashboard; tugas diarsipkan TETAP dihitung. Jangan menambah filter `arsip` di agregator.
+4. Jangan memfilter agregasi dengan `mapel == mapel tugas yang disinkron`: proyek lintas mapel punya TP mapel lain. Pencocokan lewat id TP yang di-resolve dalam mapel dokumen masing-masing.
+5. `tp_kktp` per rombel: hanya dokumen dengan `kelas` sama yang dihitung, dan rekaman siswa (`lms_nilai_tugas.kelas`, `lms_jawaban.kelas`) rombel lain diabaikan. Berbagi tugas ke rombel paralel (`kelasList`) BELUM memindahkan nilai ke TP rombel lain.
+6. Kuis: satu jawaban terbaru per siswa (percobaan terbesar, lalu waktu). `skorOtomatis` sudah memuat skor koreksi manual.
+7. `slmKomponen` hanya ringkasan penyusun nilai saat sinkron; bila guru mengubah sel manual, rincian bisa berbeda (UI menandai). Sinkron ulang dengan overwrite menimpa nilai manual.
+8. Batasan diketahui: agregasi tidak menyaring semester/tahun ajaran (`lms_tugas` tak punya field semester); STS/SAS masih last-write-wins per TP.
+9. **Tes:** `node scripts/cek-agregasi-slm.mjs` (butuh `npm --prefix functions install`) wajib lulus sebelum deploy functions.
+
+## §Peringkat.Leger — peringkat hanya untuk mapel lengkap (2026-11-21)
+
+1. Peringkat Leger dihitung dari TOTAL; total dari jumlah mapel berbeda tidak sebanding. Hanya siswa dengan jumlah mapel terisi sama dengan terbanyak di kelas yang diperingkat; lainnya «–» dengan keterangan n/N. Jangan kembali meranking semua siswa dari total mentah.
+2. Leger SAS memakai nilai SAS murni (`hitungStsMapel` pada `nilai_sas`), BUKAN nilai akhir rapor SAS (`hitungSasMapel` gabungan SLM/STS/SAS). Angkanya boleh berbeda; jangan dibandingkan langsung.

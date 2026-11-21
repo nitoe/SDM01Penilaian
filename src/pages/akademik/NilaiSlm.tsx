@@ -365,6 +365,7 @@ function Detail({
   node: React.ReactNode
   onSegarkan: () => Promise<void>
 }) {
+  const [rincian, setRincian] = useState<{ tpId: string; siswaId: string } | null>(null)
   const [busy, setBusy] = useState(false)
   const [draf, setDraf] = useState<Record<string, Record<string, string>>>({})
   const [tampilKolom, setTampilKolom] = useState<string[] | null>(null)
@@ -1056,6 +1057,16 @@ function Detail({
                                           {lv.label}
                                         </span>
                                       )}
+                                      {(nilai[t.id]?.[s.id]?.slmKomponen?.length ?? 0) > 0 && (
+                                        <button
+                                          type="button"
+                                          className="rounded px-1 text-[9px] font-medium text-muh-700 underline decoration-dotted"
+                                          aria-label={`Rincian nilai SLM ${s.nama} materi ${t.nomorTp}`}
+                                          onClick={() => setRincian({ tpId: t.id, siswaId: s.id })}
+                                        >
+                                          dari {nilai[t.id]?.[s.id]?.slmKomponen?.length} nilai
+                                        </button>
+                                      )}
                                     </div>
                                   </td>
                                 )
@@ -1071,6 +1082,66 @@ function Detail({
                         })}
                       </tbody>
                     </table>
+                    {rincian && (() => {
+                      const doc = nilai[rincian.tpId]?.[rincian.siswaId]
+                      const komp = doc?.slmKomponen ?? []
+                      const sis = siswa.find((x) => x.id === rincian.siswaId)
+                      const tp = kolom.find((x) => x.id === rincian.tpId)
+                      const dirata = komp.length
+                        ? Math.round((komp.reduce((a, k) => a + k.nilai, 0) / komp.length) * 100) / 100
+                        : null
+                      const teksSaatIni = draf[rincian.tpId]?.[rincian.siswaId] ?? ''
+                      const manual =
+                        dirata !== null && teksSaatIni.trim() !== '' && parseNilai(teksSaatIni) !== dirata
+                      return (
+                        <div
+                          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-3 sm:items-center"
+                          role="dialog"
+                          aria-modal="true"
+                          onClick={() => setRincian(null)}
+                        >
+                          <div
+                            className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <p className="text-sm font-semibold text-slate-900">
+                              {sis?.nama} — TP {tp?.nomorTp}
+                            </p>
+                            <p className="mt-0.5 text-xs text-muted">
+                              Nilai SLM = rata-rata semua tugas dan kuis SLM dari LMS untuk TP ini.
+                            </p>
+                            <ul className="mt-3 divide-y divide-border text-sm">
+                              {komp.map((k) => (
+                                <li key={`${k.jenis}-${k.id}`} className="flex items-center justify-between gap-3 py-1.5">
+                                  <span className="min-w-0 truncate">
+                                    <span className="mr-1.5 rounded bg-slate-100 px-1 text-[10px] font-semibold uppercase text-slate-600">
+                                      {k.jenis}
+                                    </span>
+                                    {k.judul}
+                                  </span>
+                                  <span className="font-semibold tabular-nums">{String(k.nilai).replace('.', ',')}</span>
+                                </li>
+                              ))}
+                            </ul>
+                            <p className="mt-2 text-sm font-semibold">
+                              Rata-rata: {dirata !== null ? String(dirata).replace('.', ',') : '–'}
+                            </p>
+                            {manual && (
+                              <p className="mt-1 text-xs text-amber-700">
+                                Nilai di sel sudah diubah manual dan berbeda dari rata-rata ini.
+                              </p>
+                            )}
+                            <button
+                              type="button"
+                              className="mt-3 w-full rounded-lg border border-border px-3 py-2 text-sm font-medium"
+                              onClick={() => setRincian(null)}
+                            >
+                              Tutup
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })()}
                   </div>
                   <p className="border-t border-border px-3 py-2 text-[11.5px] text-muted sm:px-4">
                     {siswa.length} siswa · {kolom.length} materi · Total = jumlah SLM · *Rata = rata-rata tertimbang SLM
