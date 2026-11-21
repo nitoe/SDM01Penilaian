@@ -1,7 +1,7 @@
 /**
  * Sinkron skor kuis LMS (online/offline) → nilai Penilaian.
  * - latihan: ditolak
- * - slm → nilai_tp.slm
+ * - slm → nilai_tp.slm  (AGREGAT rata-rata semua tugas+kuis SLM terkait TP yang sama)
  * - sts → nilai_sts.nilai
  * - sas → nilai_sas.nilai
  *
@@ -10,6 +10,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { logger } from 'firebase-functions'
+import { kumpulkanSkorSlm, nilaiAgregat } from './agregasiSlmLms.js'
 
 function bolehMapelKelas(profil, mapel, kelas) {
   if (!profil || profil.aktif === false) return false
@@ -175,6 +176,20 @@ export const sinkronNilaiKuisLms = onCall(
     let dilewati = 0
     const koleksi = jenis === 'slm' ? 'nilai_tp' : jenis === 'sts' ? 'nilai_sts' : 'nilai_sas'
 
+    // SLM: agregasi lintas tugas+kuis terkait TP (bukan skor kuis ini saja)
+    let skorAgregat = null
+    let agregatMeta = null
+    if (jenis === 'slm') {
+      const { skor, meta } = await kumpulkanSkorSlm(db, {
+        kelas,
+        mapel,
+        tpTargets: tpList,
+      })
+      skorAgregat = skor
+      agregatMeta = meta
+      logger.info('sinkronNilaiKuisLms agregasi SLM', meta)
+    }
+
     for (const tp of tpList) {
       // existing docs for this tp
       const existingSnap = await db
@@ -196,17 +211,31 @@ export const sinkronNilaiKuisLms = onCall(
 
       for (const j of terbaru) {
         const siswaId = String(j.siswaId)
-        let nilai = skor100(j.skorOtomatis, j.totalPoin)
-        if (nilaiPerTpKuis) {
-          const byNama = nilaiPerTpKuis[tp.nama]
-          if (typeof byNama === 'number' && Number.isFinite(byNama)) nilai = byNama
-        }
-        nilai = Math.round(Math.max(0, Math.min(100, nilai)) * 100) / 100
-
-        const foundId = existingBySiswa.get(siswaId)
+                const foundId = existingBySiswa.get(siswaId)
         if (foundId && !overwrite) {
           dilewati++
           continue
+        }
+
+        let nilai
+        if (jenis === 'slm' && skorAgregat) {
+          nilai = nilaiAgregat(skorAgregat, siswaId, tp.id)
+          if (nilai == null) {
+            // fallback skor kuis ini
+            nilai = skor100(j.skorOtomatis, j.totalPoin)
+            if (nilaiPerTpKuis) {
+              const byNama = nilaiPerTpKuis[tp.nama]
+              if (typeof byNama === 'number' && Number.isFinite(byNama)) nilai = byNama
+            }
+            nilai = Math.round(Math.max(0, Math.min(100, Number(nilai) || 0)) * 100) / 100
+          }
+        } else {
+          nilai = skor100(j.skorOtomatis, j.totalPoin)
+          if (nilaiPerTpKuis) {
+            const byNama = nilaiPerTpKuis[tp.nama]
+            if (typeof byNama === 'number' && Number.isFinite(byNama)) nilai = byNama
+          }
+          nilai = Math.round(Math.max(0, Math.min(100, Number(nilai) || 0)) * 100) / 100
         }
 
         const base = {
@@ -218,15 +247,25 @@ export const sinkronNilaiKuisLms = onCall(
           semester,
           tahunAjaran,
           updatedAt: FieldValue.serverTimestamp(),
-          updatedBy: uid,
+          updatedBy: request.auth.uid,
           sumberKuisId: kuisId,
         }
+        if (j.siswaNama) base.siswaNama = String(j.siswaNama)
 
         if (jenis === 'slm') {
           base.slm = nilai
+          if (agregatMeta) {
+            base.slmAgregat = {
+              metode: 'rata',
+              nTugas: agregatMeta.nTugas,
+              nKuis: agregatMeta.nKuis,
+              nKomponen: skorAgregat?.get?.(String(siswaId))?.get?.(tp.id)?.length || 1,
+            }
+          }
         } else {
           base.nilai = nilai
         }
+
 
         if (foundId) {
           batch.update(db.doc(`${koleksi}/${foundId}`), base)
@@ -258,6 +297,9 @@ export const sinkronNilaiKuisLms = onCall(
         nTp: tpList.length,
         ditulis,
         dilewati,
+        ...(agregatMeta
+          ? { agregat: { metode: 'rata', nTugas: agregatMeta.nTugas, nKuis: agregatMeta.nKuis } }
+          : {}),
         semester,
         tahunAjaran,
       },
