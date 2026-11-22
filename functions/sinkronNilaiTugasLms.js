@@ -146,93 +146,118 @@ export const sinkronNilaiTugasLms = onCall(
       if (n.siswaId && n.siswaNama) namaBySiswa.set(String(n.siswaId), String(n.siswaNama))
     }
 
+    // Rombel tujuan: induk + rombel paralel yang diberi tugas ini dan boleh ditulis pengguna.
+    const { tujuan, tanpaTp, tidakBerhak } = await petakanRombelTujuan(db, {
+      kelas,
+      kelasList: tugas.kelasList,
+      tpList,
+      mapelUtama,
+      boleh: (m, k) => bolehMapelKelas(profil, m, k),
+    })
+    const rombel = []
     let agregatMeta = null
-    if (jenis === 'slm') {
-      // SLM: rata-rata semua tugas+kuis SLM kelas ini yang terkait TP (satu implementasi bersama)
-      const hasil = await kumpulkanSkorSlm(db, { kelas, tpTargets: tpList })
-      agregatMeta = hasil.meta
-      logger.info('sinkronNilaiTugasLms agregasi SLM', hasil.meta)
-      const r = await tulisNilaiTpSlm(db, {
-        tpList,
-        mapelUtama,
-        hasil,
-        kelas,
-        semester,
-        tahunAjaran,
-        uid,
-        overwrite,
-        sumber: { sumberTugasId: tugasId },
-        namaBySiswa,
-      })
-      ditulis = r.ditulis
-      dilewati = r.dilewati
-    } else {
-      for (const tp of tpList) {
-        const mapel = tp.mapel || mapelUtama
-        const existingSnap = await db
-          .collection(koleksi)
-          .where('tpId', '==', tp.id)
-          .where('mapel', '==', mapel)
-          .where('kelas', '==', kelas)
-          .where('semester', '==', semester)
-          .where('tahunAjaran', '==', tahunAjaran)
-          .get()
-        const existingBySiswa = new Map()
-        existingSnap.docs.forEach((d) => {
-          const sid = d.data().siswaId
-          if (sid) existingBySiswa.set(String(sid), d.id)
-        })
 
-        let batch = db.batch()
-        let ops = 0
-        for (const n of nilaiDocs) {
-          const siswaId = String(n.siswaId || '')
-          // Rekaman siswa rombel lain (tugas dibagikan) tidak ditulis ke kelas tugas ini.
-          const kn = String(n.kelas || '').toUpperCase()
-          if (!siswaId || (kn && kn !== kelas) || typeof n.nilai !== 'number') {
-            dilewati++
-            continue
+    for (const tj of tujuan) {
+      const kelasT = tj.kelas
+      const tpListT = tj.tpList
+      const tinggiT = tingkatanDariKelas(kelasT)
+      const ditulisAwal = ditulis
+
+      if (jenis === 'slm') {
+        // SLM: rata-rata semua tugas+kuis SLM rombel ini yang terkait TP (satu implementasi bersama)
+        const hasil = await kumpulkanSkorSlm(db, {
+          kelas: kelasT,
+          tpTargets: tpListT,
+          semester,
+          tahunAjaran,
+        })
+        if (kelasT === kelas) agregatMeta = hasil.meta
+        logger.info('sinkronNilaiTugasLms agregasi SLM', { kelas: kelasT, ...hasil.meta })
+        const r = await tulisNilaiTpSlm(db, {
+          tpList: tpListT,
+          mapelUtama,
+          hasil,
+          kelas: kelasT,
+          semester,
+          tahunAjaran,
+          uid,
+          overwrite,
+          sumber: { sumberTugasId: tugasId },
+          namaBySiswa,
+        })
+        ditulis += r.ditulis
+        dilewati += r.dilewati
+      } else {
+        for (const tp of tpListT) {
+          const mapel = tp.mapel || mapelUtama
+          const existingSnap = await db
+            .collection(koleksi)
+            .where('tpId', '==', tp.id)
+            .where('mapel', '==', mapel)
+            .where('kelas', '==', kelasT)
+            .where('semester', '==', semester)
+            .where('tahunAjaran', '==', tahunAjaran)
+            .get()
+          const existingBySiswa = new Map()
+          existingSnap.docs.forEach((d) => {
+            const sid = d.data().siswaId
+            if (sid) existingBySiswa.set(String(sid), d.id)
+          })
+
+          let batch = db.batch()
+          let ops = 0
+          for (const n of nilaiDocs) {
+            const siswaId = String(n.siswaId || '')
+            // Hanya rekaman siswa rombel tujuan (rekaman tanpa kelas = rombel induk tugas).
+            const kn = String(n.kelas || kelas).toUpperCase()
+            if (!siswaId || kn !== kelasT || typeof n.nilai !== 'number') {
+              if (kelasT === kelas) dilewati++
+              continue
+            }
+            const foundId = existingBySiswa.get(siswaId)
+            if (foundId && !overwrite) {
+              dilewati++
+              continue
+            }
+            const nilai = Math.round(Math.max(0, Math.min(100, Number(n.nilai))) * 100) / 100
+            const base = {
+              tpId: tp.id,
+              siswaId,
+              mapel,
+              kelas: kelasT,
+              tingkatan: tinggiT,
+              semester,
+              tahunAjaran,
+              nilai,
+              updatedAt: FieldValue.serverTimestamp(),
+              updatedBy: uid,
+              sumberTugasId: tugasId,
+            }
+            if (n.siswaNama) base.siswaNama = String(n.siswaNama)
+            if (foundId) {
+              batch.update(db.doc(`${koleksi}/${foundId}`), base)
+            } else {
+              batch.set(db.collection(koleksi).doc(), {
+                ...base,
+                createdAt: FieldValue.serverTimestamp(),
+                createdBy: uid,
+              })
+            }
+            ditulis++
+            ops++
+            if (ops >= 400) {
+              await batch.commit()
+              batch = db.batch()
+              ops = 0
+            }
           }
-          const foundId = existingBySiswa.get(siswaId)
-          if (foundId && !overwrite) {
-            dilewati++
-            continue
-          }
-          const nilai = Math.round(Math.max(0, Math.min(100, Number(n.nilai))) * 100) / 100
-          const base = {
-            tpId: tp.id,
-            siswaId,
-            mapel,
-            kelas,
-            tingkatan,
-            semester,
-            tahunAjaran,
-            nilai,
-            updatedAt: FieldValue.serverTimestamp(),
-            updatedBy: uid,
-            sumberTugasId: tugasId,
-          }
-          if (n.siswaNama) base.siswaNama = String(n.siswaNama)
-          if (foundId) {
-            batch.update(db.doc(`${koleksi}/${foundId}`), base)
-          } else {
-            batch.set(db.collection(koleksi).doc(), {
-              ...base,
-              createdAt: FieldValue.serverTimestamp(),
-              createdBy: uid,
-            })
-          }
-          ditulis++
-          ops++
-          if (ops >= 400) {
-            await batch.commit()
-            batch = db.batch()
-            ops = 0
-          }
+          if (ops > 0) await batch.commit()
         }
-        if (ops > 0) await batch.commit()
       }
+      rombel.push({ kelas: kelasT, nTp: tpListT.length, ditulis: ditulis - ditulisAwal })
     }
+
+    if (jenis === 'slm') await capPeriodeSlm(tugasSnap.ref, tugas, semester, tahunAjaran)
 
     const ringkas = {
       jenis,
@@ -243,6 +268,9 @@ export const sinkronNilaiTugasLms = onCall(
       semester,
       tahunAjaran,
       koleksi,
+      rombel,
+      rombelTanpaTp: tanpaTp,
+      rombelTidakBerhak: tidakBerhak,
     }
     if (agregatMeta) {
       ringkas.agregat = {

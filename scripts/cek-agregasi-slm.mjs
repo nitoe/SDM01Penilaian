@@ -4,7 +4,7 @@
  * ANTIREGRESI §SLM-Agregasi.
  */
 import assert from 'node:assert/strict'
-import { kumpulkanSkorSlm, tulisNilaiTpSlm, nilaiAgregat, normNama } from '../functions/agregasiSlmLms.js'
+import { kumpulkanSkorSlm, tulisNilaiTpSlm, nilaiAgregat, normNama, petakanRombelTujuan } from '../functions/agregasiSlmLms.js'
 
 class Doc {
   constructor(id, data) { this.id = id; this._d = data; this.exists = true }
@@ -16,7 +16,7 @@ class Query {
   async get() {
     const rows = [...(this.db.cols[this.name] || new Map()).entries()]
     const docs = rows
-      .filter(([, d]) => this.filters.every(([f, op, v]) => (op === '==' ? d[f] === v : op === 'in' ? v.includes(d[f]) : false)))
+      .filter(([, d]) => this.filters.every(([f, op, v]) => (op === '==' ? d[f] === v : op === 'in' ? v.includes(d[f]) : op === 'array-contains' ? Array.isArray(d[f]) && d[f].includes(v) : false)))
       .map(([id, d]) => new Doc(id, d))
     return { docs, empty: docs.length === 0, forEach: (fn) => docs.forEach(fn) }
   }
@@ -84,7 +84,12 @@ const db = mkDb({
 assert.equal(normNama('TP 3. Mengenal  Ekosistem'), 'mengenal ekosistem')
 
 // Sinkron tugas proyek (mapel utama IPAS) untuk TP IPAS + BI
-const hasil = await kumpulkanSkorSlm(db, { kelas: '5A', tpTargets: [{ id: 'tp1' }, { id: 'tpbi' }] })
+const hasil = await kumpulkanSkorSlm(db, {
+  kelas: '5A',
+  tpTargets: [{ id: 'tp1', nama: 'Mengenal ekosistem', mapel: 'IPAS' }, { id: 'tpbi', nama: 'Menulis laporan', mapel: 'Bahasa Indonesia' }],
+  semester: '1',
+  tahunAjaran: '2026/2027',
+})
 // IPAS s1: t1 80, t2 60 (arsip tetap), proyek 90, kuis terbaru 80 => (80+60+90+80)/4 = 77.5
 assert.equal(nilaiAgregat(hasil.skor, 's1', 'tp1'), 77.5)
 assert.equal(hasil.meta.nKuis, 1) // kuis dibaca lewat tpIds/tpNamaList
@@ -108,4 +113,40 @@ db.cols.nilai_tp = new Map([...db.cols.nilai_tp.entries()].map(([k, v], i) => [`
 const r2 = await tulisNilaiTpSlm(db, { ...args, overwrite: false })
 assert.equal(r2.ditulis, 0)
 assert.equal(r2.dilewati, 2)
+
+// ---- Tugas dibagikan ke rombel paralel (5B punya TP sendiri dengan id berbeda) ----
+const db2 = mkDb({
+  tp_kktp: {
+    a1: { kelas: '5A', mapel: 'IPAS', namaTp: 'Mengenal ekosistem' },
+    b1: { kelas: '5B', mapel: 'IPAS', namaTp: 'Mengenal Ekosistem' },
+    a2: { kelas: '5A', mapel: 'IPAS', namaTp: 'TP lain' },
+  },
+  lms_tugas: {
+    x1: { kelas: '5A', kelasList: ['5A', '5B'], mapel: 'IPAS', judul: 'Dibagikan', jenisPenilaian: 'slm', tpList: [{ id: 'a1', nama: 'Mengenal ekosistem' }] },
+    x2: { kelas: '5B', kelasList: ['5B'], mapel: 'IPAS', judul: 'Khusus 5B', jenisPenilaian: 'slm', tpList: [{ id: 'b1', nama: 'Mengenal Ekosistem' }] },
+    lama: { kelas: '5A', kelasList: ['5A'], mapel: 'IPAS', judul: 'Semester lalu', jenisPenilaian: 'slm', periodeSlm: { semester: '1', tahunAjaran: '2026/2027' }, tpList: [{ id: 'a1', nama: 'x' }] },
+  },
+  lms_nilai_tugas: {
+    p1: { tugasId: 'x1', siswaId: 'a-s1', kelas: '5A', nilai: 80 },
+    p2: { tugasId: 'x1', siswaId: 'b-s1', kelas: '5B', nilai: 90 },
+    p3: { tugasId: 'x2', siswaId: 'b-s1', kelas: '5B', nilai: 70 },
+    p4: { tugasId: 'lama', siswaId: 'a-s1', kelas: '5A', nilai: 10 },
+  },
+  lms_kuis: {},
+  lms_jawaban: {},
+})
+const tpA = [{ id: 'a1', nama: 'Mengenal ekosistem', mapel: 'IPAS' }]
+const pet = await petakanRombelTujuan(db2, { kelas: '5A', kelasList: ['5A', '5B', '5C'], tpList: tpA, mapelUtama: 'IPAS', boleh: (m, k) => k !== '5C' })
+assert.deepEqual(pet.tujuan.map((t) => t.kelas), ['5A', '5B'])
+assert.equal(pet.tujuan[1].tpList[0].id, 'b1') // TP dipetakan ke TP rombel 5B lewat nama
+assert.deepEqual(pet.tidakBerhak, ['5C'])
+// semester 2: tugas bercap semester 1 tidak ikut
+const hA = await kumpulkanSkorSlm(db2, { kelas: '5A', tpTargets: tpA, semester: '2', tahunAjaran: '2026/2027' })
+assert.equal(nilaiAgregat(hA.skor, 'a-s1', 'a1'), 80)
+const hA1 = await kumpulkanSkorSlm(db2, { kelas: '5A', tpTargets: tpA, semester: '1', tahunAjaran: '2026/2027' })
+assert.equal(nilaiAgregat(hA1.skor, 'a-s1', 'a1'), 45) // (80+10)/2 di semester 1
+// 5B: tugas dibagikan (90) + tugas 5B sendiri (70) = 80; siswa 5A tidak ikut
+const hB = await kumpulkanSkorSlm(db2, { kelas: '5B', tpTargets: pet.tujuan[1].tpList, semester: '2', tahunAjaran: '2026/2027' })
+assert.equal(nilaiAgregat(hB.skor, 'b-s1', 'b1'), 80)
+assert.equal(hB.skor.has('a-s1'), false)
 console.log('cek-agregasi-slm: semua uji lulus')

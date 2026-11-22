@@ -8,7 +8,11 @@
  *   (bukan filter mapel tugas yang disinkron) → proyek lintas mapel tidak saling menimpa.
  * - Tugas diarsipkan TETAP dihitung (arsip hanya menyembunyikan dari dashboard).
  * - Kuis dibaca lewat tpIds/tpNamaList (+ tpList/tpId/tpNama legacy).
- * - Hanya rekaman siswa yang rombelnya sama dengan kelas target (tp_kktp per rombel).
+ * - Tugas/kuis yang DIBAGIKAN ke rombel paralel (kelasList) ikut dihitung untuk rombel tujuan:
+ *   TP dipetakan ke TP rombel tujuan lewat nama+mapel (tp_kktp per rombel), dan hanya
+ *   rekaman siswa rombel tujuan yang dihitung.
+ * - Periode: dokumen yang sudah dicap `periodeSlm` (semester+tahun ajaran saat disinkron)
+ *   tidak dihitung pada periode lain. Dokumen tanpa cap tetap dihitung (perilaku lama).
  * - Kuis: satu jawaban terbaru per siswa. Rincian komponen disimpan (slmKomponen).
  */
 import { logger } from 'firebase-functions'
@@ -101,7 +105,8 @@ export function buatPenyelesaiTp(db, kelas) {
     let hasil = null
     try {
       const s = await db.doc(`tp_kktp/${id}`).get()
-      if (s.exists) hasil = { id, nama: String(s.data().namaTp || s.data().nama || id) }
+      if (s.exists)
+        hasil = { id, nama: String(s.data().namaTp || s.data().nama || id), mapel: String(s.data().mapel || '') }
     } catch (e) {
       logger.warn('penyelesaiTp: get tp_kktp gagal', id, e)
     }
@@ -130,7 +135,12 @@ export function buatPenyelesaiTp(db, kelas) {
       for (const s of sisa) {
         const n = normNama(s)
         const found = docs.find((d) => normNama(d.data().namaTp || d.data().nama) === n)
-        if (found) tambah({ id: found.id, nama: String(found.data().namaTp || found.data().nama || s) })
+        if (found)
+          tambah({
+            id: found.id,
+            nama: String(found.data().namaTp || found.data().nama || s),
+            mapel: String(found.data().mapel || mapel || ''),
+          })
       }
     }
     return out
@@ -192,23 +202,72 @@ function labelKuis(d) {
   return labels
 }
 
-function kelasCocok(kelasRekaman, kelasTarget) {
+/** Rekaman tanpa kelas dianggap milik rombel induk dokumen (bukan rombel tujuan pembagian). */
+function kelasCocok(kelasRekaman, kelasTarget, kelasInduk) {
   const k = String(kelasRekaman || '').trim().toUpperCase()
-  return !k || k === kelasTarget
+  return k ? k === kelasTarget : kelasInduk === kelasTarget
+}
+
+function mapelSama(a, b) {
+  const x = normNama(a)
+  const y = normNama(b)
+  return !x || !y || x === y
+}
+
+/** Dokumen sudah dicap periode lain? (cap diberi saat sinkron; tanpa cap = ikut dihitung) */
+function periodeLain(d, semester, tahunAjaran) {
+  const p = d.periodeSlm
+  if (!p || !semester || !tahunAjaran) return false
+  return String(p.semester) !== String(semester) || String(p.tahunAjaran) !== String(tahunAjaran)
+}
+
+/** Id TP target (rombel C) yang dirujuk dokumen berinduk rombel P. */
+function targetDariDok(resolved, kelasInduk, kelasTarget, tpTargets) {
+  const out = new Set()
+  if (kelasInduk === kelasTarget) {
+    const ids = new Set(tpTargets.map((t) => String(t.id)))
+    for (const tp of resolved) if (ids.has(tp.id)) out.add(tp.id)
+    return out
+  }
+  for (const tp of resolved) {
+    const n = normNama(tp.nama)
+    const t = tpTargets.find((x) => normNama(x.nama) === n && mapelSama(x.mapel, tp.mapel))
+    if (t) out.add(String(t.id))
+  }
+  return out
+}
+
+async function dokKelasAtauDibagikan(db, koleksi, kelasU) {
+  const hasil = new Map()
+  for (const q of [
+    db.collection(koleksi).where('kelas', '==', kelasU),
+    db.collection(koleksi).where('kelasList', 'array-contains', kelasU),
+  ]) {
+    try {
+      for (const d of (await q.get()).docs) hasil.set(d.id, d)
+    } catch (e) {
+      logger.warn(`agregasiSlm: query ${koleksi} gagal`, e)
+    }
+  }
+  return [...hasil.values()]
 }
 
 /**
- * Kumpulkan skor SLM per siswa per TP dari seluruh tugas+kuis kelas ini.
- * @param {{kelas: string, tpTargets: {id: string, nama?: string}[]}} p
+ * Kumpulkan skor SLM per siswa per TP dari seluruh tugas+kuis yang berlaku untuk rombel `kelas`
+ * (dibuat di rombel itu atau dibagikan ke sana).
+ * @param {{kelas: string, tpTargets: {id: string, nama?: string, mapel?: string}[], semester?: string, tahunAjaran?: string}} p
  * @returns {{skor: Map<string, Map<string, number[]>>, komponen: Map<string, Map<string, object[]>>, meta: object}}
  */
-export async function kumpulkanSkorSlm(db, { kelas, tpTargets }) {
+export async function kumpulkanSkorSlm(db, { kelas, tpTargets, semester, tahunAjaran }) {
   const kelasU = String(kelas || '').toUpperCase()
-  const targetIds = new Set(tpTargets.map((t) => String(t.id)))
   const skor = new Map()
   const komponen = new Map()
   const meta = { nTugas: 0, nKuis: 0, tugasIds: [], kuisIds: [] }
-  const penyelesai = buatPenyelesaiTp(db, kelasU)
+  const penyelesaiPer = new Map()
+  const penyelesaiUntuk = (k) => {
+    if (!penyelesaiPer.has(k)) penyelesaiPer.set(k, buatPenyelesaiTp(db, k))
+    return penyelesaiPer.get(k)
+  }
 
   function push(siswaId, tpId, nilai, info) {
     if (nilai == null || Number.isNaN(Number(nilai))) return
@@ -223,24 +282,19 @@ export async function kumpulkanSkorSlm(db, { kelas, tpTargets }) {
     komponen.get(sid).get(tid).push({ ...info, nilai: v })
   }
 
-  // ---- Tugas SLM (termasuk yang diarsipkan) ----
-  let tugasDocs = []
-  try {
-    tugasDocs = (await db.collection('lms_tugas').where('kelas', '==', kelasU).get()).docs
-  } catch (e) {
-    logger.warn('agregasiSlm: query lms_tugas gagal', e)
-  }
-  const tugasRelevan = new Map() // id -> {data, tpIds:Set}
+  // ---- Tugas SLM (termasuk yang diarsipkan & yang dibagikan ke rombel ini) ----
+  const tugasDocs = await dokKelasAtauDibagikan(db, 'lms_tugas', kelasU)
+  const tugasRelevan = new Map() // id -> {data, ids}
   for (const d of tugasDocs) {
     const data = d.data()
-    if (jenisTugas(data) !== 'slm') continue
-    const ids = new Set()
+    if (jenisTugas(data) !== 'slm' || periodeLain(data, semester, tahunAjaran)) continue
+    const induk = String(data.kelas || '').toUpperCase()
+    const resolved = []
     for (const [mapel, labels] of labelTugasPerMapel(data)) {
-      for (const tp of await penyelesai.resolve(mapel, labels)) {
-        if (targetIds.has(tp.id)) ids.add(tp.id)
-      }
+      resolved.push(...(await penyelesaiUntuk(induk).resolve(mapel, labels)))
     }
-    if (ids.size) tugasRelevan.set(d.id, { data, ids })
+    const ids = targetDariDok(resolved, induk, kelasU, tpTargets)
+    if (ids.size) tugasRelevan.set(d.id, { data, ids, induk })
   }
   meta.nTugas = tugasRelevan.size
   meta.tugasIds = [...tugasRelevan.keys()]
@@ -255,7 +309,7 @@ export async function kumpulkanSkorSlm(db, { kelas, tpTargets }) {
         const info = tugasRelevan.get(String(n.tugasId || ''))
         if (!info || !n.siswaId) continue
         if (typeof n.nilai !== 'number' || Number.isNaN(n.nilai)) continue
-        if (!kelasCocok(n.kelas, kelasU)) continue
+        if (!kelasCocok(n.kelas, kelasU, info.induk)) continue
         for (const tpId of info.ids) {
           push(n.siswaId, tpId, n.nilai, {
             jenis: 'tugas',
@@ -270,18 +324,22 @@ export async function kumpulkanSkorSlm(db, { kelas, tpTargets }) {
   }
 
   // ---- Kuis SLM ----
-  let kuisDocs = []
-  try {
-    kuisDocs = (await db.collection('lms_kuis').where('kelas', '==', kelasU).get()).docs
-  } catch (e) {
-    logger.warn('agregasiSlm: query lms_kuis gagal', e)
-  }
+  const kuisDocs = await dokKelasAtauDibagikan(db, 'lms_kuis', kelasU)
   const kuisRelevan = []
   for (const d of kuisDocs) {
     const data = d.data()
-    if (jenisKuis(data) !== 'slm' || data.lombaId) continue
-    const resolved = await penyelesai.resolve(data.mapel, labelKuis(data))
-    const tps = resolved.filter((t) => targetIds.has(t.id))
+    if (jenisKuis(data) !== 'slm' || data.lombaId || periodeLain(data, semester, tahunAjaran)) continue
+    const induk = String(data.kelas || '').toUpperCase()
+    const resolved = await penyelesaiUntuk(induk).resolve(data.mapel, labelKuis(data))
+    const ids = targetDariDok(resolved, induk, kelasU, tpTargets)
+    const tps = resolved
+      .map((t) => {
+        if (induk === kelasU) return ids.has(t.id) ? t : null
+        const n = normNama(t.nama)
+        const tg = tpTargets.find((x) => normNama(x.nama) === n && mapelSama(x.mapel, t.mapel))
+        return tg ? { id: String(tg.id), nama: t.nama, mapel: t.mapel } : null
+      })
+      .filter(Boolean)
     if (tps.length) kuisRelevan.push({ id: d.id, data, tps })
   }
   meta.nKuis = kuisRelevan.length
@@ -296,7 +354,7 @@ export async function kumpulkanSkorSlm(db, { kelas, tpTargets }) {
       const terbaru = jawabanTerbaruPerSiswa(jaw.docs.map((jd) => ({ ...jd.data(), _id: jd.id })))
       for (const j of terbaru) {
         const siswaId = j.siswaId || j.siswaUid
-        if (!siswaId || !kelasCocok(j.kelas, kelasU)) continue
+        if (!siswaId || !kelasCocok(j.kelas, kelasU, String(k.data.kelas || '').toUpperCase())) continue
         let dasar = skor100(j.skorOtomatis, j.totalPoin)
         if (dasar == null && typeof j.skorAkhir === 'number') dasar = j.skorAkhir
         if (dasar == null && typeof j.nilai === 'number') dasar = j.nilai
@@ -398,4 +456,51 @@ export async function tulisNilaiTpSlm(
     if (ops > 0) await batch.commit()
   }
   return { ditulis, dilewati }
+}
+
+/**
+ * Rombel tujuan sinkron: rombel induk + rombel di `kelasList` yang boleh ditulis pengguna.
+ * Mengembalikan [{kelas, tpList, dilewatiTp}] dengan TP dipetakan ke TP rombel tujuan
+ * (nama + mapel; tp_kktp per rombel). Rombel tanpa TP padanan dilaporkan di `tanpaTp`.
+ */
+export async function petakanRombelTujuan(db, { kelas, kelasList, tpList, mapelUtama, boleh }) {
+  const induk = String(kelas).toUpperCase()
+  const semua = [induk]
+  for (const k of Array.isArray(kelasList) ? kelasList : []) {
+    const u = String(k || '').trim().toUpperCase()
+    if (u && !semua.includes(u)) semua.push(u)
+  }
+  const tujuan = [{ kelas: induk, tpList }]
+  const tanpaTp = []
+  const tidakBerhak = []
+  for (const k of semua) {
+    if (k === induk) continue
+    const mapelDiK = [...new Set(tpList.map((t) => t.mapel || mapelUtama))]
+    if (typeof boleh === 'function' && !mapelDiK.some((m) => boleh(m, k))) {
+      tidakBerhak.push(k)
+      continue
+    }
+    const pen = buatPenyelesaiTp(db, k)
+    const petaan = []
+    for (const tp of tpList) {
+      const mapel = tp.mapel || mapelUtama
+      if (typeof boleh === 'function' && !boleh(mapel, k)) continue
+      const r = await pen.resolve(mapel, [tp.nama])
+      const cocok = r.find((x) => normNama(x.nama) === normNama(tp.nama))
+      if (cocok && !petaan.some((x) => x.id === cocok.id)) petaan.push({ ...cocok, mapel })
+    }
+    if (petaan.length) tujuan.push({ kelas: k, tpList: petaan })
+    else tanpaTp.push(k)
+  }
+  return { tujuan, tanpaTp, tidakBerhak }
+}
+
+/** Cap periode pada dokumen sumber (sekali, saat pertama disinkron). Tidak menimpa cap lama. */
+export async function capPeriodeSlm(ref, data, semester, tahunAjaran) {
+  if (data && data.periodeSlm) return
+  try {
+    await ref.update({ periodeSlm: { semester: String(semester), tahunAjaran: String(tahunAjaran) } })
+  } catch (e) {
+    logger.warn('capPeriodeSlm gagal', e)
+  }
 }

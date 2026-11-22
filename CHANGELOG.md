@@ -483,3 +483,12 @@
 - `src/pages/akademik/Leger.tsx`: peringkat dari total HANYA untuk siswa yang mapelnya lengkap; siswa dengan mapel belum terisi diberi «–» (n/N), bukan peringkat rendah. Seri tetap berbagi peringkat.
 - `scripts/cek-agregasi-slm.mjs` (baru): uji agregasi dengan Firestore tiruan.
 - Deploy: `firebase deploy --only functions:sinkronNilaiTugasLms,functions:sinkronNilaiKuisLms` lalu hosting. `firestore.rules` TIDAK berubah. Setelah deploy, guru menekan sinkron ulang (overwrite) agar nilai lama dihitung ulang.
+
+## 2026-11-21 (lanjutan) — SLM: tugas dibagikan ke rombel paralel, cap periode semester, build bersih
+
+- **Tugas/kuis dibagikan (`kelasList`):** sinkron kini menulis nilai ke rombel tujuan juga (mis. 5A dan 5B). TP dipetakan ke TP rombel tujuan lewat nama + mapel (karena `tp_kktp` per rombel), hanya siswa rombel tujuan yang dihitung, dan hanya bila pengguna berhak atas kelas×mapel tujuan. Rombel tanpa TP padanan atau tanpa hak dilaporkan di hasil sinkron (`rombelTanpaTp`, `rombelTidakBerhak`; rincian per rombel di `rombel`).
+- **Periode:** setelah sinkron SLM, tugas/kuis dicap `periodeSlm {semester, tahunAjaran}` (sekali, tidak menimpa). Pada periode lain, dokumen bercap berbeda tidak ikut dihitung. Dokumen tanpa cap tetap dihitung (perilaku lama).
+- `functions/agregasiSlmLms.js`: tambah `petakanRombelTujuan`, `capPeriodeSlm`; `kumpulkanSkorSlm` menerima `semester`/`tahunAjaran` dan membaca dokumen rombel + dokumen dibagikan.
+- `functions/sinkronNilaiTugasLms.js`, `functions/sinkronNilaiKuisLms.js`: memproses tiap rombel tujuan (SLM, STS, SAS).
+- `scripts/cek-agregasi-slm.mjs`: uji tambahan (pemetaan TP antar rombel, cap semester, rombel tanpa hak).
+- **Build:** `src/lib/kuis.ts` dan `src/pages/siswa/SiswaLombaDetail.tsx` (salinan LMS yang tidak sengaja ter-push pada commit «fix» 2026-11-17, tidak diimpor siapa pun) menyebabkan `tsc -b` gagal sehingga `npm run build` gagal. Kedua file DIHAPUS (`git rm`); setelah itu `tsc -b` bersih.

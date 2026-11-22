@@ -414,3 +414,13 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 
 1. Peringkat Leger dihitung dari TOTAL; total dari jumlah mapel berbeda tidak sebanding. Hanya siswa dengan jumlah mapel terisi sama dengan terbanyak di kelas yang diperingkat; lainnya «–» dengan keterangan n/N. Jangan kembali meranking semua siswa dari total mentah.
 2. Leger SAS memakai nilai SAS murni (`hitungStsMapel` pada `nilai_sas`), BUKAN nilai akhir rapor SAS (`hitungSasMapel` gabungan SLM/STS/SAS). Angkanya boleh berbeda; jangan dibandingkan langsung.
+
+## §SLM.Agregasi.2 — rombel paralel, periode, dan file LMS nyasar (2026-11-21)
+
+1. Entri §SLM.Agregasi butir 5 dan 8 digantikan di sini: tugas/kuis dengan `kelasList` KINI ditulis ke tiap rombel tujuan. Pemetaan TP antar rombel hanya lewat nama TP ternormalisasi + mapel (`petakanRombelTujuan`). Jika rombel tujuan tidak punya TP bernama sama, nilainya tidak ditulis (dilaporkan), bukan ditulis ke TP rombel lain.
+2. Penulisan ke rombel lain wajib melewati `bolehMapelKelas` per kelas×mapel tujuan. Jangan menulis ke rombel yang tidak diampu pengguna.
+3. Rekaman siswa tanpa `kelas` dianggap milik rombel INDUK dokumen, bukan rombel tujuan (agar tidak terhitung ganda di kedua rombel).
+4. `periodeSlm` dicap sekali saat sinkron SLM; jangan menimpa cap lama dan jangan menghapus filter periode di `kumpulkanSkorSlm`. Dokumen tanpa cap tetap dihitung agar data lama tidak hilang.
+5. Query dokumen dibagikan memakai dua query satu-field (`kelas ==` dan `kelasList array-contains`) — tidak perlu indeks komposit. Jangan menggabungkannya menjadi satu query dengan `where` tambahan tanpa menambah indeks.
+6. Repo ini TIDAK boleh berisi salinan file LMS (`src/lib/kuis.ts`, `src/pages/siswa/*`, `src/types/kuis.ts`, dst.). Penyebab build gagal pada 2026-11-17. Jalankan `npx tsc -b` sebelum push; harus bersih.
+7. Masih last-write-wins: STS dan SAS (satu nilai per TP, sinkron terakhir menimpa).
