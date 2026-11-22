@@ -51,6 +51,8 @@ interface SumberMapel {
   nilaiSlm?: NilaiSlmKelas
   nilaiAsesmen?: NilaiAsesmenKelas
   tpBobot?: Record<string, number> | null
+  /** Semua TP semester ini — pool cadangan sama seperti rapor STS (raporSts.ts). */
+  tpSemester?: TujuanPembelajaran[]
 }
 
 function parseJenis(v: string | null): JenisLeger {
@@ -110,9 +112,12 @@ function nilaiAsesmenMapel(
   nilai: NilaiAsesmenKelas | undefined,
   tpBobot: Record<string, number> | null | undefined,
   semester: string,
+  tpSemester?: TujuanPembelajaran[],
 ): number | null {
   if (!nilai || !tpList.length) return null
-  return hitungStsMapel(tpList, nilai, siswaId, semester, tpList, tpBobot).nilaiAkhir
+  // Pool = semua TP semester, persis seperti rapor STS, agar leger & rapor tidak berbeda
+  // (ANTIREGRESI §Peringkat-STS).
+  return hitungStsMapel(tpList, nilai, siswaId, semester, tpSemester ?? tpList, tpBobot).nilaiAkhir
 }
 
 /** Peringkat dari skor (total). Nilai lebih tinggi = peringkat lebih baik. Seri = peringkat sama. */
@@ -246,6 +251,7 @@ export default function Leger({ profile }: { profile: AppUser }) {
               tpList: tampil,
               nilaiAsesmen: angka,
               tpBobot: cakupan?.tpBobot ?? null,
+              tpSemester: semesterTp,
             }
           }),
         )
@@ -318,6 +324,7 @@ export default function Leger({ profile }: { profile: AppUser }) {
               src.nilaiAsesmen,
               src.tpBobot,
               semester,
+              src.tpSemester,
             )
           })
           const terisi = nilaiPerMapel.filter((n) => n != null && Number.isFinite(n)) as number[]

@@ -492,3 +492,11 @@
 - `functions/sinkronNilaiTugasLms.js`, `functions/sinkronNilaiKuisLms.js`: memproses tiap rombel tujuan (SLM, STS, SAS).
 - `scripts/cek-agregasi-slm.mjs`: uji tambahan (pemetaan TP antar rombel, cap semester, rombel tanpa hak).
 - **Build:** `src/lib/kuis.ts` dan `src/pages/siswa/SiswaLombaDetail.tsx` (salinan LMS yang tidak sengaja ter-push pada commit «fix» 2026-11-17, tidak diimpor siapa pun) menyebabkan `tsc -b` gagal sehingga `npm run build` gagal. Kedua file DIHAPUS (`git rm`); setelah itu `tsc -b` bersih.
+
+## 2026-11-22 — Peringkat STS (PTS): leger dan portal 5 Besar memakai aturan yang sama
+
+- **Laporan:** guru kelas 4B melaporkan peringkat STS tidak sesuai.
+- **Temuan audit (kode):** (1) portal 5 Besar meranking dari rata-rata nilai akhir yang dibulatkan 1 desimal dan menerima siswa dengan jumlah mapel berbeda, sedangkan Leger STS meranking dari jumlah nilai dan hanya siswa bermapel lengkap → siswa dengan satu mapel kosong bisa menjadi peringkat 1 di portal tetapi tidak diperingkat di Leger; pembulatan 1 desimal juga membuat selisih kecil menjadi seri palsu. (2) Leger STS memakai pool TP cakupan saja, sedangkan rapor STS memakai pool semua TP semester sebagai cadangan bila siswa belum punya nilai di TP cakupan → nilai mapel bisa «–» di leger tetapi berangka di rapor/portal. (3) Bobot antar TP STS tidak berbeda antarjalur: Leger, Laporan Nilai, dan rapor STS sama-sama memakai `tpBobot` cakupan (default 1; bobot semester tidak dipakai). Tidak ditemukan jalur STS yang memakai bobot nilai akhir.
+- `src/pages/akademik/Leger.tsx`: `nilaiAsesmenMapel` kini meneruskan `tpSemester` sebagai pool (sama dengan `raporSts.ts`).
+- Portal orang tua (repo `portal-orangtua`): peringkat 5 Besar dihitung dari jumlah nilai akhir, hanya siswa bermapel lengkap, seri berbagi peringkat; jumlah siswa yang belum lengkap ditampilkan.
+- Belum diubah: `LaporanNilai.tsx` (kolom rata-rata STS) tidak memakai pool cadangan sehingga bisa «–» untuk kasus tepi yang sama; snapshot `rapor_sts_ortu` tetap harus dipublikasikan ulang bila nilai berubah.

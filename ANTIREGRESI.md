@@ -424,3 +424,11 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 5. Query dokumen dibagikan memakai dua query satu-field (`kelas ==` dan `kelasList array-contains`) — tidak perlu indeks komposit. Jangan menggabungkannya menjadi satu query dengan `where` tambahan tanpa menambah indeks.
 6. Repo ini TIDAK boleh berisi salinan file LMS (`src/lib/kuis.ts`, `src/pages/siswa/*`, `src/types/kuis.ts`, dst.). Penyebab build gagal pada 2026-11-17. Jalankan `npx tsc -b` sebelum push; harus bersih.
 7. Masih last-write-wins: STS dan SAS (satu nilai per TP, sinkron terakhir menimpa).
+
+## §Peringkat-STS — satu aturan untuk leger dan portal (2026-11-22)
+
+1. Peringkat STS di mana pun (Leger STS, portal 5 Besar) = peringkat kompetisi dari JUMLAH nilai akhir mapel (bilangan bulat per mapel), hanya untuk siswa yang jumlah mapel terisinya sama dengan yang terbanyak di kelas. Jangan meranking dari rata-rata yang dibulatkan atau dari jumlah mapel berbeda.
+2. Nilai akhir STS per mapel dihitung HANYA lewat `hitungStsMapel` dengan `tpCakupan` + pool `tpSemester` (cadangan) — sama di Leger dan `raporSts.ts`. Jangan memanggilnya dengan pool = cakupan di satu tempat dan pool = semua TP di tempat lain.
+3. Bobot antar TP STS = `tpBobot` cakupan (default 1). Bobot semester (`bobotPerSemester`/`bobotMapel`) hanya untuk nilai akhir rapor SLM+STS+SAS dan TIDAK boleh masuk jalur STS.
+4. Portal 5 Besar membaca snapshot `rapor_sts_ortu`; perubahan nilai setelah publikasi tidak terlihat sampai wali kelas mempublikasikan ulang.
+5. Diketahui: `LaporanNilai.tsx` tidak memakai pool cadangan (kolom rata-rata bisa «–» di kasus tepi).
