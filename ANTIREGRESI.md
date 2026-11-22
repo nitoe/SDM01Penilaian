@@ -439,3 +439,11 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 2. Penyelesaian: `git rm` kedua file DI REPO INI (folder `sdm01kks`, remote `SDM01Penilaian`), lalu `npx tsc -b` harus bersih. Jangan menghapusnya di repo `lms` — di sana keduanya dipakai.
 3. Sebelum menghapus file, cek `git remote -v` dan nama folder di terminal. Zip paket tidak bisa menyampaikan penghapusan file; penghapusan harus dilakukan manual lewat Git.
 4. Jangan menyalin file/halaman LMS (`src/lib/kuis.ts`, `src/lib/soal.ts`, `src/pages/siswa/*`, `src/types/kuis.ts`, `src/types/soal.ts`, `src/types/lomba.ts`, `src/context/SiswaContext`) ke repo ini. Jika perlu data LMS, baca lewat koleksi Firestore atau Cloud Function.
+
+## §Functions.Impor — setiap fungsi yang dipakai harus diimpor; uji handler, bukan hanya sintaks (2026-11-22)
+
+1. Gejala: HTTP 500 pada Cloud Function callable tanpa pesan jelas di klien. Penyebab pernah terjadi: nama fungsi (`petakanRombelTujuan`, `capPeriodeSlm`) dipakai di `sinkronNilaiTugasLms.js` tetapi tidak ada di daftar impor → `ReferenceError` saat runtime.
+2. `node --check` TIDAK menangkap nama yang tidak terdefinisi. Setelah mengubah file di `functions/` jalankan keduanya: `npx -y eslint@8 --no-eslintrc --env es2022,node --parser-options=sourceType:module,ecmaVersion:2022 --rule '{"no-undef":"error"}' functions/*.js` (harus tanpa error) dan `node scripts/cek-sinkron-cf.mjs` (harus «semua uji lulus»).
+3. Menambah fungsi baru ke `agregasiSlmLms.js` berarti memperbarui daftar impor di KEDUA `sinkronNilaiTugasLms.js` dan `sinkronNilaiKuisLms.js` bila dipakai di sana. Jangan menyunting kedua CF memakai penggantian teks tanpa memverifikasi hasil akhirnya (`git diff`).
+4. Firestore menolak nilai `undefined`; uji `cek-sinkron-cf.mjs` meniru aturan ini.
+5. Setelah deploy functions, selalu coba satu sinkron nyata sebelum menyatakan selesai.

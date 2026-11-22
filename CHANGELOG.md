@@ -507,3 +507,11 @@
 - Sempat salah repo: perintah hapus pertama dijalankan di folder repo `lms` dan dipulihkan sebelum commit (lihat CHANGELOG/ANTIREGRESI repo `lms`).
 - Setelah penghapusan: `npx tsc -b` bersih lalu `npm run deploy`.
 - Antiregresi: §Operasional.Repo.
+
+## 2026-11-22 — HOTFIX: sinkron nilai tugas ke penilaian error 500 (import hilang)
+
+- **Gejala:** tombol sinkron/publish nilai tugas dari LMS gagal; konsol: `POST .../sinkronNilaiTugasLms 500 (Internal Server Error)`.
+- **Penyebab:** pada pembaruan «rombel paralel + cap periode» (2026-11-21 lanjutan), `functions/sinkronNilaiTugasLms.js` memanggil `petakanRombelTujuan` dan `capPeriodeSlm` tetapi keduanya tidak diimpor dari `agregasiSlmLms.js` → `ReferenceError` saat fungsi dijalankan. Tidak tertangkap karena `node --check` hanya memeriksa sintaks dan uji lama hanya menjalankan agregator, bukan fungsi sinkronnya. `sinkronNilaiKuisLms.js` tidak terdampak (impornya lengkap).
+- `functions/sinkronNilaiTugasLms.js`: menambah impor `petakanRombelTujuan` dan `capPeriodeSlm`.
+- `scripts/cek-sinkron-cf.mjs` (baru): menjalankan handler kedua fungsi sinkron dengan Firestore tiruan (tugas dibagikan 5A+5B, kuis, sinkron ulang tanpa duplikat, nilai `undefined` ditolak seperti Firestore asli). Terbukti gagal dengan `ReferenceError` bila impor dilepas.
+- Deploy: `firebase deploy --only functions:sinkronNilaiTugasLms`. Setelah itu coba sinkron ulang satu tugas SLM.
