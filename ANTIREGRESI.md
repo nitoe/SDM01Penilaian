@@ -447,3 +447,10 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 3. Menambah fungsi baru ke `agregasiSlmLms.js` berarti memperbarui daftar impor di KEDUA `sinkronNilaiTugasLms.js` dan `sinkronNilaiKuisLms.js` bila dipakai di sana. Jangan menyunting kedua CF memakai penggantian teks tanpa memverifikasi hasil akhirnya (`git diff`).
 4. Firestore menolak nilai `undefined`; uji `cek-sinkron-cf.mjs` meniru aturan ini.
 5. Setelah deploy functions, selalu coba satu sinkron nyata sebelum menyatakan selesai.
+
+## §SLM.Bobot — nilai SLM sinkron = nilai Rekap Nilai LMS (2026-11-22)
+
+1. Rumus SLM sinkron HARUS sama dengan `hitungNilaiBerbobot`/`gabungSumberDenganBobot` di LMS (`src/lib/rekapNilai.ts`): rata berbobot, sumber tanpa skor dilewati, 1 desimal, bobot tersimpan hanya dipakai bila mencakup semua sumber terdeteksi, selain itu bobot sama. Ubah kedua sisi bersamaan.
+2. Id dokumen bobot = `idBobotSlm(kelas, mapel TP, tpId)` — tetap identik dengan LMS (`KELAS__Mapel_Dengan_Underscore__tpId`).
+3. Ini menggantikan §SLM.Agregasi butir yang menyebut «rata-rata» biasa: rata biasa hanya kasus tanpa bobot tersimpan.
+4. **Tes:** `node scripts/cek-agregasi-slm.mjs` (bobot) dan `node scripts/cek-sinkron-cf.mjs` (handler) harus lulus.

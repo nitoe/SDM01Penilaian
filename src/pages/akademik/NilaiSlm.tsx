@@ -1087,9 +1087,16 @@ function Detail({
                       const komp = doc?.slmKomponen ?? []
                       const sis = siswa.find((x) => x.id === rincian.siswaId)
                       const tp = kolom.find((x) => x.id === rincian.tpId)
+                      // Rata-rata berbobot (bobot dari Rekap Nilai LMS; tanpa bobot = rata biasa)
+                      const totBobot = komp.reduce((a, k) => a + (k.bobot && k.bobot > 0 ? k.bobot : 1), 0)
                       const dirata = komp.length
-                        ? Math.round((komp.reduce((a, k) => a + k.nilai, 0) / komp.length) * 100) / 100
+                        ? Math.round(
+                            (komp.reduce((a, k) => a + k.nilai * (k.bobot && k.bobot > 0 ? k.bobot : 1), 0) /
+                              totBobot) *
+                              10,
+                          ) / 10
                         : null
+                      const berbobot = komp.some((k) => (k.bobot ?? 1) !== (komp[0]?.bobot ?? 1))
                       const teksSaatIni = draf[rincian.tpId]?.[rincian.siswaId] ?? ''
                       const manual =
                         dirata !== null && teksSaatIni.trim() !== '' && parseNilai(teksSaatIni) !== dirata
@@ -1108,7 +1115,7 @@ function Detail({
                               {sis?.nama} — TP {tp?.nomorTp}
                             </p>
                             <p className="mt-0.5 text-xs text-muted">
-                              Nilai SLM = rata-rata semua tugas dan kuis SLM dari LMS untuk TP ini.
+                              Nilai SLM = {berbobot ? 'rata-rata berbobot' : 'rata-rata'} semua tugas dan kuis SLM dari LMS untuk TP ini.
                             </p>
                             <ul className="mt-3 divide-y divide-border text-sm">
                               {komp.map((k) => (
@@ -1119,7 +1126,14 @@ function Detail({
                                     </span>
                                     {k.judul}
                                   </span>
-                                  <span className="font-semibold tabular-nums">{String(k.nilai).replace('.', ',')}</span>
+                                  <span className="shrink-0 font-semibold tabular-nums">
+                                    {berbobot && (
+                                      <span className="mr-1.5 text-[11px] font-normal text-muted">
+                                        bobot {String(Math.round(((k.bobot ?? 1) / totBobot) * 1000) / 10).replace('.', ',')}%
+                                      </span>
+                                    )}
+                                    {String(k.nilai).replace('.', ',')}
+                                  </span>
                                 </li>
                               ))}
                             </ul>

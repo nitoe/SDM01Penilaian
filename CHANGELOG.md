@@ -515,3 +515,11 @@
 - `functions/sinkronNilaiTugasLms.js`: menambah impor `petakanRombelTujuan` dan `capPeriodeSlm`.
 - `scripts/cek-sinkron-cf.mjs` (baru): menjalankan handler kedua fungsi sinkron dengan Firestore tiruan (tugas dibagikan 5A+5B, kuis, sinkron ulang tanpa duplikat, nilai `undefined` ditolak seperti Firestore asli). Terbukti gagal dengan `ReferenceError` bila impor dilepas.
 - Deploy: `firebase deploy --only functions:sinkronNilaiTugasLms`. Setelah itu coba sinkron ulang satu tugas SLM.
+
+## 2026-11-22b — SLM sinkron memakai bobot Rekap Nilai (lms_bobot_slm)
+
+- **Temuan audit:** layar Rekap Nilai LMS menghitung nilai SLM sebagai rata-rata BERBOBOT persen (`lms_bobot_slm`), sedangkan sinkron ke penilaian memakai rata-rata biasa → nilai di LMS dan di penilaian bisa berbeda bila guru mengatur bobot.
+- `functions/agregasiSlmLms.js`: membaca `lms_bobot_slm/{KELAS}__{mapel}__{tpId}`; bobot tersimpan dipakai bila mencakup semua sumber terdeteksi (selain itu rata, persis seperti layar LMS); nilai dibulatkan 1 desimal (sama dengan LMS). `slmKomponen` kini memuat `bobot`; `slmAgregat.metode` = `berbobot` atau `rata`.
+- `src/pages/akademik/NilaiSlm.tsx`, `src/types/akademik.ts`: rincian nilai menampilkan bobot tiap sumber dan rata-rata berbobot.
+- `scripts/cek-agregasi-slm.mjs`: uji bobot 70/30 → 85, tanpa bobot → 75, bobot tak lengkap → kembali rata.
+- Deploy: `firebase deploy --only functions:sinkronNilaiTugasLms,functions:sinkronNilaiKuisLms` + hosting; lalu sinkron ulang (overwrite).

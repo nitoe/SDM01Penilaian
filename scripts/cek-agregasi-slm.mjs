@@ -4,7 +4,7 @@
  * ANTIREGRESI §SLM-Agregasi.
  */
 import assert from 'node:assert/strict'
-import { kumpulkanSkorSlm, tulisNilaiTpSlm, nilaiAgregat, normNama, petakanRombelTujuan } from '../functions/agregasiSlmLms.js'
+import { kumpulkanSkorSlm, tulisNilaiTpSlm, nilaiAgregat, normNama, petakanRombelTujuan, idBobotSlm, nilaiBerbobot } from '../functions/agregasiSlmLms.js'
 
 class Doc {
   constructor(id, data) { this.id = id; this._d = data; this.exists = true }
@@ -149,4 +149,26 @@ assert.equal(nilaiAgregat(hA1.skor, 'a-s1', 'a1'), 45) // (80+10)/2 di semester 
 const hB = await kumpulkanSkorSlm(db2, { kelas: '5B', tpTargets: pet.tujuan[1].tpList, semester: '2', tahunAjaran: '2026/2027' })
 assert.equal(nilaiAgregat(hB.skor, 'b-s1', 'b1'), 80)
 assert.equal(hB.skor.has('a-s1'), false)
+
+// ---- Bobot per sumber (lms_bobot_slm) — harus sama dengan layar Rekap Nilai LMS ----
+assert.equal(idBobotSlm('5a', 'Bahasa Indonesia', 'tp1'), '5A__Bahasa_Indonesia__tp1')
+const mkBobotDb = (dokBobot) => mkDb({
+  tp_kktp: { tp1: { kelas: '5A', mapel: 'IPAS', namaTp: 'TP satu' } },
+  lms_tugas: { T: { kelas: '5A', mapel: 'IPAS', judul: 'Tugas', jenisPenilaian: 'slm', tpList: [{ id: 'tp1' }] } },
+  lms_nilai_tugas: { n: { tugasId: 'T', siswaId: 's1', kelas: '5A', nilai: 100 } },
+  lms_kuis: { K: { kelas: '5A', mapel: 'IPAS', judul: 'Kuis', jenisPenilaian: 'slm', tpIds: ['tp1'] } },
+  lms_jawaban: { j: { kuisId: 'K', siswaId: 's1', kelas: '5A', skorOtomatis: 5, totalPoin: 10, percobaan: 1 } },
+  lms_bobot_slm: dokBobot ? { '5A__IPAS__tp1': dokBobot } : {},
+})
+const tgt = [{ id: 'tp1', nama: 'TP satu', mapel: 'IPAS' }]
+// tanpa dokumen bobot → rata (100 & 50 → 75)
+let hb = await kumpulkanSkorSlm(mkBobotDb(null), { kelas: '5A', tpTargets: tgt })
+assert.equal(nilaiBerbobot(hb.komponen.get('s1').get('tp1')), 75)
+// bobot tersimpan 70/30 mencakup semua sumber → (100*70 + 50*30)/100 = 85
+hb = await kumpulkanSkorSlm(mkBobotDb({ sumber: [{ id: 'tugas:T', bobot: 70 }, { id: 'kuis:K', bobot: 30 }] }), { kelas: '5A', tpTargets: tgt })
+assert.equal(nilaiBerbobot(hb.komponen.get('s1').get('tp1')), 85)
+assert.equal(hb.meta.bobotKustom, true)
+// bobot tersimpan tidak mencakup semua sumber (ada sumber baru) → kembali rata, seperti layar LMS
+hb = await kumpulkanSkorSlm(mkBobotDb({ sumber: [{ id: 'tugas:T', bobot: 70 }] }), { kelas: '5A', tpTargets: tgt })
+assert.equal(nilaiBerbobot(hb.komponen.get('s1').get('tp1')), 75)
 console.log('cek-agregasi-slm: semua uji lulus')

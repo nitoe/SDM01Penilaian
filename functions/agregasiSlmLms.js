@@ -66,6 +66,43 @@ export function jawabanTerbaruPerSiswa(docs) {
   return [...map.values()]
 }
 
+/** Id dokumen bobot SLM — HARUS sama dengan idBobotSlm() di LMS (src/lib/rekapNilai.ts). */
+export function idBobotSlm(kelas, mapel, tpId) {
+  const mapelSlug = String(mapel || '').trim().replace(/\s+/g, '_').replace(/[\/\\#?[\]]/g, '-')
+  return `${String(kelas).toUpperCase()}__${mapelSlug}__${tpId}`
+}
+
+/**
+ * Bobot per sumber untuk satu TP, meniru gabungSumberDenganBobot() di LMS:
+ * bila dokumen bobot tersimpan mencakup SEMUA sumber terdeteksi → pakai bobot itu;
+ * selain itu (sumber baru / belum diatur) → rata (bobot sama).
+ */
+export function bobotSumber(kunciTerdeteksi, dokBobot) {
+  const peta = new Map()
+  const saved = new Map()
+  if (dokBobot && Array.isArray(dokBobot.sumber)) {
+    for (const x of dokBobot.sumber) {
+      if (x && x.id && typeof x.bobot === 'number' && x.bobot > 0) saved.set(String(x.id), x.bobot)
+    }
+  }
+  const lengkap = kunciTerdeteksi.length > 0 && kunciTerdeteksi.every((k) => saved.has(k))
+  for (const k of kunciTerdeteksi) peta.set(k, lengkap ? saved.get(k) : 1)
+  return peta
+}
+
+/** Nilai berbobot (1 desimal) — sama dengan hitungNilaiBerbobot() di LMS. */
+export function nilaiBerbobot(komp) {
+  let sum = 0
+  let tot = 0
+  for (const k of komp) {
+    const b = typeof k.bobot === 'number' && k.bobot > 0 ? k.bobot : 0
+    if (b <= 0 || typeof k.nilai !== 'number') continue
+    sum += k.nilai * b
+    tot += b
+  }
+  return tot > 0 ? Math.round((sum / tot) * 10) / 10 : null
+}
+
 function clamp100(n) {
   return Math.round(Math.max(0, Math.min(100, Number(n))) * 100) / 100
 }
@@ -370,6 +407,34 @@ export async function kumpulkanSkorSlm(db, { kelas, tpTargets, semester, tahunAj
     }
   }
 
+  // ---- Bobot per sumber (lms_bobot_slm), sama dengan layar Rekap Nilai LMS ----
+  const sumberPerTp = new Map() // tpId -> Set<'tugas:id' | 'kuis:id'>
+  const tambahSumber = (tpId, kunci) => {
+    if (!sumberPerTp.has(tpId)) sumberPerTp.set(tpId, new Set())
+    sumberPerTp.get(tpId).add(kunci)
+  }
+  for (const [id, info] of tugasRelevan) for (const tpId of info.ids) tambahSumber(String(tpId), `tugas:${id}`)
+  for (const k of kuisRelevan) for (const tp of k.tps) tambahSumber(String(tp.id), `kuis:${k.id}`)
+  const bobotPerTp = new Map()
+  for (const [tpId, kunci] of sumberPerTp) {
+    const tp = tpTargets.find((t) => String(t.id) === tpId)
+    let dok = null
+    try {
+      const snap = await db.doc(`lms_bobot_slm/${idBobotSlm(kelasU, tp?.mapel || '', tpId)}`).get()
+      if (snap.exists) dok = snap.data()
+    } catch (e) {
+      logger.warn('agregasiSlm: baca lms_bobot_slm gagal', e)
+    }
+    bobotPerTp.set(tpId, bobotSumber([...kunci], dok))
+  }
+  for (const perTp of komponen.values()) {
+    for (const [tpId, arr] of perTp) {
+      const peta = bobotPerTp.get(tpId)
+      for (const k of arr) k.bobot = peta?.get(`${k.jenis}:${k.id}`) ?? 1
+    }
+  }
+  meta.bobotKustom = [...bobotPerTp.values()].some((m) => [...m.values()].some((v) => v !== 1))
+
   return { skor, komponen, meta }
 }
 
@@ -429,14 +494,14 @@ export async function tulisNilaiTpSlm(
         tingkatan,
         semester,
         tahunAjaran,
-        slm: rataSkor(arr),
+        slm: nilaiBerbobot(komp) ?? rataSkor(arr),
         slmAgregat: {
-          metode: 'rata',
+          metode: komp.some((x) => x.bobot !== komp[0].bobot) ? 'berbobot' : 'rata',
           nTugas: komp.filter((x) => x.jenis === 'tugas').length,
           nKuis: komp.filter((x) => x.jenis === 'kuis').length,
           nKomponen: arr.length,
         },
-        slmKomponen: komp.map((x) => ({ jenis: x.jenis, id: x.id, judul: x.judul, nilai: x.nilai })),
+        slmKomponen: komp.map((x) => ({ jenis: x.jenis, id: x.id, judul: x.judul, nilai: x.nilai, bobot: x.bobot })),
         updatedAt: FieldValue.serverTimestamp(),
         updatedBy: uid,
         ...sumber,
