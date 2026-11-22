@@ -500,3 +500,10 @@
 - `src/pages/akademik/Leger.tsx`: `nilaiAsesmenMapel` kini meneruskan `tpSemester` sebagai pool (sama dengan `raporSts.ts`).
 - Portal orang tua (repo `portal-orangtua`): peringkat 5 Besar dihitung dari jumlah nilai akhir, hanya siswa bermapel lengkap, seri berbagi peringkat; jumlah siswa yang belum lengkap ditampilkan.
 - Belum diubah: `LaporanNilai.tsx` (kolom rata-rata STS) tidak memakai pool cadangan sehingga bisa «–» untuk kasus tepi yang sama; snapshot `rapor_sts_ortu` tetap harus dipublikasikan ulang bila nilai berubah.
+
+## 2026-11-22 — Penghapusan salinan file LMS yang nyasar
+
+- `src/lib/kuis.ts` dan `src/pages/siswa/SiswaLombaDetail.tsx` (salinan LMS yang masuk lewat commit «fix» 2026-11-17, tidak diimpor kode mana pun) dihapus dengan `git rm` dari repo ini. Sebelumnya keduanya membuat `npm run deploy` berhenti di `tsc -b` (27 error: modul `types/kuis`, `types/soal`, `lib/lomba`, `context/SiswaContext`, dst. tidak ada di repo ini).
+- Sempat salah repo: perintah hapus pertama dijalankan di folder repo `lms` dan dipulihkan sebelum commit (lihat CHANGELOG/ANTIREGRESI repo `lms`).
+- Setelah penghapusan: `npx tsc -b` bersih lalu `npm run deploy`.
+- Antiregresi: §Operasional.Repo.

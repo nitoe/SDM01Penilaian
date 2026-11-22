@@ -432,3 +432,10 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 3. Bobot antar TP STS = `tpBobot` cakupan (default 1). Bobot semester (`bobotPerSemester`/`bobotMapel`) hanya untuk nilai akhir rapor SLM+STS+SAS dan TIDAK boleh masuk jalur STS.
 4. Portal 5 Besar membaca snapshot `rapor_sts_ortu`; perubahan nilai setelah publikasi tidak terlihat sampai wali kelas mempublikasikan ulang.
 5. Diketahui: `LaporanNilai.tsx` tidak memakai pool cadangan (kolom rata-rata bisa «–» di kasus tepi).
+
+## §Operasional.Repo — repo ini tidak boleh memuat file LMS; cek repo sebelum menghapus (2026-11-22)
+
+1. Pelengkap §SLM.Agregasi.2 butir 6. Gejala: `npm run deploy` berhenti di `tsc -b` dengan error «Cannot find module '../types/kuis' / '../types/soal' / './lombaAkses' / '../../context/SiswaContext'» pada `src/lib/kuis.ts` dan `src/pages/siswa/SiswaLombaDetail.tsx`. Penyebab: salinan file LMS ter-push ke repo ini (commit «fix» 2026-11-17).
+2. Penyelesaian: `git rm` kedua file DI REPO INI (folder `sdm01kks`, remote `SDM01Penilaian`), lalu `npx tsc -b` harus bersih. Jangan menghapusnya di repo `lms` — di sana keduanya dipakai.
+3. Sebelum menghapus file, cek `git remote -v` dan nama folder di terminal. Zip paket tidak bisa menyampaikan penghapusan file; penghapusan harus dilakukan manual lewat Git.
+4. Jangan menyalin file/halaman LMS (`src/lib/kuis.ts`, `src/lib/soal.ts`, `src/pages/siswa/*`, `src/types/kuis.ts`, `src/types/soal.ts`, `src/types/lomba.ts`, `src/context/SiswaContext`) ke repo ini. Jika perlu data LMS, baca lewat koleksi Firestore atau Cloud Function.
