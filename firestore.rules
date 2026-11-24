@@ -1756,7 +1756,12 @@ match /g7kaih/{id} {
                       && lmsLihatMapelKelas(resource.data.mapel, resource.data.kelas))
                   || (isSiswaLms()
                       && 'siswaId' in resource.data
-                      && resource.data.siswaId == request.auth.token.siswaId);
+                      && resource.data.siswaId == request.auth.token.siswaId)
+                  // Anggota kelompok membaca pengumpulan KETUANYA (hanya untuk status «terkumpul
+                  // lewat kelompok»). id pengumpulan ketua == id kelompok baru `{tugasId}_{ketuaId}`.
+                  || (isSiswaLms()
+                      && exists(/databases/$(database)/documents/lms_tugas_kelompok/$(id))
+                      && request.auth.token.siswaId in get(/databases/$(database)/documents/lms_tugas_kelompok/$(id)).data.anggotaIds);
 
       allow create: if request.resource.data.keys().hasOnly(
                          ['tugasId', 'siswaId', 'siswaNama', 'kelas', 'mapel', 'catatan',
@@ -1862,7 +1867,9 @@ match /g7kaih/{id} {
     // Kelompok untuk tugas modeKelompok (ANTIREGRESI §Tugas.Kelompok).
     // Siswa sekelas: buat (jadi ketua), baca, update anggota (hanya ketua),
     // keluar (hapus diri / hapus doc jika ketua). Guru mapel×kelas + admin: baca + hapus.
-    // Tidak ada konfirmasi anggota — ketua memasukkan hasil diskusi kelas.
+    // Konfirmasi anggota hanya informatif (lms_tugas_kelompok_anggota) — tidak menghalangi pengumpulan.
+    // Kelompok BARU wajib id `{tugasId}_{ketuaId}` (= id pengumpulan ketua; dipakai rules
+    // lms_pengumpulan agar anggota boleh membaca status pengumpulan ketuanya).
     match /lms_tugas_kelompok/{id} {
       allow read: if isAdmin()
                   || (isSiswaLms()
@@ -1874,6 +1881,7 @@ match /g7kaih/{id} {
                            resource.data.kelas));
 
       allow create: if isSiswaLms()
+                    && id == request.resource.data.tugasId + '_' + request.auth.token.siswaId
                     && request.resource.data.keys().hasAll(
                          ['tugasId', 'kelas', 'ketuaId', 'ketuaNama', 'anggotaIds', 'anggotaList',
                           'dibuatOleh', 'dibuatMs', 'diubahMs'])
@@ -1935,6 +1943,91 @@ match /g7kaih/{id} {
                     || (isSiswaLms()
                         && resource.data.kelas == request.auth.token.kelas
                         && resource.data.ketuaId == request.auth.token.siswaId)
+                    || (resource.data.keys().hasAll(['tugasId'])
+                        && exists(/databases/$(database)/documents/lms_tugas/$(resource.data.tugasId))
+                        && lmsTulisMapelKelas(
+                             get(/databases/$(database)/documents/lms_tugas/$(resource.data.tugasId)).data.mapel,
+                             resource.data.kelas));
+    }
+
+    // ---- lms_tugas_kelompok_anggota/{kelompokId}_{siswaId} ------------------
+    // Status per anggota: konfirmasi (INFORMATIF, tidak menghalangi pengumpulan ketua) dan
+    // pengajuan kirim mandiri (anggota mengajukan → ketua menerima/menolak).
+    // - Anggota: buat/ubah dokumen MILIKNYA saja (konfirmasiMs, pengajuan 'tidak'|'menunggu', alasan).
+    //   Anggota tidak bisa menerima pengajuannya sendiri.
+    // - Ketua: hanya mengubah pengajuan → 'diterima'|'ditolak' + catatanKetua.
+    // - Baca: siswa sekelas + guru mapel×kelas + admin. Query siswa WAJIB menyertakan kelas.
+    // Izin kirim mandiri ditegakkan di UI (rules pengumpulan tidak diubah) — lihat ANTIREGRESI.
+    match /lms_tugas_kelompok_anggota/{id} {
+      allow read: if isAdmin()
+                  || (isSiswaLms()
+                      && resource.data.kelas == request.auth.token.kelas)
+                  || (resource.data.keys().hasAll(['tugasId'])
+                      && exists(/databases/$(database)/documents/lms_tugas/$(resource.data.tugasId))
+                      && lmsLihatMapelKelas(
+                           get(/databases/$(database)/documents/lms_tugas/$(resource.data.tugasId)).data.mapel,
+                           resource.data.kelas));
+
+      allow create: if isSiswaLms()
+                    && request.resource.data.keys().hasOnly(
+                         ['kelompokId', 'tugasId', 'kelas', 'siswaId', 'siswaNama', 'ketuaId',
+                          'konfirmasiMs', 'pengajuan', 'alasan', 'catatanKetua', 'diubahMs'])
+                    && request.resource.data.keys().hasAll(
+                         ['kelompokId', 'tugasId', 'kelas', 'siswaId', 'siswaNama', 'ketuaId',
+                          'konfirmasiMs', 'pengajuan', 'alasan', 'catatanKetua', 'diubahMs'])
+                    && request.resource.data.siswaId == request.auth.token.siswaId
+                    && request.resource.data.kelas == request.auth.token.kelas
+                    && request.resource.data.kelompokId is string
+                    && request.resource.data.kelompokId.size() > 0
+                    && request.resource.data.kelompokId.size() <= 200
+                    && id == request.resource.data.kelompokId + '_' + request.resource.data.siswaId
+                    && exists(/databases/$(database)/documents/lms_tugas_kelompok/$(request.resource.data.kelompokId))
+                    && get(/databases/$(database)/documents/lms_tugas_kelompok/$(request.resource.data.kelompokId)).data.kelas == request.resource.data.kelas
+                    && get(/databases/$(database)/documents/lms_tugas_kelompok/$(request.resource.data.kelompokId)).data.tugasId == request.resource.data.tugasId
+                    && get(/databases/$(database)/documents/lms_tugas_kelompok/$(request.resource.data.kelompokId)).data.ketuaId == request.resource.data.ketuaId
+                    && request.auth.token.siswaId in get(/databases/$(database)/documents/lms_tugas_kelompok/$(request.resource.data.kelompokId)).data.anggotaIds
+                    && request.resource.data.siswaNama is string
+                    && request.resource.data.siswaNama.size() <= 120
+                    && request.resource.data.konfirmasiMs is number
+                    && request.resource.data.pengajuan in ['tidak', 'menunggu']
+                    && request.resource.data.alasan is string
+                    && request.resource.data.alasan.size() <= 200
+                    && request.resource.data.catatanKetua == ''
+                    && request.resource.data.diubahMs is number;
+
+      // Anggota mengubah dokumen miliknya: konfirmasi + pengajuan (tidak boleh langsung 'diterima').
+      allow update: if isSiswaLms()
+                    && resource.data.siswaId == request.auth.token.siswaId
+                    && resource.data.kelas == request.auth.token.kelas
+                    && exists(/databases/$(database)/documents/lms_tugas_kelompok/$(resource.data.kelompokId))
+                    && request.auth.token.siswaId in get(/databases/$(database)/documents/lms_tugas_kelompok/$(resource.data.kelompokId)).data.anggotaIds
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['konfirmasiMs', 'pengajuan', 'alasan', 'diubahMs'])
+                    && request.resource.data.konfirmasiMs is number
+                    && request.resource.data.alasan is string
+                    && request.resource.data.alasan.size() <= 200
+                    && (request.resource.data.pengajuan == resource.data.pengajuan
+                        || (request.resource.data.pengajuan in ['tidak', 'menunggu']
+                            && resource.data.pengajuan in ['tidak', 'menunggu', 'ditolak']));
+
+      // Ketua memutuskan pengajuan anggota.
+      allow update: if isSiswaLms()
+                    && resource.data.ketuaId == request.auth.token.siswaId
+                    && resource.data.kelas == request.auth.token.kelas
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['pengajuan', 'catatanKetua', 'diubahMs'])
+                    && request.resource.data.pengajuan in ['diterima', 'ditolak']
+                    && resource.data.pengajuan in ['menunggu', 'diterima', 'ditolak']
+                    && request.resource.data.catatanKetua is string
+                    && request.resource.data.catatanKetua.size() <= 200;
+
+      // Anggota menghapus miliknya (keluar), ketua membersihkan anggota yang dikeluarkan / kelompok
+      // dihapus, guru mapel×kelas + admin.
+      allow delete: if isAdmin()
+                    || (isSiswaLms()
+                        && resource.data.kelas == request.auth.token.kelas
+                        && (resource.data.siswaId == request.auth.token.siswaId
+                            || resource.data.ketuaId == request.auth.token.siswaId))
                     || (resource.data.keys().hasAll(['tugasId'])
                         && exists(/databases/$(database)/documents/lms_tugas/$(resource.data.tugasId))
                         && lmsTulisMapelKelas(
