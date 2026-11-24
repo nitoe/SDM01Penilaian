@@ -39,11 +39,11 @@ service firebase.storage {
         );
     }
 
-    // Guru atau admin (bukan orang tua). Dipakai baca video pengumpulan — orang tua
+    // Semua jenis guru + admin (selaras isGuru() di firestore.rules; bukan orang tua). Dipakai baca video pengumpulan — orang tua
     // tidak boleh mengakses berkas video siswa lewat rules (ANTIREGRESI §Tugas.Video.6).
     function guruStorage() {
       return isLoggedIn()
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['guru', 'admin']
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['admin', 'guru', 'guru_akademik', 'guru_tahsin_tahfizh']
         && (
           !('aktif' in firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data)
           || firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.aktif == true
