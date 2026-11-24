@@ -277,6 +277,20 @@
       ]
     },
     {
+      "collectionGroup": "lms_tugas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "kelasList",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "aktif",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "lms_kuis",
       "queryScope": "COLLECTION",
       "fields": [
