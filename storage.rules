@@ -1,13 +1,16 @@
 rules_version = '2';
 
-// Firebase Storage — tanda tangan digital rapor STS + PDF perpustakaan
+// Firebase Storage — tanda tangan digital rapor STS + PDF perpustakaan + LMS
 // Deploy: firebase deploy --only storage
 // Path:
 //   tanda-tangan/kepsek.png
 //   tanda-tangan/stempel.png
 //   tanda-tangan/guru/{uid}.png   ← nama file = uid + ".png"
 //   perpus_digital/{uid}/{file}    ← PDF bacaan digital (unggah staf, baca publik)
-//   lms/pengumpulan/{tugasId}/{siswaId}_{slot}.{webm|mp4} ← video bukti tugas LMS (unggah siswa, baca guru + pemilik)
+//   lms/materi/{kelas}/{fileName}
+//   lms/kuis/{kuisId}/{fileName}
+//   lms/tugas/{tugasId}/{fileName}       ← lampiran guru (ANTIREGRESI §Tugas.Lampiran)
+//   lms/pengumpulan/{tugasId}/{fileName} ← video bukti siswa (ANTIREGRESI §Tugas.Video)
 
 service firebase.storage {
   match /b/{bucket}/o {
@@ -18,9 +21,29 @@ service firebase.storage {
       return request.auth != null && !('lmsSiswa' in request.auth.token);
     }
 
+    function isSiswaLms() {
+      return request.auth != null
+        && 'lmsSiswa' in request.auth.token
+        && request.auth.token.lmsSiswa == true
+        && 'siswaId' in request.auth.token
+        && request.auth.token.siswaId is string
+        && request.auth.token.siswaId.size() > 0;
+    }
+
     function isAdmin() {
       return isLoggedIn()
         && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        && (
+          !('aktif' in firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data)
+          || firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.aktif == true
+        );
+    }
+
+    // Guru atau admin (bukan orang tua). Dipakai baca video pengumpulan — orang tua
+    // tidak boleh mengakses berkas video siswa lewat rules (ANTIREGRESI §Tugas.Video.6).
+    function guruStorage() {
+      return isLoggedIn()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['guru', 'admin']
         && (
           !('aktif' in firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data)
           || firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.aktif == true
@@ -73,9 +96,9 @@ service firebase.storage {
     }
 
 
-    // LMS materi: PDF / gambar / video / audio
+    // LMS materi: PDF / gambar / video
     // Path: lms/materi/{kelas}/{fileName}
-    // Batas: gambar/pdf 10 MB, audio 15 MB, video 50 MB. Baca: staf login; tulis: staf login.
+    // Batas: gambar/pdf 10 MB, video 50 MB. Baca: staf login; tulis: staf login.
     // Penegakan penugasan di app + firestore.rules (metadata di lms_materi).
     function lmsGambarAtauPdf() {
       return request.resource.size < 10 * 1024 * 1024
@@ -86,16 +109,11 @@ service firebase.storage {
       return request.resource.size < 50 * 1024 * 1024
         && request.resource.contentType.matches('video/.*');
     }
-    // Audio untuk materi tulis-sendiri (narasi, lagu, bacaan). Maks 15 MB.
-    function lmsAudio() {
-      return request.resource.size < 15 * 1024 * 1024
-        && request.resource.contentType.matches('audio/.*');
-    }
 
     match /lms/materi/{kelas}/{fileName} {
       allow read: if isLoggedIn();
       allow create, update: if isLoggedIn()
-        && (lmsGambarAtauPdf() || lmsVideo() || lmsAudio())
+        && (lmsGambarAtauPdf() || lmsVideo())
         && fileName.size() > 0
         && fileName.size() <= 200;
       allow delete: if isLoggedIn();
@@ -121,58 +139,66 @@ service firebase.storage {
       allow delete: if isLoggedIn();
     }
 
-    // Video bukti tugas LMS (siswa unggah sendiri; ≤ 1 menit, dikecilkan di HP, maks 15 MB).
-    // Path: lms/pengumpulan/{tugasId}/{siswaId}_{slot}.{webm|mp4}, slot 1..6.
-    // Tulis/hapus: hanya siswa pemilik (claim siswaId), tugas aktif, kelas cocok, BELUM dinilai.
-    // Baca: pemilik + guru/admin (BUKAN akun orang tua/staf lain). Durasi tidak bisa dicek di rules
-    // (dijaga klien); ukuran dan tipe dijaga di sini. Hapus otomatis lewat lifecycle bucket.
-    function lmsSiswaStorage() {
-      return request.auth != null
-        && 'lmsSiswa' in request.auth.token
-        && request.auth.token.lmsSiswa == true
-        && 'siswaId' in request.auth.token;
+    // ---- Lampiran tugas guru (ANTIREGRESI §Tugas.Lampiran) --------------------
+    // Path: lms/tugas/{tugasId}/{id}_{nama}
+    // Tulis: staf login. Baca: publik (siswa unduh lewat URL bertoken getDownloadURL).
+    // Batas 50 MB per berkas (selaras klien).
+    match /lms/tugas/{tugasId}/{fileName} {
+      allow read: if true;
+      allow create, update: if isLoggedIn()
+        && tugasId.size() > 0
+        && tugasId.size() <= 100
+        && fileName.size() > 0
+        && fileName.size() <= 220
+        && request.resource.size < 50 * 1024 * 1024;
+      allow delete: if isLoggedIn();
     }
 
-    function videoTugasSah() {
-      return request.resource.size < 15 * 1024 * 1024
-        && request.resource.contentType.matches('video/(webm|mp4)');
+    // ---- Video bukti pengumpulan siswa (ANTIREGRESI §Tugas.Video) ------------
+    // Path: lms/pengumpulan/{tugasId}/{siswaId}_{slot}.{webm|mp4}
+    // Nama berkas WAJIB diawali claim siswaId + '_' + slot 1..6 + ekstensi.
+    // Ukuran ≤ 15 MB; tipe video/webm atau video/mp4 saja.
+    // Siswa: create/update/delete hanya miliknya, tugas aktif, belum dinilai.
+    // Baca: pemilik (siswa) atau guru/admin (guruStorage) — BUKAN isLoggedIn() (orang tua).
+    // Maks. 2 panggilan firestore per evaluasi (satu get tugas, satu exists nilai).
+
+    function videoPengumpulanSah() {
+      return request.resource.size > 0
+        && request.resource.size <= 15 * 1024 * 1024
+        && (request.resource.contentType == 'video/webm'
+            || request.resource.contentType == 'video/mp4');
     }
 
-    function namaVideoMilikSiswa(fileName) {
-      return fileName.matches(request.auth.token.siswaId + '_[1-6]\\.(webm|mp4)');
+    // Nama: {siswaId}_{1..6}.webm|mp4  (siswaId dari claim token).
+    function namaVideoSiswa(fileName) {
+      return fileName.matches('^' + request.auth.token.siswaId + '_[1-6]\\.(webm|mp4)$');
     }
 
+    // Tugas aktif + siswa belum dinilai. Satu get + satu exists (batas Storage rules).
     function siswaBolehKelolaVideo(tugasId) {
       let t = firestore.get(/databases/(default)/documents/lms_tugas/$(tugasId)).data;
       return t.aktif == true
-        && (t.kelas == request.auth.token.kelas
-            || ('kelasList' in t && request.auth.token.kelas in t.kelasList))
         && !firestore.exists(/databases/(default)/documents/lms_nilai_tugas/$(tugasId + '_' + request.auth.token.siswaId));
     }
 
-    function guruStorage() {
-      return isLoggedIn()
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role
-             in ['admin', 'guru', 'guru_tahsin_tahfizh', 'guru_akademik']
-        && (
-          !('aktif' in firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data)
-          || firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.aktif == true
-        );
-    }
-
     match /lms/pengumpulan/{tugasId}/{fileName} {
-      allow read: if (lmsSiswaStorage() && namaVideoMilikSiswa(fileName))
+      allow read: if (isSiswaLms()
+                      && fileName.matches('^' + request.auth.token.siswaId + '_.*'))
                   || guruStorage();
-      allow create, update: if lmsSiswaStorage()
-                            && namaVideoMilikSiswa(fileName)
-                            && videoTugasSah()
-                            && tugasId.size() > 0
-                            && tugasId.size() <= 100
-                            && siswaBolehKelolaVideo(tugasId);
-      allow delete: if (lmsSiswaStorage()
-                        && namaVideoMilikSiswa(fileName)
+
+      allow create, update: if isSiswaLms()
+        && tugasId.size() > 0
+        && tugasId.size() <= 100
+        && namaVideoSiswa(fileName)
+        && videoPengumpulanSah()
+        && siswaBolehKelolaVideo(tugasId);
+
+      // Hapus (ganti/reset): pemilik sebelum dinilai, atau guru/admin.
+      allow delete: if (isSiswaLms()
+                        && namaVideoSiswa(fileName)
                         && siswaBolehKelolaVideo(tugasId))
-                    || guruStorage();
+                    || guruStorage()
+                    || isAdmin();
     }
 
     match /{allPaths=**} {
