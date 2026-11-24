@@ -1,0 +1,26 @@
+/* Tugas kelompok — sisipkan ke src/styles/siswa.css */
+.sw-kelompok { margin-bottom: 1rem; }
+.sw-kelompok-info { margin-top: 0.35rem; }
+.sw-kelompok-ketua { margin: 0 0 0.35rem; font-size: 0.9rem; }
+.sw-kelompok-anggota {
+  list-style: none; padding: 0; margin: 0 0 0.5rem;
+  display: flex; flex-wrap: wrap; gap: 0.35rem;
+}
+.sw-kelompok-anggota li {
+  background: #f1f5f9; border-radius: 999px; padding: 0.2rem 0.65rem;
+  font-size: 0.82rem; color: #334155;
+}
+.sw-kelompok-form { margin-top: 0.35rem; }
+.sw-kelompok-max { font-size: 0.85rem; color: #64748b; margin: 0.25rem 0; }
+.sw-kelompok-pilih {
+  list-style: none; padding: 0; margin: 0.4rem 0 0.75rem;
+  max-height: 14rem; overflow: auto;
+  border: 1px solid #e2e8f0; border-radius: 0.5rem;
+}
+.sw-kelompok-pilih li { border-bottom: 1px solid #f1f5f9; }
+.sw-kelompok-pilih li:last-child { border-bottom: 0; }
+.sw-kelompok-check {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.45rem 0.65rem; cursor: pointer; font-size: 0.9rem;
+}
+.sw-kelompok-aksi { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
