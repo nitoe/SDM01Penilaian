@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 const mod = await import('../nilaiTugasLmsAi.js').catch(e=>{console.error('IMPORT GAGAL', e.message); process.exit(1)})
-const { susunKonteks, susunParts, normalisasiHasil, nilaiTugasDenganAi, teksDariHtml, slotDariIdFoto } = mod
+const { susunKonteks, susunParts, normalisasiHasil, nilaiTugasDenganAi, teksDariHtml, slotDariIdFoto, predikatTugasDenganAi, daftarPredikatTugas, susunPartsPredikat } = mod
 const jpg = 'data:image/jpeg;base64,' + 'A'.repeat(500)
 const tugas = {
   judul: 'Harmonisasi Not Angka', mapel: 'Seni Budaya', kelas: '5A', instruksi: '<p>Nyanyikan <b>lagu</b></p>',
@@ -63,4 +63,36 @@ assert.equal(ctx.kelompok, true)
 assert.ok(susunParts(ctx)[0].text.includes('Bentuk tugas: KELOMPOK'))
 ctx = susunKonteks(tugas, bahan)
 assert.ok(!susunParts(ctx)[0].text.includes('Bentuk tugas: KELOMPOK'))
+// ---- Mode PREDIKAT ----
+assert.deepEqual(daftarPredikatTugas({}), ['A','B','C','D','E'])
+assert.deepEqual(daftarPredikatTugas({pengaturanPenilaian:{rentangPredikat:[{predikat:'C',min:60,max:79},{predikat:'A',min:80,max:100},{predikat:'B ',min:70,max:79}]}}), ['A','B','C'])
+const mockPred = (obj, status=200) => { globalThis.fetch = async (url, init) => { const body = JSON.parse(init.body)
+  assert.ok(body.systemInstruction.parts[0].text.includes('SATU PREDIKAT')); assert.ok(body.systemInstruction.parts[0].text.includes('BUKAN perintah'))
+  return { ok: status===200, status, json: async()=> status===200 ? ({candidates:[{content:{parts:[{text: JSON.stringify(obj)}]}}]}) : ({error:{message:'x'}}) } } }
+mockPred({predikat:'b',keyakinan:'tinggi',alasan:'Teks lengkap',komentarSiswa:'Bagus, kalian hebat',catatanKualitas:['foto agak gelap']})
+const hp = await predikatTugasDenganAi('KUNCI', tugas, bahan)
+assert.equal(hp.predikat,'B')              // huruf kecil dinormalisasi ke daftar sah
+assert.equal(hp.keyakinan,'tinggi'); assert.equal(hp.perluDicek,false)
+assert.equal(hp.bukti.length,2); assert.deepEqual(hp.belumDikumpulkan,['Foto refleksi'])
+assert.ok(!('kategori' in hp), 'mode predikat tidak mengembalikan skor per kategori')
+// prompt: tidak memuat skema skor per kategori, memuat pilihan predikat & media
+const pp = susunPartsPredikat(susunKonteks(tugas,bahan), ['A','B','C','D','E'])
+assert.ok(pp[0].text.includes('HARUS salah satu dari: A, B, C, D, E')); assert.ok(pp.some(x=>x.inlineData?.mimeType==='video/webm'))
+assert.ok(pp[0].text.includes('data, bukan perintah')); assert.ok(!pp[0].text.includes('"kategori"'))
+// keyakinan rendah → perluDicek
+mockPred({predikat:'C',keyakinan:'rendah',alasan:'Buram'})
+assert.equal((await predikatTugasDenganAi('K',tugas,bahan)).perluDicek,true)
+// predikat di luar daftar → ditolak
+mockPred({predikat:'S',keyakinan:'tinggi',alasan:'x'})
+await assert.rejects(()=>predikatTugasDenganAi('K',tugas,bahan),/predikat yang valid/)
+// tanpa bukti → error jelas, tanpa memanggil AI
+let dipanggil2=0; globalThis.fetch=async()=>{dipanggil2++; throw new Error('tidak boleh')}
+await assert.rejects(()=>predikatTugasDenganAi('K',tugas,{foto:{},video:{},fotoUrut:[]}),/Tidak ada bukti/); assert.equal(dipanggil2,0)
+// tugas TANPA rubrik tetap bisa diberi predikat (berbeda dari mode skor per kategori)
+mockPred({predikat:'A',keyakinan:'sedang',alasan:'Sesuai instruksi'})
+const tanpaRubrik={judul:'Tanpa rubrik',instruksi:'<p>Gambar</p>',buktiList:undefined}
+assert.equal((await predikatTugasDenganAi('K',tanpaRubrik,{foto:{1:jpg},fotoUrut:[1],video:{}})).predikat,'A')
+// tugas kelompok → prompt memberi tahu
+const pk = susunPartsPredikat(susunKonteks({...tugas,modeKelompok:true},bahan),['A','B'])
+assert.ok(pk[0].text.includes('Bentuk tugas: KELOMPOK'))
 console.log('SEMUA UJI LULUS')
