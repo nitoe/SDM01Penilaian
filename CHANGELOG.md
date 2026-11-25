@@ -535,3 +535,9 @@
 - `firestore.rules` (lengkap): `lmsVideosSah` menerima kunci `'1'..'10'`. `storage.rules` (lengkap): `namaVideoSiswa` memakai `_(10|[1-9])`. Keduanya identik dengan repo `lms`.
 - `functions/nilaiTugasLmsAi.js`: bukti berlabel dan slot video sampai 10. Generator tugas AI (`generateTugasLmsAi.js`) tetap menyarankan ≤ 6 bukti.
 - Deploy: `firebase deploy --only firestore:rules,storage,functions:nilaiTugasLmsAi` DAHULU, baru hosting LMS (ANTIREGRESI LMS §Tugas.Bukti.Batas10).
+
+## 2026-11-25 — Batas video bukti tugas LMS: 15 MB → 100 MB (storage.rules)
+
+- `storage.rules` (lengkap): `videoPengumpulanSah` menerima video sampai 100 MB (sebelumnya 15 MB). Identik dengan repo `lms`. Batas durasi 1 menit di klien LMS dihapus (hanya ukuran yang dibatasi).
+- `functions/nilaiTugasLmsAi.js` tidak berubah: video > 9 MB dilewati dengan catatan «periksa manual».
+- Deploy: `firebase deploy --only storage` DAHULU, baru hosting LMS (ANTIREGRESI LMS §Tugas.Video.Ukuran).

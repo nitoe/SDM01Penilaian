@@ -157,14 +157,14 @@ service firebase.storage {
     // ---- Video bukti pengumpulan siswa (ANTIREGRESI §Tugas.Video) ------------
     // Path: lms/pengumpulan/{tugasId}/{siswaId}_{slot}.{webm|mp4}
     // Nama berkas WAJIB diawali claim siswaId + '_' + slot 1..10 + ekstensi.
-    // Ukuran ≤ 15 MB; tipe video/webm atau video/mp4 saja.
+    // Ukuran ≤ 100 MB (tanpa batas durasi, ANTIREGRESI LMS §Tugas.Video.Ukuran); tipe video/webm atau video/mp4 saja.
     // Siswa: create/update/delete hanya miliknya, tugas aktif, belum dinilai.
     // Baca: pemilik (siswa) atau guru/admin (guruStorage) — BUKAN isLoggedIn() (orang tua).
     // Maks. 2 panggilan firestore per evaluasi (satu get tugas, satu exists nilai).
 
     function videoPengumpulanSah() {
       return request.resource.size > 0
-        && request.resource.size <= 15 * 1024 * 1024
+        && request.resource.size <= 100 * 1024 * 1024
         && (request.resource.contentType == 'video/webm'
             || request.resource.contentType == 'video/mp4');
     }

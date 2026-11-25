@@ -465,5 +465,11 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 ## §LMS.BuktiBatas10 — bukti berlabel dan video LMS maksimal 10 (2026-11-25)
 
 1. Menggantikan §LMS.FotoBatas10 butir 3 (video tetap 1..6). Kunci `videos` di `lmsVideosSah` (`'1'..'10'`), `storage.rules` `namaVideoSiswa` (`_(10|[1-9])`), dan `nilaiTugasLmsAi.js` (`buktiTugas.slice(0, 10)`, slot video ≤ 10) harus selaras dengan `BATAS_BUKTI_TUGAS` = 10 di repo `lms`.
-2. Tetap: maks 2 video per pengumpulan, video ≤ 15 MB, dan saran generator AI ≤ 6 bukti. Rincian dan uji di ANTIREGRESI repo `lms` §Tugas.Bukti.Batas10.
+2. Tetap: maks 2 video per pengumpulan, video ≤ 100 MB (diubah dari 15 MB, lihat §LMS.VideoUkuran), dan saran generator AI ≤ 6 bukti. Rincian dan uji di ANTIREGRESI repo `lms` §Tugas.Bukti.Batas10.
 3. `storage.rules` dan `firestore.rules` harus IDENTIK di repo `lms` dan Penilaian; deploy dari Penilaian.
+
+## §LMS.VideoUkuran — batas video bukti LMS hanya ukuran, 100 MB (2026-11-25)
+
+1. Menggantikan «video ≤ 15 MB» (§LMS.BuktiBatas10 butir 2). `storage.rules` `videoPengumpulanSah` kini `request.resource.size <= 100 * 1024 * 1024` dan HARUS selaras dengan `BATAS_UKURAN_VIDEO` di `src/lib/videoTugas.ts` repo `lms`. Tidak ada batas durasi di rules maupun klien.
+2. `storage.rules` dan `firestore.rules` tetap IDENTIK di repo `lms` dan Penilaian; deploy dari Penilaian (`firebase deploy --only storage`), lalu hosting LMS.
+3. `nilaiTugasLmsAi.js` sengaja tidak menaikkan `BATAS_VIDEO_BYTE` (9 MB); video lebih besar dicatat «periksa manual». Rincian dan uji di ANTIREGRESI repo `lms` §Tugas.Video.Ukuran.
