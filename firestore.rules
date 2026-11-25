@@ -1727,6 +1727,7 @@ match /g7kaih/{id} {
         && mapel is string
         && exists(/databases/$(database)/documents/lms_tugas/$(tugasId))
         && lmsTugasDoc(tugasId).aktif == true
+        && !('selesai' in lmsTugasDoc(tugasId) && lmsTugasDoc(tugasId).selesai == true)
         && lmsTugasDoc(tugasId).mapel == mapel
         && (lmsTugasDoc(tugasId).kelas == kelas
             || ('kelasList' in lmsTugasDoc(tugasId)

@@ -178,6 +178,7 @@ service firebase.storage {
     function siswaBolehKelolaVideo(tugasId) {
       let t = firestore.get(/databases/(default)/documents/lms_tugas/$(tugasId)).data;
       return t.aktif == true
+        && !('selesai' in t && t.selesai == true)
         && !firestore.exists(/databases/(default)/documents/lms_nilai_tugas/$(tugasId + '_' + request.auth.token.siswaId));
     }
 
