@@ -529,3 +529,9 @@
 - `firestore.rules` (lengkap): `lms_pengumpulan` `fotoIds.size() <= 10` (create & update), `lms_pengumpulan_foto` slot `'1'..'10'`. Kunci video tetap `'1'..'6'`; `storage.rules` tidak berubah.
 - `functions/nilaiTugasLmsAi.js`: `slotDariIdFoto` kini `/_(10|[1-9])$/`, `fotoIds` dibaca sampai 10; slot video dan bukti berlabel tetap ≤ 6. `functions/uji/nilaiTugasLmsAi.uji.mjs`: tambahan uji slot 10/11/0.
 - Deploy: `firebase deploy --only firestore:rules,functions:nilaiTugasLmsAi` DAHULU, lalu hosting LMS (ANTIREGRESI LMS §Tugas.Foto.Batas10).
+
+## 2026-11-25 — Bukti berlabel LMS maksimal 10 (rules, storage, nilaiTugasLmsAi)
+
+- `firestore.rules` (lengkap): `lmsVideosSah` menerima kunci `'1'..'10'`. `storage.rules` (lengkap): `namaVideoSiswa` memakai `_(10|[1-9])`. Keduanya identik dengan repo `lms`.
+- `functions/nilaiTugasLmsAi.js`: bukti berlabel dan slot video sampai 10. Generator tugas AI (`generateTugasLmsAi.js`) tetap menyarankan ≤ 6 bukti.
+- Deploy: `firebase deploy --only firestore:rules,storage,functions:nilaiTugasLmsAi` DAHULU, baru hosting LMS (ANTIREGRESI LMS §Tugas.Bukti.Batas10).

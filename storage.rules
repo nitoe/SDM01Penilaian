@@ -156,7 +156,7 @@ service firebase.storage {
 
     // ---- Video bukti pengumpulan siswa (ANTIREGRESI §Tugas.Video) ------------
     // Path: lms/pengumpulan/{tugasId}/{siswaId}_{slot}.{webm|mp4}
-    // Nama berkas WAJIB diawali claim siswaId + '_' + slot 1..6 + ekstensi.
+    // Nama berkas WAJIB diawali claim siswaId + '_' + slot 1..10 + ekstensi.
     // Ukuran ≤ 15 MB; tipe video/webm atau video/mp4 saja.
     // Siswa: create/update/delete hanya miliknya, tugas aktif, belum dinilai.
     // Baca: pemilik (siswa) atau guru/admin (guruStorage) — BUKAN isLoggedIn() (orang tua).
@@ -169,9 +169,9 @@ service firebase.storage {
             || request.resource.contentType == 'video/mp4');
     }
 
-    // Nama: {siswaId}_{1..6}.webm|mp4  (siswaId dari claim token).
+    // Nama: {siswaId}_{1..10}.webm|mp4  (siswaId dari claim token).
     function namaVideoSiswa(fileName) {
-      return fileName.matches('^' + request.auth.token.siswaId + '_[1-6]\\.(webm|mp4)$');
+      return fileName.matches('^' + request.auth.token.siswaId + '_(10|[1-9])\\.(webm|mp4)$');
     }
 
     // Tugas aktif + siswa belum dinilai. Satu get + satu exists (batas Storage rules).

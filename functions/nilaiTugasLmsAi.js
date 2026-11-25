@@ -115,7 +115,7 @@ export function susunKonteks(tugas, bahan) {
   const belumDikumpulkan = []
 
   if (berlabel) {
-    for (const b of buktiTugas.slice(0, 6)) {
+    for (const b of buktiTugas.slice(0, 10)) {
       const slot = Number(b.slot)
       const label = potong(b.label, 120) || `Bukti ${slot}`
       const dasar = {
@@ -469,7 +469,7 @@ async function ambilBahan(tugasId, siswaId) {
   let totalVideo = 0
   for (const [k, v] of Object.entries(videos)) {
     const slot = Number(k)
-    if (!(slot >= 1 && slot <= 6) || !v || typeof v.path !== 'string') continue
+    if (!(slot >= 1 && slot <= 10) || !v || typeof v.path !== 'string') continue
     if (!v.path.startsWith(`lms/pengumpulan/${tugasId}/`) || v.path.includes('..')) continue
     const mime = v.tipe === 'video/mp4' ? 'video/mp4' : v.tipe === 'video/webm' ? 'video/webm' : ''
     if (!mime) continue

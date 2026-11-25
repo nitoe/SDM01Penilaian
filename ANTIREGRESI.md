@@ -461,3 +461,9 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 2. `slotDariIdFoto` memakai `/_(10|[1-9])$/`; jangan kembali ke `[1-6]` (foto slot 7–10 akan hilang dari penilaian AI) dan jangan memakai `[1-9]` saja (slot 10 terbaca 0).
 3. Slot VIDEO tetap 1..6 (`lmsVideosSah`, `storage.rules`, function). Jangan ikut dinaikkan tanpa mengubah semuanya bersamaan.
 4. Setelah mengubah `functions/nilaiTugasLmsAi.js` jalankan `node functions/uji/nilaiTugasLmsAi.uji.mjs` (harus «SEMUA UJI LULUS») dan eslint `no-undef` (§Functions.Impor).
+
+## §LMS.BuktiBatas10 — bukti berlabel dan video LMS maksimal 10 (2026-11-25)
+
+1. Menggantikan §LMS.FotoBatas10 butir 3 (video tetap 1..6). Kunci `videos` di `lmsVideosSah` (`'1'..'10'`), `storage.rules` `namaVideoSiswa` (`_(10|[1-9])`), dan `nilaiTugasLmsAi.js` (`buktiTugas.slice(0, 10)`, slot video ≤ 10) harus selaras dengan `BATAS_BUKTI_TUGAS` = 10 di repo `lms`.
+2. Tetap: maks 2 video per pengumpulan, video ≤ 15 MB, dan saran generator AI ≤ 6 bukti. Rincian dan uji di ANTIREGRESI repo `lms` §Tugas.Bukti.Batas10.
+3. `storage.rules` dan `firestore.rules` harus IDENTIK di repo `lms` dan Penilaian; deploy dari Penilaian.

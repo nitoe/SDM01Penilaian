@@ -1750,12 +1750,12 @@ match /g7kaih/{id} {
       return exists(/databases/$(database)/documents/lms_nilai_tugas/$(tugasId + '_' + siswaId));
     }
 
-    // videos: map opsional, kunci '1'..'6' (video hanya untuk bukti berlabel; foto boleh slot 1..10),
+    // videos: map opsional, kunci '1'..'10' (video hanya untuk bukti berlabel; slot sama dengan foto),
     // nilai map dengan path/tipe/ukuran/durasi, maks 2 entri.
     function lmsVideosSah(v) {
       return v is map
         && v.size() <= 2
-        && v.keys().hasOnly(['1', '2', '3', '4', '5', '6']);
+        && v.keys().hasOnly(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
     }
 
     // Minimal satu bukti: foto atau video (atau keduanya).
