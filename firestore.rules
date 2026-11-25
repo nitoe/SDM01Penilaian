@@ -1668,7 +1668,8 @@ match /g7kaih/{id} {
                             && request.resource.data.nilaiRataRata <= 1000))
                     && (!('nilaiPerKategori' in request.resource.data)
                         || request.resource.data.nilaiPerKategori == null
-                        || request.resource.data.nilaiPerKategori is map);
+                        || request.resource.data.nilaiPerKategori is map)
+                    && lmsNilaiPercobaanSah(request.resource.data);
 
       allow update: if resource.data.keys().hasAll(['tugasId', 'siswaId', 'kelas', 'mapel'])
                     && (lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas) || isAdmin())
@@ -1694,7 +1695,8 @@ match /g7kaih/{id} {
                             && request.resource.data.nilaiRataRata <= 1000))
                     && (!('nilaiPerKategori' in request.resource.data)
                         || request.resource.data.nilaiPerKategori == null
-                        || request.resource.data.nilaiPerKategori is map);
+                        || request.resource.data.nilaiPerKategori is map)
+                    && lmsNilaiPercobaanSah(request.resource.data);
 
       allow delete: if resource.data.keys().hasAll(['mapel', 'kelas'])
                     && (lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas) || isAdmin());
@@ -1746,8 +1748,24 @@ match /g7kaih/{id} {
                 && kelas in lmsTugasDoc(tugasId).kelasList));
     }
 
+    // Terkunci = nilai sudah ada DAN guru belum membuka perbaikan («Minta perbaikan»,
+    // bukaPerbaikan == true). Dokumen nilai lama tanpa field itu tetap terkunci seperti biasa.
+    // ANTIREGRESI §Tugas.Kesempatan.
     function lmsSudahDinilai(tugasId, siswaId) {
-      return exists(/databases/$(database)/documents/lms_nilai_tugas/$(tugasId + '_' + siswaId));
+      return exists(/databases/$(database)/documents/lms_nilai_tugas/$(tugasId + '_' + siswaId))
+        && get(/databases/$(database)/documents/lms_nilai_tugas/$(tugasId + '_' + siswaId))
+             .data.get('bukaPerbaikan', false) != true;
+    }
+
+    // Field percobaan pada lms_nilai_tugas (semuanya opsional; ditulis guru).
+    function lmsNilaiPercobaanSah(d) {
+      return (!('bukaPerbaikan' in d) || d.bukaPerbaikan is bool)
+          && (!('percobaanDinilai' in d)
+              || (d.percobaanDinilai is int && d.percobaanDinilai >= 1 && d.percobaanDinilai <= 100))
+          && (!('poinPerbaikan' in d)
+              || (d.poinPerbaikan is list && d.poinPerbaikan.size() <= 10))
+          && (!('riwayat' in d)
+              || (d.riwayat is list && d.riwayat.size() <= 20));
     }
 
     // videos: map opsional, kunci '1'..'10' (video hanya untuk bukti berlabel; slot sama dengan foto),
