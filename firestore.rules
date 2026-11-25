@@ -1717,6 +1717,17 @@ match /g7kaih/{id} {
       return get(/databases/$(database)/documents/lms_tugas/$(tugasId)).data;
     }
 
+    // Tugas bertanda tutupSetelahTenggat ditutup untuk siswa setelah tenggat + toleransi 5 menit
+    // (unggahan yang sedang berjalan). WAJIB sama dengan TOLERANSI_UNGGAH_MENIT di lib/tugasTutup.ts
+    // dan storage.rules. Field dibaca dengan `in` dulu: dokumen lama tidak memilikinya.
+    function lmsTugasTutupOlehTenggat(tugasId) {
+      return 'tutupSetelahTenggat' in lmsTugasDoc(tugasId)
+        && lmsTugasDoc(tugasId).tutupSetelahTenggat == true
+        && 'tenggat' in lmsTugasDoc(tugasId)
+        && lmsTugasDoc(tugasId).tenggat is timestamp
+        && request.time > lmsTugasDoc(tugasId).tenggat + duration.value(5, 'm');
+    }
+
     function lmsSiswaBolehKumpul(tugasId, kelas, mapel) {
       return isSiswaLms()
         && tugasId is string
@@ -1728,6 +1739,7 @@ match /g7kaih/{id} {
         && exists(/databases/$(database)/documents/lms_tugas/$(tugasId))
         && lmsTugasDoc(tugasId).aktif == true
         && !('selesai' in lmsTugasDoc(tugasId) && lmsTugasDoc(tugasId).selesai == true)
+        && !lmsTugasTutupOlehTenggat(tugasId)
         && lmsTugasDoc(tugasId).mapel == mapel
         && (lmsTugasDoc(tugasId).kelas == kelas
             || ('kelasList' in lmsTugasDoc(tugasId)

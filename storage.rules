@@ -179,6 +179,10 @@ service firebase.storage {
       let t = firestore.get(/databases/(default)/documents/lms_tugas/$(tugasId)).data;
       return t.aktif == true
         && !('selesai' in t && t.selesai == true)
+        // Tutup otomatis saat tenggat (+ toleransi 5 menit) — sama dengan firestore.rules.
+        && !('tutupSetelahTenggat' in t && t.tutupSetelahTenggat == true
+             && 'tenggat' in t && t.tenggat is timestamp
+             && request.time > t.tenggat + duration.value(5, 'm'))
         && !firestore.exists(/databases/(default)/documents/lms_nilai_tugas/$(tugasId + '_' + request.auth.token.siswaId));
     }
 
