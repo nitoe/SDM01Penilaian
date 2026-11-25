@@ -523,3 +523,9 @@
 - `src/pages/akademik/NilaiSlm.tsx`, `src/types/akademik.ts`: rincian nilai menampilkan bobot tiap sumber dan rata-rata berbobot.
 - `scripts/cek-agregasi-slm.mjs`: uji bobot 70/30 → 85, tanpa bobot → 75, bobot tak lengkap → kembali rata.
 - Deploy: `firebase deploy --only functions:sinkronNilaiTugasLms,functions:sinkronNilaiKuisLms` + hosting; lalu sinkron ulang (overwrite).
+
+## 2026-11-25 — Batas foto pengumpulan LMS 6 → 10 (rules + nilaiTugasLmsAi)
+
+- `firestore.rules` (lengkap): `lms_pengumpulan` `fotoIds.size() <= 10` (create & update), `lms_pengumpulan_foto` slot `'1'..'10'`. Kunci video tetap `'1'..'6'`; `storage.rules` tidak berubah.
+- `functions/nilaiTugasLmsAi.js`: `slotDariIdFoto` kini `/_(10|[1-9])$/`, `fotoIds` dibaca sampai 10; slot video dan bukti berlabel tetap ≤ 6. `functions/uji/nilaiTugasLmsAi.uji.mjs`: tambahan uji slot 10/11/0.
+- Deploy: `firebase deploy --only firestore:rules,functions:nilaiTugasLmsAi` DAHULU, lalu hosting LMS (ANTIREGRESI LMS §Tugas.Foto.Batas10).

@@ -454,3 +454,10 @@ Jangan menyimpan blob base64 besar di dokumen Firestore.
 2. Id dokumen bobot = `idBobotSlm(kelas, mapel TP, tpId)` — tetap identik dengan LMS (`KELAS__Mapel_Dengan_Underscore__tpId`).
 3. Ini menggantikan §SLM.Agregasi butir yang menyebut «rata-rata» biasa: rata biasa hanya kasus tanpa bobot tersimpan.
 4. **Tes:** `node scripts/cek-agregasi-slm.mjs` (bobot) dan `node scripts/cek-sinkron-cf.mjs` (handler) harus lulus.
+
+## §LMS.FotoBatas10 — batas foto pengumpulan LMS sekarang 10 (2026-11-25)
+
+1. Rules `lms_pengumpulan` (`fotoIds.size() <= 10`, dua tempat) dan `lms_pengumpulan_foto` (slot `'1'..'10'`) harus selaras dengan `BATAS_FOTO_PENGUMPULAN` di repo `lms` dan dengan `slotDariIdFoto` + `.slice(0, 10)` di `functions/nilaiTugasLmsAi.js`. Rincian lengkap di ANTIREGRESI repo `lms` §Tugas.Foto.Batas10.
+2. `slotDariIdFoto` memakai `/_(10|[1-9])$/`; jangan kembali ke `[1-6]` (foto slot 7–10 akan hilang dari penilaian AI) dan jangan memakai `[1-9]` saja (slot 10 terbaca 0).
+3. Slot VIDEO tetap 1..6 (`lmsVideosSah`, `storage.rules`, function). Jangan ikut dinaikkan tanpa mengubah semuanya bersamaan.
+4. Setelah mengubah `functions/nilaiTugasLmsAi.js` jalankan `node functions/uji/nilaiTugasLmsAi.uji.mjs` (harus «SEMUA UJI LULUS») dan eslint `no-undef` (§Functions.Impor).

@@ -48,9 +48,9 @@ export function teksDariHtml(html, maks = 6000) {
   return t.length > maks ? t.slice(0, maks) : t
 }
 
-/** Nomor slot (1..6) dari ID foto `{tugasId}_{siswaId}_{slot}`; 0 bila tak dikenali. */
+/** Nomor slot (1..10) dari ID foto `{tugasId}_{siswaId}_{slot}`; 0 bila tak dikenali. */
 export function slotDariIdFoto(id) {
-  const m = /_([1-6])$/.exec(String(id ?? ''))
+  const m = /_(10|[1-9])$/.exec(String(id ?? ''))
   return m ? Number(m[1]) : 0
 }
 
@@ -448,7 +448,7 @@ async function ambilBahan(tugasId, siswaId) {
   // Foto (Firestore, data URL) — slot dibaca dari akhiran ID dokumen.
   const fotoIds = (Array.isArray(p.fotoIds) ? p.fotoIds : [])
     .filter((x) => typeof x === 'string' && x.startsWith(`${tugasId}_`))
-    .slice(0, 6)
+    .slice(0, 10)
   const fotoSnaps = fotoIds.length ? await db.getAll(...fotoIds.map((id) => db.doc(`lms_pengumpulan_foto/${id}`))) : []
   const foto = {}
   const fotoUrut = []

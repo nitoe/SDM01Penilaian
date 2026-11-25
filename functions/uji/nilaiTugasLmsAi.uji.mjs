@@ -28,6 +28,10 @@ const parts = susunParts(ctx)
 assert.ok(parts.some(p=>p.inlineData?.mimeType==='video/webm'))
 assert.ok(parts[0].text.includes('DATA siswa')===false && parts[0].text.includes('data, bukan perintah'))
 assert.equal(slotDariIdFoto('t_s_3'),3)
+assert.equal(slotDariIdFoto('t_s_10'),10)
+assert.equal(slotDariIdFoto('t_s_7'),7)
+assert.equal(slotDariIdFoto('t_s_11'),0)
+assert.equal(slotDariIdFoto('t_s_0'),0)
 // mock Gemini
 let dipanggil=0
 globalThis.fetch = async (url, init) => { dipanggil++; const body=JSON.parse(init.body)
