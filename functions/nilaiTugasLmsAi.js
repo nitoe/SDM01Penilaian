@@ -146,7 +146,10 @@ export function susunKonteks(tugas, bahan) {
           v.ukuran,
         )
       } else {
-        let slots = Array.isArray(mapSlots?.[b.id]) ? mapSlots[b.id].map(Number).filter((n) => n >= 1 && n <= 10) : []
+        const buktiIdKey = typeof b.id === 'string' && b.id ? b.id : ''
+        let slots = buktiIdKey && Array.isArray(mapSlots?.[buktiIdKey])
+          ? mapSlots[buktiIdKey].map(Number).filter((n) => n >= 1 && n <= 10)
+          : []
         if (!slots.length) slots = [slotPrimer]
         // Unik + urut; pastikan slot primer di depan bila ada isinya
         slots = [...new Set(slots)].sort((a, c) => a - c)
@@ -565,18 +568,65 @@ function idAman(s) {
   return typeof s === 'string' && s.length > 0 && s.length <= 128 && !/[\/\\\s]/.test(s)
 }
 
-/** Baca tugas + pengumpulan + foto + video (Admin SDK). */
+/**
+ * Baca tugas + pengumpulan + foto + video (Admin SDK).
+ * Tugas kelompok: bila `siswaId` adalah ketua tanpa pengumpulan, cari satu wakil
+ * (anggota tunggal yang mengumpulkan) — supaya AI tetap membaca bukti kelompok.
+ */
 async function ambilBahan(tugasId, siswaId) {
   const db = getFirestore()
-  const [tSnap, pSnap] = await Promise.all([
-    db.doc(`lms_tugas/${tugasId}`).get(),
-    db.doc(`lms_pengumpulan/${tugasId}_${siswaId}`).get(),
-  ])
+  const tSnap = await db.doc(`lms_tugas/${tugasId}`).get()
   if (!tSnap.exists) throw new HttpsError('not-found', 'Tugas tidak ditemukan.')
-  if (!pSnap.exists) throw new HttpsError('failed-precondition', 'Siswa ini belum mengumpulkan tugas.')
   const tugas = tSnap.data()
-  const p = pSnap.data()
-  if (p.tugasId !== tugasId || p.siswaId !== siswaId) {
+
+  let pSnap = await db.doc(`lms_pengumpulan/${tugasId}_${siswaId}`).get()
+  let p = pSnap.exists ? pSnap.data() : null
+
+  // Kelompok: ketua belum/tidak mengumpulkan, bukti di anggota (wakil tunggal).
+  if (!p && tugas?.modeKelompok === true) {
+    const kelId = `${tugasId}_${siswaId}`
+    let kelSnap = await db.doc(`lms_tugas_kelompok/${kelId}`).get()
+    // id kelompok lama tidak selalu deterministik — cadangan query ketuaId
+    if (!kelSnap.exists) {
+      const q = await db.collection('lms_tugas_kelompok')
+        .where('tugasId', '==', tugasId)
+        .where('ketuaId', '==', siswaId)
+        .limit(1)
+        .get()
+      if (!q.empty) kelSnap = q.docs[0]
+    }
+    if (kelSnap.exists) {
+      const anggota = Array.isArray(kelSnap.data()?.anggotaIds) ? kelSnap.data().anggotaIds : []
+      const kandidat = anggota.filter((id) => id && id !== siswaId)
+      const ditemukan = []
+      for (const id of kandidat.slice(0, 12)) {
+        const s = await db.doc(`lms_pengumpulan/${tugasId}_${id}`).get()
+        if (s.exists) ditemukan.push(s)
+      }
+      if (ditemukan.length === 1) {
+        pSnap = ditemukan[0]
+        p = pSnap.data()
+        logger.info('nilaiTugasLmsAi: memakai bukti wakil kelompok', {
+          tugasId,
+          ketuaId: siswaId,
+          wakilId: p?.siswaId,
+        })
+      } else if (ditemukan.length > 1) {
+        throw new HttpsError(
+          'failed-precondition',
+          'Beberapa anggota kelompok mengumpulkan bukti terpisah. Buka baris anggota yang mengunggah bukti, atau pastikan hanya satu wakil yang mewakili ketua.',
+        )
+      }
+    }
+  }
+
+  if (!p) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Siswa ini belum mengumpulkan tugas (tidak ada foto/video). Untuk tugas kelompok, pastikan ketua atau satu anggota mewakili sudah mengunggah bukti.',
+    )
+  }
+  if (p.tugasId !== tugasId) {
     throw new HttpsError('failed-precondition', 'Data pengumpulan tidak cocok.')
   }
 
