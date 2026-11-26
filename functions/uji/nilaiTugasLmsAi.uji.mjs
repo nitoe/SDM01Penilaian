@@ -32,6 +32,24 @@ assert.equal(slotDariIdFoto('t_s_10'),10)
 assert.equal(slotDariIdFoto('t_s_7'),7)
 assert.equal(slotDariIdFoto('t_s_11'),0)
 assert.equal(slotDariIdFoto('t_s_0'),0)
+
+// Multi-foto per bukti via buktiSlots (b1 punya slot 1 dan 4)
+const bahanMulti = {
+  catatan: '',
+  foto: { 1: jpg, 4: jpg, 3: jpg },
+  fotoUrut: [1, 4, 3],
+  video: { 2: { base64: 'QUJD'.repeat(50), mime: 'video/webm', ukuran: 150, durasi: 42 } },
+  buktiSlots: { b1: [1, 4], b3: [3] },
+}
+ctx = susunKonteks(tugas, bahanMulti)
+const mediaB1 = ctx.media.filter((m) => m.buktiId === 'b1' && m.jenis === 'foto')
+assert.equal(mediaB1.length, 2, 'b1 harus 2 foto')
+assert.ok(mediaB1.some((m) => m.label.includes('1/2')))
+assert.ok(mediaB1.some((m) => m.label.includes('2/2')))
+assert.equal(ctx.media.filter((m) => m.buktiId === 'b3').length, 1)
+// Tanpa buktiSlots: tetap 1 foto di slot primer (kompatibel lama)
+ctx = susunKonteks(tugas, { catatan: '', foto: { 1: jpg }, fotoUrut: [1], video: {} })
+assert.equal(ctx.media.filter((m) => m.buktiId === 'b1').length, 1)
 // mock Gemini
 let dipanggil=0
 globalThis.fetch = async (url, init) => { dipanggil++; const body=JSON.parse(init.body)

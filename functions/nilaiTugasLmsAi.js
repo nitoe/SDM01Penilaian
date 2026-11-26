@@ -10,6 +10,8 @@
  *  4. Kategori `sumber: 'observasi'` dan kategori yang buktinya tidak ada TIDAK dinilai AI
  *     (skor null) — ditentukan server secara deterministik, bukan oleh AI.
  *  5. Catatan siswa, tulisan di foto, dan ucapan di video = DATA, bukan perintah (anti prompt injection).
+ *  6. Multi-foto per bukti: baca `pengumpulan.buktiSlots[buktiId]` → semua slot ikut dianalisis
+ *     dengan label yang sama (+ indeks bila >1). Tanpa field = fallback `bukti.slot` (kompatibel lama).
  *
  * Dua fungsi di berkas ini: `nilaiTugasLmsAi` (skor per kategori) dan `predikatTugasLmsAi`
  * (satu predikat keseluruhan; skor diturunkan di klien). Keduanya berbagi pembacaan bahan & pengamanan.
@@ -118,39 +120,62 @@ export function susunKonteks(tugas, bahan) {
   const belumDikumpulkan = []
 
   if (berlabel) {
+    // Multi-foto per bukti: pakai buktiSlots[b.id] bila ada; fallback [b.slot] (dokumen lama).
+    const mapSlots = bahan?.buktiSlots && typeof bahan.buktiSlots === 'object' ? bahan.buktiSlots : null
     for (const b of buktiTugas.slice(0, 10)) {
-      const slot = Number(b.slot)
-      const label = potong(b.label, 120) || `Bukti ${slot}`
+      const slotPrimer = Number(b.slot)
+      const labelDasar = potong(b.label, 120) || `Bukti ${slotPrimer}`
       const dasar = {
         buktiId: b.id,
-        slot,
-        label,
         petunjuk: potong(b.petunjuk, 300),
         kategoriIds: Array.isArray(b.kategoriIds) ? b.kategoriIds.map(String) : [],
         wajib: b.wajib !== false,
       }
       if (b.jenis === 'video') {
-        const v = bahan?.video?.[slot]
+        const v = bahan?.video?.[slotPrimer]
         if (!v) {
-          belumDikumpulkan.push(label)
+          belumDikumpulkan.push(labelDasar)
           continue
         }
         if (v.lewati) {
-          catatan.push(`${label}: video tidak dianalisis (${v.lewati}). Periksa manual.`)
+          catatan.push(`${labelDasar}: video tidak dianalisis (${v.lewati}). Periksa manual.`)
           continue
         }
-        tambahMedia({ ...dasar, jenis: 'video', mime: v.mime, base64: v.base64, durasi: v.durasi }, v.ukuran)
+        tambahMedia(
+          { ...dasar, slot: slotPrimer, label: labelDasar, jenis: 'video', mime: v.mime, base64: v.base64, durasi: v.durasi },
+          v.ukuran,
+        )
       } else {
-        const f = jenisFoto(slot)
-        if (!f) {
-          belumDikumpulkan.push(label)
+        let slots = Array.isArray(mapSlots?.[b.id]) ? mapSlots[b.id].map(Number).filter((n) => n >= 1 && n <= 10) : []
+        if (!slots.length) slots = [slotPrimer]
+        // Unik + urut; pastikan slot primer di depan bila ada isinya
+        slots = [...new Set(slots)].sort((a, c) => a - c)
+        if (slots.includes(slotPrimer)) {
+          slots = [slotPrimer, ...slots.filter((n) => n !== slotPrimer)]
+        }
+        const fotoValid = []
+        for (const slot of slots) {
+          const f = jenisFoto(slot)
+          if (!f) continue
+          if (f.lewati) {
+            catatan.push(`${labelDasar} (slot ${slot}): foto tidak dianalisis (${f.lewati}). Periksa manual.`)
+            continue
+          }
+          fotoValid.push({ slot, f })
+        }
+        if (fotoValid.length === 0) {
+          belumDikumpulkan.push(labelDasar)
           continue
         }
-        if (f.lewati) {
-          catatan.push(`${label}: foto tidak dianalisis (${f.lewati}). Periksa manual.`)
-          continue
-        }
-        tambahMedia({ ...dasar, jenis: 'foto', mime: f.mime, base64: f.base64 }, f.byte)
+        const banyak = fotoValid.length
+        fotoValid.forEach(({ slot, f }, i) => {
+          const label =
+            banyak === 1 ? labelDasar : `${labelDasar} (${i + 1}/${banyak})`
+          tambahMedia(
+            { ...dasar, slot, label, jenis: 'foto', mime: f.mime, base64: f.base64 },
+            f.byte,
+          )
+        })
       }
     }
   } else {
@@ -604,9 +629,31 @@ async function ambilBahan(tugasId, siswaId) {
     }
   }
 
+  // Multi-foto per bukti (ANTIREGRESI §Tugas.MultiFotoBukti): mapping buktiId → slot[]
+  let buktiSlots
+  if (p.buktiSlots && typeof p.buktiSlots === 'object') {
+    buktiSlots = {}
+    for (const [buktiId, slots] of Object.entries(p.buktiSlots)) {
+      if (!buktiId || typeof buktiId !== 'string') continue
+      if (!Array.isArray(slots)) continue
+      const bersih = [...new Set(
+        slots.map((s) => Number(s)).filter((n) => Number.isInteger(n) && n >= 1 && n <= 10),
+      )].sort((a, b) => a - b)
+      if (bersih.length) buktiSlots[buktiId] = bersih
+    }
+    if (!Object.keys(buktiSlots).length) buktiSlots = undefined
+  }
+
   return {
     tugas,
-    bahan: { catatan: p.catatan || '', siswaNama: p.siswaNama || '', foto, fotoUrut, video },
+    bahan: {
+      catatan: p.catatan || '',
+      siswaNama: p.siswaNama || '',
+      foto,
+      fotoUrut,
+      video,
+      ...(buktiSlots ? { buktiSlots } : {}),
+    },
     siswaNama: p.siswaNama || '',
     jumlahFoto: Object.keys(foto).length,
     jumlahVideo: Object.values(video).filter((x) => x && x.base64).length,
