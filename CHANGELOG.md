@@ -1,3 +1,10 @@
+## 2026-11-26 — firestore.rules: koleksi `lms_tugas_hasil_ortu` (nilai dan status tugas untuk portal orang tua)
+
+- Menambah blok `match /lms_tugas_hasil_ortu/{id}` di bagian LMS. Hanya penambahan; tidak ada aturan lain yang diubah.
+- Baca terbuka (portal orang tua tanpa Auth). Tulis: guru penugasan mapel×kelas atau admin; isi dibatasi nilai dan status (`hasOnly`).
+- `firestore.rules` identik dengan repo nitoe/lms. Detail fitur dan antiregresi: CHANGELOG/ANTIREGRESI nitoe/lms §Tugas.Ortu.
+- Deploy: `firebase deploy --only firestore:rules`.
+
 ## 2026-11-25 — Bukti video: batas hanya dari ukuran, tidak lagi 1 menit
 
 ### Latar

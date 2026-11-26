@@ -2249,6 +2249,51 @@ match /g7kaih/{id} {
 
 
 
+    // ---- lms_tugas_hasil_ortu/{tugasId_siswaId} -----------------------------------
+    // Snapshot NILAI + STATUS tugas untuk portal orang tua (tanpa Auth Firebase; pola
+    // rapor_sts_ortu / lms_tka_hasil_ortu). Ditulis saat guru menekan «Bagikan ke orang tua».
+    // Isi dibatasi hasOnly: catatan guru, poin perbaikan, riwayat percobaan, nilai per rubrik,
+    // dan bukti siswa TIDAK boleh masuk koleksi ini. Portal memfilter siswaId + published == true.
+    // Baca terbuka (portal tanpa Auth). Tulis: guru penugasan mapel×kelas atau admin
+    // (sama dengan lms_nilai_tugas). Tarik dari portal = update published=false. Hapus: admin.
+    // ANTIREGRESI §Tugas.Ortu.
+    match /lms_tugas_hasil_ortu/{id} {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasAll(
+                                 ['tugasId', 'siswaId', 'kelas', 'mapel', 'status', 'published'])
+                            && request.resource.data.keys().hasOnly(
+                                 ['tugasId', 'siswaId', 'kelas', 'mapel', 'judul', 'nilai', 'predikat',
+                                  'status', 'published', 'publishedAt', 'publishedBy', 'publishedByNama',
+                                  'updatedAt'])
+                            && (lmsTulisMapelKelas(
+                                  request.resource.data.mapel,
+                                  request.resource.data.kelas) || isAdmin())
+                            && request.resource.data.tugasId is string
+                            && request.resource.data.tugasId.size() > 0
+                            && request.resource.data.siswaId is string
+                            && request.resource.data.siswaId.size() > 0
+                            && id == request.resource.data.tugasId + '_' + request.resource.data.siswaId
+                            && request.resource.data.kelas is string
+                            && request.resource.data.kelas.size() <= 10
+                            && request.resource.data.mapel is string
+                            && request.resource.data.status in ['dinilai', 'perbaikan', 'belum']
+                            && request.resource.data.published is bool
+                            && (!('judul' in request.resource.data)
+                                || (request.resource.data.judul is string
+                                    && request.resource.data.judul.size() <= 200))
+                            && (!('predikat' in request.resource.data)
+                                || (request.resource.data.predikat is string
+                                    && request.resource.data.predikat.size() <= 40))
+                            && (!('nilai' in request.resource.data)
+                                || request.resource.data.nilai == null
+                                || (request.resource.data.nilai is number
+                                    && request.resource.data.nilai >= 0
+                                    && request.resource.data.nilai <= 100));
+      allow delete: if isAdmin();
+    }
+
+
+
     // ---- lms_lomba -----------------------------------------------------------
     // Modul Lomba (Tahap 1): meta lomba, guru pengampu, peserta max 20.
     // Create/update/delete meta: admin saja.
