@@ -1797,7 +1797,7 @@ match /g7kaih/{id} {
 
       allow create: if request.resource.data.keys().hasOnly(
                          ['tugasId', 'siswaId', 'siswaNama', 'kelas', 'mapel', 'catatan',
-                          'fotoIds', 'jumlahFoto', 'videos', 'createdAt', 'updatedAt'])
+                          'fotoIds', 'jumlahFoto', 'videos', 'buktiSlots', 'createdAt', 'updatedAt'])
                     && request.resource.data.keys().hasAll(
                          ['tugasId', 'siswaId', 'siswaNama', 'kelas', 'mapel',
                           'fotoIds', 'jumlahFoto', 'createdAt', 'updatedAt'])
@@ -1828,7 +1828,7 @@ match /g7kaih/{id} {
                     && lmsSiswaBolehKumpul(resource.data.tugasId, resource.data.kelas, resource.data.mapel)
                     && !lmsSudahDinilai(resource.data.tugasId, resource.data.siswaId)
                     && request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['catatan', 'fotoIds', 'jumlahFoto', 'videos', 'updatedAt'])
+                         .hasOnly(['catatan', 'fotoIds', 'jumlahFoto', 'videos', 'buktiSlots', 'updatedAt'])
                     && request.resource.data.fotoIds is list
                     && request.resource.data.fotoIds.size() <= 10
                     && request.resource.data.jumlahFoto is int
