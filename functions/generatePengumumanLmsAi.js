@@ -14,8 +14,7 @@ function potong(s, n) {
 }
 
 /**
- * Rapikan HTML dari model: fence, escape, markdown ringan → HTML terstruktur.
- * Sanitasi penuh tetap di klien (bersihHtmlMateri / normalisasiHtmlPengumuman).
+ * Rapikan HTML dari model: fence, escape, markdown, paragraf tebal beruntun → daftar.
  */
 function normalisasiHtmlDariAi(raw) {
   let s = String(raw || '').trim()
@@ -23,7 +22,6 @@ function normalisasiHtmlDariAi(raw) {
 
   s = s.replace(/^```(?:html|HTML)?\s*/i, '').replace(/\s*```$/i, '').trim()
 
-  // HTML ter-escape penuh
   if ((s.match(/&lt;/g) || []).length >= 2 && !/<[a-zA-Z]/.test(s)) {
     s = s
       .replace(/&lt;/g, '<')
@@ -83,6 +81,30 @@ function normalisasiHtmlDariAi(raw) {
     s = `<p>${s}</p>`
   }
 
+  // Paragraf yang isinya hanya <strong>…</strong> beruntun (≥2) → <ul><li>
+  s = s.replace(
+    /(?:<p>\s*(?:<strong>|<b>)([\s\S]*?)(?:<\/strong>|<\/b>)\s*<\/p>\s*){2,}/gi,
+    (blok) => {
+      const items = []
+      const re = /<p>\s*(?:<strong>|<b>)([\s\S]*?)(?:<\/strong>|<\/b>)\s*<\/p>/gi
+      let m
+      while ((m = re.exec(blok))) {
+        const isi = String(m[1] || '')
+          .replace(/<[^>]+>/g, '')
+          .replace(/\s+/g, ' ')
+          .trim()
+        if (isi) items.push(isi)
+      }
+      if (items.length < 2) return blok
+      return `<ul>${items.map((i) => `<li>${i}</li>`).join('')}</ul>`
+    },
+  )
+
+  // Baris seperti "- topik" di dalam <p>
+  s = s.replace(/<p>\s*[-•]\s+([^<]+)<\/p>/gi, '<ul><li>$1</li></ul>')
+  // Gabung <ul> berurutan
+  s = s.replace(/<\/ul>\s*<ul>/gi, '')
+
   s = s.replace(/>\s+</g, '><').replace(/><(p|h2|h3|ul|ol|blockquote)\b/gi, '>\n<$1')
   return s.trim()
 }
@@ -92,7 +114,7 @@ async function mintaGeminiJson(apiKey, model, systemText, userText) {
   const body = {
     contents: [{ role: 'user', parts: [{ text: `${systemText}\n\n${userText}` }] }],
     generationConfig: {
-      temperature: 0.65,
+      temperature: 0.85,
       responseMimeType: 'application/json',
     },
   }
@@ -140,36 +162,43 @@ export async function generatePengumumanDenganAi(apiKey, data = {}) {
   const variasi = potong(data.variasi, 40) || String(Date.now())
 
   const system = [
-    'Anda adalah guru SD Muhammadiyah yang menulis pengumuman untuk orang tua dan siswa.',
-    'Gaya bahasa: Islami, hangat, sopan, jelas, dan profesional.',
-    'WAJIB memakai sebutan «ayah/bunda» untuk orang tua dan «ananda» untuk siswa.',
-    'Boleh membuka dengan salam Islami singkat dan menutup dengan doa/terima kasih singkat.',
-    'Jangan berlebihan, jangan menghakimi. Hanya fakta dari guru.',
+    'Anda menulis pengumuman sekolah dasar Muhammadiyah untuk ayah/bunda dan ananda.',
+    'Bahasa: hangat, mengalir, seperti guru yang akrab berbicara kepada keluarga — tetap sopan dan jelas.',
+    'WAJIB sebutan «ayah/bunda» dan «ananda». Boleh salam Islami di awal dan penutup singkat yang tulus (bukan formal kaku).',
     '',
-    'OUTPUT: HANYA JSON valid dengan kunci tepat: judul (string, maks 120 karakter), kontenHtml (string HTML).',
+    'GAYA (penting — jangan kaku):',
+    '- Hindari kalimat seragam berpola «Kami sampaikan informasi mengenai…» di setiap pengumuman.',
+    '- Variasikan pembuka: bisa langsung ke inti, bisa satu kalimat hangat, bisa pertanyaan ringan bila cocok.',
+    '- Kalimat sedang-pendek, natural bicara Indonesia sehari-hari yang sopan — bukan bahasa birokrasi.',
+    '- Jangan mengulang frasa yang sama; jangan terasa seperti template yang diisi formulir.',
+    '- Satu ide per paragraf. Poin materi/jadwal/yang dibawa WAJIB dalam daftar HTML, bukan baris tebal saja.',
     '',
-    'ATURAN kontenHtml (sangat ketat):',
-    '1. Harus HTML valid, BUKAN markdown. Dilarang: **, __, # heading, list markdown dengan tanda minus, dan fence kode.',
-    '2. Tag yang diizinkan: p, br, strong, em, u, ul, ol, li, h2, h3, blockquote. Tidak ada style/class/script/a/img.',
-    '3. Setiap paragraf dibungkus <p>...</p>. Daftar memakai <ul><li> atau <ol><li>.',
-    '4. Fakta penting (tanggal, jam, tempat, yang dibawa) boleh ditandai <strong>.',
-    '5. Struktur tipikal: paragraf salam + 1–3 paragraf isi + opsional daftar poin + paragraf penutup/doa.',
-    '6. Jangan escape tag (jangan tulis &lt;p&gt;). Tulis karakter < dan > secara langsung di dalam string JSON.',
+    'OUTPUT: HANYA JSON dengan kunci: judul (maks 120 karakter, natural), kontenHtml (string HTML).',
     '',
-    'Contoh bentuk kontenHtml (ilustrasi struktur saja):',
-    "<p>Assalamu'alaikum warahmatullahi wabarakatuh.</p><p>Ayah/bunda yang dirahmati Allah, kami sampaikan informasi untuk ananda kelas terkait.</p><ul><li><strong>Hari:</strong> Rabu</li><li><strong>Yang dibawa:</strong> alat tulis</li></ul><p>Jazakumullahu khairan. Wassalamu'alaikum warahmatullahi wabarakatuh.</p>",
+    'HTML kontenHtml:',
+    '- Tag boleh: p, br, strong, em, u, ul, ol, li, h2, h3, blockquote. Tanpa style/class/script/tautan.',
+    '- BUKAN markdown. Jangan **, #, atau - tanpa tag HTML.',
+    '- Daftar wajib: <ul><li>…</li></ul> atau <ol><li>…</li></ol>. Jangan menulis topik hanya sebagai <p><strong>…</strong></p>.',
+    '- Fakta penting (tanggal, jam, mapel) boleh <strong> di dalam kalimat atau di dalam <li>.',
+    '- Tulis tag dengan karakter < > langsung (jangan &lt;p&gt;).',
+    '',
+    'Contoh struktur (isi boleh berbeda total — jangan menjiplak kalimatnya):',
+    "<p>Assalamu'alaikum warahmatullahi wabarakatuh.</p>",
+    '<p>Ayah/bunda, ananda kelas 5A sebentar lagi menghadapi sumatif IPAS. Agar lebih tenang, berikut materi yang perlu dilatih di rumah:</p>',
+    '<ul><li>Sistem pencernaan manusia</li><li>Sistem pernapasan manusia</li></ul>',
+    "<p>Mohon dampingan ayah/bunda ya. Jazakumullahu khairan. Wassalamu'alaikum warahmatullahi wabarakatuh.</p>",
   ].join('\n')
 
   const user = [
     `KELAS: ${kelas || '(umum)'}`,
     `MATA PELAJARAN: ${mapel || '(umum)'}`,
-    tujuan ? `TUJUAN/NADA: ${tujuan}` : '',
+    tujuan ? `TUJUAN/NADA: ${tujuan}` : 'TUJUAN/NADA: informatif, hangat, tidak kaku',
     `VARIATION_SEED: ${variasi}`,
     '',
-    '=== INFORMASI DARI GURU (sumber kebenaran) ===',
+    '=== INFORMASI DARI GURU (sumber kebenaran — jangan menambah fakta) ===',
     informasi,
     '',
-    'Susun pengumuman HTML berdasarkan informasi di atas. Jangan menambah fakta yang tidak disebutkan.',
+    'Tulis ulang sebagai pengumuman HTML yang mengalir. Poin-poin wajib dalam <ul>/<ol>.',
   ]
     .filter(Boolean)
     .join('\n')
