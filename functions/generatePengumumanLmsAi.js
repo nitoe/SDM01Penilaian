@@ -4,7 +4,7 @@
  */
 import { logger } from 'firebase-functions'
 
-const MODEL_TEKS = 'gemini-2.5-flash'
+const MODEL_TEKS = 'gemini-3.8-flash'
 
 function potong(s, n) {
   const t = String(s || '').trim()
