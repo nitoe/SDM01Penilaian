@@ -1,6 +1,7 @@
 /**
  * Generate pengumuman ruang kelas LMS — bahasa Islami hangat (ayah/bunda · ananda).
  * Hanya akun AI (bolehPemanggilAi). Dipanggil dari generatePengumumanLmsAi di index.js.
+ * Model selaras generateSoalLmsAi / generateMateriLmsAi: gemini-3.8-flash.
  */
 import { logger } from 'firebase-functions'
 
@@ -12,12 +13,86 @@ function potong(s, n) {
   return t.slice(0, n)
 }
 
+/**
+ * Rapikan HTML dari model: fence, escape, markdown ringan → HTML terstruktur.
+ * Sanitasi penuh tetap di klien (bersihHtmlMateri / normalisasiHtmlPengumuman).
+ */
+function normalisasiHtmlDariAi(raw) {
+  let s = String(raw || '').trim()
+  if (!s) return ''
+
+  s = s.replace(/^```(?:html|HTML)?\s*/i, '').replace(/\s*```$/i, '').trim()
+
+  // HTML ter-escape penuh
+  if ((s.match(/&lt;/g) || []).length >= 2 && !/<[a-zA-Z]/.test(s)) {
+    s = s
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&')
+  }
+
+  const punyaTag = /<\/?[a-z][a-z0-9]*\b[^>]*>/i.test(s)
+  if (!punyaTag) {
+    const esc = (x) =>
+      String(x)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+    const inline = (x) => {
+      let y = esc(x)
+      y = y.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      y = y.replace(/__(.+?)__/g, '<strong>$1</strong>')
+      y = y.replace(/(^|[^*])\*([^*]+)\*(?![*])/g, '$1<em>$2</em>')
+      return y
+    }
+    const baris = s.replace(/\r\n?/g, '\n').split('\n')
+    const out = []
+    let list = []
+    let listOrdered = false
+    const flushList = () => {
+      if (!list.length) return
+      const tag = listOrdered ? 'ol' : 'ul'
+      out.push(`<${tag}>${list.map((li) => `<li>${li}</li>`).join('')}</${tag}>`)
+      list = []
+    }
+    for (const line of baris) {
+      const bullet = line.match(/^\s*[-*•]\s+(.+)$/)
+      const numbered = line.match(/^\s*\d+[.)]\s+(.+)$/)
+      if (bullet) {
+        if (list.length && listOrdered) flushList()
+        listOrdered = false
+        list.push(inline(bullet[1]))
+        continue
+      }
+      if (numbered) {
+        if (list.length && !listOrdered) flushList()
+        listOrdered = true
+        list.push(inline(numbered[1]))
+        continue
+      }
+      flushList()
+      const t = line.trim()
+      if (!t) continue
+      out.push(`<p>${inline(t)}</p>`)
+    }
+    flushList()
+    s = out.join('') || `<p>${inline(s)}</p>`
+  } else if (!/<\s*(p|ul|ol|h2|h3|h4|blockquote|div)\b/i.test(s)) {
+    s = `<p>${s}</p>`
+  }
+
+  s = s.replace(/>\s+</g, '><').replace(/><(p|h2|h3|ul|ol|blockquote)\b/gi, '>\n<$1')
+  return s.trim()
+}
+
 async function mintaGeminiJson(apiKey, model, systemText, userText) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
   const body = {
     contents: [{ role: 'user', parts: [{ text: `${systemText}\n\n${userText}` }] }],
     generationConfig: {
-      temperature: 0.7,
+      temperature: 0.65,
       responseMimeType: 'application/json',
     },
   }
@@ -66,15 +141,24 @@ export async function generatePengumumanDenganAi(apiKey, data = {}) {
 
   const system = [
     'Anda adalah guru SD Muhammadiyah yang menulis pengumuman untuk orang tua dan siswa.',
-    'Gaya bahasa: Islami, hangat, sopan, jelas, dan profesional — seperti komunikasi sekolah kepada keluarga.',
-    'WAJIB memakai sebutan «ayah/bunda» untuk orang tua dan «ananda» untuk siswa (jangan «Bapak/Ibu» atau «anak Anda» kecuali dalam kutipan).',
-    'Boleh membuka dengan salam Islami singkat (Assalamu\'alaikum warahmatullahi wabarakatuh) bila cocok, dan menutup dengan doa singkat atau ucapan terima kasih yang tulus.',
-    'Jangan berlebihan, jangan menghakimi, jangan menakut-nakuti. Fokus pada informasi yang diberikan guru.',
-    'Keluarkan HANYA JSON dengan kunci: judul (string singkat, maks 120 karakter), kontenHtml (string HTML).',
-    'kontenHtml boleh memakai tag: p, br, strong, em, u, ul, ol, li, h2, h3, blockquote. Tanpa style, class, script, atau tautan.',
-    'Struktur kontenHtml profesional: 2–5 paragraf pendek, boleh daftar poin jika membantu. Jangan markdown.',
-    'Bahasa Indonesia baku yang ramah; fakta penting (tanggal, jam, tempat, yang dibawa) harus jelas.',
-  ].join(' ')
+    'Gaya bahasa: Islami, hangat, sopan, jelas, dan profesional.',
+    'WAJIB memakai sebutan «ayah/bunda» untuk orang tua dan «ananda» untuk siswa.',
+    'Boleh membuka dengan salam Islami singkat dan menutup dengan doa/terima kasih singkat.',
+    'Jangan berlebihan, jangan menghakimi. Hanya fakta dari guru.',
+    '',
+    'OUTPUT: HANYA JSON valid dengan kunci tepat: judul (string, maks 120 karakter), kontenHtml (string HTML).',
+    '',
+    'ATURAN kontenHtml (sangat ketat):',
+    '1. Harus HTML valid, BUKAN markdown. Dilarang: **, __, # heading, list markdown dengan tanda minus, dan fence kode.',
+    '2. Tag yang diizinkan: p, br, strong, em, u, ul, ol, li, h2, h3, blockquote. Tidak ada style/class/script/a/img.',
+    '3. Setiap paragraf dibungkus <p>...</p>. Daftar memakai <ul><li> atau <ol><li>.',
+    '4. Fakta penting (tanggal, jam, tempat, yang dibawa) boleh ditandai <strong>.',
+    '5. Struktur tipikal: paragraf salam + 1–3 paragraf isi + opsional daftar poin + paragraf penutup/doa.',
+    '6. Jangan escape tag (jangan tulis &lt;p&gt;). Tulis karakter < dan > secara langsung di dalam string JSON.',
+    '',
+    'Contoh bentuk kontenHtml (ilustrasi struktur saja):',
+    "<p>Assalamu'alaikum warahmatullahi wabarakatuh.</p><p>Ayah/bunda yang dirahmati Allah, kami sampaikan informasi untuk ananda kelas terkait.</p><ul><li><strong>Hari:</strong> Rabu</li><li><strong>Yang dibawa:</strong> alat tulis</li></ul><p>Jazakumullahu khairan. Wassalamu'alaikum warahmatullahi wabarakatuh.</p>",
+  ].join('\n')
 
   const user = [
     `KELAS: ${kelas || '(umum)'}`,
@@ -85,7 +169,7 @@ export async function generatePengumumanDenganAi(apiKey, data = {}) {
     '=== INFORMASI DARI GURU (sumber kebenaran) ===',
     informasi,
     '',
-    'Susun pengumuman berdasarkan informasi di atas. Jangan menambah fakta yang tidak disebutkan.',
+    'Susun pengumuman HTML berdasarkan informasi di atas. Jangan menambah fakta yang tidak disebutkan.',
   ]
     .filter(Boolean)
     .join('\n')
@@ -98,10 +182,9 @@ export async function generatePengumumanDenganAi(apiKey, data = {}) {
 
   const out = await mintaGeminiJson(apiKey, MODEL_TEKS, system, user)
   const judul = potong(out?.judul, 160)
-  let kontenHtml = String(out?.kontenHtml || '').trim()
+  let kontenHtml = normalisasiHtmlDariAi(out?.kontenHtml)
   if (!judul) throw new Error('AI tidak mengembalikan judul.')
   if (!kontenHtml || kontenHtml.length < 20) throw new Error('AI tidak mengembalikan isi pengumuman.')
-  // Batasi ukuran
   if (kontenHtml.length > 20000) kontenHtml = kontenHtml.slice(0, 20000)
   return { judul, kontenHtml }
 }
