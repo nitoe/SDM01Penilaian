@@ -2263,8 +2263,8 @@ match /g7kaih/{id} {
                                  ['tugasId', 'siswaId', 'kelas', 'mapel', 'status', 'published'])
                             && request.resource.data.keys().hasOnly(
                                  ['tugasId', 'siswaId', 'kelas', 'mapel', 'judul', 'nilai', 'predikat',
-                                  'status', 'published', 'publishedAt', 'publishedBy', 'publishedByNama',
-                                  'updatedAt'])
+                                  'status', 'statusKumpul', 'tenggat', 'published', 'publishedAt',
+                                  'publishedBy', 'publishedByNama', 'updatedAt'])
                             && (lmsTulisMapelKelas(
                                   request.resource.data.mapel,
                                   request.resource.data.kelas) || isAdmin())
@@ -2288,7 +2288,12 @@ match /g7kaih/{id} {
                                 || request.resource.data.nilai == null
                                 || (request.resource.data.nilai is number
                                     && request.resource.data.nilai >= 0
-                                    && request.resource.data.nilai <= 100));
+                                    && request.resource.data.nilai <= 100))
+                            && (!('statusKumpul' in request.resource.data)
+                                || request.resource.data.statusKumpul in ['belum_kumpul', 'sudah_kumpul'])
+                            && (!('tenggat' in request.resource.data)
+                                || request.resource.data.tenggat == null
+                                || request.resource.data.tenggat is timestamp);
       allow delete: if isAdmin();
     }
 
