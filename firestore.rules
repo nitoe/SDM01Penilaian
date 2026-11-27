@@ -2422,6 +2422,59 @@ match /g7kaih/{id} {
       allow delete: if lombaAdmin();
     }
 
+    // ---- lms_pengumuman/{id} -------------------------------------------------
+    // Pengumuman per ruang kelas (kelas × mapel). Guru menulis; siswa LMS membaca
+    // yang aktif untuk kelasnya. Konten HTML disanitasi di klien (bersihHtmlMateri).
+    // ANTIREGRESI §Pengumuman.
+    match /lms_pengumuman/{id} {
+      allow read: if isGuru() || isAdmin()
+                  || (isSiswaLms()
+                      && resource.data.aktif == true
+                      && resource.data.kelas == request.auth.token.kelas);
+
+      allow create: if lmsTulisMapelKelas(
+                         request.resource.data.mapel,
+                         request.resource.data.kelas)
+                    && request.resource.data.keys().hasAll(
+                         ['kelas', 'mapel', 'judul', 'kontenHtml', 'aktif', 'dibuatOleh'])
+                    && request.resource.data.kelas is string
+                    && request.resource.data.kelas.size() > 0
+                    && request.resource.data.kelas.size() <= 10
+                    && request.resource.data.mapel is string
+                    && request.resource.data.mapel.size() > 0
+                    && request.resource.data.mapel.size() <= 80
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 160
+                    && request.resource.data.kontenHtml is string
+                    && request.resource.data.kontenHtml.size() > 0
+                    && request.resource.data.kontenHtml.size() <= 50000
+                    && request.resource.data.aktif is bool
+                    && request.resource.data.dibuatOleh == request.auth.uid
+                    && (!('pin' in request.resource.data) || request.resource.data.pin is bool)
+                    && (!('dibuatOlehNama' in request.resource.data)
+                        || (request.resource.data.dibuatOlehNama is string
+                            && request.resource.data.dibuatOlehNama.size() <= 120));
+
+      allow update: if lmsTulisMapelKelas(
+                         resource.data.mapel,
+                         resource.data.kelas)
+                    && request.resource.data.kelas == resource.data.kelas
+                    && request.resource.data.mapel == resource.data.mapel
+                    && request.resource.data.dibuatOleh == resource.data.dibuatOleh
+                    && request.resource.data.judul is string
+                    && request.resource.data.judul.size() > 0
+                    && request.resource.data.judul.size() <= 160
+                    && request.resource.data.kontenHtml is string
+                    && request.resource.data.kontenHtml.size() > 0
+                    && request.resource.data.kontenHtml.size() <= 50000
+                    && request.resource.data.aktif is bool
+                    && (!('pin' in request.resource.data) || request.resource.data.pin is bool);
+
+      allow delete: if lmsTulisMapelKelas(resource.data.mapel, resource.data.kelas)
+                    || isAdmin();
+    }
+
     // ############################################################################
     // ##  REPO: BERSAMA (semua repo)
     // ##  Penutup.

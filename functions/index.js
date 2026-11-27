@@ -39,6 +39,7 @@ import {
   generateMateriHalamanDenganAi,
   generateIlustrasiMateriDenganAi,
 } from './generateMateriLmsAi.js'
+import { generatePengumumanDenganAi } from './generatePengumumanLmsAi.js'
 import {
   generateKategoriTugasDenganAi,
   generateIsiTugasDenganAi,
@@ -518,6 +519,27 @@ export const generateMateriLmsAi = onCall(opsiAi, async (request) => {
     if (err?.code === 'invalid-argument') throw new HttpsError('invalid-argument', err.message)
     logger.error('generateMateriLmsAi gagal', { pesan: err?.message })
     throw new HttpsError('internal', err?.message || 'Gagal membuat materi AI.')
+  }
+})
+
+/** LMS Pengumuman ruang kelas: HTML hangat ayah/bunda·ananda. Hanya UID+email AI. */
+export const generatePengumumanLmsAi = onCall(opsiAi, async (request) => {
+  const provider = pastikanAi(request)
+  if (provider !== 'gemini') {
+    throw new HttpsError('invalid-argument', 'Generate pengumuman LMS saat ini hanya mendukung Gemini.')
+  }
+  try {
+    const apiKey = kunciProvider('gemini')
+    const hasil = await generatePengumumanDenganAi(apiKey, request.data || {})
+    logger.info('generatePengumumanLmsAi', {
+      uid: request.auth.uid,
+      mapel: String(request.data?.mapel || '').slice(0, 40),
+    })
+    return hasil
+  } catch (err) {
+    if (err?.code === 'invalid-argument') throw new HttpsError('invalid-argument', err.message)
+    logger.error('generatePengumumanLmsAi gagal', { pesan: err?.message })
+    throw new HttpsError('internal', err?.message || 'Gagal membuat pengumuman AI.')
   }
 })
 
