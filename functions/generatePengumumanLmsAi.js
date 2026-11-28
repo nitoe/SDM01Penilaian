@@ -2,6 +2,7 @@
  * Generate pengumuman ruang kelas LMS — bahasa Islami hangat (ayah/bunda · ananda).
  * Hanya akun AI (bolehPemanggilAi). Dipanggil dari generatePengumumanLmsAi di index.js.
  * Model selaras generateSoalLmsAi / generateMateriLmsAi: gemini-3.8-flash.
+ * Gaya prompt: ANTIREGRESI §Pengumuman.AiGaya (ringkas, hanya fakta guru, tanpa frasa klise).
  */
 import { logger } from 'firebase-functions'
 
@@ -114,7 +115,7 @@ async function mintaGeminiJson(apiKey, model, systemText, userText) {
   const body = {
     contents: [{ role: 'user', parts: [{ text: `${systemText}\n\n${userText}` }] }],
     generationConfig: {
-      temperature: 0.85,
+      temperature: 0.6,
       responseMimeType: 'application/json',
     },
   }
@@ -162,43 +163,57 @@ export async function generatePengumumanDenganAi(apiKey, data = {}) {
   const variasi = potong(data.variasi, 40) || String(Date.now())
 
   const system = [
-    'Anda menulis pengumuman sekolah dasar Muhammadiyah untuk ayah/bunda dan ananda.',
-    'Bahasa: hangat, mengalir, seperti guru yang akrab berbicara kepada keluarga — tetap sopan dan jelas.',
-    'WAJIB sebutan «ayah/bunda» dan «ananda». Boleh salam Islami di awal dan penutup singkat yang tulus (bukan formal kaku).',
+    'Anda menuliskan pengumuman dari guru SD Muhammadiyah kepada ayah/bunda murid.',
+    'Tujuannya satu: orang tua langsung tahu APA yang diumumkan, KAPAN, dan APA yang perlu dilakukan — tanpa harus membaca basa-basi.',
     '',
-    'GAYA (penting — jangan kaku):',
-    '- Hindari kalimat seragam berpola «Kami sampaikan informasi mengenai…» di setiap pengumuman.',
-    '- Variasikan pembuka: bisa langsung ke inti, bisa satu kalimat hangat, bisa pertanyaan ringan bila cocok.',
-    '- Kalimat sedang-pendek, natural bicara Indonesia sehari-hari yang sopan — bukan bahasa birokrasi.',
-    '- Jangan mengulang frasa yang sama; jangan terasa seperti template yang diisi formulir.',
-    '- Satu ide per paragraf. Poin materi/jadwal/yang dibawa WAJIB dalam daftar HTML, bukan baris tebal saja.',
+    'PRINSIP ISI (utama):',
+    '- Sumber kebenaran hanya «INFORMASI DARI GURU». Jangan menambah fakta, penjelasan materi, hikmah, nasihat, atau imbauan yang tidak ada di sana.',
+    '- Panjang mengikuti informasi: info singkat → pengumuman singkat. Umumnya 50–130 kata. Jangan memanjangkan dengan kalimat pengisi.',
+    '- Kalimat pertama setelah salam langsung memuat inti pengumuman (apa + kapan/untuk siapa).',
+    '- Judul spesifik dan informatif (mis. «Sumatif IPAS Rabu 3 Desember: materi dan perlengkapan»), bukan judul umum seperti «Pengumuman Penting».',
+    '- Bila ada tanggal, jam, tempat, barang bawaan, atau batas waktu: tampilkan jelas, boleh <strong> di dalam kalimat atau item daftar.',
+    '- Bila guru memberi daftar materi/langkah, salin sebagai daftar apa adanya (boleh dirapikan), JANGAN menjelaskan ulang setiap butirnya.',
+    '- Ajakan kepada orang tua (mendampingi, mengingatkan, menyiapkan) hanya jika disebut guru, dan cukup satu kalimat konkret.',
     '',
-    'OUTPUT: HANYA JSON dengan kunci: judul (maks 120 karakter, natural), kontenHtml (string HTML).',
+    'GAYA:',
+    '- Sapaan «ayah/bunda» dan sebutan «ananda» wajib. Nada sopan, hangat, bahasa Indonesia sehari-hari yang wajar.',
+    "- Salam pembuka «Assalamu'alaikum warahmatullahi wabarakatuh» dan salam penutup «Wassalamu'alaikum warahmatullahi wabarakatuh» cukup sekali, singkat.",
+    '- Penutup satu kalimat saja, spesifik pada isi pengumuman. Ucapan terima kasih atau doa hanya bila sesuai TUJUAN/NADA.',
+    '- Variasikan pembuka antarpengumuman; jangan memakai pola yang sama berulang.',
+    '- Dilarang memakai julukan, slogan, atau gelar bernuansa gimik (mis. «detektif …», «petualang …», «agen …»).',
+    '',
+    'FRASA KLISE YANG DILARANG (jangan dipakai, juga turunannya):',
+    '«Tidak terasa…», «semakin dekat dengan…», «agar ananda lebih tenang dan terarah», «semakin bersemangat dan percaya diri»,',
+    '«pendampingan hangat/santai dari ayah/bunda», «sentuhan semangat», «kerja sama yang tulus/hangat selama ini»,',
+    '«kami berharap ananda dapat… dengan baik», «mari bersama-sama…», «jazakumullahu khairan» di setiap pengumuman,',
+    'serta kalimat motivasi umum yang tidak membawa informasi baru.',
+    '',
+    'OUTPUT: HANYA JSON dengan kunci: judul (maks 120 karakter), kontenHtml (string HTML).',
     '',
     'HTML kontenHtml:',
-    '- Tag boleh: p, br, strong, em, u, ul, ol, li, h2, h3, blockquote. Tanpa style/class/script/tautan.',
+    '- Tag boleh: p, br, strong, em, u, ul, ol, li, h2, h3, blockquote, table, thead, tbody, tr, th, td. Tanpa style/class/script/tautan.',
+    '- Jadwal atau data dengan ≥3 baris dan ≥2 kolom boleh memakai tabel; selain itu pakai daftar.',
     '- BUKAN markdown. Jangan **, #, atau - tanpa tag HTML.',
-    '- Daftar wajib: <ul><li>…</li></ul> atau <ol><li>…</li></ol>. Jangan menulis topik hanya sebagai <p><strong>…</strong></p>.',
-    '- Fakta penting (tanggal, jam, mapel) boleh <strong> di dalam kalimat atau di dalam <li>.',
+    '- Daftar wajib <ul><li>…</li></ul> atau <ol><li>…</li></ol>. Jangan menulis butir hanya sebagai <p><strong>…</strong></p>.',
     '- Tulis tag dengan karakter < > langsung (jangan &lt;p&gt;).',
     '',
-    'Contoh struktur (isi boleh berbeda total — jangan menjiplak kalimatnya):',
-    "<p>Assalamu'alaikum warahmatullahi wabarakatuh.</p>",
-    '<p>Ayah/bunda, ananda kelas 5A sebentar lagi menghadapi sumatif IPAS. Agar lebih tenang, berikut materi yang perlu dilatih di rumah:</p>',
-    '<ul><li>Sistem pencernaan manusia</li><li>Sistem pernapasan manusia</li></ul>',
-    "<p>Mohon dampingan ayah/bunda ya. Jazakumullahu khairan. Wassalamu'alaikum warahmatullahi wabarakatuh.</p>",
+    'CONTOH BENTUK SAJA — topik dan kalimat di bawah JANGAN ditiru atau dipakai ulang:',
+    "<p>Assalamu'alaikum warahmatullahi wabarakatuh, ayah/bunda.</p>",
+    '<p>Pengumpulan proyek kelompok kelas 5A diundur menjadi <strong>Jumat, 12 Desember</strong>. Mohon ananda membawa hasil proyek dalam keadaan siap dipresentasikan.</p>',
+    '<ul><li>Poster ukuran A3</li><li>Lembar refleksi yang sudah diisi</li></ul>',
+    "<p>Terima kasih. Wassalamu'alaikum warahmatullahi wabarakatuh.</p>",
   ].join('\n')
 
   const user = [
     `KELAS: ${kelas || '(umum)'}`,
     `MATA PELAJARAN: ${mapel || '(umum)'}`,
-    tujuan ? `TUJUAN/NADA: ${tujuan}` : 'TUJUAN/NADA: informatif, hangat, tidak kaku',
+    tujuan ? `TUJUAN/NADA: ${tujuan}` : 'TUJUAN/NADA: informatif, ringkas, sopan',
     `VARIATION_SEED: ${variasi}`,
     '',
     '=== INFORMASI DARI GURU (sumber kebenaran — jangan menambah fakta) ===',
     informasi,
     '',
-    'Tulis ulang sebagai pengumuman HTML yang mengalir. Poin-poin wajib dalam <ul>/<ol>.',
+    'Susun pengumuman ringkas dan spesifik dari informasi di atas. Poin-poin wajib dalam <ul>/<ol>. Tanpa klise.',
   ]
     .filter(Boolean)
     .join('\n')
